@@ -1,5 +1,4 @@
 import ClientConstants as CC
-import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientDuplicates
@@ -14,8 +13,7 @@ import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIFileSeedCache
 import ClientGUIGallerySeedLog
-import ClientGUISerialisable
-import ClientGUIShortcuts
+import ClientGUITags
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImportFileSeeds
@@ -25,7 +23,6 @@ import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientParsing
 import ClientPaths
-import ClientSerialisable
 import ClientTags
 import collections
 import HydrusConstants as HC
@@ -191,17 +188,19 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._checkboxes = wx.CheckListBox( self )
+        self._checkboxes = ClientGUICommon.BetterCheckListBox( self )
         
         self._checkboxes.SetMinSize( ( 320, 420 ) )
         
-        for ( i, ( label, data, selected ) ) in enumerate( choice_tuples ):
+        choice_tuples.sort()
+        
+        for ( index, ( label, data, selected ) ) in enumerate( choice_tuples ):
             
             self._checkboxes.Append( label, data )
             
             if selected:
                 
-                self._checkboxes.Check( i )
+                self._checkboxes.Check( index )
                 
             
         
@@ -216,14 +215,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        datas = []
-        
-        for index in self._checkboxes.GetCheckedItems():
-            
-            datas.append( self._checkboxes.GetClientData( index ) )
-            
-        
-        return datas
+        return self._checkboxes.GetChecked()
         
     
 class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
@@ -332,8 +324,8 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [], file_post_default_tag_import_options )
-        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [], watchable_default_tag_import_options )
+        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, file_post_default_tag_import_options )
+        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, watchable_default_tag_import_options )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -451,9 +443,9 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
                 
-                ( namespaces, tag_import_options ) = self._GetNamespacesAndDefaultTagImportOptions( url_match )
+                tag_import_options = self._GetDefaultTagImportOptions( url_match )
                 
-                panel = EditTagImportOptionsPanel( dlg, namespaces, tag_import_options )
+                panel = EditTagImportOptionsPanel( dlg, tag_import_options )
                 
                 dlg.SetPanel( panel )
                 
@@ -475,13 +467,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl.UpdateDatas( url_matches_to_edit )
         
     
-    def _GetNamespacesAndDefaultTagImportOptions( self, url_match ):
-        
-        parser_key = self._url_match_keys_to_parser_keys[ url_match.GetMatchKey() ]
-        
-        parser = self._parser_keys_to_parsers[ parser_key ]
-        
-        namespaces = parser.GetNamespaces()
+    def _GetDefaultTagImportOptions( self, url_match ):
         
         url_match_key = url_match.GetMatchKey()
         
@@ -491,17 +477,23 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            url_types_to_guidance_tag_import_options = {}
+            url_type = url_match.GetURLType()
             
-            url_types_to_guidance_tag_import_options[ HC.URL_TYPE_POST ] = self._file_post_default_tag_import_options_button.GetValue()
-            url_types_to_guidance_tag_import_options[ HC.URL_TYPE_WATCHABLE ] = self._watchable_default_tag_import_options_button.GetValue()
-            
-            namespaces = parser.GetNamespaces()
-            
-            tag_import_options = ClientNetworkingDomain.DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_tag_import_options, url_match )
+            if url_type == HC.URL_TYPE_POST:
+                
+                tag_import_options = self._file_post_default_tag_import_options_button.GetValue()
+                
+            elif url_type == HC.URL_TYPE_WATCHABLE:
+                
+                tag_import_options = self._watchable_default_tag_import_options_button.GetValue()
+                
+            else:
+                
+                raise HydrusExceptions.URLMatchException( 'Could not find tag import options for that kind of URL Class!' )
+                
             
         
-        return ( namespaces, tag_import_options )
+        return tag_import_options
         
     
     def _OnlyOneTIOSelected( self ):
@@ -902,7 +894,9 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                         
-                        panel = EditTagFilterPanel( dlg_3, tag_filter )
+                        namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+                        
+                        panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
                         
                         dlg_3.SetPanel( panel )
                         
@@ -1016,7 +1010,9 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                 
-                panel = EditTagFilterPanel( dlg_3, tag_filter )
+                namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+                
+                panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
                 
                 dlg_3.SetPanel( panel )
                 
@@ -2301,17 +2297,17 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = '''****Subscriptions are not for large one-time syncs****
 
-tl;dr: Do not change the checker options or file limits until you really know what you are doing. The limits are now only 1000 anyway, but you should leave them at 100/50.
+tl;dr: Do not change the checker options or file limits until you really know what you are doing. The limits are now only 1000 (10000 in advanced mode) anyway, but you should leave them at 100/100.
 
 A subscription will start at a site's newest files and keep searching further and further back into the past. It will stop naturally if it reaches the end of results or starts to see files it saw in a previous check (and so assumes it has 'caught up' to where it was before). It will stop 'artificially' if it finds enough new files to hit the file limits here.
 
 Unless you have a very special reason, it is important to keep these file limit numbers low. Being automated, subscriptions typically run when you are not looking at the client, and if they go wrong, it is good to have some brakes to stop them going very wrong.
 
-First of all, making sure you only get a few dozen or hundred on the first check means you do not spend twenty minutes fetching all the search's thousands of file URLs that you may well have previously downloaded, but it is even more important for regular checks, where the sub is trying to find where it got to before: if a site changes its URL format (say from artistname.deviantart.com to deviantart.com/artistname) or changes its markup or otherwise starts delivering unusual results, the subscription may not realise it is seeing the wrong urls and will keep syncing until it hits its regular limit. If the periodic limit is 50, this is no big deal--you'll likely get a popup message out of it and might need to update the respective downloader--but if it were 60000 (or infinite, and the site were somehow serving you random/full results!), you could run into a huge problem completely by accident.
+First of all, making sure you only get a few dozen or hundred on the first check means you do not spend twenty minutes fetching all the search's thousands of file URLs that you may well have previously downloaded, but it is even more important for regular checks, where the sub is trying to find where it got to before: if a site changes its URL format (say from artistname.deviantart.com to deviantart.com/artistname) or changes its markup or otherwise starts delivering unusual results, the subscription may not realise it is seeing the wrong urls and will keep syncing until it hits its regular limit. If the periodic limit is 100, this is no big deal--you'll likely get a popup message out of it and might need to update the respective downloader--but if it were 60000 (or infinite, and the site were somehow serving you random/full results!), you could run into a huge problem completely by accident.
 
 Subscription sync searches are somewhat 'fragile' (they cannot pause/resume the gallery pagewalk, only completely cancel), so it is best if they are short--say, no more than five pages. It is better for a sub to pick up a small number of new files every few weeks than trying to catch up in a giant rush once a year.
 
-If you are not experienced with subscriptions, I strongly suggest you set these to something like 100 for the first check and 50 thereafter, which is likely your default. This works great for typical artist and character queries.
+If you are not experienced with subscriptions, I strongly suggest you set these to something like 100 for the first check and 100 thereafter, which is likely your default. This works great for typical artist and character queries.
 
 If you want to get all of an artist's files from a site, use the manual gallery download page first. A good routine is to check that you have the right search text and it all works correctly and that you know what tags you want, and then once that big queue is fully downloaded synced, start a new sub with the same settings to continue checking for anything posted in future.'''
         
@@ -2319,10 +2315,19 @@ If you want to get all of an artist's files from a site, use the manual gallery 
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
         
-        self._initial_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = 1000 )
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            limits_max = 10000
+            
+        else:
+            
+            limits_max = 1000
+            
+        
+        self._initial_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = limits_max )
         self._initial_file_limit.SetToolTip( 'The first sync will add no more than this many URLs.' )
         
-        self._periodic_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = 1000 )
+        self._periodic_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = limits_max )
         self._periodic_file_limit.SetToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
         
         self._publish_files_to_popup_button = wx.CheckBox( self._options_panel )
@@ -2343,7 +2348,7 @@ If you want to get all of an artist's files from a site, use the manual gallery 
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, [], tag_import_options, allow_default_selection = True )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, allow_default_selection = True )
         
         #
         
@@ -2416,7 +2421,7 @@ If you want to get all of an artist's files from a site, use the manual gallery 
         
         gallery_identifier = self._gallery_identifier.GetValue()
         
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        search_value = ClientDefaults.GetDefaultSearchValue( gallery_identifier )
         
         query = ClientImportSubscriptions.SubscriptionQuery( search_value )
         
@@ -2983,23 +2988,12 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions_panel.SetListCtrl( self._subscriptions )
         
         subscriptions_panel.AddButton( 'add', self.Add )
-        
-        menu_items = []
-        
-        menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
-        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
-        
-        subscriptions_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
-        
-        menu_items = []
-        
-        menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
-        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
-        
-        subscriptions_panel.AddMenuButton( 'import', menu_items )
-        subscriptions_panel.AddButton( 'duplicate', self.Duplicate, enabled_only_on_selection = True )
         subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
         subscriptions_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
+        
+        subscriptions_panel.AddSeparator()
+        
+        subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptions.Subscription, ), self._AddSubscription )
         
         subscriptions_panel.NewButtonRow()
         
@@ -3050,6 +3044,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+    
+    def _AddSubscription( self, subscription ):
+        
+        subscription.SetNonDupeName( self._GetExistingNames() )
+        
+        self._subscriptions.AddDatas( ( subscription, ) )
         
     
     def _CanCheckNow( self ):
@@ -3352,9 +3353,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_subscription = panel.GetValue()
                 
-                new_subscription.SetNonDupeName( self._GetExistingNames() )
+                self._AddSubscription( new_subscription )
                 
-                self._subscriptions.AddDatas( ( new_subscription, ) )
+                self._subscriptions.Sort()
                 
             
         
@@ -3402,20 +3403,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def Duplicate( self ):
-        
-        subs_to_dupe = self._subscriptions.GetData( only_selected = True )
-        
-        for subscription in subs_to_dupe:
-            
-            dupe_subscription = subscription.Duplicate()
-            
-            dupe_subscription.SetNonDupeName( self._GetExistingNames() )
-            
-            self._subscriptions.AddDatas( ( dupe_subscription, ) )
-            
-        
-    
     def Edit( self ):
         
         subs_to_edit = self._subscriptions.GetData( only_selected = True )
@@ -3452,89 +3439,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions.Sort()
         
     
-    def ExportToClipboard( self ):
-        
-        export_object = self._GetExportObject()
-        
-        if export_object is not None:
-            
-            json = export_object.DumpToString()
-            
-            HG.client_controller.pub( 'clipboard', 'text', json )
-            
-        
-    
-    def ExportToPng( self ):
-        
-        export_object = self._GetExportObject()
-        
-        if export_object is not None:
-            
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
-                
-                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
-                
-                dlg.SetPanel( panel )
-                
-                dlg.ShowModal()
-                
-            
-        
-    
     def GetValue( self ):
         
         subscriptions = self._subscriptions.GetData()
         
         return subscriptions
-        
-    
-    def ImportFromClipboard( self ):
-        
-        raw_text = HG.client_controller.GetClipboardText()
-        
-        try:
-            
-            obj = HydrusSerialisable.CreateFromString( raw_text )
-            
-            self._ImportObject( obj )
-            
-        except Exception as e:
-            
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
-            
-        
-    
-    def ImportFromPng( self ):
-        
-        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                try:
-                    
-                    payload = ClientSerialisable.LoadFromPng( path )
-                    
-                except Exception as e:
-                    
-                    wx.MessageBox( HydrusData.ToUnicode( e ) )
-                    
-                    return
-                    
-                
-                try:
-                    
-                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
-                    
-                    self._ImportObject( obj )
-                    
-                except:
-                    
-                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
-                    
-                
-            
         
     
     def Merge( self ):
@@ -3750,11 +3659,15 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             choice_tuples = [ ( query.GetQueryText(), query, False ) for query in queries ]
             
-            with ClientGUIDialogs.DialogCheckFromList( self, 'select the queries to extract', choice_tuples ) as dlg:
+            with ClientGUITopLevelWindows.DialogEdit( self, 'select the queries to extract' ) as dlg:
+                
+                panel = EditChooseMultiple( dlg, choice_tuples )
+                
+                dlg.SetPanel( panel )
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    queries_to_extract = dlg.GetChecked()
+                    queries_to_extract = panel.GetValue()
                     
                 else:
                     
@@ -3893,7 +3806,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = EditTagImportOptionsPanel( dlg, [], tag_import_options, show_downloader_options = True, allow_default_selection = True )
+            panel = EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options = True, allow_default_selection = True )
             
             dlg.SetPanel( panel )
             
@@ -3911,260 +3824,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, tag_filter, message = None ):
-        
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
-        
-        #
-        
-        blacklist_panel = ClientGUICommon.StaticBox( self, 'exclude these' )
-        
-        self._blacklist = ClientGUIListBoxes.ListBoxTagsCensorship( blacklist_panel )
-        
-        self._blacklist_input = wx.TextCtrl( blacklist_panel, style = wx.TE_PROCESS_ENTER )
-        self._blacklist_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownBlacklist )
-        
-        add_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'add', self._AddBlacklist )
-        delete_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'delete', self._DeleteBlacklist )
-        blacklist_everything_button = ClientGUICommon.BetterButton( blacklist_panel, 'block everything', self._BlacklistEverything )
-        
-        #
-        
-        whitelist_panel = ClientGUICommon.StaticBox( self, 'except for these' )
-        
-        self._whitelist = ClientGUIListBoxes.ListBoxTagsCensorship( whitelist_panel )
-        
-        self._whitelist_input = wx.TextCtrl( whitelist_panel, style = wx.TE_PROCESS_ENTER )
-        self._whitelist_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownWhitelist )
-        
-        add_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'add', self._AddWhitelist )
-        delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'delete', self._DeleteWhitelist )
-        
-        #
-        
-        self._status_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ' )
-        
-        #
-        
-        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_BLACKLIST ]
-        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_WHITELIST ]
-        
-        self._blacklist.AddTags( blacklist_tag_slices )
-        self._whitelist.AddTags( whitelist_tag_slices )
-        
-        self._UpdateStatus()
-        
-        #
-        
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_hbox.Add( self._blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox.Add( add_blacklist_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( delete_blacklist_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( blacklist_everything_button, CC.FLAGS_VCENTER )
-        
-        blacklist_panel.Add( self._blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        blacklist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_hbox.Add( self._whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox.Add( add_whitelist_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( delete_whitelist_button, CC.FLAGS_VCENTER )
-        
-        whitelist_panel.Add( self._whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        whitelist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        
-        if message is not None:
-            
-            vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-        
-        vbox.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        #
-        
-        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
-        
-    
-    def _AddBlacklist( self ):
-        
-        tag_slice = self._blacklist_input.GetValue()
-        
-        self._blacklist.EnterTags( ( tag_slice, ) )
-        
-        self._whitelist.RemoveTags( ( tag_slice, ) )
-        
-        self._blacklist_input.SetValue( '' )
-        
-        self._UpdateStatus()
-        
-    
-    def _AddWhitelist( self ):
-        
-        tag_slice = self._whitelist_input.GetValue()
-        
-        self._whitelist.EnterTags( ( tag_slice, ) )
-        
-        self._blacklist.RemoveTags( ( tag_slice, ) )
-        
-        self._whitelist_input.SetValue( '' )
-        
-        self._UpdateStatus()
-        
-    
-    def _BlacklistEverything( self ):
-        
-        tag_slices = self._blacklist.GetClientData()
-        
-        self._blacklist.RemoveTags( tag_slices )
-        
-        self._blacklist.AddTags( ( '', ':' ) )
-        
-        self._UpdateStatus()
-        
-    
-    def _DeleteBlacklist( self ):
-        
-        selected_tag_slices = self._blacklist.GetSelectedTags()
-        
-        if len( selected_tag_slices ) > 0:
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._blacklist.RemoveTags( selected_tag_slices )
-                    
-                
-            
-        
-        self._UpdateStatus()
-        
-    
-    def _DeleteWhitelist( self ):
-        
-        selected_tag_slices = self._whitelist.GetSelectedTags()
-        
-        if len( selected_tag_slices ) > 0:
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._whitelist.RemoveTags( selected_tag_slices )
-                    
-                
-            
-        
-        self._UpdateStatus()
-        
-    
-    def _ShowHelp( self ):
-        
-        help = 'Here you can set rules to filter tags. By default, all tags will be allowed.'
-        help += os.linesep * 2
-        help += 'Add tags or classes of tag to the left to exclude them. Here are the formats accepted:'
-        help += os.linesep * 2
-        help += '"tag" or "namespace:tag" - just a single tag'
-        help += os.linesep
-        help += '"namespace:" - all instances of that namespace'
-        help += os.linesep
-        help += '":" - all namespaced tags'
-        help += os.linesep
-        help += '"" (i.e. an empty string) - all unnamespaced tags'
-        help += os.linesep * 2
-        help += 'If you want to ban all of a class of tag except for some specific cases, add those specifics on the right to create exceptions for them.'
-        help += os.linesep * 2
-        help += 'If you want to make this work like a whitelist, hit \'block everything\' (to block everything on the left) and then add what you do want on the right.'
-        
-        wx.MessageBox( help )
-        
-    
-    def _UpdateStatus( self ):
-        
-        tag_filter = self.GetValue()
-        
-        pretty_tag_filter = tag_filter.ToPermittedString()
-        
-        self._status_st.SetLabelText( 'currently keeping: ' + pretty_tag_filter )
-        
-    
-    def EventListBoxChanged( self, event ):
-        
-        self._UpdateStatus()
-        
-    
-    def EventKeyDownBlacklist( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            self._AddBlacklist()
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventKeyDownWhitelist( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            self._AddWhitelist()
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def GetValue( self ):
-        
-        tag_filter = ClientTags.TagFilter()
-        
-        for tag_slice in self._blacklist.GetClientData():
-            
-            tag_filter.SetRule( tag_slice, CC.FILTER_BLACKLIST )
-            
-        
-        for tag_slice in self._whitelist.GetClientData():
-            
-            tag_filter.SetRule( tag_slice, CC.FILTER_WHITELIST )
-            
-        
-        return tag_filter
-        
-    
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, namespaces, tag_import_options, show_downloader_options = True, allow_default_selection = False ):
+    def __init__( self, parent, tag_import_options, show_downloader_options = True, allow_default_selection = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -4204,13 +3866,11 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_blacklist = tag_import_options.GetTagBlacklist()
         
-        message = 'Blacklists are managed by the tag filtering object, which has an overcomplicated ui for this typically simple job.'
+        message = 'Any tag that this filter _excludes_ will be considered a blacklisted tag and will stop the file importing.'
         message += os.linesep * 2
-        message += 'Any tag that this filter excludes will be considered a blacklisted tag and will stop the file importing.'
-        message += os.linesep * 2
-        message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the left column and hit ok.'
+        message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the simple blacklist and hit ok. It is worth doing a small test, just to make sure it is all set up how you want.'
         
-        self._tag_filter_button = ClientGUICommon.TagFilterButton( downloader_options_panel, message, tag_blacklist, is_blacklist = True )
+        self._tag_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, is_blacklist = True )
         self._tag_filter_button.SetToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
         
         self._services_vbox = wx.BoxSizer( wx.VERTICAL )
@@ -4222,7 +3882,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
-        self._InitialiseServices( tag_import_options, namespaces, show_downloader_options )
+        self._InitialiseServices( tag_import_options, show_downloader_options )
         
         #
         
@@ -4282,11 +3942,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateIsDefault()
         
     
-    def _InitialiseServices( self, tag_import_options, namespaces, show_downloader_options ):
-        
-        namespaces = list( namespaces )
-        
-        namespaces.sort()
+    def _InitialiseServices( self, tag_import_options, show_downloader_options ):
         
         services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
         
@@ -4296,7 +3952,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
             
-            panel = EditServiceTagImportOptionsPanel( self._specific_options_panel, service_key, namespaces, service_tag_import_options, show_downloader_options = show_downloader_options )
+            panel = EditServiceTagImportOptionsPanel( self._specific_options_panel, service_key, service_tag_import_options, show_downloader_options = show_downloader_options )
             
             self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
             
@@ -4362,13 +4018,11 @@ Please note that you can set up the 'default' values for these tag import option
     
 class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, service_key, possible_namespaces, service_tag_import_options, show_downloader_options = True ):
+    def __init__( self, parent, service_key, service_tag_import_options, show_downloader_options = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._service_key = service_key
-        
-        self._namespaces_to_checkbox_info = {}
         
         name = HG.client_controller.services_manager.GetName( self._service_key )
         
@@ -4376,7 +4030,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( get_all, get_all_filter, namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter ) = service_tag_import_options.ToTuple()
+        ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter ) = service_tag_import_options.ToTuple()
         
         #
         
@@ -4388,61 +4042,29 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         downloader_options_panel = ClientGUICommon.StaticBox( main_box, 'tag parsing' )
         
-        if len( possible_namespaces ) > 0:
+        self._get_tags_checkbox = wx.CheckBox( downloader_options_panel, label = 'get tags' )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            label = 'get tags (works better than \'select all\' for the new downloader system)'
+            message = None
             
         else:
             
-            label = 'get tags'
+            message = 'Here you can filter which tags are applied to the files being imported in this context. This typically means those tags on a booru file page beside the file, but other contexts provide tags from different locations and quality.'
+            message += os.linesep * 2
+            message += 'The namespace checkboxes on the left are compiled from what all your current parsers say they can do and are simply for convenience. It is worth doing some smaller tests with a new download source to make sure you know what it can provide and what you actually want.'
+            message += os.linesep * 2
+            message += 'Once you are happy, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'. This tag filter can get complicated if you want it to--check the help button in the top-right for more information.'
             
         
-        self._get_all_checkbox = wx.CheckBox( downloader_options_panel, label = label )
-        
-        message = 'You can filter which tags are applied here. For instance, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'.'
-        message += os.linesep * 2
-        message += 'This panel can get pretty complicated--down to individual tags. You probably don\'t want the hassle of managing hundreds of individual tags in a whitelist here, but it is possible.'
-        message += os.linesep * 2
-        message += 'I recommend you stick to broad namespaces. The easy way to create a simple whitelist is to click \'block everything\' and then put in what you _want_ on the right.'
-        
-        self._get_all_filter_button = ClientGUICommon.TagFilterButton( downloader_options_panel, message, get_all_filter )
+        self._get_tags_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, get_tags_filter )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( self._get_all_checkbox, CC.FLAGS_VCENTER )
-        hbox.Add( self._get_all_filter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._get_tags_checkbox, CC.FLAGS_VCENTER )
+        hbox.Add( self._get_tags_filter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         downloader_options_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        if len( possible_namespaces ) == 1:
-            
-            downloader_options_panel.Add( ClientGUICommon.BetterStaticText( downloader_options_panel, '----' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-        elif len( possible_namespaces ) > 1:
-            
-            select_all_button = ClientGUICommon.BetterButton( downloader_options_panel, 'select all', self._SelectAll, True )
-            select_none_button = ClientGUICommon.BetterButton( downloader_options_panel, 'select none', self._SelectAll, False )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.Add( select_all_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.Add( select_none_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            downloader_options_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-        
-        for possible_namespace in possible_namespaces:
-            
-            label = ClientTags.RenderNamespaceForUser( possible_namespace )
-            
-            namespace_checkbox = wx.CheckBox( downloader_options_panel, label = label )
-            
-            namespace_checkbox.SetValue( possible_namespace in namespaces )
-            
-            self._namespaces_to_checkbox_info[ possible_namespace ] = namespace_checkbox
-            
-            downloader_options_panel.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
         
         #
         
@@ -4452,7 +4074,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._get_all_checkbox.SetValue( get_all )
+        self._get_tags_checkbox.SetValue( get_tags )
         
         #
         
@@ -4471,11 +4093,11 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.SetSizer( vbox )
         
-        self._UpdateGetAllCheckboxes()
+        self._UpdateGetTags()
         
         #
         
-        self._get_all_checkbox.Bind( wx.EVT_CHECKBOX, self.EventGetAllCheckbox )
+        self._get_tags_checkbox.Bind( wx.EVT_CHECKBOX, self.EventGetTagsCheckbox )
         
     
     def _DoAdditionalTags( self ):
@@ -4499,15 +4121,17 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit already-exist filter' ) as dlg:
             
-            message = 'If you do not want the \'only add tags that already exist\' option to apply to all tags coming in, set a filter here for the tags you _want_ to be exposed to this filter.'
+            namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+            
+            message = 'If you do not want the \'only add tags that already exist\' option to apply to all tags coming in, set a filter here for the tags you _want_ to be exposed to this test.'
             message += os.linesep * 2
-            message += 'For instance, if you only want the wash of messy unnamespaced tags to be filtered, then just add \':\' (for all namespaces) to the \'exclude\' box and you should be good.'
+            message += 'For instance, if you only want the wash of messy unnamespaced tags to be exposed to the test, then set a simple whitelist for only \'unnamespaced\'.'
             message += os.linesep * 2
             message += 'This is obviously a complicated idea, so make sure you test it on a small scale before you try anything big.'
             message += os.linesep * 2
             message += 'Clicking ok on this dialog will automatically turn on the already-exists filter if it is off.'
             
-            panel = EditTagFilterPanel( dlg, self._only_add_existing_tags_filter, message )
+            panel = ClientGUITags.EditTagFilterPanel( dlg, self._only_add_existing_tags_filter, namespaces = namespaces, message = message )
             
             dlg.SetPanel( panel )
             
@@ -4547,43 +4171,27 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return menu_items
         
     
-    def _SelectAll( self, value ):
+    def _UpdateGetTags( self ):
         
-        for checkbox in self._namespaces_to_checkbox_info.values():
-            
-            checkbox.SetValue( value )
-            
+        get_tags = self._get_tags_checkbox.GetValue()
         
-    
-    def _UpdateGetAllCheckboxes( self ):
+        should_enable_filter = get_tags
         
-        get_all = self._get_all_checkbox.GetValue()
-        
-        should_enable_filter = get_all
-        
-        self._get_all_filter_button.Enable( should_enable_filter )
-        
-        should_enable_checkboxes = not get_all
-        
-        for checkbox in self._namespaces_to_checkbox_info.values():
-            
-            checkbox.Enable( should_enable_checkboxes )
-            
+        self._get_tags_filter_button.Enable( should_enable_filter )
         
     
-    def EventGetAllCheckbox( self, event ):
+    def EventGetTagsCheckbox( self, event ):
         
-        self._UpdateGetAllCheckboxes()
+        self._UpdateGetTags()
         
     
     def GetValue( self ):
         
-        get_all = self._get_all_checkbox.GetValue()
-        namespaces = [ namespace for ( namespace, checkbox ) in self._namespaces_to_checkbox_info.items() if checkbox.GetValue() ]
+        get_tags = self._get_tags_checkbox.GetValue()
         
-        get_all_filter = self._get_all_filter_button.GetValue()
+        get_tags_filter = self._get_tags_filter_button.GetValue()
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = get_all, get_all_filter = get_all_filter, namespaces = namespaces, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter )
         
         return service_tag_import_options
         
@@ -4774,7 +4382,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         separator = self._separator.GetValue()
         example_tags = HydrusTags.CleanTags( HydrusText.DeserialiseNewlinedTexts( self._example_tags.GetValue() ) )
         
-        return ClientTags.TagSummaryGenerator( background_colour, text_colour, namespace_info, separator, example_tags, show )
+        return ClientGUITags.TagSummaryGenerator( background_colour, text_colour, namespace_info, separator, example_tags, show )
         
     
 class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):

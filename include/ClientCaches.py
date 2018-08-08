@@ -1686,6 +1686,8 @@ class ParsingCache( object ):
     
     def __init__( self ):
         
+        self._next_clean_cache_time = HydrusData.GetNow()
+        
         self._html_to_soups = {}
         self._json_to_jsons = {}
         
@@ -1694,22 +1696,27 @@ class ParsingCache( object ):
     
     def _CleanCache( self ):
         
-        for cache in ( self._html_to_soups, self._json_to_jsons ):
+        if HydrusData.TimeHasPassed( self._next_clean_cache_time ):
             
-            dead_datas = set()
-            
-            for ( data, ( last_accessed, parsed_object ) ) in cache.items():
+            for cache in ( self._html_to_soups, self._json_to_jsons ):
                 
-                if HydrusData.TimeHasPassed( last_accessed + 10 ):
+                dead_datas = set()
+                
+                for ( data, ( last_accessed, parsed_object ) ) in cache.items():
                     
-                    dead_datas.add( data )
+                    if HydrusData.TimeHasPassed( last_accessed + 10 ):
+                        
+                        dead_datas.add( data )
+                        
+                    
+                
+                for dead_data in dead_datas:
+                    
+                    del cache[ dead_data ]
                     
                 
             
-            for dead_data in dead_datas:
-                
-                del cache[ dead_data ]
-                
+            self._next_clean_cache_time = HydrusData.GetNow() + 5
             
         
     

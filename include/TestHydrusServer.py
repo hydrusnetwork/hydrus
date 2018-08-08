@@ -251,7 +251,7 @@ class TestServer( unittest.TestCase ):
         info[ 'timeout' ] = 0
         info[ 'hashes' ] = hashes
         
-        file_info_manager = ClientMedia.FileInfoManager( hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
+        file_info_manager = ClientMedia.FileInfoManager( 1, hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
         
         media_results = [ ClientMedia.MediaResult( file_info_manager, ClientMedia.TagsManager( {} ), ClientMedia.LocationsManager( set(), set(), set(), set() ), ClientRatings.RatingsManager( {} ) ) for hash in hashes ]
         

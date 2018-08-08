@@ -150,21 +150,6 @@ def ConvertURLIntoDomain( url ):
     
     return domain
     
-def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_tag_import_options, url_match ):
-    
-    url_type = url_match.GetURLType()
-    
-    if url_type not in url_types_to_guidance_tag_import_options:
-        
-        raise HydrusExceptions.URLMatchException( 'Could not find tag import options for that kind of URL Class!' )
-        
-    
-    guidance_tag_import_options = url_types_to_guidance_tag_import_options[ url_type ]
-    
-    tag_import_options = guidance_tag_import_options.DeriveTagImportOptionsFromSelf( namespaces )
-    
-    return tag_import_options
-    
 def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
     
     # domain is either the same or starts with www. or www2. or something
@@ -282,6 +267,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._parsers = HydrusSerialisable.SerialisableList()
         self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
         
+        self._parser_namespaces = []
+        
         self._url_match_keys_to_display = set()
         self._url_match_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
         
@@ -309,7 +296,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         if url_match is None or url_match.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
             
-            return self._file_post_default_tag_import_options.DeriveTagImportOptionsFromSelf( [] )
+            return self._file_post_default_tag_import_options
             
         
         try:
@@ -318,37 +305,32 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.URLMatchException:
             
-            return self._file_post_default_tag_import_options.DeriveTagImportOptionsFromSelf( [] )
+            return self._file_post_default_tag_import_options
             
         
         url_match_key = url_match.GetMatchKey()
         
         if url_match_key in self._url_match_keys_to_default_tag_import_options:
             
-            tag_import_options = self._url_match_keys_to_default_tag_import_options[ url_match_key ]
+            return self._url_match_keys_to_default_tag_import_options[ url_match_key ]
             
         else:
             
-            url_types_to_guidance_tag_import_options = {}
+            url_type = url_match.GetURLType()
             
-            url_types_to_guidance_tag_import_options[ HC.URL_TYPE_POST ] = self._file_post_default_tag_import_options
-            url_types_to_guidance_tag_import_options[ HC.URL_TYPE_WATCHABLE ] = self._watchable_default_tag_import_options
+            if url_type == HC.URL_TYPE_POST:
+                
+                return self._file_post_default_tag_import_options
+                
+            elif url_type == HC.URL_TYPE_WATCHABLE:
+                
+                return self._watchable_default_tag_import_options
+                
+            else:
+                
+                raise HydrusExceptions.URLMatchException( 'Could not find tag import options for that kind of URL Class!' )
+                
             
-            try:
-                
-                ( url_to_fetch, parser ) = self._GetURLToFetchAndParser( url )
-                
-                namespaces = parser.GetNamespaces()
-                
-            except HydrusExceptions.URLMatchException:
-                
-                namespaces = []
-                
-            
-            tag_import_options = DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_tag_import_options, url_match )
-            
-        
-        return tag_import_options
         
     
     def _GetNormalisedAPIURLMatchAndURL( self, url ):
@@ -528,6 +510,17 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._parser_keys_to_parsers[ parser.GetParserKey() ] = parser
             
         
+        namespaces = set()
+        
+        for parser in self._parsers:
+            
+            namespaces.update( parser.GetNamespaces() )
+            
+        
+        self._parser_namespaces = list( namespaces )
+        
+        self._parser_namespaces.sort()
+        
     
     def _SetDirty( self ):
         
@@ -656,9 +649,12 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 if url_match is None:
                     
-                    domain = ConvertURLIntoDomain( url )
-                    
-                    url_tuples.append( ( domain, url ) )
+                    if False:
+                        
+                        domain = ConvertURLIntoDomain( url )
+                        
+                        url_tuples.append( ( domain, url ) )
+                        
                     
                 else:
                     
@@ -804,6 +800,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return list( self._parsers )
+            
+        
+    
+    def GetParserNamespaces( self ):
+        
+        with self._lock:
+            
+            return list( self._parser_namespaces )
             
         
     

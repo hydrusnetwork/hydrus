@@ -1916,6 +1916,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
             ClientGUIMenus.AppendMenuItem( self, debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._DebugSimulateWakeFromSleepEvent )
             
             ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
@@ -3134,9 +3135,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             else:
                 
-                list_of_tuples = [ ( service.GetName(), service ) for service in ipfs_services ]
+                choice_tuples = [ ( service.GetName(), service ) for service in ipfs_services ]
                 
-                with ClientGUIDialogs.DialogSelectFromList( self, 'Select which IPFS Daemon', list_of_tuples ) as dlg:
+                with ClientGUIDialogs.DialogSelectFromList( self, 'Select which IPFS Daemon', choice_tuples ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
@@ -3214,6 +3215,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.network_report_mode = not HG.network_report_mode
             
+        elif name == 'pubsub_profile_mode':
+            
+            HG.pubsub_profile_mode = not HG.pubsub_profile_mode
+            
         elif name == 'shortcut_report_mode':
             
             HG.shortcut_report_mode = not HG.shortcut_report_mode
@@ -3222,9 +3227,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.subscription_report_mode = not HG.subscription_report_mode
             
-        elif name == 'pubsub_profile_mode':
+        elif name == 'thumbnail_debug_mode':
             
-            HG.pubsub_profile_mode = not HG.pubsub_profile_mode
+            HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
             
         elif name == 'ui_timer_profile_mode':
             

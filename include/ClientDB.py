@@ -3592,7 +3592,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_id = self._GetHashId( hash )
             
-            result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            result = self._c.execute( 'SELECT 1 FROM current_files WHERE hash_id = ? AND service_id = ?;', ( hash_id, service_id ) ).fetchone()
             
             if result is not None:
                 
@@ -5536,7 +5536,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
         
-        hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
+        hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
         
         hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN %s;', hash_ids ) ) )
         
@@ -5681,7 +5681,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                file_info_manager = ClientMedia.FileInfoManager( hash )
+                file_info_manager = ClientMedia.FileInfoManager( hash_id, hash )
                 
             
             media_results.append( ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager ) )
@@ -6943,7 +6943,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._AddFiles( self._local_file_service_id, [ ( hash_id, timestamp ) ] )
             
-            file_info_manager = ClientMedia.FileInfoManager( hash, size, mime, width, height, duration, num_frames, num_words )
+            file_info_manager = ClientMedia.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, num_words )
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, timestamp ) )
             
@@ -7095,11 +7095,38 @@ class DB( HydrusDB.HydrusDB ):
         self._db_filenames[ 'external_master' ] = 'client.master.db'
         
     
-    def _InInbox( self, hash ):
+    def _InInbox( self, hash_param ):
         
-        hash_id = self._GetHashId( hash )
-        
-        return hash_id in self._inbox_hash_ids
+        if isinstance( hash_param, str ):
+            
+            hash = hash_param
+            
+            hash_id = self._GetHashId( hash )
+            
+            return hash_id in self._inbox_hash_ids
+            
+        elif isinstance( hash_param, ( list, tuple, set ) ):
+            
+            hashes = hash_param
+            
+            inbox_hashes = []
+            
+            for hash in hashes:
+                
+                hash_id = self._GetHashId( hash )
+                
+                if hash_id in self._inbox_hash_ids:
+                    
+                    inbox_hashes.append( hash )
+                    
+                
+            
+            return inbox_hashes
+            
+        else:
+            
+            raise NotImplementedError( 'Did not understand hashes parameter!' )
+            
         
     
     def _IsAnOrphan( self, test_type, possible_hash ):
@@ -7443,9 +7470,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 ( file_info_manager, timestamp ) = row
                                 
-                                ( hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
-                                
-                                hash_id = self._GetHashId( hash )
+                                ( hash_id, hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
                                 
                                 self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ] )
                                 
@@ -7453,7 +7478,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 ( file_info_manager, multihash ) = row
                                 
-                                hash_id = self._GetHashId( file_info_manager.hash )
+                                hash_id = file_info_manager.hash_id
                                 
                                 self._SetServiceFilename( service_id, hash_id, multihash )
                                 
@@ -10706,6 +10731,40 @@ class DB( HydrusDB.HydrusDB ):
             message = 'All gallery import pages have been converted to multi-gallery import pages! The UI is significantly different, and everything converted from your old pages should start paused. If you are lost, please check out the v316 release post!'
             
             self.pub_initial_message( message )
+            
+        
+        if version == 316:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( ( 'imgur media page api', 'imgur media page', 'imgur single media page', 'imgur tagged media page', 'imgur subreddit single media page', 'derpibooru file page' ) )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'imgur single or subreddit parser', 'imgur media page api parser', 'derpibooru.org file page parser' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

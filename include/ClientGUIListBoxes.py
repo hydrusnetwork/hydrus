@@ -105,13 +105,18 @@ class AddEditDeleteListBox( wx.Panel ):
         
         choice_tuples = [ ( self._data_to_pretty_callable( default ), default, selected ) for default in defaults ]
         
-        import ClientGUIDialogs
+        import ClientGUITopLevelWindows
+        import ClientGUIScrolledPanelsEdit
         
-        with ClientGUIDialogs.DialogCheckFromList( self, 'select the defaults to add', choice_tuples ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                defaults_to_add = dlg.GetChecked()
+                defaults_to_add = panel.GetValue()
                 
                 for default in defaults_to_add:
                     
@@ -2147,6 +2152,13 @@ class ListBoxTagsACWrite( ListBoxTagsAC ):
     
 class ListBoxTagsCensorship( ListBoxTags ):
     
+    def __init__( self, parent, removed_callable = None ):
+        
+        ListBoxTags.__init__( self, parent )
+        
+        self._removed_callable = removed_callable
+        
+    
     def _Activate( self ):
         
         if len( self._selected_terms ) > 0:
@@ -2156,6 +2168,11 @@ class ListBoxTagsCensorship( ListBoxTags ):
             for tag in tags:
                 
                 self._RemoveTerm( tag )
+                
+            
+            if self._removed_callable is not None:
+                
+                self._removed_callable( tags )
                 
             
             self._ordered_terms.sort()
@@ -2228,6 +2245,13 @@ class ListBoxTagsCensorship( ListBoxTags ):
         self._ordered_terms.sort()
         
         self._DataHasChanged()
+        
+    
+    def SetTags( self, tags ):
+        
+        self._Clear()
+        
+        self.AddTags( tags )
         
     
 class ListBoxTagsColourOptions( ListBoxTags ):

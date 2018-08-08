@@ -2477,7 +2477,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, [], tag_import_options, show_downloader_options = False )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, tag_import_options, show_downloader_options = False )
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._tag_box )
         

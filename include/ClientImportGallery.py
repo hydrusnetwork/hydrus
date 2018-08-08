@@ -1070,6 +1070,8 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         self._status_cache = None
         self._status_cache_generation_time = 0
         
+        self._last_time_imports_changed = HydrusData.GetNowPrecise()
+        
         self._last_pubbed_value_range = ( 0, 0 )
         self._next_pub_value_check_time = 0
         
@@ -1081,8 +1083,9 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         gallery_import.PublishToPage( False )
         gallery_import.Repage( self._page_key )
         
-        
         self._gallery_imports.append( gallery_import )
+        
+        self._last_time_imports_changed = HydrusData.GetNowPrecise()
         
         gallery_import_key = gallery_import.GetGalleryImportKey()
         
@@ -1161,6 +1164,8 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         gallery_import.Repage( 'dead page key' )
         
         self._gallery_imports.remove( gallery_import )
+        
+        self._last_time_imports_changed = HydrusData.GetNowPrecise()
         
         del self._gallery_import_keys_to_gallery_imports[ gallery_import_key ]
         
@@ -1302,14 +1307,6 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetGalleryImportKeys( self ):
-        
-        with self._lock:
-            
-            return set( self._gallery_import_keys_to_gallery_imports.keys() )
-            
-        
-    
     def GetHighlightedGalleryImport( self ):
         
         with self._lock:
@@ -1325,6 +1322,22 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 
             
             return None
+            
+        
+    
+    def GetLastTimeImportsChanged( self ):
+        
+        with self._lock:
+            
+            return self._last_time_imports_changed
+            
+        
+    
+    def GetNumGalleryImports( self ):
+        
+        with self._lock:
+            
+            return len( self._gallery_imports )
             
         
     
@@ -1373,6 +1386,8 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
     
     def PendQuery( self, query ):
         
+        created_import = None
+        
         with self._lock:
             
             gallery_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( self._gallery_identifier )
@@ -1394,11 +1409,18 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._AddGalleryImport( gallery_import )
                 
+                if created_import is None:
+                    
+                    created_import = gallery_import
+                    
+                
             
             ClientImporting.WakeRepeatingJob( self._importers_repeating_job )
             
             self._SetDirty()
             
+        
+        return created_import
         
     
     def RemoveGalleryImport( self, gallery_import_key ):

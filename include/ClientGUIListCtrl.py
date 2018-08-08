@@ -521,7 +521,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        ( total_width, height ) = ClientGUICommon.ConvertTextToPixels( self, ( sizing_column_initial_width_num_chars, height_num_chars + 2 ) ) # +2 for the header
+        total_width = ClientGUICommon.ConvertTextToPixelWidth( self, sizing_column_initial_width_num_chars )
         
         resize_column = 1
         
@@ -545,7 +545,9 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self.setResizeColumn( resize_column )
         
-        self.SetInitialSize( ( total_width, height ) )
+        self.SetInitialSize( ( total_width, -1 ) )
+        
+        self.GrowShrinkColumnsHeight( height_num_chars )
         
         self._delete_key_callback = delete_key_callback
         self._activation_callback = activation_callback
@@ -909,6 +911,17 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
         
     
+    def GrowShrinkColumnsHeight( self, ideal_rows ):
+        
+        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
+        
+        existing_min_width = self.GetMinClientSize()[0]
+        
+        ( width_gumpf, ideal_client_height ) = ClientGUICommon.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
+        
+        self.SetMinClientSize( ( existing_min_width, ideal_client_height ) )
+        
+    
     def Sort( self, col = None, asc = None ):
         
         if col is not None:
@@ -1028,13 +1041,18 @@ class BetterListCtrlPanel( wx.Panel ):
         
         choice_tuples = [ ( default.GetName(), default, selected ) for default in defaults ]
         
-        import ClientGUIDialogs
+        import ClientGUITopLevelWindows
+        import ClientGUIScrolledPanelsEdit
         
-        with ClientGUIDialogs.DialogCheckFromList( self, 'select the defaults to add', choice_tuples ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                defaults_to_add = dlg.GetChecked()
+                defaults_to_add = panel.GetValue()
                 
                 for default in defaults_to_add:
                     
@@ -1056,6 +1074,8 @@ class BetterListCtrlPanel( wx.Panel ):
             
             self._ImportObject( dupe_data )
             
+        
+        self._listctrl.Sort()
         
     
     def _ExportToClipboard( self ):
@@ -1370,6 +1390,8 @@ class BetterListCtrlPanel( wx.Panel ):
             if dlg.ShowModal() == wx.ID_YES:
                 
                 self._ImportPngs( paths )
+                
+                self._listctrl.Sort()
                 
             
         

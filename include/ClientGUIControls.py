@@ -547,10 +547,7 @@ class NetworkJobControl( wx.Panel ):
         self._left_text = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
         self._right_text = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT )
         
-        # 512/768KB - 200KB/s
-        right_width = ClientGUICommon.ConvertTextToPixelWidth( self._right_text, 20 )
-        
-        self._right_text.SetMinSize( ( right_width, -1 ) )
+        self._last_right_min_width = ( -1, -1 )
         
         self._gauge = ClientGUICommon.Gauge( self )
         
@@ -646,9 +643,9 @@ class NetworkJobControl( wx.Panel ):
                 self._download_started = True
                 
             
+            speed_text = ''
+            
             if self._download_started and not self._network_job.HasError():
-                
-                speed_text = ''
                 
                 if bytes_read is not None:
                     
@@ -667,11 +664,20 @@ class NetworkJobControl( wx.Panel ):
                     speed_text += ' ' + HydrusData.ConvertIntToBytes( current_speed ) + '/s'
                     
                 
-                self._right_text.SetLabelText( speed_text )
+            
+            self._right_text.SetLabelText( speed_text )
+            
+            right_width = ClientGUICommon.ConvertTextToPixelWidth( self._right_text, len( speed_text ) )
+            
+            right_min_size = ( right_width, -1 )
+            
+            if right_min_size != self._last_right_min_width:
                 
-            else:
+                self._last_right_min_width = right_min_size
                 
-                self._right_text.SetLabelText( '' )
+                self._right_text.SetMinSize( right_min_size )
+                
+                self.Layout()
                 
             
             self._gauge.SetRange( bytes_to_read )
@@ -812,9 +818,10 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
 class TextAndPasteCtrl( wx.Panel ):
     
-    def __init__( self, parent, add_callable ):
+    def __init__( self, parent, add_callable, allow_empty_input = False ):
         
         self._add_callable = add_callable
+        self._allow_empty_input = allow_empty_input
         
         wx.Panel.__init__( self, parent )
         
@@ -840,7 +847,12 @@ class TextAndPasteCtrl( wx.Panel ):
         
         try:
             
-            texts = [ text for text in HydrusText.DeserialiseNewlinedTexts( raw_text ) if text != '' ]
+            texts = [ text for text in HydrusText.DeserialiseNewlinedTexts( raw_text ) ]
+            
+            if not self._allow_empty_input:
+                
+                texts = [ text for text in texts if text != '' ]
+                
             
             if len( texts ) > 0:
                 
@@ -861,10 +873,12 @@ class TextAndPasteCtrl( wx.Panel ):
             
             text = self._text_input.GetValue()
             
-            if text != '':
+            if not self._allow_empty_input and text == '':
                 
-                self._add_callable( ( text, ) )
+                return
                 
+            
+            self._add_callable( ( text, ) )
             
             self._text_input.SetValue( '' )
             

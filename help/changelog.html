@@ -8,6 +8,58 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 317</h3></li>
+				<ul>
+					<li>completely overhauled the tag filter panel:</li>
+					<li>the tag filter panel now has 'whitelist' and 'blacklist' pages beside the old 'advanced' sub-panel. these new simple pages are much more human friendly for common workflows and provide easy-select checkboxes for namespace classes (which are compiled from all the namespaces your parsers can currently do)</li>
+					<li>the tag filter rule entering workflow now stops you from creating overcomplicated rulesets: when adding a blacklist rule, it will now only add an explicit entry if it is not already blocked by a higher rule (otherwise it will just discard from whitelist, if there)--and when adding a whitelist rule, it will now only add an explicit entry if it is already blocked by a higher blacklist rule (otherwise it will just discard from blacklist, if there)</li>
+					<li>tag filters now provide more human-friendly summary statements</li>
+					<li>misc improvements to tag filter ui logic</li>
+					<li>the various help texts surrounding the tag filter panel all got passes</li>
+					<li>the tag filter panel now uses text-and-paste controls for mass-adding of tags</li>
+					<li>namespace checkboxes have been completely removed from the tag import options panel and various other related places. any existing TIO with checked namespaces will be automatically updated to 'get tags' with an appropriate filter. this is an important step in the rewrite--everything is now handled in the new tag filter panel</li>
+					<li>simplified and sped up the actual tag filtering code</li>
+					<li>.</li>
+					<li>numerous multi-importer improvements:</li>
+					<li>the gallery and watcher page lists will now ~dynamically~ resize in height based on number of entries, from roughly four columns to twenty four. this relayout code somehow seems to work on all platforms</li>
+					<li>sped up the 'results loading' step of gallery/watcher highlighting immensely--on a typical list of a couple hundred files, it should now be about 50ms total (before, depending on presentation rules, it could be 0.8-3s)</li>
+					<li>added an additional db-skipping optimisation for calculating presentation status</li>
+					<li>watcher and gallery highlights will now filter out trash and completely deleted files (the ones that appear with a dark default 'hydrus' icon) on reloads</li>
+					<li>added two checkboxes to options->downloading for 'if nothing is highlighted when I add a new X, highlight that new X' for watchers and galleries</li>
+					<li>adding or removing a query or watcher from the new multi-lists should now be reflected in the list ui instantly, rather than after a <=1s delay</li>
+					<li>added url classes and parsers for imgur single and multiple urls--thanks to the community for providing some examples</li>
+					<li>added url class and parser for derpibooru single file pages--again thanks to the community. derpibooru hence now supports basic drag and drop import</li>
+					<li>fixed an issue where the watcher was often still checking despite 404 status</li>
+					<li>watchers and galleries use a little less CPU to update some of their ui</li>
+					<li>added simple subsidiary page parsing support to file import objects (previously, this only worked in the gallery log)</li>
+					<li>.</li>
+					<li>gave the thumbnail scrolling code a pass--it is now a bit cleverer about drawing and uses a larger number of smaller 'tile' bmps rather than pages</li>
+					<li>added an 'EXPERIMENTAL' option to options->gui to change the number of thumbnails each scroll tick scrolls. it defaults to 1.0, but you _should_ be able to set 0.5, 0.37, whatever. please report any bugs!</li>
+					<li>added a thumbnail debug mode to help see the new thumbnail layout boundaries</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the max subscription file limits are now 10,000 for users in advanced mode</li>
+					<li>the default subs initial/periodic limit is now 100/100 (bumped up from 100/50)</li>
+					<li>the file import dialog now has a little cog icon to change whether human sort is applied on path addition events (for e.g. if you want to add in some date order from an explorer window)</li>
+					<li>humansort now sorts case-insensitive</li>
+					<li>by default, unmatched urls will no longer display in the top-right of the media viewer. see how you like this and let me know if you would like an option to put them back</li>
+					<li>the speed text on the right-side of the network job control now dynamically resizes to its min size, which gives the text on the left side (where it is often cut off, saying 'overriding bandwidth ...') more space when available</li>
+					<li>I think I fixed an issue where the popup frame could spam-resize in odd ways (such as growing a pixel wider every update tick)</li>
+					<li>watchers will no longer include the '* ' highlight prefix in subject-based sort comparisons</li>
+					<li>in prep for an eventual major code refactoring, the thumbnails' underlying media object now stores a faster db-based numeric file identifier</li>
+					<li>'duplicate' calls on the new listctrl will now insert the dupes in the current correct sort location, rather than tacking them on the end</li>
+					<li>drag and drop imports to the new listctrl will also now insert like this</li>
+					<li>caught up edit subscriptions panel to the finalised common listctrl panel code, including the import/export/duplicate buttons</li>
+					<li>the multiple checkboxlist selection dialog now sorts by label</li>
+					<li>converted all old checkboxlist dialogs to the new panel system</li>
+					<li>massively sped up certain kinds of parsing that were wasting time hitting a cache test way too often</li>
+					<li>fixed an old hash filtering system</li>
+					<li>moved to a simpler and more stable way of calculating certain text extents</li>
+					<li>fixed an issue where the include directory (which has the original source, which isn't a big deal but is nice to have) wasn't being correctly copied into the linux build</li>
+					<li>the os x .tar.gz build now has the include directory</li>
+					<li>refactored some client tags code around</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 316</h3></li>
 				<ul>
 					<li>gallery:</li>

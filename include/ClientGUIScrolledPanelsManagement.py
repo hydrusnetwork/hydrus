@@ -149,9 +149,9 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         deletee_title = deletee_account_type.GetTitle()
                         
-                        list_of_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
+                        choice_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
                         
-                        with ClientGUIDialogs.DialogSelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', list_of_tuples ) as dlg:
+                        with ClientGUIDialogs.DialogSelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', choice_tuples ) as dlg:
                             
                             if dlg.ShowModal() == wx.ID_OK:
                                 
@@ -529,13 +529,17 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     archive_namespaces.sort()
                     
-                    list_of_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in archive_namespaces ]
+                    choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in archive_namespaces ]
                     
-                    with ClientGUIDialogs.DialogCheckFromList( self, 'Select namespaces', list_of_tuples ) as dlg:
+                    with ClientGUITopLevelWindows.DialogEdit( self, 'select namespaces' ) as dlg:
+                        
+                        panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+                        
+                        dlg.SetPanel( panel )
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            namespaces = dlg.GetChecked()
+                            namespaces = panel.GetValue()
                             
                         else:
                             
@@ -573,13 +577,17 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 archive_namespaces.sort()
                 
-                list_of_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, namespace in existing_namespaces ) for namespace in archive_namespaces ]
+                choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, namespace in existing_namespaces ) for namespace in archive_namespaces ]
                 
-                with ClientGUIDialogs.DialogCheckFromList( self, 'Select namespaces', list_of_tuples ) as dlg:
+                with ClientGUITopLevelWindows.DialogEdit( self, 'select namespaces' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+                    
+                    dlg.SetPanel( panel )
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        namespaces = dlg.GetChecked()
+                        namespaces = panel.GetValue()
                         
                     else:
                         
@@ -1704,6 +1712,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._gallery_page_wait_period_pages = wx.SpinCtrl( gallery_downloader, min = 1, max = 120 )
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, none_phrase = 'no limit', min = 1, max = 1000000 )
             
+            self._highlight_new_query = wx.CheckBox( gallery_downloader )
+            
             #
             
             subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
@@ -1721,6 +1731,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             watchers = ClientGUICommon.StaticBox( self, 'watchers' )
+            
+            self._highlight_new_watcher = wx.CheckBox( watchers )
             
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
             
@@ -1750,6 +1762,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._gallery_page_wait_period_pages.SetToolTip( gallery_page_tt )
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
+            self._highlight_new_query.SetValue( self._new_options.GetBoolean( 'highlight_new_query' ) )
+            
             self._gallery_page_wait_period_subscriptions.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_subscriptions' ) )
             self._gallery_page_wait_period_subscriptions.SetToolTip( gallery_page_tt )
             self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
@@ -1757,10 +1771,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_deleted_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
             
+            self._highlight_new_watcher.SetValue( self._new_options.GetBoolean( 'highlight_new_watcher' ) )
+            
             #
             
             rows = []
             
+            rows.append( ( 'If new query entered and no current highlight, highlight the new query:', self._highlight_new_query ) )
             rows.append( ( 'Additional fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_pages ) )
             rows.append( ( 'By default, stop searching once this many files are found:', self._gallery_file_limit ) )
             
@@ -1783,6 +1800,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            rows = []
+            
+            rows.append( ( 'If new watcher entered and no current highlight, highlight the new watcher:', self._highlight_new_watcher ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
+            
+            watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             watchers.Add( self._watcher_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -1811,10 +1835,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'gallery_page_wait_period_pages', self._gallery_page_wait_period_pages.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
+            self._new_options.SetBoolean( 'highlight_new_query', self._highlight_new_query.GetValue() )
             
             self._new_options.SetInteger( 'gallery_page_wait_period_subscriptions', self._gallery_page_wait_period_subscriptions.GetValue() )
             self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.GetValue() )
             self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
+            
+            self._new_options.SetBoolean( 'highlight_new_watcher', self._highlight_new_watcher.GetValue() )
             
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
@@ -2471,6 +2498,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_message_force_min_width = wx.CheckBox( self )
             
+            self._thumbnail_scroll_rate = wx.TextCtrl( self )
+            
             self._thumbnail_fill = wx.CheckBox( self )
             
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
@@ -2558,6 +2587,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_message_force_min_width.SetValue( self._new_options.GetBoolean( 'popup_message_force_min_width' ) )
             
+            self._thumbnail_scroll_rate.SetValue( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
+            
             self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
             
             self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
@@ -2604,6 +2635,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
+            rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
@@ -2709,6 +2741,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
             HG.client_controller.pub( 'main_gui_title', title )
+            
+            try:
+                
+                thumbnail_scroll_rate = self._thumbnail_scroll_rate.GetValue()
+                
+                float( thumbnail_scroll_rate )
+                
+                self._new_options.SetString( 'thumbnail_scroll_rate', thumbnail_scroll_rate )
+                
+            except:
+                
+                pass
+                
             
             self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.GetValue() )
             

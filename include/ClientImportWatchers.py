@@ -62,6 +62,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._AddWatcher( watcher )
             
         
+        self._last_time_watchers_changed = HydrusData.GetNowPrecise()
+        
         self._last_pubbed_value_range = ( 0, 0 )
         self._next_pub_value_check_time = 0
         
@@ -72,6 +74,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         watcher.Repage( self._page_key )
         
         self._watchers.append( watcher )
+        
+        self._last_time_watchers_changed = HydrusData.GetNowPrecise()
         
         watcher_key = watcher.GetWatcherKey()
         
@@ -150,6 +154,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._watchers.remove( watcher )
         
+        self._last_time_watchers_changed = HydrusData.GetNowPrecise()
+        
         del self._watcher_keys_to_watchers[ watcher_key ]
         
     
@@ -195,7 +201,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if url == '':
             
-            return
+            return None
             
         
         with self._lock:
@@ -208,7 +214,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._watcher_keys_to_already_in_timestamps[ watcher_key ] = HydrusData.GetNow()
                     
-                    return
+                    return None
                     
                 
             
@@ -226,6 +232,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._AddWatcher( watcher )
             
+        
+        return watcher
         
     
     def AddWatcher( self, watcher ):
@@ -259,11 +267,27 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetLastTimeWatchersChanged( self ):
+        
+        with self._lock:
+            
+            return self._last_time_watchers_changed
+            
+        
+    
     def GetNumDead( self ):
         
         with self._lock:
             
             return len( [ watcher for watcher in self._watchers if watcher.IsDead() ] )
+            
+        
+    
+    def GetNumWatchers( self ):
+        
+        with self._lock:
+            
+            return len( self._watchers )
             
         
     
@@ -315,14 +339,6 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return list( self._watchers )
-            
-        
-    
-    def GetWatcherKeys( self ):
-        
-        with self._lock:
-            
-            return set( self._watcher_keys_to_watchers.keys() )
             
         
     
@@ -587,6 +603,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 with self._lock:
                     
+                    self._checking_paused = True
+                    
                     self._checking_status = ClientImporting.CHECKER_STATUS_404
                     
                 
@@ -717,14 +735,17 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                if self._checking_status != ClientImporting.CHECKER_STATUS_404:
+                if self._checking_status == ClientImporting.CHECKER_STATUS_OK:
                     
                     if self._checker_options.IsDead( self._file_seed_cache, self._last_check_time ):
                         
                         self._checking_status = ClientImporting.CHECKER_STATUS_DEAD
                         
-                        self._checking_paused = True
-                        
+                    
+                
+                if self._checking_status != ClientImporting.CHECKER_STATUS_OK:
+                    
+                    self._checking_paused = True
                     
                 
                 last_next_check_time = self._next_check_time
@@ -1252,7 +1273,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            able_to_check = self._HasURL() and not self._checking_paused
+            able_to_check = self._checking_status == ClientImporting.CHECKER_STATUS_OK and self._HasURL() and not self._checking_paused
             check_due = HydrusData.TimeHasPassed( self._next_check_time )
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )

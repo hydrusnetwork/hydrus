@@ -649,7 +649,7 @@ def HumanTextSort( texts ):
     
     convert = lambda text: int( text ) if text.isdigit() else text
     
-    alphanum = lambda key: [ convert( c ) for c in re.split( '([0-9]+)', key ) ]
+    alphanum = lambda key: [ convert( c ) for c in re.split( '([0-9]+)', key.lower() ) ]
     
     texts.sort( key = alphanum ) 
     
@@ -892,7 +892,7 @@ def Profile( summary, code, g, l, min_duration_ms = 20 ):
         
     else:
         
-        summary += ' - It took ' + ToHumanInt( time_took_ms ) + 'ms.'
+        summary += ' - It took ' + TimeDeltaToPrettyTimeDelta( time_took ) + '.'
         
         details = ''
         
@@ -1477,6 +1477,8 @@ class JobDatabase( object ):
     
     def GetResult( self ):
         
+        time.sleep( 0.00001 ) # this one neat trick can save hassle on superquick jobs as event.wait can be laggy
+        
         while True:
             
             if self._result_ready.wait( 2 ) == True:
@@ -1506,7 +1508,10 @@ class JobDatabase( object ):
         return self._type
         
     
-    def IsSynchronous( self ): return self._synchronous
+    def IsSynchronous( self ):
+        
+        return self._synchronous
+        
     
     def PutResult( self, result ):
         

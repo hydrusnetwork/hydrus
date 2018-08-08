@@ -433,7 +433,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_blacklist.SetRule( 'series:', CC.FILTER_BLACKLIST )
         
-        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_all = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : ClientImportOptions.ServiceTagImportOptions( get_tags = True ) }
         
         tag_import_options = ClientImportOptions.TagImportOptions( tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
@@ -461,23 +461,21 @@ class TestTagImportOptions( unittest.TestCase ):
         
         service_keys_to_service_tag_import_options = {}
         
-        service_keys_to_service_tag_import_options[ example_service_key_1 ] = ClientImportOptions.ServiceTagImportOptions( get_all = True )
-        service_keys_to_service_tag_import_options[ example_service_key_2 ] = ClientImportOptions.ServiceTagImportOptions( namespaces = [ 'character' ] )
+        service_keys_to_service_tag_import_options[ example_service_key_1 ] = ClientImportOptions.ServiceTagImportOptions( get_tags = True )
+        service_keys_to_service_tag_import_options[ example_service_key_2 ] = ClientImportOptions.ServiceTagImportOptions( get_tags = False )
         
         tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetServiceKeysToContentUpdates( CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags )
         
         self.assertIn( example_service_key_1, result )
-        self.assertIn( example_service_key_2, result )
+        self.assertNotIn( example_service_key_2, result )
         
         self.assertTrue( len( result ), 2 )
         
         content_updates_1 = result[ example_service_key_1 ]
-        content_updates_2 = result[ example_service_key_2 ]
         
         self.assertEqual( len( content_updates_1 ), 3 )
-        self.assertEqual( len( content_updates_2 ), 1 )
         
 
 class TestServiceTagImportOptions( unittest.TestCase ):
@@ -492,8 +490,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         default_service_tag_import_options = ClientImportOptions.ServiceTagImportOptions()
         
-        self.assertEqual( default_service_tag_import_options._get_all, False )
-        self.assertEqual( default_service_tag_import_options._namespaces, [] )
+        self.assertEqual( default_service_tag_import_options._get_tags, False )
         self.assertEqual( default_service_tag_import_options._additional_tags, [] )
         self.assertEqual( default_service_tag_import_options._to_new_files, True )
         self.assertEqual( default_service_tag_import_options._to_already_in_inbox, True )
@@ -503,7 +500,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         self.assertEqual( default_service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
         
     
-    def test_get_all_filtering( self ):
+    def test_get_tags_filtering( self ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
@@ -511,7 +508,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags )
         
@@ -521,7 +518,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         only_namespaced.SetRule( '', CC.FILTER_BLACKLIST )
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, get_all_filter = only_namespaced )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'character:samus aran', 'series:metroid' } )
         
@@ -533,34 +530,9 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         only_samus.SetRule( ':', CC.FILTER_BLACKLIST )
         only_samus.SetRule( 'character:samus aran', CC.FILTER_WHITELIST )
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, get_all_filter = only_samus )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'character:samus aran' } )
-        
-    
-    def test_namespace_filtering( self ):
-        
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
-        example_hash = HydrusData.GenerateKey()
-        example_service_key = HydrusData.GenerateKey()
-        
-        #
-        
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True )
-        
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags )
-        
-        #
-        
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( namespaces = [ '', 'character' ] )
-        
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'bodysuit', 'character:samus aran' } )
-        
-        #
-        
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( namespaces = [] )
-        
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
         
     
     def test_additional( self ):
@@ -571,7 +543,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, additional_tags = [ 'wew' ] )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = [ 'wew' ] )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags.union( [ 'wew' ] ) )
         
@@ -584,7 +556,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True, example_hash, some_tags ), set() )
@@ -592,7 +564,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True, example_hash, some_tags ), some_tags )
@@ -600,7 +572,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True, example_hash, some_tags ), set() )
@@ -618,7 +590,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, only_add_existing_tags = True )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), existing_tags )
         
@@ -633,7 +605,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         

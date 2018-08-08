@@ -17,6 +17,7 @@ import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingContexts
 import ClientPaths
+import ClientGUITags
 import ClientTags
 import ClientThreading
 import collections
@@ -202,7 +203,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def ExportToHTA( self ):
         
-        ClientTags.ExportToHTA( self, self._service_key, self._hashes )
+        ClientGUITags.ExportToHTA( self, self._service_key, self._hashes )
         
     
     def Go( self ):
@@ -303,7 +304,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 path = HydrusData.ToUnicode( dlg_file.GetPath() )
                 
-                ClientTags.ImportFromHTA( self, path, self._service_key, self._hashes )
+                ClientGUITags.ImportFromHTA( self, path, self._service_key, self._hashes )
                 
             
         
@@ -1831,15 +1832,17 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             tag_services = services_manager.GetServices( HC.TAG_SERVICES )
             
-            list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
+            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
             
-            list_of_tuples.sort()
-            
-            with ClientGUIDialogs.DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
+            with ClientGUITopLevelWindows.DialogEdit( self, 'select tag services' ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+                
+                dlg.SetPanel( panel )
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    self._neighbouring_txt_tag_service_keys = dlg.GetChecked()
+                    self._neighbouring_txt_tag_service_keys = panel.GetValue()
                     
                     if len( self._neighbouring_txt_tag_service_keys ) == 0:
                         

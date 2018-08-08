@@ -14,6 +14,7 @@ import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
+import ClientGUITags
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientPaths
@@ -94,11 +95,11 @@ def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description
         ClientGUIMenus.AppendMenu( menu, submenu, phrase + u'\u2026' )
         
     
-class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
+class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
-        wx.ScrolledWindow.__init__( self, parent, size = ( 0, 0 ), style = wx.BORDER_SUNKEN )
+        wx.ScrolledCanvas.__init__( self, parent, size = ( 0, 0 ), style = wx.BORDER_SUNKEN )
         ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._UpdateBackgroundColour()
@@ -543,7 +544,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if service_key is not None:
                 
-                ClientTags.ExportToHTA( self, service_key, hashes )
+                ClientGUITags.ExportToHTA( self, service_key, hashes )
                 
             
         
@@ -2022,7 +2023,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self.SetScrollRate( 0, thumbnail_span_height )
+        thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
+        
+        self.SetScrollRate( 0, int( thumbnail_span_height * thumbnail_scroll_rate ) )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
         self.Bind( wx.EVT_MOTION, self.EventDrag )
@@ -2051,18 +2054,23 @@ class MediaPanelThumbnails( MediaPanel ):
         
         y_start = self._GetYStart()
         
-        page_indices = set()
+        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
         
-        page_indices.add( y_start / self._num_rows_per_canvas_page )
+        earliest_y = y_start * yUnit
         
-        if y_start % self._num_rows_per_canvas_page > 0:
-            
-            page_indices.add( ( y_start / self._num_rows_per_canvas_page ) + 1 )
-            
+        ( client_width, client_height ) = self.GetClientSize()
         
-        page_indices = list( page_indices )
+        last_y = earliest_y + client_height
         
-        page_indices.sort()
+        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+        
+        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
+        
+        first_visible_page_index = earliest_y // page_height
+        
+        last_visible_page_index = last_y // page_height
+        
+        page_indices = list( range( first_visible_page_index, last_visible_page_index + 1 ) )
         
         return page_indices
         
@@ -2117,7 +2125,14 @@ class MediaPanelThumbnails( MediaPanel ):
         
         new_options = HG.client_controller.new_options
         
-        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) ) )
+        bg_colour = new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+        
+        if HG.thumbnail_debug_mode and page_index % 2 == 0:
+            
+            bg_colour = ClientData.GetLighterDarkerColour( bg_colour )
+            
+        
+        dc.SetBackground( wx.Brush( bg_colour ) )
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
@@ -2323,13 +2338,13 @@ class MediaPanelThumbnails( MediaPanel ):
             max_y += 1
             
         
-        ( x, y ) = self.GetViewStart()
+        ( x_start, y_start ) = self.GetViewStart()
         
-        y = max( 0, y )
+        y_start = max( 0, y_start )
         
-        y = min( y, max_y )
+        y_start = min( y_start, max_y )
         
-        return y
+        return y_start
         
     
     def _MoveFocussedThumbnail( self, rows, columns, shift ):
@@ -2392,11 +2407,27 @@ class MediaPanelThumbnails( MediaPanel ):
             
             num_rows = max( 1, num_media / self._num_columns )
             
-            if num_media % self._num_columns > 0: num_rows += 1
+            if num_media % self._num_columns > 0:
+                
+                num_rows += 1
+                
             
             virtual_width = client_width
             
-            virtual_height = max( num_rows * thumbnail_span_height, client_height )
+            virtual_height = num_rows * thumbnail_span_height
+            
+            ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+            
+            excess = virtual_height % yUnit
+            
+            if excess > 0: # we want virtual height to fit exactly into scroll units, even if that puts some padding below bottom row
+                
+                top_up = yUnit - excess
+                
+                virtual_height += top_up
+                
+            
+            virtual_height = max( virtual_height, client_height )
             
             if ( virtual_width, virtual_height ) != self.GetVirtualSize():
                 
@@ -2448,12 +2479,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        num_rows = client_height / thumbnail_span_height
-        
-        if client_height % thumbnail_span_height > 0:
-            
-            num_rows += 1
-            
+        num_rows = ( client_height // thumbnail_span_height ) / 2 # roughly half a client_height's worth of thumbs
         
         self._num_rows_per_canvas_page = max( 1, num_rows )
         
@@ -2561,7 +2587,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 y_to_scroll_to = ( y - height ) / y_unit
                 
-                self.Scroll( -1, y_to_scroll_to + 2 )
+                self.Scroll( -1, y_to_scroll_to )
                 
                 wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
                 
@@ -3807,7 +3833,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._RecalculateVirtualSize()
         
-        self.SetScrollRate( 0, thumbnail_span_height )
+        thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
+        
+        self.SetScrollRate( 0, int( thumbnail_span_height * thumbnail_scroll_rate ) )
         
         self._DirtyAllPages()
         

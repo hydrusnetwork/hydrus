@@ -1130,7 +1130,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._similar_files_maintenance_status = self._controller.Read( 'similar_files_maintenance_status', duplicate_filter_file_domain )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def _RegeneratePhashes( self ):
@@ -1204,7 +1204,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._search_distance_spinctrl.SetValue( value )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def _ShowSimpleHelp( self ):
@@ -1257,7 +1257,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._page.SwapMediaPanel( panel )
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count ) = self._similar_files_maintenance_status
         
@@ -1385,7 +1385,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def EventSearchDistanceChanged( self, event ):
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def RefreshAndUpdateStatus( self ):
@@ -1404,7 +1404,7 @@ class ManagementPanelImporter( ManagementPanel ):
         self._controller.sub( self, 'RefreshSort', 'refresh_query' )
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         raise NotImplementedError()
         
@@ -1418,7 +1418,7 @@ class ManagementPanelImporter( ManagementPanel ):
         
         ManagementPanel.PageShown( self )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def RefreshSort( self, page_key ):
@@ -1431,7 +1431,7 @@ class ManagementPanelImporter( ManagementPanel ):
     
     def REPEATINGPageUpdate( self ):
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
 class ManagementPanelImporterHDD( ManagementPanelImporter ):
@@ -1479,10 +1479,10 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         ( current_action, paused ) = self._hdd_import.GetStatus()
         
@@ -1522,7 +1522,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._hdd_import.PausePlay()
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def Start( self ):
@@ -1538,7 +1538,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
-        self._last_gallery_import_keys = set()
+        self._last_time_imports_changed = 0
         self._next_update_time = 0
         
         self._multiple_gallery_import = self._management_controller.GetVariable( 'multiple_gallery_import' )
@@ -1559,12 +1559,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         columns = [ ( 'query', -1 ), ( 'source', 11 ), ( 'f', 3 ), ( 's', 3 ), ( 'status', 8 ), ( 'items', 9 ) ]
         
-        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, 'gallery_importers', 24, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightGalleryImport )
+        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, 'gallery_importers', 4, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
         self._gallery_importers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
-        self._gallery_importers_listctrl_panel.AddButton( 'highlight', self._HighlightGalleryImport, enabled_check_func = self._CanHighlight )
+        self._gallery_importers_listctrl_panel.AddButton( 'highlight', self._HighlightSelectedGalleryImport, enabled_check_func = self._CanHighlight )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
@@ -1597,10 +1597,10 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
         
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        search_value = ClientDefaults.GetDefaultSearchValue( gallery_identifier )
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._multiple_gallery_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, namespaces, tag_import_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, tag_import_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
         
         #
         
@@ -1640,7 +1640,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._file_limit.SetValue( file_limit )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def _CanClearHighlight( self ):
@@ -1768,7 +1768,43 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         return ( display_tuple, sort_tuple )
         
     
-    def _HighlightGalleryImport( self ):
+    def _HighlightGalleryImport( self, new_highlight ):
+        
+        if new_highlight == self._highlighted_gallery_import:
+            
+            self._ClearExistingHighlightAndPanel()
+            
+        else:
+            
+            self._ClearExistingHighlight()
+            
+            self._highlighted_gallery_import = new_highlight
+            
+            self._multiple_gallery_import.SetHighlightedGalleryImport( self._highlighted_gallery_import )
+            
+            hashes = self._highlighted_gallery_import.GetPresentedHashes()
+            
+            hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            
+            self._page.SwapMediaPanel( panel )
+            
+            self._gallery_importers_listctrl_panel.UpdateButtons()
+            
+            self._gallery_importers_listctrl.UpdateDatas()
+            
+            self._highlighted_gallery_import_panel.SetGalleryImport( self._highlighted_gallery_import )
+            
+        
+    
+    def _HighlightSelectedGalleryImport( self ):
         
         selected = self._gallery_importers_listctrl.GetData( only_selected = True )
         
@@ -1776,36 +1812,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             new_highlight = selected[0]
             
-            if new_highlight == self._highlighted_gallery_import:
-                
-                self._ClearExistingHighlightAndPanel()
-                
-            else:
-                
-                self._ClearExistingHighlight()
-                
-                self._highlighted_gallery_import = new_highlight
-                
-                self._multiple_gallery_import.SetHighlightedGalleryImport( self._highlighted_gallery_import )
-                
-                hashes = self._highlighted_gallery_import.GetPresentedHashes()
-                
-                media_results = HG.client_controller.Read( 'media_results', hashes )
-                
-                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-                
-                sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-                
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
-                
-                self._page.SwapMediaPanel( panel )
-                
-                self._gallery_importers_listctrl_panel.UpdateButtons()
-                
-                self._gallery_importers_listctrl.UpdateDatas()
-                
-                self._highlighted_gallery_import_panel.SetGalleryImport( self._highlighted_gallery_import )
-                
+            self._HighlightGalleryImport( new_highlight )
             
         
     
@@ -1831,12 +1838,24 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _PendQueries( self, queries ):
         
+        first_result = None
+        
         for query in queries:
             
-            self._multiple_gallery_import.PendQuery( query )
+            result = self._multiple_gallery_import.PendQuery( query )
+            
+            if result is not None and first_result is None:
+                
+                first_result = result
+                
             
         
-        self._UpdateStatus()
+        if first_result is not None and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
+            
+            self._HighlightGalleryImport( first_result )
+            
+        
+        self._UpdateImportStatusNow()
         
     
     def _RemoveGalleryImports( self ):
@@ -1895,20 +1914,20 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
             
         
-        self._UpdateStatus()
+        self._UpdateImportStatusNow()
         
     
     def _SetGalleryIdentifier( self, gallery_identifier ):
         
         current_gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
         
-        ( current_namespaces, current_search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( current_gallery_identifier )
+        current_search_value = ClientDefaults.GetDefaultSearchValue( current_gallery_identifier )
         
         current_input_value = self._query_input.GetValue()
         
         if current_input_value in ( current_search_value, '' ):
             
-            ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+            search_value = ClientDefaults.GetDefaultSearchValue( gallery_identifier )
             
             self._query_input.SetValue( search_value )
             
@@ -1945,7 +1964,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         if HydrusData.TimeHasPassed( self._next_update_time ):
             
@@ -1953,11 +1972,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             #
             
-            gallery_import_keys = self._multiple_gallery_import.GetGalleryImportKeys()
+            last_time_imports_changed = self._multiple_gallery_import.GetLastTimeImportsChanged()
+            
+            num_gallery_imports = self._multiple_gallery_import.GetNumGalleryImports()
             
             #
             
-            if len( gallery_import_keys ) == 0:
+            if num_gallery_imports == 0:
                 
                 text_top = 'waiting for new queries'
                 text_bottom = ''
@@ -1966,7 +1987,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
                 ( status, simple_status, ( value, range ) ) = self._multiple_gallery_import.GetTotalStatus()
                 
-                text_top = HydrusData.ToHumanInt( len( gallery_import_keys ) ) + ' queries - ' + HydrusData.ConvertValueRangeToPrettyString( value, range )
+                text_top = HydrusData.ToHumanInt( num_gallery_imports ) + ' queries - ' + HydrusData.ConvertValueRangeToPrettyString( value, range )
                 text_bottom = status
                 
             
@@ -1975,7 +1996,25 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             #
             
-            if self._last_gallery_import_keys == gallery_import_keys:
+            if self._last_time_imports_changed != last_time_imports_changed:
+                
+                self._last_time_imports_changed = last_time_imports_changed
+                
+                gallery_imports = self._multiple_gallery_import.GetGalleryImports()
+                
+                self._gallery_importers_listctrl.SetData( gallery_imports )
+                
+                ideal_rows = len( gallery_imports )
+                ideal_rows = max( 4, ideal_rows )
+                ideal_rows = min( ideal_rows, 24 )
+                
+                self._gallery_importers_listctrl.GrowShrinkColumnsHeight( ideal_rows )
+                
+                self.FitInside()
+                
+                self.Layout()
+                
+            else:
                 
                 sort_data_has_changed = self._gallery_importers_listctrl.UpdateDatas()
                 
@@ -1984,15 +2023,14 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     self._gallery_importers_listctrl.Sort()
                     
                 
-            else:
-                
-                self._last_gallery_import_keys = gallery_import_keys
-                
-                gallery_imports = self._multiple_gallery_import.GetGalleryImports()
-                
-                self._gallery_importers_listctrl.SetData( gallery_imports )
-                
             
+        
+    
+    def _UpdateImportStatusNow( self ):
+        
+        self._next_update_time = 0
+        
+        self._UpdateImportStatus()
         
     
     def CheckAbleToClose( self ):
@@ -2038,7 +2076,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
-        self._last_watcher_keys = set()
+        self._last_time_watchers_changed = 0
         self._next_update_time = 0
         
         self._multiple_watcher_import = self._management_controller.GetVariable( 'multiple_watcher_import' )
@@ -2058,12 +2096,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         columns = [ ( 'subject', -1 ), ( 'f', 3 ), ( 'c', 3 ), ( 'status', 8 ), ( 'items', 9 ), ( 'added', 8 ) ]
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 24, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 4, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
         self._watchers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
-        self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightWatcher, enabled_check_func = self._CanHighlight )
+        self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightSelectedWatcher, enabled_check_func = self._CanHighlight )
         
         self._watchers_listctrl_panel.NewButtonRow()
         
@@ -2083,11 +2121,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
         
-        namespaces = []
-        
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._watchers_panel, checker_options, self._OptionsUpdated )
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, self._OptionsUpdated )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, namespaces, tag_import_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, tag_import_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
         
         # suck up watchers from elsewhere in the program (presents a checklistboxdialog)
         
@@ -2124,7 +2160,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         #
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
         HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
@@ -2132,12 +2168,24 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _AddURLs( self, urls ):
         
+        first_result = None
+        
         for url in urls:
             
-            self._multiple_watcher_import.AddURL( url )
+            result = self._multiple_watcher_import.AddURL( url )
+            
+            if result is not None and first_result is None:
+                
+                first_result = result
+                
             
         
-        self._UpdateStatus()
+        if first_result is not None and self._highlighted_watcher is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_watcher' ):
+            
+            self._HighlightWatcher( first_result )
+            
+        
+        self._UpdateImportStatusNow()
         
     
     def _CanClearHighlight( self ):
@@ -2203,7 +2251,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _ConvertDataToListCtrlTuples( self, watcher ):
         
-        pretty_subject = watcher.GetSubject()
+        subject = watcher.GetSubject()
+        
+        pretty_subject = subject
         
         if watcher == self._highlighted_watcher:
             
@@ -2251,8 +2301,6 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
         
-        subject = pretty_subject.lower()
-        
         watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
         pretty_watcher_status = watcher_status
@@ -2268,7 +2316,43 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         return ( display_tuple, sort_tuple )
         
     
-    def _HighlightWatcher( self ):
+    def _HighlightWatcher( self, new_highlight ):
+        
+        if new_highlight == self._highlighted_watcher:
+            
+            self._ClearExistingHighlightAndPanel()
+            
+        else:
+            
+            self._ClearExistingHighlight()
+            
+            self._highlighted_watcher = new_highlight
+            
+            hashes = self._highlighted_watcher.GetPresentedHashes()
+            
+            hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            
+            self._page.SwapMediaPanel( panel )
+            
+            self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
+            
+            self._watchers_listctrl_panel.UpdateButtons()
+            
+            self._watchers_listctrl.UpdateDatas()
+            
+            self._highlighted_watcher_panel.SetWatcher( self._highlighted_watcher )
+            
+        
+    
+    def _HighlightSelectedWatcher( self ):
         
         selected = self._watchers_listctrl.GetData( only_selected = True )
         
@@ -2276,36 +2360,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             new_highlight = selected[0]
             
-            if new_highlight == self._highlighted_watcher:
-                
-                self._ClearExistingHighlightAndPanel()
-                
-            else:
-                
-                self._ClearExistingHighlight()
-                
-                self._highlighted_watcher = new_highlight
-                
-                hashes = self._highlighted_watcher.GetPresentedHashes()
-                
-                media_results = HG.client_controller.Read( 'media_results', hashes )
-                
-                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-                
-                sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-                
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
-                
-                self._page.SwapMediaPanel( panel )
-                
-                self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
-                
-                self._watchers_listctrl_panel.UpdateButtons()
-                
-                self._watchers_listctrl.UpdateDatas()
-                
-                self._highlighted_watcher_panel.SetWatcher( self._highlighted_watcher )
-                
+            self._HighlightWatcher( new_highlight )
             
         
     
@@ -2402,6 +2457,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
             
         
+        self._UpdateImportStatusNow()
+        
     
     def _SetOptionsToWatchers( self ):
         
@@ -2432,7 +2489,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         if HydrusData.TimeHasPassed( self._next_update_time ):
             
@@ -2440,11 +2497,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             #
             
-            watcher_keys = self._multiple_watcher_import.GetWatcherKeys()
+            last_time_watchers_changed = self._multiple_watcher_import.GetLastTimeWatchersChanged()
+            num_watchers = self._multiple_watcher_import.GetNumWatchers()
             
             #
             
-            if len( watcher_keys ) == 0:
+            if num_watchers == 0:
                 
                 text_top = 'waiting for new watchers'
                 text_bottom = ''
@@ -2464,7 +2522,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 ( status, simple_status, ( value, range ) ) = self._multiple_watcher_import.GetTotalStatus()
                 
-                text_top = HydrusData.ToHumanInt( len( watcher_keys ) ) + ' watchers - ' + num_dead_text + HydrusData.ConvertValueRangeToPrettyString( value, range )
+                text_top = HydrusData.ToHumanInt( num_watchers ) + ' watchers - ' + num_dead_text + HydrusData.ConvertValueRangeToPrettyString( value, range )
                 text_bottom = status
                 
             
@@ -2473,7 +2531,25 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             #
             
-            if self._last_watcher_keys == watcher_keys:
+            if self._last_time_watchers_changed != last_time_watchers_changed:
+                
+                self._last_time_watchers_changed = last_time_watchers_changed
+                
+                watchers = self._multiple_watcher_import.GetWatchers()
+                
+                self._watchers_listctrl.SetData( watchers )
+                
+                ideal_rows = len( watchers )
+                ideal_rows = max( 4, ideal_rows )
+                ideal_rows = min( ideal_rows, 24 )
+                
+                self._watchers_listctrl.GrowShrinkColumnsHeight( ideal_rows )
+                
+                self.FitInside()
+                
+                self.Layout()
+                
+            else:
                 
                 sort_data_has_changed = self._watchers_listctrl.UpdateDatas()
                 
@@ -2482,15 +2558,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     self._watchers_listctrl.Sort()
                     
                 
-            else:
-                
-                self._last_watcher_keys = watcher_keys
-                
-                watchers = self._multiple_watcher_import.GetWatchers()
-                
-                self._watchers_listctrl.SetData( watchers )
-                
             
+        
+    
+    def _UpdateImportStatusNow( self ):
+        
+        self._next_update_time = 0
+        
+        self._UpdateImportStatus()
         
     
     def CheckAbleToClose( self ):
@@ -2515,7 +2590,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if page_key == self._page_key:
             
-            self._multiple_watcher_import.AddURL( url )
+            self._AddURLs( ( url, ) )
             
         
     
@@ -2667,7 +2742,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def _EditFormulae( self ):
@@ -2778,7 +2853,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             self._simple_downloader_import.PendJob( job )
             
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def _RefreshFormulae( self ):
@@ -2811,7 +2886,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         ( pending_jobs, parser_status, current_action, queue_paused, files_paused ) = self._simple_downloader_import.GetStatus()
         
@@ -2897,7 +2972,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             self._simple_downloader_import.AdvanceJob( job )
             
-            self._UpdateStatus()
+            self._UpdateImportStatus()
             
         
     
@@ -2911,7 +2986,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             self._simple_downloader_import.DelayJob( job )
             
-            self._UpdateStatus()
+            self._UpdateImportStatus()
             
         
     
@@ -2925,7 +3000,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             self._simple_downloader_import.DeleteJob( job )
             
-            self._UpdateStatus()
+            self._UpdateImportStatus()
             
         
     
@@ -2945,14 +3020,14 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._simple_downloader_import.PausePlayQueue()
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def EventPauseFiles( self, event ):
         
         self._simple_downloader_import.PausePlayFiles()
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def SetSearchFocus( self ):
@@ -2996,7 +3071,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._url_panel, file_import_options, self._urls_import.SetFileImportOptions )
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._url_panel, [], tag_import_options, update_callable = self._urls_import.SetTagImportOptions, show_downloader_options = True, allow_default_selection = True )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._url_panel, tag_import_options, update_callable = self._urls_import.SetTagImportOptions, show_downloader_options = True, allow_default_selection = True )
         
         #
         
@@ -3033,7 +3108,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
         
@@ -3044,10 +3119,10 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._urls_import.PendURLs( urls )
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
-    def _UpdateStatus( self ):
+    def _UpdateImportStatus( self ):
         
         paused = self._urls_import.IsPaused()
         
@@ -3079,7 +3154,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._urls_import.PausePlay()
         
-        self._UpdateStatus()
+        self._UpdateImportStatus()
         
     
     def PendURL( self, page_key, url ):

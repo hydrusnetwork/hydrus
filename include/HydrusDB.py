@@ -1,5 +1,3 @@
-import cProfile
-import cStringIO
 import distutils.version
 import HydrusConstants as HC
 import HydrusData
@@ -7,12 +5,8 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusPaths
 import os
-import psutil
 import Queue
-import random
 import sqlite3
-import sys
-import threading
 import traceback
 import time
 

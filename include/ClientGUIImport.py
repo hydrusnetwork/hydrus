@@ -1154,7 +1154,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
         self._file_import_options = FileImportOptionsButton( self, file_import_options, self._SetFileImportOptions )
-        self._tag_import_options = TagImportOptionsButton( self, [], tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
+        self._tag_import_options = TagImportOptionsButton( self, tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
         
         #
         
@@ -1457,11 +1457,10 @@ class GallerySelector( ClientGUICommon.BetterButton ):
     
 class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, namespaces, tag_import_options, update_callable = None, show_downloader_options = True, allow_default_selection = False ):
+    def __init__( self, parent, tag_import_options, update_callable = None, show_downloader_options = True, allow_default_selection = False ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag import options', self._EditOptions )
         
-        self._namespaces = namespaces
         self._tag_import_options = tag_import_options
         self._update_callable = update_callable
         self._show_downloader_options = show_downloader_options
@@ -1485,7 +1484,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._namespaces, self._tag_import_options, show_downloader_options = self._show_downloader_options, allow_default_selection = self._allow_default_selection )
+            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._tag_import_options, show_downloader_options = self._show_downloader_options, allow_default_selection = self._allow_default_selection )
             
             dlg.SetPanel( panel )
             
@@ -1629,13 +1628,11 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._checker_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
         
-        namespaces = []
-        
         file_import_options = ClientImportOptions.FileImportOptions()
         tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
         self._file_import_options = FileImportOptionsButton( self, file_import_options, self._SetFileImportOptions )
-        self._tag_import_options = TagImportOptionsButton( self, namespaces, tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
+        self._tag_import_options = TagImportOptionsButton( self, tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
         
         #
         

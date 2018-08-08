@@ -541,6 +541,8 @@ class PopupMessageManager( wx.Frame ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
+        self._last_best_size_i_fit_on = ( 0, 0 )
+        
         self._max_messages_to_display = 10
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -760,7 +762,9 @@ class PopupMessageManager( wx.Frame ):
                 
                 best_size = self.GetBestSize()
                 
-                if best_size != self.GetSize():
+                if best_size != self._last_best_size_i_fit_on:
+                    
+                    self._last_best_size_i_fit_on = best_size
                     
                     self.Fit()
                     

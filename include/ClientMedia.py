@@ -255,13 +255,14 @@ class DuplicatesManager( object ):
     
 class FileInfoManager( object ):
     
-    def __init__( self, hash, size = None, mime = None, width = None, height = None, duration = None, num_frames = None, num_words = None ):
+    def __init__( self, hash_id, hash, size = None, mime = None, width = None, height = None, duration = None, num_frames = None, num_words = None ):
         
         if mime is None:
             
             mime = HC.APPLICATION_UNKNOWN
             
         
+        self.hash_id = hash_id
         self.hash = hash
         self.size = size
         self.mime = mime
@@ -274,12 +275,12 @@ class FileInfoManager( object ):
     
     def Duplicate( self ):
         
-        return FileInfoManager( self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
+        return FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
         
     
     def ToTuple( self ):
         
-        return ( self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
+        return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
         
     
 class LocationsManager( object ):
@@ -1550,7 +1551,7 @@ class MediaSingleton( Media ):
         file_info_manager = self._media_result.GetFileInfoManager()
         locations_manager = self._media_result.GetLocationsManager()
         
-        ( hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
+        ( hash_id, hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
         
         info_string = HydrusData.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         

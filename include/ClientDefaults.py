@@ -165,54 +165,27 @@ def GetDefaultHentaiFoundryInfo():
     
     return info
     
-def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
+def GetDefaultSearchValue( gallery_identifier ):
     
     site_type = gallery_identifier.GetSiteType()
     
     if site_type == HC.SITE_TYPE_DEFAULT:
         
-        namespaces = []
-        
         search_value = ''
         
     elif site_type == HC.SITE_TYPE_BOORU:
-        
-        name = gallery_identifier.GetAdditionalInfo()
-        
-        if name is None:
-            
-            namespaces = []
-            
-        else:
-            
-            try:
-                
-                booru = HG.client_controller.Read( 'remote_booru', name )
-                
-                namespaces = booru.GetNamespaces()
-                
-            except:
-                
-                namespaces = []
-                
-            
         
         search_value = 'search tags'
         
     elif site_type == HC.SITE_TYPE_DEVIANT_ART:
         
-        namespaces = [ 'creator', 'title' ]
         search_value = 'artist username'
         
     elif site_type == HC.SITE_TYPE_GIPHY:
         
-        namespaces = [ '' ]
-        
         search_value = 'search tag'
         
     elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ):
-        
-        namespaces = [ 'creator', 'title' ]
         
         if site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
             
@@ -229,12 +202,9 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         
     elif site_type == HC.SITE_TYPE_NEWGROUNDS:
         
-        namespaces = [ 'creator', 'title', '' ]
         search_value = 'artist username'
         
     elif site_type in ( HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ):
-        
-        namespaces = [ 'creator', 'title', 'page', '' ]
         
         if site_type == HC.SITE_TYPE_PIXIV:
             
@@ -251,16 +221,14 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         
     elif site_type == HC.SITE_TYPE_TUMBLR:
         
-        namespaces = [ '' ]
         search_value = 'username'
         
     elif site_type == HC.SITE_TYPE_WATCHER:
         
-        namespaces = []
         search_value = 'thread url'
         
     
-    return ( namespaces, search_value )
+    return search_value
     
 def GetDefaultBoorus():
     

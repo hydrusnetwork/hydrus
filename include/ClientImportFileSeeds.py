@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientImageHandling
+import ClientImporting
 import ClientNetworkingDomain
 import ClientParsing
 import ClientPaths
@@ -877,18 +878,26 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._UpdateModified()
         
     
-    def ShouldPresent( self, file_import_options ):
+    def ShouldPresent( self, file_import_options, in_inbox = None ):
         
         hash = self.GetHash()
         
         if hash is not None and self.status in CC.SUCCESSFUL_IMPORT_STATES:
             
-            if file_import_options.ShouldPresentIgnorantOfInbox( self.status ):
+            if in_inbox is None:
                 
-                return True
+                if file_import_options.ShouldPresentIgnorantOfInbox( self.status ):
+                    
+                    return True
+                    
                 
-            
-            in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                if file_import_options.ShouldNotPresentIgnorantOfInbox( self.status ):
+                    
+                    return False
+                    
+                
+                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                
             
             if file_import_options.ShouldPresent( self.status, in_inbox ):
                 
@@ -996,93 +1005,104 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         raise HydrusExceptions.VetoException( 'Could not parse any data!' )
                         
-                    
-                    parse_results = all_parse_results[0]
-                    
-                    self.AddParseResults( parse_results )
-                    
-                    self.CheckPreFetchMetadata( tag_import_options )
-                    
-                    desired_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
-                    
-                    child_urls = []
-                    
-                    if len( desired_urls ) == 0:
+                    elif len( all_parse_results ) > 1:
                         
-                        raise HydrusExceptions.VetoException( 'Could not find a file or post URL to download!' )
+                        ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.file_seed_data )
                         
-                    elif len( desired_urls ) == 1:
+                        status = CC.STATUS_SUCCESSFUL_AND_NEW
+                        note = 'Found ' + HydrusData.ToHumanInt( num_urls_added ) + ' new URLs.'
                         
-                        desired_url = desired_urls[0]
-                        
-                        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( desired_url )
-                        
-                        if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
-                            
-                            file_url = desired_url
-                            
-                            ( should_download_metadata, should_download_file ) = self.PredictPreImportStatus( file_import_options, tag_import_options, file_url )
-                            
-                            if should_download_file:
-                                
-                                status_hook( 'downloading file' )
-                                
-                                self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, override_bandwidth = True )
-                                
-                            
-                        elif url_type == HC.URL_TYPE_POST and can_parse:
-                            
-                            # a pixiv mode=medium page has spawned a mode=manga page, so we need a new file_seed to go pursue that
-                            
-                            child_urls = [ desired_url ]
-                            
-                        else:
-                            
-                            raise HydrusExceptions.VetoException( 'Found a URL--' + desired_url + '--but could not understand/parse it!' )
-                            
+                        self.SetStatus( status, note = note )
                         
                     else:
                         
-                        child_urls = desired_urls
+                        parse_results = all_parse_results[0]
                         
-                    
-                    if len( child_urls ) > 0:
+                        self.AddParseResults( parse_results )
                         
-                        child_file_seeds = []
+                        self.CheckPreFetchMetadata( tag_import_options )
                         
-                        for child_url in child_urls:
+                        desired_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
+                        
+                        child_urls = []
+                        
+                        if len( desired_urls ) == 0:
                             
-                            duplicate_file_seed = self.Duplicate() # inherits all urls and tags from here
+                            raise HydrusExceptions.VetoException( 'Could not find a file or post URL to download!' )
                             
-                            duplicate_file_seed.file_seed_data = child_url
+                        elif len( desired_urls ) == 1:
                             
-                            duplicate_file_seed.SetReferralURL( self.file_seed_data )
+                            desired_url = desired_urls[0]
                             
-                            if self._referral_url is not None:
+                            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( desired_url )
+                            
+                            if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                                 
-                                duplicate_file_seed.AddURL( self._referral_url )
+                                file_url = desired_url
+                                
+                                ( should_download_metadata, should_download_file ) = self.PredictPreImportStatus( file_import_options, tag_import_options, file_url )
+                                
+                                if should_download_file:
+                                    
+                                    status_hook( 'downloading file' )
+                                    
+                                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, override_bandwidth = True )
+                                    
+                                
+                            elif url_type == HC.URL_TYPE_POST and can_parse:
+                                
+                                # a pixiv mode=medium page has spawned a mode=manga page, so we need a new file_seed to go pursue that
+                                
+                                child_urls = [ desired_url ]
+                                
+                            else:
+                                
+                                raise HydrusExceptions.VetoException( 'Found a URL--' + desired_url + '--but could not understand/parse it!' )
                                 
                             
-                            child_file_seeds.append( duplicate_file_seed )
+                        else:
+                            
+                            child_urls = desired_urls
                             
                         
-                        try:
+                        if len( child_urls ) > 0:
                             
-                            my_index = file_seed_cache.GetFileSeedIndex( self )
+                            child_file_seeds = []
                             
-                            insertion_index = my_index + 1
+                            for child_url in child_urls:
+                                
+                                duplicate_file_seed = self.Duplicate() # inherits all urls and tags from here
+                                
+                                duplicate_file_seed.file_seed_data = child_url
+                                
+                                duplicate_file_seed.SetReferralURL( self.file_seed_data )
+                                
+                                if self._referral_url is not None:
+                                    
+                                    duplicate_file_seed.AddURL( self._referral_url )
+                                    
+                                
+                                child_file_seeds.append( duplicate_file_seed )
+                                
                             
-                        except:
+                            try:
+                                
+                                my_index = file_seed_cache.GetFileSeedIndex( self )
+                                
+                                insertion_index = my_index + 1
+                                
+                            except:
+                                
+                                insertion_index = len( file_seed_cache )
+                                
                             
-                            insertion_index = len( file_seed_cache )
+                            file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                             
-                        
-                        file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
-                        
-                        status = CC.STATUS_SUCCESSFUL_AND_NEW
-                        note = 'Found ' + HydrusData.ToHumanInt( len( child_urls ) ) + ' new URLs.'
-                        
-                        self.SetStatus( status, note = note )
+                            status = CC.STATUS_SUCCESSFUL_AND_NEW
+                            note = 'Found ' + HydrusData.ToHumanInt( len( child_urls ) ) + ' new URLs.'
+                            
+                            self.SetStatus( status, note = note )
+                            
                         
                     
                 
@@ -1801,13 +1821,23 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            eligible_file_seeds = [ file_seed for file_seed in self._file_seeds if file_seed.HasHash() ]
+            
+            file_seed_hashes = [ file_seed.GetHash() for file_seed in eligible_file_seeds ]
+            
+            inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
+            
             hashes = []
             
-            for file_seed in self._file_seeds:
+            for file_seed in eligible_file_seeds:
                 
-                if file_seed.HasHash() and file_seed.ShouldPresent( file_import_options ):
+                hash = file_seed.GetHash()
+                
+                in_inbox = hash in inbox_hashes
+                
+                if file_seed.ShouldPresent( file_import_options, in_inbox = in_inbox ):
                     
-                    hashes.append( file_seed.GetHash() )
+                    hashes.append( hash )
                     
                 
             

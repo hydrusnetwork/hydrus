@@ -247,17 +247,24 @@ def ClientToScreen( win, pos ):
         return ( 50, 50 )
         
     
+
+MAGIC_TEXT_PADDING = 1.1
+
 def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
     
-    dialog_units = ( char_cols * 4, char_rows * 8 )
+    dc = wx.ClientDC( window )
     
-    return tuple( window.ConvertDialogToPixels( dialog_units ) ) # convert from _Point_ to a tuple that size methods can deal with
+    dc.SetFont( window.GetFont() )
+    
+    return ( int( char_cols * dc.GetCharWidth() * MAGIC_TEXT_PADDING ), int( char_rows * dc.GetCharHeight() * MAGIC_TEXT_PADDING ) )
     
 def ConvertTextToPixelWidth( window, char_cols ):
     
-    ( width, height ) = ConvertTextToPixels( window, ( char_cols, 1 ) )
+    dc = wx.ClientDC( window )
     
-    return width
+    dc.SetFont( window.GetFont() )
+    
+    return int( char_cols * dc.GetCharWidth() * MAGIC_TEXT_PADDING )
     
 def GetFocusTLP():
     
@@ -2990,59 +2997,6 @@ class RadioBox( StaticBox ):
     def SetString( self, index, text ):
         
         self._indices_to_radio_buttons[ index ].SetLabelText( text )
-        
-    
-class TagFilterButton( BetterButton ):
-    
-    def __init__( self, parent, message, tag_filter, is_blacklist = False ):
-        
-        BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
-        
-        self._message = message
-        self._tag_filter = tag_filter
-        self._is_blacklist = is_blacklist
-        
-        self._UpdateLabel()
-        
-    
-    def _EditTagFilter( self ):
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag filter' ) as dlg:
-            
-            import ClientGUIScrolledPanelsEdit
-            
-            panel = ClientGUIScrolledPanelsEdit.EditTagFilterPanel( dlg, self._tag_filter, self._message )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._tag_filter = panel.GetValue()
-                
-                self._UpdateLabel()
-                
-            
-        
-    
-    def _UpdateLabel( self ):
-        
-        if self._is_blacklist:
-            
-            tt = self._tag_filter.ToBlacklistString()
-            
-        else:
-            
-            tt = self._tag_filter.ToPermittedString()
-            
-        
-        self.SetLabelText( tt[:32] )
-        
-        self.SetToolTip( tt )
-        
-    
-    def GetValue( self ):
-        
-        return self._tag_filter
         
     
 class TextAndGauge( wx.Panel ):

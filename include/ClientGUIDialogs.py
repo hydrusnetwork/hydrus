@@ -84,9 +84,9 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
         services = { HG.client_controller.services_manager.GetService( service_key ) for service_key in service_keys }
         
-        list_of_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
+        choice_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
-        with DialogSelectFromList( HG.client_controller.GetGUI(), 'select service', list_of_tuples ) as dlg:
+        with DialogSelectFromList( HG.client_controller.GetGUI(), 'select service', choice_tuples ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -830,6 +830,14 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
+        menu_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'do_human_sort_on_hdd_file_import_paths' )
+        
+        menu_items.append( ( 'check', 'sort paths as they are added', 'If checked, paths will be sorted in a numerically human-friendly (e.g. "page 9.jpg" comes before "page 10.jpg") way.', check_manager ) )
+        
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE )
         self._delete_after_success_st.SetForegroundColour( ( 127, 0, 0 ) )
         
@@ -859,6 +867,11 @@ class FrameInputLocalFiles( wx.Frame ):
         delete_hbox.Add( self._delete_after_success_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         delete_hbox.Add( self._delete_after_success, CC.FLAGS_VCENTER )
         
+        import_options_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        import_options_buttons.Add( self._file_import_options, CC.FLAGS_SIZER_VCENTER )
+        import_options_buttons.Add( self._cog_button, CC.FLAGS_SIZER_VCENTER )
+        
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
         buttons.Add( self._add_button, CC.FLAGS_VCENTER )
@@ -870,7 +883,7 @@ class FrameInputLocalFiles( wx.Frame ):
         vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( delete_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._file_import_options, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( import_options_buttons, CC.FLAGS_LONE_BUTTON )
         vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -1170,13 +1183,15 @@ class FrameInputLocalFiles( wx.Frame ):
             
             # first we'll flesh out unparsed_paths with anything new to look at
             
+            do_human_sort = HG.client_controller.new_options.GetBoolean( 'do_human_sort_on_hdd_file_import_paths' )
+            
             while not unparsed_paths_queue.empty():
                 
                 try:
                     
                     raw_paths = unparsed_paths_queue.get( block = False )
                     
-                    paths = ClientFiles.GetAllPaths( raw_paths ) # convert any dirs to subpaths
+                    paths = ClientFiles.GetAllPaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
                     unparsed_paths.extend( paths )
                     
@@ -1194,7 +1209,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                     raw_paths = unparsed_paths_queue.get( timeout = 5 )
                     
-                    paths = ClientFiles.GetAllPaths( raw_paths ) # convert any dirs to subpaths
+                    paths = ClientFiles.GetAllPaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
                     unparsed_paths.extend( paths )
                     
@@ -2108,54 +2123,9 @@ class DialogSelectImageboard( Dialog ):
     
     def GetImageboard( self ): return self._tree.GetItemData( self._tree.GetSelection() ).GetData()
     
-class DialogCheckFromList( Dialog ):
-    
-    def __init__( self, parent, title, list_of_tuples ):
-        
-        Dialog.__init__( self, parent, title )
-        
-        self._check_list_box = ClientGUICommon.BetterCheckListBox( self, style = wx.LB_EXTENDED )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        
-        for ( index, ( text, data, selected ) ) in enumerate( list_of_tuples ):
-            
-            self._check_list_box.Append( text, data )
-            
-            if selected:
-                
-                self._check_list_box.Check( index )
-                
-            
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._ok, CC.FLAGS_VCENTER )
-        hbox.Add( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._check_list_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        if x < 320: x = 320
-        
-        self.SetInitialSize( ( x, y ) )
-        
-    
-    def GetChecked( self ):
-        
-        return self._check_list_box.GetChecked()
-        
-    
 class DialogSelectFromList( Dialog ):
     
-    def __init__( self, parent, title, list_of_tuples, value_to_select = None ):
+    def __init__( self, parent, title, choice_tuples, value_to_select = None ):
         
         Dialog.__init__( self, parent, title )
         
@@ -2171,9 +2141,9 @@ class DialogSelectFromList( Dialog ):
         
         selected_a_value = False
         
-        list_of_tuples.sort()
+        choice_tuples.sort()
         
-        for ( i, ( label, value ) ) in enumerate( list_of_tuples ):
+        for ( i, ( label, value ) ) in enumerate( choice_tuples ):
             
             self._list.Append( label, value )
             

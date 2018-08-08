@@ -104,6 +104,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'only_save_last_session_during_idle' ] = False
         
+        self._dictionary[ 'booleans' ][ 'do_human_sort_on_hdd_file_import_paths' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'highlight_new_watcher' ] = False
+        self._dictionary[ 'booleans' ][ 'highlight_new_query' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -246,6 +251,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
         self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
+        self._dictionary[ 'strings' ][ 'thumbnail_scroll_rate' ] = '1.0'
         
         self._dictionary[ 'string_list' ] = {}
         
@@ -255,8 +261,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         #
         
         self._dictionary[ 'tag_summary_generators' ] = HydrusSerialisable.SerialisableDictionary()
-        
-        import ClientTags
         
         namespace_info = []
         
@@ -270,7 +274,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title' ] )
         
-        tsg = ClientTags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
+        import ClientGUITags
+        
+        tsg = ClientGUITags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
         
         self._dictionary[ 'tag_summary_generators' ][ 'thumbnail_top' ] = tsg
         
@@ -284,7 +290,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         example_tags = HydrusTags.CleanTags( [ 'volume:3', 'chapter:10', 'page:330', 'page:331' ] )
         
-        tsg = ClientTags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
+        tsg = ClientGUITags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
         
         self._dictionary[ 'tag_summary_generators' ][ 'thumbnail_bottom_right' ] = tsg
         
@@ -301,7 +307,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title', 'volume:1', 'chapter:1', 'page:1' ] )
         
-        tsg = ClientTags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
+        tsg = ClientGUITags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
         
         self._dictionary[ 'tag_summary_generators' ][ 'media_viewer_top' ] = tsg
         

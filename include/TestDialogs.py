@@ -167,9 +167,9 @@ class TestNonDBDialogs( unittest.TestCase ):
     
     def test_select_from_list_of_strings( self ):
         
-        list_of_tuples = [ ( 'a', 123 ), ( 'b', 456 ), ( 'c', 789 ) ]
+        choice_tuples = [ ( 'a', 123 ), ( 'b', 456 ), ( 'c', 789 ) ]
         
-        with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', list_of_tuples ) as dlg:
+        with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', choice_tuples ) as dlg:
             
             HG.test_controller.CallLaterWXSafe( self, 0.5, dlg._list.Select, 1 )
             HG.test_controller.CallLaterWXSafe( self, 1, PressKey, dlg._list, wx.WXK_RETURN )

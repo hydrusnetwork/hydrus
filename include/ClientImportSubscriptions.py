@@ -47,7 +47,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             self._initial_file_limit = min( 100, HC.options[ 'gallery_file_limit' ] )
             
         
-        self._periodic_file_limit = 50
+        self._periodic_file_limit = 100
         self._paused = False
         
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
