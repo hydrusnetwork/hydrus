@@ -229,7 +229,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if len( all_parse_results ) == 0:
                 
-                raise HydrusExceptions.VetoException( 'Could not parse any data!' )
+                raise HydrusExceptions.VetoException( 'No data found in document!' )
                 
             
             title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
@@ -275,6 +275,35 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 if len( next_page_urls ) > 0:
                     
+                    next_page_generation_phrase = ' next gallery pages found'
+                    
+                else:
+                    
+                    # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
+                    
+                    url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( self.url )
+                    
+                    if url_match is not None and url_match.CanGenerateNextGalleryPage():
+                        
+                        try:
+                            
+                            next_page_url = url_match.GetNextGalleryPage( self.url )
+                            
+                            next_page_urls = [ next_page_url ]
+                            
+                        except Exception as e:
+                            
+                            note += ' - Attempted to generate a next gallery page url, but failed!'
+                            note += os.linesep
+                            note += HydrusData.ToUnicode( traceback.format_exc() )
+                            
+                        
+                    
+                    next_page_generation_phrase = ' next gallery pages extrapolated from url class'
+                    
+                
+                if len( next_page_urls ) > 0:
+                    
                     next_page_urls = HydrusData.DedupeList( next_page_urls )
                     
                     new_next_page_urls = [ next_page_url for next_page_url in next_page_urls if next_page_url not in gallery_urls_seen_before ]
@@ -294,16 +323,16 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         if num_dupe_next_page_urls == 0:
                             
-                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + ' next gallery pages found'
+                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase
                             
                         else:
                             
-                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + ' next gallery pages found, but ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
+                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase + ', but ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
                             
                         
                     else:
                         
-                        note += ' - ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' next gallery pages found, but they had already been visited this run and were not added'
+                        note += ' - ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + next_page_generation_phrase + ', but they had already been visited this run and were not added'
                         
                     
                 
@@ -519,6 +548,63 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
         
         self.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+        
+    
+    def CanCompact( self, compact_before_this_source_time ):
+        
+        with self._lock:
+            
+            if len( self._gallery_seeds ) <= 25:
+                
+                return False
+                
+            
+            for gallery_seed in self._gallery_seeds[:-25]:
+                
+                if gallery_seed.status == CC.STATUS_UNKNOWN:
+                    
+                    continue
+                    
+                
+                if gallery_seed.created < compact_before_this_source_time:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def Compact( self, compact_before_this_source_time ):
+        
+        with self._lock:
+            
+            if len( self._gallery_seeds ) <= 25:
+                
+                return
+                
+            
+            new_gallery_seeds = HydrusSerialisable.SerialisableList()
+            
+            for gallery_seed in self._gallery_seeds[:-25]:
+                
+                still_to_do = gallery_seed.status == CC.STATUS_UNKNOWN
+                still_relevant = gallery_seed.created > compact_before_this_source_time
+                
+                if still_to_do or still_relevant:
+                    
+                    new_gallery_seeds.append( gallery_seed )
+                    
+                
+            
+            new_gallery_seeds.extend( self._gallery_seeds[-25:] )
+            
+            self._gallery_seeds = new_gallery_seeds
+            self._gallery_seeds_to_indices = { gallery_seed : index for ( index, gallery_seed ) in enumerate( self._gallery_seeds ) }
+            
+            self._SetStatusDirty()
+            
         
     
     def DelayGallerySeed( self, gallery_seed ):

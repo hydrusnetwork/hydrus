@@ -39,6 +39,55 @@ import yaml
 import HydrusData
 import HydrusGlobals as HG
 
+def AddKnownURLsViewCopyMenu( win, menu, media ):
+    
+    urls = media.GetLocationsManager().GetURLs()
+    
+    if len( urls ) > 0:
+        
+        urls = list( urls )
+        
+        labels_and_urls = []
+        unmatched_urls = []
+        
+        for url in urls:
+            
+            url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url )
+            
+            if url_match is None:
+                
+                unmatched_urls.append( url )
+                
+            else:
+                
+                label = url_match.GetName() + ': ' + url
+                
+                labels_and_urls.append( ( label, url ) )
+                
+            
+        
+        labels_and_urls.sort()
+        unmatched_urls.sort()
+        
+        labels_and_urls.extend( ( ( url, url ) for url in unmatched_urls ) )
+        
+        urls_menu = wx.Menu()
+        
+        urls_visit_menu = wx.Menu()
+        urls_copy_menu = wx.Menu()
+        
+        for ( label, url ) in labels_and_urls:
+            
+            ClientGUIMenus.AppendMenuItem( win, urls_visit_menu, label, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
+            ClientGUIMenus.AppendMenuItem( win, urls_copy_menu, label, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
+            
+        
+        ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
+        ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
+        
+        ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
+        
+    
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
     services_manager = HG.client_controller.services_manager
@@ -2007,7 +2056,6 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
-        self._client_bmp = wx.Bitmap( 20, 20, 24 )
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
         self._num_rows_per_canvas_page = 1
@@ -2152,9 +2200,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             hash = thumbnail.GetDisplayMedia().GetHash()
             
-            self._StopFading( hash )
-            
             if hash in self._hashes_faded and thumbnail_cache.HasThumbnailCached( thumbnail ):
+                
+                self._StopFading( hash )
                 
                 thumbnail_col = thumbnail_index % self._num_columns
                 
@@ -2181,6 +2229,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             return
             
+        
+        self._hashes_faded.update( ( thumbnail.GetDisplayMedia().GetHash() for thumbnail in thumbnails ) )
         
         if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
@@ -2210,8 +2260,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
             hash = thumbnail.GetDisplayMedia().GetHash()
-            
-            self._hashes_faded.add( hash )
             
             self._StopFading( hash )
             
@@ -2489,8 +2537,6 @@ class MediaPanelThumbnails( MediaPanel ):
         thumb_layout_changed = old_num_columns != self._num_columns or old_num_rows != self._num_rows_per_canvas_page
         
         if client_dimensions_changed or thumb_layout_changed:
-            
-            self._client_bmp = wx.Bitmap( client_width, client_height, 24 )
             
             width_got_bigger = old_client_width < client_width
             
@@ -2798,7 +2844,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventPaint( self, event ):
         
-        dc = wx.BufferedPaintDC( self, self._client_bmp )
+        dc = wx.PaintDC( self )
         
         ( client_x, client_y ) = self.GetClientSize()
         
@@ -3363,30 +3409,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            urls = self._focussed_media.GetLocationsManager().GetURLs()
-            
-            if len( urls ) > 0:
-                
-                urls = list( urls )
-                
-                urls.sort()
-                
-                urls_menu = wx.Menu()
-                
-                urls_visit_menu = wx.Menu()
-                urls_copy_menu = wx.Menu()
-                
-                for url in urls:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
-                    ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
-                    
-                
-                ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
-                ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
-                
-                ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
-                
+            AddKnownURLsViewCopyMenu( self, menu, self._focussed_media )
             
             # share
             

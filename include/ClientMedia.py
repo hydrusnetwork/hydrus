@@ -1155,48 +1155,43 @@ class MediaList( object ):
     
     def HasNoMedia( self ): return len( self._sorted_media ) == 0
     
-    def ProcessContentUpdate( self, service_key, content_update ):
-        
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        hashes = content_update.GetHashes()
-        
-        for media in self._GetMedia( hashes, 'collections' ):
-            
-            media.ProcessContentUpdate( service_key, content_update )
-            
-        
-        if data_type == HC.CONTENT_TYPE_FILES:
-            
-            if action == HC.CONTENT_UPDATE_DELETE:
-                
-                local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-                
-                non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
-                
-                local_file_services = list( non_trash_local_file_services ) + [ CC.TRASH_SERVICE_KEY ]
-                
-                deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_file_services
-                
-                trashed_and_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and service_key in non_trash_local_file_services and self._file_service_key in non_trash_local_file_services
-                
-                deleted_from_repo_and_repo_view = service_key not in local_file_services and self._file_service_key == service_key
-                
-                if deleted_from_trash_and_local_view or trashed_and_non_trash_local_view or deleted_from_repo_and_repo_view:
-                    
-                    self._RemoveMediaByHashes( hashes )
-                    
-                
-            
-        
-    
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        for m in self._collected_media:
+            
+            m.ProcessContentUpdates( service_keys_to_content_updates )
+            
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             for content_update in content_updates:
                 
-                self.ProcessContentUpdate( service_key, content_update )
+                ( data_type, action, row ) = content_update.ToTuple()
+                
+                hashes = content_update.GetHashes()
+                
+                if data_type == HC.CONTENT_TYPE_FILES:
+                    
+                    if action == HC.CONTENT_UPDATE_DELETE:
+                        
+                        local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                        
+                        non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
+                        
+                        local_file_services = list( non_trash_local_file_services ) + [ CC.TRASH_SERVICE_KEY ]
+                        
+                        deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_file_services
+                        
+                        trashed_and_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and service_key in non_trash_local_file_services and self._file_service_key in non_trash_local_file_services
+                        
+                        deleted_from_repo_and_repo_view = service_key not in local_file_services and self._file_service_key == service_key
+                        
+                        if deleted_from_trash_and_local_view or trashed_and_non_trash_local_view or deleted_from_repo_and_repo_view:
+                            
+                            self._RemoveMediaByHashes( hashes )
+                            
+                        
+                    
                 
             
         
@@ -1444,9 +1439,9 @@ class MediaCollection( MediaList, Media ):
     
     def IsSizeDefinite( self ): return self._size_definite
     
-    def ProcessContentUpdate( self, service_key, content_update ):
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
-        MediaList.ProcessContentUpdate( self, service_key, content_update )
+        MediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
         self._RecalcInternals()
         
@@ -1843,8 +1838,6 @@ class MediaResult( object ):
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
-        
-        ( data_type, action, row ) = content_update.ToTuple()
         
         service = HG.client_controller.services_manager.GetService( service_key )
         

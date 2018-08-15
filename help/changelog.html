@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 318</h3></li>
+				<ul>
+					<li>downloaders:</li>
+					<li>extended url classes to support 'next gallery page' generation--a fallback that predicts next gallery page url if the parser cannot provide it (as is often the case with APIs and unreliable next-page-url galleries such as gelbooru)</li>
+					<li>integrated this new next page generation into new gallery processing pipeline</li>
+					<li>updated gelbooru, tumblr api and artstation gallery api url classes to support the new next gallery page business</li>
+					<li>fixed the url class for xbooru, which wasn't recognising gallery urls correctly</li>
+					<li>wrote new gallery parsers for rule34.paheal and mishimmie (which are both shimmie but have slightly different gallery layout). this should finally solve the 'one paheal gallery url is being parsed into the file list per page' problem</li>
+					<li>'fixed' the tumblr parser to fetch the 1280px url (tumblr killed the raw url trick this past week)</li>
+					<li>misc text/status fixes</li>
+					<li>wrote a gallery parser for tumblr that fetches the actual tumblr post urls and hence uses the new tumblr post parser naturally! (tumblr post urls are now more neatly associated as 'known urls' on files!)</li>
+					<li>note that as the tumblr downloader now produces different kinds of urls, your tumblr subs will hit your periodic limits the next time they run. they will also re-download any 1280px files that are different to the previously fetched raws due to the above raw change (protip: keep your subscription periodic file limits low)</li>
+					<li>cut the 'periodic limit' subscription warning popup down to a much simpler statement and moved the accompanying help to a new help button on the edit sub panel</li>
+					<li>multi-gallery pages now have an 'added' column like multi-watchers</li>
+					<li>the new 'pause' ? and 'stop' ? characters shown in the multi-downloader pages are now customisable under options->downloading (some users had trouble with the unicode)</li>
+					<li>the watcher now shows the 'stop character' if checking is 404/DEAD</li>
+					<li>fixed an issue where the new gallery imports on the same multi-page were all sharing the same identifier for their ephemeral 'downloader instance' bandwidth tracker, which meant they were all sharing the same '100rqs per 5mins' etc... rules</li>
+					<li>the page and subscription downloader 'gallery page delay' is now program-wide (since both these things can run in mass parallel). let's see how it goes, maybe we'll move it to per-site</li>
+					<li>subscription queries now auto-compact on sync! this means that surplus old urls will be removed from their caches, keeping the whole object lean and quick to load/save</li>
+					<li>gallery logs now also compact! they will remove anything older than twice the current death velocity, but always keep the newest 25 regardless of age</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the top-right hover window will now always appear--previously, it would only pop up if the client had some ratings services, but this window now handles urls</li>
+					<li>harmonised 'known urls' view/copy menu to a single code location and added sorted url class labels to entries (which should reduce direct-file-url misclicks)</li>
+					<li>greatly sped up manage tags dialogs initial calculation of possible actions on a tag alteration event, particularly when the dialog holds 10k+ tags</li>
+					<li>greatly sped up the second half of this process, when the action choice is applied to the manage tag dialog's current media list</li>
+					<li>the buttons on the manage tags dialog action popup dialog will now only show a max of 25 rows on their tooltips</li>
+					<li>some larger->smaller selection events on large pages with many tags should be significantly faster</li>
+					<li>subscription popups should now 'blank' their network job controls when not working (rather than leaving them on the old job, and without flickery-ly removing the job control completely)</li>
+					<li>the file cache and gallery log summary controls now have ... ellipsized texts to reduce their max width</li>
+					<li>fixed an issue where larger 'overriding bandwidth' status wait times would sometimes show instead of legit regular smaller bandwidth wait times</li>
+					<li>removed a now-superfluous layer of buffering in the thumbnail grid drawing pipeline--it seems to have removed some slight lag/flicker</li>
+					<li>I may have fixed the issue where a handful of thumbs will sometimes remain undrawn after several fast scrolling events</li>
+					<li>gave the some-linux-flavours infinitely-expanding popup message problem another pass. there _should_ be an explicit reasonable max width on the thing now</li>
+					<li>added a 'html5lib not found!' notification to the network->downloaders menu if this library is missing (mostly for users running from source)</li>
+					<li>help->about now states if lz4 is present</li>
+					<li>gave 'running from source' help page another pass, including info on running a virtual environment</li>
+					<li>in file lookup scripts, the full file content now supports string transformations--if this is set to occur, the file will be sent as an addition POST parameter and the content-type set to 'application/x-www-form-urlencoded'. this is a temp fix to see if we can get whatanime.ga working, and may see some more work</li>
+					<li>if the free space on the db dir partition is < 500MB, the program will not boot</li>
+					<li>if the free space on the db dir partition is < 1GB, the client will not sync repositories</li>
+					<li>on boot the client can now attempt to auto-heal a missing local_hashes table. it will give an appropriate error message</li>
+					<li>misc post-importing-cleanup refactoring</li>
+				</ul>
 				<li><h3>version 317</h3></li>
 				<ul>
 					<li>completely overhauled the tag filter panel:</li>

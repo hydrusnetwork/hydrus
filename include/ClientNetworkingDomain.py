@@ -283,6 +283,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._parser_keys_to_parsers = {}
         
+        self._last_pages_gallery_query_timestamp = 0
+        self._last_subscriptions_gallery_query_timestamp = 0
+        
         self._dirty = False
         
         self._lock = threading.Lock()
@@ -1153,6 +1156,49 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def TryToConsumeAGalleryQuery( self, query_type ):
+        
+        with self._lock:
+            
+            if query_type == 'pages':
+                
+                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_pages' )
+                
+                next_timestamp = self._last_pages_gallery_query_timestamp + delay
+                
+                if HydrusData.TimeHasPassed( next_timestamp ):
+                    
+                    self._last_pages_gallery_query_timestamp = HydrusData.GetNow()
+                    
+                    return ( True, 0 )
+                    
+                else:
+                    
+                    return ( False, next_timestamp )
+                    
+                
+            elif query_type == 'subscriptions':
+                
+                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
+                
+                next_timestamp = self._last_subscriptions_gallery_query_timestamp + delay
+                
+                if HydrusData.TimeHasPassed( next_timestamp ):
+                    
+                    self._last_subscriptions_gallery_query_timestamp = HydrusData.GetNow()
+                    
+                    return ( True, 0 )
+                    
+                else:
+                    
+                    return ( False, next_timestamp )
+                    
+                
+            
+            raise NotImplementedError( 'Unknown query type' )
+            
+        
+    
     def URLCanReferToMultipleFiles( self, url ):
         
         with self._lock:
@@ -1387,13 +1433,16 @@ class DomainValidationPopupProcess( object ):
             
         
     
+GALLERY_INDEX_TYPE_PATH_COMPONENT = 0
+GALLERY_INDEX_TYPE_PARAMETER = 1
+
 class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH
     SERIALISABLE_NAME = 'URL Class'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, can_produce_multiple_files = False, should_be_associated_with_files = True, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+    def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, can_produce_multiple_files = False, should_be_associated_with_files = True, gallery_index_type = None, gallery_index_identifier = None, gallery_index_delta = 1, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
         
         if url_match_key is None:
             
@@ -1437,13 +1486,19 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         self._url_type = url_type
         self._preferred_scheme = preferred_scheme
         self._netloc = netloc
+        
         self._match_subdomains = match_subdomains
         self._keep_matched_subdomains = keep_matched_subdomains
+        self._can_produce_multiple_files = can_produce_multiple_files
+        self._should_be_associated_with_files = should_be_associated_with_files
+        
         self._path_components = path_components
         self._parameters = parameters
         self._api_lookup_converter = api_lookup_converter
-        self._can_produce_multiple_files = can_produce_multiple_files
-        self._should_be_associated_with_files = should_be_associated_with_files
+        
+        self._gallery_index_type = gallery_index_type
+        self._gallery_index_identifier = gallery_index_identifier
+        self._gallery_index_delta = gallery_index_delta
         
         self._example_url = example_url
         
@@ -1522,12 +1577,12 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_parameters = self._parameters.GetSerialisableTuple()
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         
-        return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url )
+        return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url ) = serialisable_info
+        ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
         
         self._url_match_key = serialisable_url_match_key.decode( 'hex' )
         self._path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components )
@@ -1583,6 +1638,32 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = old_serialisable_info
+            
+            gallery_index_type = None
+            gallery_index_identifier = None
+            gallery_index_delta = 1
+            
+            new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
+            
+            return ( 5, new_serialisable_info )
+            
+        
+    
+    def CanGenerateNextGalleryPage( self ):
+        
+        if self._url_type == HC.URL_TYPE_GALLERY:
+            
+            if self._gallery_index_type is not None:
+                
+                return True
+                
+            
+        
+        return False
+        
     
     def CanReferToMultipleFiles( self ):
         
@@ -1615,9 +1696,94 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         return self._example_url
         
     
+    def GetGalleryIndexValues( self ):
+        
+        return ( self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta )
+        
+    
     def GetMatchKey( self ):
         
         return self._url_match_key
+        
+    
+    def GetNextGalleryPage( self, url ):
+        
+        p = urlparse.urlparse( url )
+        
+        scheme = p.scheme
+        netloc = p.netloc
+        path = p.path
+        query = p.query
+        params = ''
+        fragment = ''
+        
+        if self._gallery_index_type == GALLERY_INDEX_TYPE_PATH_COMPONENT:
+            
+            page_index_path_component_index = self._gallery_index_identifier
+            
+            while path.startswith( '/' ):
+                
+                path = path[ 1 : ]
+                
+            
+            path_components = path.split( '/' )
+            
+            try:
+                
+                page_index = path_components[ page_index_path_component_index ]
+                
+            except IndexError:
+                
+                raise HydrusExceptions.URLMatchException( 'Could not generate next gallery page--not enough path components!' )
+                
+            
+            try:
+                
+                page_index = int( page_index )
+                
+            except:
+                
+                raise HydrusExceptions.URLMatchException( 'Could not generate next gallery page--index component was not an integer!' )
+                
+            
+            path_components[ page_index_path_component_index ] = page_index + self._gallery_index_delta
+            
+            path = '/' + '/'.join( path_components )
+            
+        elif self._gallery_index_type == GALLERY_INDEX_TYPE_PARAMETER:
+            
+            page_index_name = self._gallery_index_identifier
+            
+            query_dict = { key : value_list[0] for ( key, value_list ) in urlparse.parse_qs( query ).items() }
+            
+            if page_index_name not in query_dict:
+                
+                raise HydrusExceptions.URLMatchException( 'Could not generate next gallery page--did not find ' + str( self._gallery_index_identifier ) + ' in parameters!' )
+                
+            
+            page_index = query_dict[ page_index_name ]
+            
+            try:
+                
+                page_index = int( page_index )
+                
+            except:
+                
+                raise HydrusExceptions.URLMatchException( 'Could not generate next gallery page--index component was not an integer!' )
+                
+            
+            query_dict[ page_index_name ] = page_index + self._gallery_index_delta
+            
+            query = urllib.urlencode( query_dict )
+            
+        else:
+            
+            raise NotImplementedError( 'Did not understand the next gallery page rules!' )
+            
+        
+        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+        
+        return r.geturl()
         
     
     def GetURLType( self ):

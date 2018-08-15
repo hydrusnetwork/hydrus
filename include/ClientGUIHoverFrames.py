@@ -804,9 +804,12 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         like_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        like_hbox.Add( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        
         like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        
+        if len( like_services ) > 0:
+            
+            like_hbox.Add( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            
         
         for service in like_services:
             

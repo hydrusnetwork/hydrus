@@ -22,7 +22,9 @@ import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
 import ClientNetworkingContexts
+import ClientParsing
 import ClientPaths
+import ClientRendering
 import ClientSearch
 import ClientServices
 import ClientThreading
@@ -192,10 +194,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             library_versions.append( ( 'Pillow', PIL.PILLOW_VERSION ) )
             
         
-        import ClientParsing
-        
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
+        library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
         
         # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
         v = sys.version
@@ -1689,6 +1690,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
+            if not ClientParsing.HTML5LIB_IS_OK:
+                
+                message = 'The client was unable to import html5lib on boot. This is an important parsing library that performs better than the usual backup, lxml. Without it, some downloaders will not work well and you will miss tags and files.'
+                message += os.linesep * 2
+                message += 'You are likely running from source, so I recommend you close the client, run \'pip install html5lib\' (or whatever is appropriate for your environment) and try again. You can double-check what imported ok under help->about.'
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', wx.MessageBox, message )
+                
+                ClientGUIMenus.AppendSeparator( submenu )
+                
+            
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
             
             ClientGUIMenus.AppendSeparator( submenu )
@@ -1719,7 +1731,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'LEGACY: manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
             

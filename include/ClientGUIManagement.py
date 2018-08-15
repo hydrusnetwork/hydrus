@@ -1557,7 +1557,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._gallery_downloader_panel )
         
-        columns = [ ( 'query', -1 ), ( 'source', 11 ), ( 'f', 3 ), ( 's', 3 ), ( 'status', 8 ), ( 'items', 9 ) ]
+        columns = [ ( 'query', -1 ), ( 'source', 11 ), ( 'f', 3 ), ( 's', 3 ), ( 'status', 8 ), ( 'items', 9 ), ( 'added', 8 ) ]
         
         self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, 'gallery_importers', 4, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
         
@@ -1715,7 +1715,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if files_paused:
             
-            pretty_files_paused = u'\u23F8'
+            pretty_files_paused = HG.client_controller.new_options.GetString( 'pause_character' )
             
         else:
             
@@ -1727,11 +1727,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if gallery_finished:
             
-            pretty_gallery_paused = u'\u23F9'
+            pretty_gallery_paused = HG.client_controller.new_options.GetString( 'stop_character' )
             
         elif gallery_paused:
             
-            pretty_gallery_paused = u'\u23F8'
+            pretty_gallery_paused = HG.client_controller.new_options.GetString( 'pause_character' )
             
         else:
             
@@ -1762,8 +1762,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         pretty_progress = file_seed_cache_simple_status
         
-        display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress )
-        sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress )
+        added = gallery_import.GetCreationTime()
+        
+        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
+        
+        display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
+        sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -2264,18 +2268,23 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if files_paused:
             
-            pretty_files_paused = u'\u23F8'
+            pretty_files_paused = HG.client_controller.new_options.GetString( 'pause_character' )
             
         else:
             
             pretty_files_paused = ''
             
         
+        checking_dead = watcher.IsDead()
         checking_paused = watcher.CheckingPaused()
         
-        if checking_paused:
+        if checking_dead:
             
-            pretty_checking_paused = u'\u23F8'
+            pretty_checking_paused = HG.client_controller.new_options.GetString( 'stop_character' )
+            
+        elif checking_paused:
+            
+            pretty_checking_paused = HG.client_controller.new_options.GetString( 'pause_character' )
             
         else:
             

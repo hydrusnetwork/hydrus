@@ -600,7 +600,7 @@ class GallerySeedLogStatusControl( wx.Panel ):
         
         self._gallery_seed_log = None
         
-        self._log_summary_st = ClientGUICommon.BetterStaticText( self )
+        self._log_summary_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
         
         self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._GetGallerySeedLog )
         

@@ -1072,7 +1072,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._is_default:
             
-            return 'Using the default tag import options, whatever they are at time of import.'
+            return 'Using whatever the default tag import options is at at time of import.'
             
         
         statements = []

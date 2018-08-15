@@ -592,7 +592,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, ClientImporting.GenerateWatcherNetworkJobFactory( self._watcher_key ), self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, self._NetworkJobFactory, self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
             
             if num_urls_added > 0:
                 
@@ -685,6 +685,13 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
+        
+    
+    def _NetworkJobFactory( self, *args, **kwargs ):
+        
+        network_job = ClientNetworkingJobs.NetworkJobWatcherPage( self._watcher_key, *args, **kwargs )
+        
+        return network_job
         
     
     def _GetSerialisableInfo( self ):
@@ -841,7 +848,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, ClientImporting.GenerateWatcherNetworkJobFactory( self._watcher_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
+        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
         
         with self._lock:
             

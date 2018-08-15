@@ -626,8 +626,8 @@ class FileSeedCacheStatusControl( wx.Panel ):
         
         self._file_seed_cache = None
         
-        self._import_summary_st = ClientGUICommon.BetterStaticText( self )
-        self._progress_st = ClientGUICommon.BetterStaticText( self )
+        self._import_summary_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
+        self._progress_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
         
         self._file_seed_cache_button = FileSeedCacheButton( self, self._controller, self._GetFileSeedCache )
         

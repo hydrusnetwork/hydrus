@@ -56,8 +56,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
-        self._last_gallery_page_hit_timestamp = 0
-        
         self._no_work_until = 0
         self._no_work_until_reason = ''
         
@@ -143,6 +141,21 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
     
+    def _GenerateNetworkJobFactory( self, query ):
+        
+        subscription_key = self._GetNetworkJobSubscriptionKey( query )
+        
+        def network_job_factory( *args, **kwargs ):
+            
+            network_job = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, *args, **kwargs )
+            
+            network_job.OverrideBandwidth( 30 )
+            
+            return network_job
+            
+        
+        return network_job_factory
+        
     def _NoDelays( self ):
         
         return HydrusData.TimeHasPassed( self._no_work_until )
@@ -166,11 +179,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ShowHitPeriodicFileLimitMessage( self, query_text ):
         
-        message = 'When syncing, the query "' + query_text + '" for subscription "' + self._name + '" hit its periodic file limit!'
-        message += os.linesep * 2
-        message += 'This may be because the query has not run in a while--so the backlog of files has built up--or that the site has changed how it presents file urls on its gallery pages (and so the subscription thinks it is seeing new files when it truly is not).'
-        message += os.linesep * 2
-        message += 'If the former is true, you might want to tweak its numbers and fill in the gap with a manual download page, but if the latter is true, the maintainer for the download parser (hydrus dev or whoever), would be interested in knowing this information so they can roll out a fix.'
+        message = 'The query "' + query_text + '" for subscription "' + self._name + '" hit its periodic file limit.'
         
         HydrusData.ShowText( message )
         
@@ -382,7 +391,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             
                         
-                        file_seed.WorkOnURL( file_seed_cache, status_hook, ClientImporting.GenerateSubscriptionNetworkJobFactory( self._GetNetworkJobSubscriptionKey( query ) ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
+                        file_seed.WorkOnURL( file_seed_cache, status_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
                         
                         if file_seed.ShouldPresent( self._file_import_options ):
                             
@@ -711,17 +720,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 break
                                 
                             
-                            next_gallery_page_hit_timestamp = self._last_gallery_page_hit_timestamp + HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
+                            ( consumed, next_timestamp ) = HG.client_controller.network_engine.domain_manager.TryToConsumeAGalleryQuery( 'subscriptions' )
                             
-                            if not HydrusData.TimeHasPassed( next_gallery_page_hit_timestamp ):
+                            if not consumed:
                                 
                                 if not done_first_page:
                                     
-                                    page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_gallery_page_hit_timestamp )
+                                    page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp )
                                     
                                 else:
                                     
-                                    page_check_status = HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls found, checking next page ' + HydrusData.TimestampToPrettyTimeDelta( next_gallery_page_hit_timestamp )
+                                    page_check_status = HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls found (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
                                     
                                 
                                 job_key.SetVariable( 'popup_text_1', prefix + ': ' + page_check_status )
@@ -737,7 +746,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             try:
                                 
-                                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( gallery_seed_log, this_page_file_seed_cache, status_hook, title_hook, ClientImporting.GenerateSubscriptionNetworkJobFactory( self._GetNetworkJobSubscriptionKey( query ) ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
+                                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( gallery_seed_log, this_page_file_seed_cache, status_hook, title_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
                                 
                             except HydrusExceptions.CancelledException as e:
                                 
@@ -755,7 +764,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                             finally:
                                 
-                                self._last_gallery_page_hit_timestamp = HydrusData.GetNow()
                                 done_first_page = True
                                 
                             
@@ -864,57 +872,50 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         new_urls_this_page = 0
                         
+                        p1 = HC.options[ 'pause_subs_sync' ]
+                        p2 = HG.view_shutdown
+                        
+                        if p1 or p2:
+                            
+                            return
+                            
+                        
+                        if job_key.IsCancelled():
+                            
+                            raise HydrusExceptions.CancelledException( 'gallery parsing cancelled, likely by user' )
+                            
+                        
+                        ( consumed, next_timestamp ) = HG.client_controller.network_engine.domain_manager.TryToConsumeAGalleryQuery( 'subscriptions' )
+                        
+                        if not consumed:
+                            
+                            if not done_first_page:
+                                
+                                page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp )
+                                
+                            else:
+                                
+                                page_check_status = HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls found, checking next page (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
+                                
+                            
+                            job_key.SetVariable( 'popup_text_1', prefix + ': ' + page_check_status )
+                            
+                            time.sleep( 1 )
+                            
+                            continue
+                            
+                        
+                        job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
+                        
+                        gallery_url = gallery.GetGalleryPageURL( query_text, page_index )
+                        
                         try:
-                            
-                            p1 = HC.options[ 'pause_subs_sync' ]
-                            p2 = HG.view_shutdown
-                            
-                            if p1 or p2:
-                                
-                                return
-                                
-                            
-                            if job_key.IsCancelled():
-                                
-                                raise HydrusExceptions.CancelledException( 'gallery parsing cancelled, likely by user' )
-                                
-                            
-                            next_gallery_page_hit_timestamp = self._last_gallery_page_hit_timestamp + HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
-                            
-                            if not HydrusData.TimeHasPassed( next_gallery_page_hit_timestamp ):
-                                
-                                if not done_first_page:
-                                    
-                                    page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_gallery_page_hit_timestamp )
-                                    
-                                else:
-                                    
-                                    page_check_status = HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls found, checking next page ' + HydrusData.TimestampToPrettyTimeDelta( next_gallery_page_hit_timestamp )
-                                    
-                                
-                                job_key.SetVariable( 'popup_text_1', prefix + ': ' + page_check_status )
-                                
-                                time.sleep( 1 )
-                                
-                                continue
-                                
-                            
-                            job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
-                            
-                            gallery_url = gallery.GetGalleryPageURL( query_text, page_index )
                             
                             gallery_seed = ClientImportGallerySeeds.GallerySeed( gallery_url, can_generate_more_pages = False )
                             
                             gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
                             
-                            try:
-                                
-                                ( page_of_file_seeds, definitely_no_more_pages ) = gallery.GetPage( gallery_url )
-                                
-                            finally:
-                                
-                                self._last_gallery_page_hit_timestamp = HydrusData.GetNow()
-                                
+                            ( page_of_file_seeds, definitely_no_more_pages ) = gallery.GetPage( gallery_url )
                             
                             done_first_page = True
                             
@@ -1020,6 +1021,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             query.RegisterSyncComplete()
             query.UpdateNextCheckTime( self._checker_options )
+            
+            if query.CanCompact( self._checker_options ):
+                
+                query.Compact( self._checker_options )
+                
             
             if query.IsDead():
                 
@@ -1473,7 +1479,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         compact_before_this_source_time = self._last_check_time - ( death_period * 2 )
         
-        return self._file_seed_cache.CanCompact( compact_before_this_source_time )
+        return self._file_seed_cache.CanCompact( compact_before_this_source_time ) or self._gallery_seed_log.CanCompact( compact_before_this_source_time )
         
     
     def CanRetryFailed( self ):
@@ -1516,7 +1522,8 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         compact_before_this_time = self._last_check_time - ( death_period * 2 )
         
-        return self._file_seed_cache.Compact( compact_before_this_time )
+        self._file_seed_cache.Compact( compact_before_this_time )
+        self._gallery_seed_log.Compact( compact_before_this_time )
         
     
     def GetFileSeedCache( self ):

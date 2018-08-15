@@ -455,7 +455,7 @@ class NetworkJob( object ):
                     
                     if will_override:
                         
-                        override_waiting_duration = HydrusData.GetNow() - self._bandwidth_manual_override_delayed_timestamp
+                        override_waiting_duration = self._bandwidth_manual_override_delayed_timestamp - HydrusData.GetNow()
                         
                         override_coming_first = override_waiting_duration < bandwidth_waiting_duration
                         

@@ -62,8 +62,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
-        self._last_gallery_page_hit_timestamp = 0
-        
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
         
@@ -199,6 +197,13 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
         
     
+    def _NetworkJobFactory( self, *args, **kwargs ):
+        
+        network_job = ClientNetworkingJobs.NetworkJobDownloader( self._gallery_import_key, *args, **kwargs )
+        
+        return network_job
+        
+    
     def _WorkOnFiles( self ):
         
         file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
@@ -222,7 +227,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, ClientImporting.GenerateDownloaderNetworkJobFactory( self._page_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
+                did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
                 
                 with self._lock:
                     
@@ -242,7 +247,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 def network_job_factory( method, url, **kwargs ):
                     
-                    network_job = ClientNetworkingJobs.NetworkJobDownloader( self._page_key, method, url, **kwargs )
+                    network_job = ClientNetworkingJobs.NetworkJobDownloader( self._gallery_import_key, method, url, **kwargs )
                     
                     with self._lock:
                         
@@ -415,20 +420,22 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._gallery_paused = True
                 
+                self._gallery_status = ''
+                
                 return
                 
             
-            next_gallery_page_hit_timestamp = self._last_gallery_page_hit_timestamp + HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_pages' )
+            ( consumed, next_timestamp ) = HG.client_controller.network_engine.domain_manager.TryToConsumeAGalleryQuery( 'pages' )
             
-            if not HydrusData.TimeHasPassed( next_gallery_page_hit_timestamp ):
+            if not consumed:
                 
                 if self._current_page_index == 0:
                     
-                    page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_gallery_page_hit_timestamp, just_now_threshold = 0 )
+                    page_check_status = 'checking first page (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
                     
                 else:
                     
-                    page_check_status = 'checking next page ' + HydrusData.TimestampToPrettyTimeDelta( next_gallery_page_hit_timestamp, just_now_threshold = 0 )
+                    page_check_status = 'checking next page (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
                     
                 
                 self._gallery_status = page_check_status
@@ -454,9 +461,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            network_job_factory = ClientImporting.GenerateDownloaderNetworkJobFactory( self._page_key )
-            network_job_presentation_context_factory = self._GalleryNetworkJobPresentationContextFactory
-            
             if self._file_limit is None:
                 
                 max_new_urls_allowed = None
@@ -468,7 +472,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, self._file_import_options, max_new_urls_allowed = max_new_urls_allowed )
+                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options, max_new_urls_allowed = max_new_urls_allowed )
                 
                 self._num_new_urls_found += num_urls_added
                 self._num_urls_found += num_urls_total
@@ -503,16 +507,12 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     self._gallery_paused = True
                     
                 
-            finally:
-                
-                self._last_gallery_page_hit_timestamp = HydrusData.GetNow()
-                
             
         else:
             
             def network_job_factory( method, url, **kwargs ):
                 
-                network_job = ClientNetworkingJobs.NetworkJobDownloader( self._page_key, method, url, **kwargs )
+                network_job = ClientNetworkingJobs.NetworkJobDownloader( self._gallery_import_key, method, url, **kwargs )
                 
                 network_job.OverrideBandwidth( 30 )
                 
@@ -550,16 +550,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                try:
-                    
-                    gallery_url = gallery_seed.url
-                    
-                    ( page_of_file_seeds, definitely_no_more_pages ) = gallery.GetPage( gallery_url )
-                    
-                finally:
-                    
-                    self._last_gallery_page_hit_timestamp = HydrusData.GetNow()
-                    
+                gallery_url = gallery_seed.url
+                
+                ( page_of_file_seeds, definitely_no_more_pages ) = gallery.GetPage( gallery_url )
+                
                 
                 # do files
                 
@@ -706,6 +700,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._gallery_paused
+            
+        
+    
+    def GetCreationTime( self ):
+        
+        with self._lock:
+            
+            return self._creation_time
             
         
     
@@ -1027,6 +1029,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 ok_to_work = work_pending and no_delays and page_shown
                 
+            
+        
+        with self._lock:
+            
+            self._gallery_status = ''
             
         
     

@@ -3,6 +3,7 @@ import calendar
 import ClientNetworkingDomain
 import ClientNetworkingJobs
 import collections
+import cStringIO
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -2391,13 +2392,34 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
         elif self._query_type == HC.POST:
             
+            additional_headers = {}
+            files = None
+            
             if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
                 
                 job_key.SetVariable( 'script_status', 'uploading file' )
                 
                 path  = file_identifier
                 
-                files = { self._file_identifier_arg_name : open( path, 'rb' ) }
+                if self._file_identifier_string_converter.MakesChanges():
+                    
+                    f_altered = cStringIO.StringIO()
+                    
+                    with open( path, 'rb' ) as f:
+                        
+                        file_content = f.read()
+                        
+                    
+                    f_altered = self._file_identifier_string_converter.Convert( file_content )
+                    
+                    request_args[ self._file_identifier_arg_name ] = f_altered
+                    
+                    additional_headers[ 'content-type' ] = 'application/x-www-form-urlencoded'
+                    
+                else:
+                    
+                    files = { self._file_identifier_arg_name : open( path, 'rb' ) }
+                    
                 
             else:
                 
@@ -2408,7 +2430,15 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             network_job = ClientNetworkingJobs.NetworkJob( 'POST', self._url, body = request_args )
             
-            network_job.SetFiles( files )
+            if files is not None:
+                
+                network_job.SetFiles( files )
+                
+            
+            for ( key, value ) in additional_headers.items():
+                
+                network_job.AddAdditionalHeader( key, value )
+                
             
         
         # send nj to nj control on this panel here

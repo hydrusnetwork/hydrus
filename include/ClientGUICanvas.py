@@ -9,6 +9,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIHoverFrames
+import ClientGUIMedia
 import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
@@ -2483,30 +2484,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open this file in your OS\'s default program.', self._OpenExternally )
             
-            urls = self._current_media.GetLocationsManager().GetURLs()
-            
-            if len( urls ) > 0:
-                
-                urls = list( urls )
-                
-                urls.sort()
-                
-                urls_menu = wx.Menu()
-                
-                urls_visit_menu = wx.Menu()
-                urls_copy_menu = wx.Menu()
-                
-                for url in urls:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
-                    ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
-                    
-                
-                ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
-                ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
-                
-                ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
-                
+            ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
             share_menu = wx.Menu()
             
@@ -2860,10 +2838,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         ratings_services = HG.client_controller.services_manager.GetServices( ( HC.RATINGS_SERVICES ) )
         
-        if len( ratings_services ) > 0:
-            
-            self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self._canvas_key )
-            
+        self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self._canvas_key )
         
         #
         
@@ -4832,30 +4807,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open this file in the default external program.', self._OpenExternally )
             
-            urls = self._current_media.GetLocationsManager().GetURLs()
-            
-            if len( urls ) > 0:
-                
-                urls = list( urls )
-                
-                urls.sort()
-                
-                urls_menu = wx.Menu()
-                
-                urls_visit_menu = wx.Menu()
-                urls_copy_menu = wx.Menu()
-                
-                for url in urls:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
-                    ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
-                    
-                
-                ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
-                ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
-                
-                ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
-                
+            ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
             share_menu = wx.Menu()
             

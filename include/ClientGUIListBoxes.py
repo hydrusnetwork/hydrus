@@ -2902,6 +2902,11 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         media = set( media )
         
+        if len( media ) < len( self._last_media ) / 10: # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
+            
+            force_reload = True
+            
+        
         if force_reload:
             
             ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
@@ -2938,7 +2943,10 @@ class ListBoxTagsSelection( ListBoxTags ):
                 
                 for tag in tags:
                     
-                    if counter[ tag ] == 0: del counter[ tag ]
+                    if counter[ tag ] == 0:
+                        
+                        del counter[ tag ]
+                        
                     
                 
             

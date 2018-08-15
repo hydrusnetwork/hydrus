@@ -252,6 +252,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
         self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
         self._dictionary[ 'strings' ][ 'thumbnail_scroll_rate' ] = '1.0'
+        self._dictionary[ 'strings' ][ 'pause_character' ] = u'\u23F8'
+        self._dictionary[ 'strings' ][ 'stop_character' ] = u'\u23F9'
         
         self._dictionary[ 'string_list' ] = {}
         

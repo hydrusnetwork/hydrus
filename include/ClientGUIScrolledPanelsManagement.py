@@ -1742,6 +1742,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             misc = ClientGUICommon.StaticBox( self, 'misc' )
             
+            self._pause_character = wx.TextCtrl( misc )
+            self._stop_character = wx.TextCtrl( misc )
             self._show_deleted_on_file_seed_short_summary = wx.CheckBox( misc )
             
             #
@@ -1756,6 +1758,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gallery_page_tt += os.linesep * 2
             gallery_page_tt += 'After this fixed wait has occurred, the gallery download job will run like any other network job, except that it will ignore bandwidth limits after thirty seconds to guarantee throughput and to stay synced with the source.'
             gallery_page_tt += os.linesep * 2
+            gallery_page_tt += 'Update: Now that it is much easier to run multiple downloaders simultaneously, these delays are now global across the whole program. There is one page gallery download slot per x seconds and one subscription gallery download slot per y seconds.'
+            gallery_page_tt += os.linesep * 2
             gallery_page_tt += 'If you do not understand this stuff, you can just leave it alone.'
             
             self._gallery_page_wait_period_pages.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_pages' ) )
@@ -1769,6 +1773,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
+            self._pause_character.SetValue( self._new_options.GetString( 'pause_character' ) )
+            self._stop_character.SetValue( self._new_options.GetString( 'stop_character' ) )
             self._show_deleted_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
             
             self._highlight_new_watcher.SetValue( self._new_options.GetBoolean( 'highlight_new_watcher' ) )
@@ -1813,6 +1819,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Pause character:', self._pause_character ) )
+            rows.append( ( 'Stop character:', self._stop_character ) )
             rows.append( ( 'Show the \'D\' (for \'deleted\') count on short file import summaries:', self._show_deleted_on_file_seed_short_summary ) )
             
             gridbox = ClientGUICommon.WrapInGrid( misc, rows )
@@ -1846,6 +1854,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
             
+            self._new_options.SetString( 'pause_character', self._pause_character.GetValue() )
+            self._new_options.SetString( 'stop_character', self._stop_character.GetValue() )
             self._new_options.SetBoolean( 'show_deleted_on_file_seed_short_summary', self._show_deleted_on_file_seed_short_summary.GetValue() )
             
         
@@ -5458,6 +5468,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             tag_managers = [ m.GetTagsManager() for m in self._media ]
+            currents = [ tag_manager.GetCurrent( self._tag_service_key ) for tag_manager in tag_managers ]
+            pendings = [ tag_manager.GetPending( self._tag_service_key ) for tag_manager in tag_managers ]
+            petitioneds = [ tag_manager.GetPetitioned( self._tag_service_key ) for tag_manager in tag_managers ]
             
             num_files = len( self._media )
             
@@ -5467,7 +5480,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for tag in tags:
                 
-                num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
+                num_current = sum( ( 1 for current in currents if tag in current ) )
                 
                 if self._i_am_local_tag_service:
                     
@@ -5491,8 +5504,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 else:
                     
-                    num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_key ) ] )
-                    num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_key ) ] )
+                    num_pending = sum( ( 1 for pending in pendings if tag in pending ) )
+                    num_petitioned = sum( ( 1 for petitioned in petitioneds if tag in petitioned ) )
                     
                     if not only_remove:
                         
@@ -5583,7 +5596,20 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     data = ( choice_action, tags )
                     
-                    tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in tag_counts ) )
+                    if len( tag_counts ) > 25:
+                        
+                        t_c = tag_counts[:25]
+                        
+                        t_c_lines = [ tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in t_c ]
+                        
+                        t_c_lines.append( 'and ' + HydrusData.ToHumanInt( len( tag_counts ) - 25 ) + ' others' )
+                        
+                        tooltip = os.linesep.join( t_c_lines )
+                        
+                    else:
+                        
+                        tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in tag_counts ) )
+                        
                     
                     bdc_choices.append( ( text, data, tooltip ) )
                     
@@ -5656,30 +5682,32 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             # we have an action and tags, so let's effect the content updates
             
-            content_updates = []
+            content_updates_group = []
             
             recent_tags = set()
             
             for tag in tags:
                 
-                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) ]
                 
                 hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
                 
                 if len( hashes ) > 0:
                     
+                    content_updates = []
+                    
                     if choice_action == HC.CONTENT_UPDATE_PETITION:
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes, reason ) ) )
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes, reason ) ) ]
                         
                     else:
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ) ) )
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ) ) ]
                         
                     
                     if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
@@ -5696,6 +5724,24 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
+                    if len( content_updates ) > 0:
+                        
+                        if not self._immediate_commit:
+                            
+                            for m in media_to_affect:
+                                
+                                mt = m.GetTagsManager()
+                                
+                                for content_update in content_updates:
+                                    
+                                    mt.ProcessContentUpdate( self._tag_service_key, content_update )
+                                    
+                                
+                            
+                        
+                        content_updates_group.extend( content_updates )
+                        
+                    
                 
             
             if len( recent_tags ) > 0 and HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
@@ -5703,25 +5749,17 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 HG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
                 
             
-            if self._immediate_commit:
+            if len( content_updates_group ) > 0:
                 
-                service_keys_to_content_updates = { self._tag_service_key : content_updates }
-                
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                
-            else:
-                
-                for m in self._media:
+                if self._immediate_commit:
                     
-                    for content_update in content_updates:
-                        
-                        m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
-                        
+                    service_keys_to_content_updates = { self._tag_service_key : content_updates_group }
                     
-                
-                if len( content_updates ) > 0:
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
-                    self._groups_of_content_updates.append( content_updates )
+                else:
+                    
+                    self._groups_of_content_updates.append( content_updates_group )
                     
                 
             
@@ -5732,7 +5770,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( tags ) > 0:
                 
-                self._AddTags( tags, only_add = only_add )
+                HydrusData.Profile( 'w', 'self._AddTags( tags, only_add = only_add )', globals(), locals() )
+                
+                #self._AddTags( tags, only_add = only_add )
                 
             
         

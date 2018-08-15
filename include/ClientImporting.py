@@ -35,17 +35,6 @@ DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
-def GenerateDownloaderNetworkJobFactory( page_key ):
-    
-    def network_job_factory( *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJobDownloader( page_key, *args, **kwargs )
-        
-        return network_job
-        
-    
-    return network_job_factory
-    
 def GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ):
     
     def network_job_presentation_context_factory( network_job ):
@@ -57,7 +46,7 @@ def GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ):
         
         def exit_call():
             
-            pass
+            job_key.SetVariable( 'popup_network_job', None )
             
         
         return NetworkJobPresentationContext( enter_call, exit_call )
@@ -83,30 +72,6 @@ def GenerateSinglePopupNetworkJobPresentationContextFactory( job_key ):
         
     
     return network_job_presentation_context_factory
-    
-def GenerateSubscriptionNetworkJobFactory( subscription_key ):
-    
-    def network_job_factory( *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, *args, **kwargs )
-        
-        network_job.OverrideBandwidth( 30 )
-        
-        return network_job
-        
-    
-    return network_job_factory
-    
-def GenerateWatcherNetworkJobFactory( watcher_key ):
-    
-    def network_job_factory( *args, **kwargs ):
-        
-        network_job = ClientNetworkingJobs.NetworkJobWatcherPage( watcher_key, *args, **kwargs )
-        
-        return network_job
-        
-    
-    return network_job_factory
     
 def GetRepeatingJobInitialDelay():
     

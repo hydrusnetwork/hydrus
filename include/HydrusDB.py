@@ -105,6 +105,11 @@ class HydrusDB( object ):
     
     def __init__( self, controller, db_dir, db_name, no_wal = False ):
         
+        if HydrusPaths.GetFreeSpace( db_dir ) < 500 * 1048576:
+            
+            raise Exception( 'Sorry, it looks like the db partition has less than 500MB, please free up some space.' )
+            
+        
         self._controller = controller
         self._db_dir = db_dir
         self._db_name = db_name

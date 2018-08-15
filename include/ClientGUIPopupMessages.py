@@ -318,7 +318,7 @@ class PopupMessage( PopupWindow ):
             
         
     
-    def Update( self ):
+    def UpdateMessage( self ):
         
         popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
         
@@ -431,9 +431,11 @@ class PopupMessage( PopupWindow ):
             self._no.Hide()
             
         
-        popup_network_job = self._job_key.GetIfHasVariable( 'popup_network_job' )
-        
-        if popup_network_job is not None:
+        if self._job_key.HasVariable( 'popup_network_job' ):
+            
+            # this can be validly None, which confuses the getifhas result
+            
+            popup_network_job = self._job_key.GetIfHasVariable( 'popup_network_job' )
             
             self._network_job_ctrl.SetNetworkJob( popup_network_job )
             
@@ -594,7 +596,7 @@ class PopupMessageManager( wx.Frame ):
             
             window = PopupMessage( self, job_key )
             
-            window.Update()
+            window.UpdateMessage()
             
             self._message_vbox.Add( window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -760,9 +762,17 @@ class PopupMessageManager( wx.Frame ):
             
             if there_is_stuff_to_display:
                 
+                # little catch here to try to stop the linux users who got infinitely expanding popups wew
+                
+                popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
+                
+                wrap_width = ClientGUICommon.ConvertTextToPixelWidth( self, popup_message_character_width )
+                
+                max_width = wrap_width * 1.2
+                
                 best_size = self.GetBestSize()
                 
-                if best_size != self._last_best_size_i_fit_on:
+                if best_size[0] < max_width and best_size != self._last_best_size_i_fit_on:
                     
                     self._last_best_size_i_fit_on = best_size
                     
@@ -939,7 +949,7 @@ class PopupMessageManager( wx.Frame ):
                 
             else:
                 
-                message_window.Update()
+                message_window.UpdateMessage()
                 
             
         
@@ -1151,7 +1161,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
     
     def _Update( self ):
         
-        self._message_window.Update()
+        self._message_window.UpdateMessage()
         
         best_size = self.GetBestSize()
         

@@ -2313,7 +2313,23 @@ If you want to get all of an artist's files from a site, use the manual gallery 
         
         help_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
+        
+        message = '''****Hitting the normal/periodic limit may or may not be a big deal****
+
+If one of your subscriptions hits the file limit just doing a normal sync, you will get a little popup telling you. It is likely because of:
+
+1) The query has not run in a while, or many new files were suddenly posted, so the backlog of to-be-synced files has built up.
+
+2) The site has changed how it formats file post urls, so the subscription thinks it is seeing new files when it truly is not.
+
+If 1 is true, you might want to increase its periodic limit a little, or speed up its checking times, and fill in whatever gap of files you missing with a manual download page.
+
+But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--the maintainer for the site's download parser (hydrus dev or whoever), would be interested in knowing what has happened so they can roll out a fix.'.'''
+        
+        help_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
+        
+        help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about hitting the normal file limit -->', wx.Colour( 0, 0, 255 ) )
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -2387,7 +2403,8 @@ If you want to get all of an artist's files from a site, use the manual gallery 
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
-        self._options_panel.Add( help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( help_hbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( help_hbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -4502,6 +4519,14 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._next_gallery_page_panel = ClientGUICommon.StaticBox( self, 'next gallery page' )
+        
+        self._next_gallery_page_choice = ClientGUICommon.BetterChoice( self._next_gallery_page_panel )
+        
+        self._next_gallery_page_delta = wx.SpinCtrl( self._next_gallery_page_panel, min = 1, max = 65536 )
+        
+        #
+        
         self._example_url = wx.TextCtrl( self )
         
         self._example_url_matches = ClientGUICommon.BetterStaticText( self )
@@ -4519,6 +4544,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._api_lookup_converter = ClientGUIParsing.StringConverterButton( self, api_lookup_converter )
         
         self._api_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        
+        self._next_gallery_page_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
         #
         
@@ -4549,6 +4576,14 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url.SetMinSize( ( example_url_width, -1 ) )
         
+        ( gallery_index_type, gallery_index_identifier, gallery_index_delta ) = url_match.GetGalleryIndexValues()
+        
+        # this preps it for the upcoming update
+        self._next_gallery_page_choice.Append( 'initialisation', ( gallery_index_type, gallery_index_identifier ) )
+        self._next_gallery_page_choice.Select( 0 )
+        
+        self._next_gallery_page_delta.SetValue( gallery_index_delta )
+        
         self._UpdateControls()
         
         #
@@ -4558,6 +4593,16 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         parameters_panel.Add( parameters_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._next_gallery_page_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._next_gallery_page_delta, CC.FLAGS_VCENTER )
+        
+        self._next_gallery_page_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -4580,6 +4625,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'normalised url: ', self._normalised_url ) )
         rows.append( ( 'optional api url converter: ', self._api_lookup_converter ) )
         rows.append( ( 'api url: ', self._api_url ) )
+        rows.append( ( 'next gallery page url: ', self._next_gallery_page_url ) )
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -4588,6 +4634,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._example_url_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -4598,6 +4645,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preferred_scheme.Bind( wx.EVT_CHOICE, self.EventUpdate )
         self._netloc.Bind( wx.EVT_TEXT, self.EventUpdate )
         self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
+        self._next_gallery_page_choice.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._next_gallery_page_delta.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
         self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
         self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
         self._url_type.Bind( wx.EVT_CHOICE, self.EventURLTypeUpdate )
@@ -4800,14 +4849,71 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
+        
+        ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetChoice()
+        gallery_index_delta = self._next_gallery_page_delta.GetValue()
+        
         example_url = self._example_url.GetValue()
         
-        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, example_url = example_url )
+        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         return url_match
         
     
     def _UpdateControls( self ):
+        
+        # we need to regen possible next gallery page choices before we fetch current value and update everything else
+        
+        if self._url_type.GetChoice() == HC.URL_TYPE_GALLERY:
+            
+            self._next_gallery_page_panel.Enable()
+            
+            choices = [ ( 'no next gallery page info set', ( None, None ) ) ]
+            
+            for ( index, path_component ) in enumerate( self._path_components.GetData() ):
+                
+                if True in ( path_component.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
+                    
+                    choices.append( ( HydrusData.ConvertIntToPrettyOrdinalString( index + 1 ) + ' path component', ( ClientNetworkingDomain.GALLERY_INDEX_TYPE_PATH_COMPONENT, index ) ) )
+                    
+                
+            
+            for ( index, ( key, value ) ) in enumerate( self._parameters.GetData() ):
+                
+                if True in ( value.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
+                    
+                    choices.append( ( key + ' parameter', ( ClientNetworkingDomain.GALLERY_INDEX_TYPE_PARAMETER, key ) ) )
+                    
+                
+            
+            existing_choice = self._next_gallery_page_choice.GetChoice()
+            
+            self._next_gallery_page_choice.Clear()
+            
+            for ( name, data ) in choices:
+                
+                self._next_gallery_page_choice.Append( name, data )
+                
+            
+            self._next_gallery_page_choice.SelectClientData( existing_choice ) # this should fail to ( None, None )
+            
+            ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetChoice() # what was actually set?
+            
+            if gallery_index_type is None:
+                
+                self._next_gallery_page_delta.Disable()
+                
+            else:
+                
+                self._next_gallery_page_delta.Enable()
+                
+            
+        else:
+            
+            self._next_gallery_page_panel.Disable()
+            
+        
+        #
         
         url_match = self._GetValue()
         
@@ -4872,6 +4978,26 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 reason = HydrusData.ToUnicode( e )
                 
                 self._api_url.SetValue( 'Could not convert - ' + reason )
+                
+            
+            try:
+                
+                if url_match.CanGenerateNextGalleryPage():
+                    
+                    next_gallery_page_url = url_match.GetNextGalleryPage( normalised )
+                    
+                else:
+                    
+                    next_gallery_page_url = 'none set'
+                    
+                
+                self._next_gallery_page_url.SetValue( next_gallery_page_url )
+                
+            except Exception as e:
+                
+                reason = HydrusData.ToUnicode( e )
+                
+                self._next_gallery_page_url.SetValue( 'Could not convert - ' + reason )
                 
             
         except HydrusExceptions.URLMatchException as e:

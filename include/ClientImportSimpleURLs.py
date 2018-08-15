@@ -35,6 +35,8 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._queue_paused = False
         self._files_paused = False
         
+        self._downloader_key = HydrusData.GenerateKey()
+        
         self._parser_status = ''
         self._current_action = ''
         
@@ -90,6 +92,13 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
+        
+    
+    def _NetworkJobFactory( self, *args, **kwargs ):
+        
+        network_job = ClientNetworkingJobs.NetworkJobDownloader( self._downloader_key, *args, **kwargs )
+        
+        return network_job
         
     
     def _PageNetworkJobPresentationContextFactory( self, network_job ):
@@ -186,7 +195,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
-        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, ClientImporting.GenerateDownloaderNetworkJobFactory( page_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, tag_import_options )
+        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, tag_import_options )
         
         if file_seed.ShouldPresent( self._file_import_options ):
             
@@ -225,7 +234,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
                 
-                network_job = ClientNetworkingJobs.NetworkJobDownloader( page_key, 'GET', url )
+                network_job = self._NetworkJobFactory( 'GET', url )
                 
                 network_job.OverrideBandwidth( 30 )
                 
@@ -624,6 +633,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         self._paused = False
         
+        self._downloader_key = HydrusData.GenerateKey()
+        
         self._lock = threading.Lock()
         
         self._files_network_job = None
@@ -697,6 +708,13 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
     
+    def _NetworkJobFactory( self, *args, **kwargs ):
+        
+        network_job = ClientNetworkingJobs.NetworkJobDownloader( self._downloader_key, *args, **kwargs )
+        
+        return network_job
+        
+    
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
         if version == 1:
@@ -743,7 +761,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             status_hook = lambda s: s # do nothing for now
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, ClientImporting.GenerateDownloaderNetworkJobFactory( page_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
             
             if file_seed.ShouldPresent( self._file_import_options ):
                 
@@ -781,7 +799,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             status_hook = lambda s: s
             title_hook = lambda s: s
             
-            gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, ClientImporting.GenerateDownloaderNetworkJobFactory( page_key ), self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
+            gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
             
         except Exception as e:
             

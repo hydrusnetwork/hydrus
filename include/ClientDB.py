@@ -8375,6 +8375,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessRepositoryUpdates( self, service_key, only_when_idle = False, stop_time = None ):
         
+        if HydrusPaths.GetFreeSpace( self._db_dir ) < 1024 * 1048576:
+            
+            HydrusData.ShowText( 'The db partition has <1GB free space, so will not sync repositories.' )
+            
+            return
+            
+        
         service_id = self._GetServiceId( service_key )
         
         ( name, ) = self._c.execute( 'SELECT name FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
@@ -8783,7 +8790,6 @@ class DB( HydrusDB.HydrusDB ):
         main_master_tables = set()
         
         main_master_tables.add( 'hashes' )
-        main_master_tables.add( 'local_hashes' )
         main_master_tables.add( 'namespaces' )
         main_master_tables.add( 'subtags' )
         main_master_tables.add( 'tags' )
@@ -8802,6 +8808,22 @@ class DB( HydrusDB.HydrusDB ):
             wx.CallAfter( wx.MessageBox, message )
             
             raise Exception( 'Master database was invalid!' )
+            
+        
+        if 'local_hashes' not in existing_master_tables:
+            
+            message = 'On boot, the \'local_hashes\' tables was missing.'
+            message += os.linesep * 2
+            message += 'If you wish, click ok on this message and the client will recreate it--empty, without data--which should at least let the client boot. The client may be able to repopulate the table in its own maintenance routines. But if you want to solve this problem otherwise, kill the hydrus process now.'
+            message += os.linesep * 2
+            message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
+            
+            wx.CallAfter( wx.MessageBox, message )
+            
+            self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
+            self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
+            self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
+            self._CreateIndex( 'external_master.local_hashes', [ 'sha512' ] )
             
         
         # mappings
@@ -8830,7 +8852,7 @@ class DB( HydrusDB.HydrusDB ):
             message += 'If you wish, click ok on this message and the client will recreate these tables--empty, without data--which should at least let the client boot. If the affected tag service(s) are tag repositories, you will want to reset the processing cache so the client can repopulate the tables from your cached update files. But if you want to solve this problem otherwise, kill the hydrus process now.'
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
-        
+            
             wx.CallAfter( wx.MessageBox, message )
             
             for service_id in tag_service_ids:
@@ -10748,6 +10770,40 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( ( 'imgur single or subreddit parser', 'imgur media page api parser', 'derpibooru.org file page parser' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 317:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( ( 'xbooru gallery page', 'artstation artist gallery page api', 'tumblr api gallery page', 'gelbooru gallery page - search initialisation', 'gelbooru gallery page' ) )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'tumblr api creator gallery page parser', 'gelbooru 0.2.x gallery page parser', 'tumblr api post page parser', 'tumblr api post page parser - with post tags', 'zzz - old parser - tumblr api post page parser', 'zzz - old parser - tumblr api post page parser - with post tags', 'rule34.paheal gallery page parser', 'mishimmie gallery page parser' ) )
                 
                 #
                 

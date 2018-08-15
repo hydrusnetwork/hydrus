@@ -1003,7 +1003,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if len( all_parse_results ) == 0:
                         
-                        raise HydrusExceptions.VetoException( 'Could not parse any data!' )
+                        raise HydrusExceptions.VetoException( 'No data found in document!' )
                         
                     elif len( all_parse_results ) > 1:
                         
