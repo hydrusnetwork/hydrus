@@ -17,8 +17,8 @@
 				<li>This takes a string like 'blue_eyes' to produce a series of thumbnail gallery pages URLs that can be parsed for image page URLs which can ultimately be parsed for file URLs and metadata like tags. Boorus fall into this category.</li>
 				<li><h3>Thread Watcher</h3></li>
 				<li>This takes a URL that it will check repeatedly, parsing it for new URLs that it then queues up to be downloaded. It typically stops checking after the 'file velocity' (such as '1 new file per day') drops below a certain level.</li>
-				<li><h3>Single Page Downloader</h3></li>
-				<li>This takes a URL one-time and parses it for more URLs. This is a miscellaneous system for certain simple gallery types. The 'page of images' downloader is one of these.</li>
+				<li><h3>Simple Downloader</h3></li>
+				<li>This takes a URL one-time and parses it for more URLs. This is a miscellaneous system for certain simple gallery types.</li>
 			</ul>
 			<p>The system currently supports HTML and JSON parsing.</p>
 			<h3>what does a downloader do?</h3>
@@ -32,12 +32,12 @@
 			</ul>
 			<p>So we have three components:</p>
 			<ul>
-				<li><b>Search:</b> faces the user and converts text input into a series of Gallery URLs.</li>
-				<li><b>URL Class:</b> identifies URLs and informs the client how to deal with them.</li>
-				<li><b>Parser:</b> converts data from URLs into hydrus-understandable metadata.</li>
+				<li><a href="downloader_gugs.html"><b>Gallery URL Generator (GUG):</b></a> faces the user and converts text input into Gallery URLs.</li>
+				<li><a href="downloader_url_classes.html"><b>URL Class:</b></a> identifies URLs and informs the client how to deal with them.</li>
+				<li><a href="downloader_parsers.html"><b>Parser:</b></a> converts data from URLs into hydrus-understandable metadata.</li>
 			</ul>
-			<p>Thread watchers and single page downloaders do not need the 'Search' component, as the input in this case <i>is</i> a URL. You drop an imageboard thread URL on the client and it automatically recognises what it is, launches a thread watcher page for it, and finds the correct parser for the output.</p>
-			<p class="right"><a href="downloader_url_classes.html">Let's learn about URL Classes ----></a></p>
+			<p>Thread watchers and simple downloaders do not need the Gallery URL Generator, as the input in this case <i>is</i> a URL. You drop an imageboard thread URL on the client and it automatically recognises what it is, launches a thread watcher page for it, and finds the correct parser for the output.</p>
+			<p class="right"><a href="downloader_url_classes.html">Let's first learn about URL Classes ----></a></p>
 		</div>
 	</body>
 </html>
