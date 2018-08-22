@@ -1083,7 +1083,14 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( sub_statements ) > 0:
                 
-                name = HG.client_controller.services_manager.GetName( service_key )
+                try:
+                    
+                    name = HG.client_controller.services_manager.GetName( service_key )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    continue
+                    
                 
                 service_statement = name + ':' + os.linesep * 2 + os.linesep.join( sub_statements )
                 

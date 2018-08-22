@@ -386,7 +386,7 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
     
     time_delta = abs( timestamp - GetNow() )
     
-    if time_delta < just_now_threshold:
+    if time_delta <= just_now_threshold:
         
         return just_now_string
         

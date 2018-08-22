@@ -90,6 +90,10 @@ class NetworkJob( object ):
         
         self._method = method
         self._url = url
+        
+        self._domain = ClientNetworkingDomain.ConvertURLIntoDomain( self._url )
+        self._second_level_domain = ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( self._url )
+        
         self._body = body
         self._referral_url = referral_url
         self._temp_path = temp_path
@@ -119,6 +123,9 @@ class NetworkJob( object ):
         
         self._is_done = False
         self._is_cancelled = False
+        
+        self._gallery_token_name = None
+        self._gallery_token_consumed = False
         self._bandwidth_manual_override = False
         self._bandwidth_manual_override_delayed_timestamp = None
         
@@ -162,8 +169,7 @@ class NetworkJob( object ):
         
         network_contexts.append( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
         
-        domain = ClientNetworkingDomain.ConvertURLIntoDomain( self._url )
-        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain )
+        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( self._domain )
         
         network_contexts.extend( ( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain ) for domain in domains ) )
         
@@ -175,11 +181,8 @@ class NetworkJob( object ):
         # we always store cookies in the larger session (even if the cookie itself refers to a subdomain in the session object)
         # but we can login to a specific subdomain
         
-        domain = ClientNetworkingDomain.ConvertURLIntoDomain( self._url )
-        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain )
-        
-        session_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domains[-1] )
-        login_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+        session_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, self._second_level_domain )
+        login_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, self._domain )
         
         return ( session_network_context, login_network_context )
         
@@ -588,6 +591,14 @@ class NetworkJob( object ):
             
         
     
+    def GetDomain( self ):
+        
+        with self._lock:
+            
+            return self._domain
+            
+        
+    
     def GetErrorException( self ):
         
         with self._lock:
@@ -609,6 +620,14 @@ class NetworkJob( object ):
         with self._lock:
             
             return list( self._network_contexts )
+            
+        
+    
+    def GetSecondLevelDomain( self ):
+        
+        with self._lock:
+            
+            return self._second_level_domain
             
         
     
@@ -749,6 +768,14 @@ class NetworkJob( object ):
         with self._lock:
             
             self._for_login = for_login
+            
+        
+    
+    def SetGalleryToken( self, token_name ):
+        
+        with self._lock:
+            
+            self._gallery_token_name = token_name
             
         
     
@@ -925,6 +952,32 @@ class NetworkJob( object ):
                 
                 self._SetDone()
                 
+            
+        
+    
+    def TokensOK( self ):
+        
+        with self._lock:
+            
+            if self._gallery_token_name is not None and not self._gallery_token_consumed:
+                
+                ( consumed, next_timestamp ) = HG.client_controller.network_engine.bandwidth_manager.TryToConsumeAGalleryToken( self._second_level_domain, self._gallery_token_name )
+                
+                if consumed:
+                    
+                    self._gallery_token_consumed = True
+                    
+                else:
+                    
+                    self._status_text = 'waiting for a ' + self._gallery_token_name + ' slot: next ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 1 )
+                    
+                    self._Sleep( 1 )
+                    
+                    return False
+                    
+                
+            
+            return True
             
         
     

@@ -17,11 +17,12 @@ LZ4_OK = False
 
 try:
     
+    import lz4
     import lz4.block
     
     LZ4_OK = True
     
-except: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
+except Exception as e: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
     
     pass
     

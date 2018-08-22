@@ -2,6 +2,8 @@ import collections
 import ClientConstants as CC
 import ClientNetworkingContexts
 import HydrusConstants as HC
+import HydrusData
+import HydrusGlobals as HG
 import HydrusNetworking
 import HydrusThreading
 import HydrusSerialisable
@@ -22,6 +24,10 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = False
         
         self._lock = threading.Lock()
+        
+        self._last_pages_gallery_query_timestamps = collections.defaultdict( lambda: 0 )
+        self._last_subscriptions_gallery_query_timestamps = collections.defaultdict( lambda: 0 )
+        self._last_watchers_query_timestamps = collections.defaultdict( lambda: 0 )
         
         self._network_contexts_to_bandwidth_trackers = collections.defaultdict( HydrusNetworking.BandwidthTracker )
         self._network_contexts_to_bandwidth_rules = collections.defaultdict( HydrusNetworking.BandwidthRules )
@@ -61,7 +67,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        # note this discards ephemeral network contexts, which have page_key-specific identifiers and are temporary, not meant to be hung onto forever, and are generally invisible to the user
+        # note this discards ephemeral network contexts, which have temporary identifiers that are generally invisible to the user
         all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in self._network_contexts_to_bandwidth_trackers.items() if not network_context.IsEphemeral() ]
         all_serialisable_rules = [ ( network_context.GetSerialisableTuple(), rules.GetSerialisableTuple() ) for ( network_context, rules ) in self._network_contexts_to_bandwidth_rules.items() ]
         
@@ -370,6 +376,46 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
             
             self._SetDirty()
+            
+        
+    
+    def TryToConsumeAGalleryToken( self, second_level_domain, query_type ):
+        
+        with self._lock:
+            
+            if query_type == 'download page':
+                
+                timestamps_dict = self._last_pages_gallery_query_timestamps
+                
+                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_pages' )
+                
+            elif query_type == 'subscription':
+                
+                timestamps_dict = self._last_subscriptions_gallery_query_timestamps
+                
+                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
+                
+            elif query_type == 'watcher':
+                
+                timestamps_dict = self._last_watchers_query_timestamps
+                
+                delay = HG.client_controller.new_options.GetInteger( 'watcher_page_wait_period' )
+                
+            
+            next_timestamp = timestamps_dict[ second_level_domain ] + delay
+            
+            if HydrusData.TimeHasPassed( next_timestamp ):
+                
+                timestamps_dict[ second_level_domain ] = HydrusData.GetNow()
+                
+                return ( True, 0 )
+                
+            else:
+                
+                return ( False, next_timestamp )
+                
+            
+            raise NotImplementedError( 'Unknown query type' )
             
         
     

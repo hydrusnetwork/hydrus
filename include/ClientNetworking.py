@@ -41,7 +41,8 @@ job_status_str_lookup[ JOB_STATUS_RUNNING ] = 'running'
 
 class NetworkEngine( object ):
     
-    MAX_JOBS = 10 # turn this into an option
+    MAX_JOBS_PER_DOMAIN = 3 # also turn this into an option
+    MAX_JOBS = 15 # turn this into an option
     
     def __init__( self, controller, bandwidth_manager, session_manager, domain_manager, login_manager ):
         
@@ -60,6 +61,8 @@ class NetworkEngine( object ):
         self._lock = threading.Lock()
         
         self._new_work_to_do = threading.Event()
+        
+        self._active_domains_counter = collections.Counter()
         
         self._jobs_awaiting_validity = []
         self._current_validation_process = None
@@ -80,7 +83,7 @@ class NetworkEngine( object ):
         
         if HG.network_report_mode:
             
-            HydrusData.ShowText( 'Network Job: ' + job._method + ' ' + job._url )
+            HydrusData.ShowText( 'Network Job Added: ' + job._method + ' ' + job._url )
             
         
         with self._lock:
@@ -291,7 +294,24 @@ class NetworkEngine( object ):
                     
                     return True
                     
+                elif self._active_domains_counter[ job.GetSecondLevelDomain() ] >= self.MAX_JOBS_PER_DOMAIN:
+                    
+                    job.SetStatus( u'waiting for a slot on this domain' )
+                    
+                    return True
+                    
+                elif not job.TokensOK():
+                    
+                    return True
+                    
                 else:
+                    
+                    if HG.network_report_mode:
+                        
+                        HydrusData.ShowText( 'Network Job Starting: ' + job._method + ' ' + job._url )
+                        
+                    
+                    self._active_domains_counter[ job.GetSecondLevelDomain() ] += 1
                     
                     self.controller.CallToThread( job.Start )
                     
@@ -302,7 +322,7 @@ class NetworkEngine( object ):
                 
             else:
                 
-                job.SetStatus( u'waiting for download slot\u2026' )
+                job.SetStatus( u'waiting for slot\u2026' )
                 
                 return True
                 
@@ -311,6 +331,20 @@ class NetworkEngine( object ):
         def ProcessRunningJob( job ):
             
             if job.IsDone():
+                
+                if HG.network_report_mode:
+                    
+                    HydrusData.ShowText( 'Network Job Done: ' + job._method + ' ' + job._url )
+                    
+                
+                second_level_domain = job.GetSecondLevelDomain()
+                
+                self._active_domains_counter[ second_level_domain ] -= 1
+                
+                if self._active_domains_counter[ second_level_domain ] == 0:
+                    
+                    del self._active_domains_counter[ second_level_domain ]
+                    
                 
                 return False
                 

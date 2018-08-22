@@ -401,6 +401,14 @@ def GetDefaultBoorus():
     
     return boorus
     
+def GetDefaultGUGs():
+    
+    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
+    
+    import ClientNetworkingDomain
+    
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ) )
+    
 def GetDefaultImageboards():
     
     imageboards = []

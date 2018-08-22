@@ -762,7 +762,7 @@ class GalleryBooru( Gallery ):
             tags = tags_to_use
             
         
-        tags_replace = self._search_separator.join( [ urllib.quote( HydrusData.ToByteString( tag ), '' ) for tag in tags ] )
+        tags_replace = self._search_separator.join( [ tag for tag in tags ] )
         
         return self._search_url.replace( '%tags%', tags_replace ).replace( '%index%', str( url_index ) )
         
@@ -1383,7 +1383,7 @@ class GalleryPixivTag( GalleryPixiv ):
         
         tag = query
         
-        gallery_url = 'https://www.pixiv.net/search.php?word=' + urllib.quote( HydrusData.ToByteString( tag ), '' ) + '&s_mode=s_tag_full&order=date_d'
+        gallery_url = 'https://www.pixiv.net/search.php?word=' + tag + '&s_mode=s_tag_full&order=date_d'
         
         return gallery_url + '&p=' + str( page_index + 1 )
         

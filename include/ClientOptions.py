@@ -187,6 +187,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'gallery_page_wait_period_pages' ] = 15
         self._dictionary[ 'integers' ][ 'gallery_page_wait_period_subscriptions' ] = 5
+        self._dictionary[ 'integers' ][ 'watcher_page_wait_period' ] = 5
         
         self._dictionary[ 'integers' ][ 'popup_message_character_width' ] = 56
         

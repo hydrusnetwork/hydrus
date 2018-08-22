@@ -76,6 +76,10 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             url = 'https://nostrils-central.cx/index.php?post=s&tag=hyper_nostrils&page=3'
             
+        else:
+            
+            url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -120,11 +124,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self.modified = HydrusData.GetNow()
         
     
-    def Normalise( self ):
-        
-        self.url = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.url )
-        
-    
     def SetReferralURL( self, referral_url ):
         
         self._referral_url = referral_url
@@ -162,7 +161,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, gallery_seed_log, file_seed_cache, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, max_new_urls_allowed = None, gallery_urls_seen_before = None ):
+    def WorkOnURL( self, gallery_token_name, gallery_seed_log, file_seeds_callable, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, gallery_urls_seen_before = None ):
         
         if gallery_urls_seen_before is None:
             
@@ -179,6 +178,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         num_urls_already_in_file_seed_cache = 0
         num_urls_total = 0
         result_404 = False
+        can_add_more_file_urls = False
+        stop_reason = ''
         
         try:
             
@@ -208,6 +209,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
             
             network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+            
+            network_job.SetGalleryToken( gallery_token_name )
             
             network_job.OverrideBandwidth( 30 )
             
@@ -239,16 +242,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 title_hook( title )
                 
             
-            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.url, max_new_urls_allowed )
+            file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.url )
             
-            if max_new_urls_allowed is None:
-                
-                can_add_more_file_urls = True
-                
-            else:
-                
-                can_add_more_file_urls = num_urls_added < max_new_urls_allowed
-                
+            num_urls_total = len( file_seeds )
+            
+            ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason ) = file_seeds_callable( file_seeds )
             
             status = CC.STATUS_SUCCESSFUL_AND_NEW
             
@@ -261,7 +259,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if not can_add_more_file_urls:
                 
-                note += ' - hit file limit'
+                note += ' - ' + stop_reason
                 
             
             # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
@@ -402,7 +400,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
         
-        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 )
+        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, can_add_more_file_urls, stop_reason )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed
@@ -412,6 +410,8 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG
     SERIALISABLE_NAME = 'Gallery Log'
     SERIALISABLE_VERSION = 1
+    
+    COMPACT_NUMBER = 100
     
     def __init__( self ):
         
@@ -506,8 +506,6 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
             for gallery_seed in gallery_seeds:
                 
-                gallery_seed.Normalise()
-                
                 if gallery_seed in self._gallery_seeds_to_indices:
                     
                     continue
@@ -554,12 +552,12 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._gallery_seeds ) <= 25:
+            if len( self._gallery_seeds ) <= self.COMPACT_NUMBER:
                 
                 return False
                 
             
-            for gallery_seed in self._gallery_seeds[:-25]:
+            for gallery_seed in self._gallery_seeds[:-self.COMPACT_NUMBER]:
                 
                 if gallery_seed.status == CC.STATUS_UNKNOWN:
                     
@@ -580,14 +578,14 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._gallery_seeds ) <= 25:
+            if len( self._gallery_seeds ) <= self.COMPACT_NUMBER:
                 
                 return
                 
             
             new_gallery_seeds = HydrusSerialisable.SerialisableList()
             
-            for gallery_seed in self._gallery_seeds[:-25]:
+            for gallery_seed in self._gallery_seeds[:-self.COMPACT_NUMBER]:
                 
                 still_to_do = gallery_seed.status == CC.STATUS_UNKNOWN
                 still_relevant = gallery_seed.created > compact_before_this_source_time
@@ -598,7 +596,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            new_gallery_seeds.extend( self._gallery_seeds[-25:] )
+            new_gallery_seeds.extend( self._gallery_seeds[-self.COMPACT_NUMBER:] )
             
             self._gallery_seeds = new_gallery_seeds
             self._gallery_seeds_to_indices = { gallery_seed : index for ( index, gallery_seed ) in enumerate( self._gallery_seeds ) }
@@ -736,8 +734,6 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     def HasGalleryURL( self, url ):
         
         search_gallery_seed = GallerySeed( url )
-        
-        search_gallery_seed.Normalise()
         
         search_url = search_gallery_seed.url
         

@@ -770,13 +770,17 @@ class PopupMessageManager( wx.Frame ):
                 
                 max_width = wrap_width * 1.2
                 
-                best_size = self.GetBestSize()
+                ( best_width, best_height ) = self.GetBestSize()
                 
-                if best_size[0] < max_width and best_size != self._last_best_size_i_fit_on:
+                best_width = min( best_width, max_width )
+                
+                best_size = ( best_width, best_height )
+                
+                if best_size != self._last_best_size_i_fit_on:
                     
                     self._last_best_size_i_fit_on = best_size
                     
-                    self.Fit()
+                    self.SetClientSize( best_size )
                     
                     self.Layout()
                     

@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 319</h3></li>
+				<ul>
+					<li>started the new convert-query-text-to-gallery-urls object. these objects, which I was thinking of calling 'Searchers', will be called the more specific and practical 'Gallery URL Generators', or GUGs for short</li>
+					<li>the first version of GUGs is done, and I've written some test ui for advanced users under network->downloader definitions->manage gugs. this ui doesn't save anything yet, but lets you mess around with different values. if we don't think of anything else needed in the next week, I will fix this code for v320 and start filling in defaults</li>
+					<li>watchers now have a global checking slot, much like the recent change to galleries and subs. it safely throttles dozens of threads so they don't rudely hammer your (or the destination server's) CPU if they all happen to want to go at once (like just after your computer wakes up). the option is similarly under options->downloading, and is global for the moment</li>
+					<li>moved the new gallery delay/token management code to the better-fit bandwidth manager (it was in domain manager before)</li>
+					<li>the gallery delay/token code now works per-domain!</li>
+					<li>moved the gallery delay/token checking code into the network job proper, simplifying a bunch of import-level code and making the text display now appear in the network job control. token consumption now occurs after bandwidth (it is now the last hoop to jump through, which reduces the chance of a pileup in unusual situations) I expect to soon add some kind of 'force-go' action to the cog menu</li>
+					<li>the network engine will now not permit more than three jobs active per domain, and the overall limit has been raised from ten to fifteen</li>
+					<li>the media right-click menu now supports copying: all of a files recognised urls; all of a files urls; all selected files' urls of a specific url class; and all selected files urls</li>
+					<li>reworked and harmonised a bunch of urlparsing and generation code--all urls should now appear as full unicode across the program, generally without %20-type encoding characters unless explicitly entered by the user. character encoding now all happens on the backend in requests</li>
+					<li>non-url-class-matched urls now have their query parameters alphabetised as part of the normalisation process</li>
+					<li>all urls in the db will have their query params alphabetised on update, and any file relationships merged to the new/existing normalised url</li>
+					<li>the manage urls dialog will now normalise newly added urls (but should also still permit the removal of non-normalised urls)</li>
+					<li>reworked how gallery hits update file import object caches, particularly for subscriptions</li>
+					<li>fixed an issue in subscriptions gallery logging where the gallery log would always state it had found the max number of files and typically redundantly generate an 'ignored' stub--it should now say something like 'found 7 files - saw 5 previously seen urls, so assuming we caught up' as originally intended</li>
+					<li>simplified some gallery->file import object creation</li>
+					<li>galleries now compact until 100 entries (was 25)</li>
+					<li>watchers now gallery-compact after a successful check</li>
+					<li>watchers now show the 'just added'/'already watching' status for 15s, up from 5s</li>
+					<li>network report mode now reports three time--once each for job addition, start, and successful completion</li>
+					<li>fixed an issue with the new 'max width' popup sizing calculation that was sometimes not fitting for new height requirements correctly</li>
+					<li>fixed an issue with the new url class next page generation code</li>
+					<li>fixed an issue where TIOs with data regarding since-deleted services were failing to initialise at the ui level</li>
+					<li>misc status text cleanup</li>
+				</ul>
 				<li><h3>version 318</h3></li>
 				<ul>
 					<li>downloaders:</li>

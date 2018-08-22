@@ -1350,6 +1350,316 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
     
+class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, gug ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._original_gug = gug
+        
+        self._name = wx.TextCtrl( self )
+        
+        self._url_template = wx.TextCtrl( self )
+        
+        min_width = ClientGUICommon.ConvertTextToPixelWidth( self._url_template, 74 )
+        
+        self._url_template.SetMinClientSize( ( min_width, -1 ) )
+        
+        self._replacement_phrase = wx.TextCtrl( self )
+        self._search_terms_separator = wx.TextCtrl( self )
+        self._initial_search_text = wx.TextCtrl( self )
+        self._example_search_text = wx.TextCtrl( self )
+        
+        self._example_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._matched_url_match = wx.TextCtrl( self, style = wx.TE_READONLY )
+        
+        #
+        
+        name = gug.GetName()
+        
+        ( url_template, replacement_phrase, search_terms_separator, example_search_text ) = gug.GetURLTemplateVariables()
+        
+        initial_search_text = gug.GetInitialSearchText()
+        
+        self._name.SetValue( name )
+        self._url_template.SetValue( url_template )
+        self._replacement_phrase.SetValue( replacement_phrase )
+        self._search_terms_separator.SetValue( search_terms_separator )
+        self._initial_search_text.SetValue( initial_search_text )
+        self._example_search_text.SetValue( example_search_text )
+        
+        self._UpdateExampleURL()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'url template: ', self._url_template) )
+        rows.append( ( 'replacement phrase: ', self._replacement_phrase ) )
+        rows.append( ( 'search terms separator: ', self._search_terms_separator ) )
+        rows.append( ( 'initial search text (to prompt user): ', self._initial_search_text ) )
+        rows.append( ( 'example search text: ', self._example_search_text ) )
+        rows.append( ( 'example url: ', self._example_url ) )
+        rows.append( ( 'matches as a: ', self._matched_url_match ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._url_template.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._replacement_phrase.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._search_terms_separator.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._example_search_text.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _GetValue( self ):
+        
+        gug_key = self._original_gug.GetGUGKey()
+        name = self._name.GetValue()
+        url_template = self._url_template.GetValue()
+        replacement_phrase = self._replacement_phrase.GetValue()
+        search_terms_separator = self._search_terms_separator.GetValue()
+        initial_search_text = self._initial_search_text.GetValue()
+        example_search_text = self._example_search_text.GetValue()
+        
+        gug = ClientNetworkingDomain.GalleryURLGenerator( name, gug_key = gug_key, url_template = url_template, replacement_phrase = replacement_phrase, search_terms_separator = search_terms_separator, initial_search_text = initial_search_text, example_search_text = example_search_text )
+        
+        return gug
+        
+    
+    def _UpdateExampleURL( self ):
+        
+        gug = self._GetValue()
+        
+        try:
+            
+            example_url = gug.GetExampleURL()
+            
+            self._example_url.SetValue( example_url )
+            
+        except HydrusExceptions.GUGException as e:
+            
+            reason = HydrusData.ToUnicode( e )
+            
+            self._example_url.SetValue( 'Could not generate - ' + reason )
+            
+            example_url = None
+            
+        
+        if example_url is None:
+            
+            self._matched_url_match.SetValue( '' )
+            
+        else:
+            
+            url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( example_url )
+            
+            if url_match is None:
+                
+                url_match_text = 'Did not match a known url class.'
+                
+            else:
+                
+                url_match_text = 'Matched ' + url_match.GetName() + ' url class.'
+                
+            
+            self._matched_url_match.SetValue( url_match_text )
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._UpdateExampleURL()
+        
+    
+    def GetValue( self ):
+        
+        gug = self._GetValue()
+        
+        try:
+            
+            gug.GetExampleURL()
+            
+        except HydrusExceptions.GUGException:
+            
+            raise HydrusExceptions.VetoException( 'Please ensure your generator can make an example url!' )
+            
+        
+        return gug
+        
+    
+class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, gugs ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_gugs.html' ) )
+        
+        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browesr.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( 'name', 16 ), ( 'example url', -1 ), ( 'gallery url class?', 20 ) ]
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'gugs', 30, 74, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        self._list_ctrl_panel.AddButton( 'add', self._Add )
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddSeparator()
+        self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.GalleryURLGenerator, ), self._AddGUG )
+        self._list_ctrl_panel.AddSeparator()
+        self._list_ctrl_panel.AddDefaultsButton( ClientDefaults.GetDefaultGUGs, self._AddGUG )
+        
+        #
+        
+        self._list_ctrl.AddDatas( gugs )
+        
+        self._list_ctrl.Sort( 0 )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        gug = ClientNetworkingDomain.GalleryURLGenerator( 'new gallery url generator' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit gallery url generator' ) as dlg:
+            
+            panel = EditGUGPanel( dlg, gug )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                gug = panel.GetValue()
+                
+                self._AddGUG( gug )
+                
+                self._list_ctrl.Sort()
+                
+            
+        
+    
+    def _AddGUG( self, gug ):
+        
+        HydrusSerialisable.SetNonDupeName( gug, self._GetExistingNames() )
+        
+        gug.RegenerateGUGKey()
+        
+        self._list_ctrl.AddDatas( ( gug, ) )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, gug ):
+        
+        name = gug.GetName()
+        example_url = gug.GetExampleURL()
+        
+        url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( example_url )
+        
+        if url_match is None:
+            
+            gallery_url_match = False
+            pretty_gallery_url_match = ''
+            
+        else:
+            
+            gallery_url_match = True
+            pretty_gallery_url_match = url_match.GetName()
+            
+        
+        pretty_name = name
+        pretty_example_url = example_url
+        
+        display_tuple = ( pretty_name, pretty_example_url, pretty_gallery_url_match )
+        sort_tuple = ( name, example_url, gallery_url_match )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        # This GUG is in NGUG blah, you sure?
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._list_ctrl.DeleteSelected()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for gug in self._list_ctrl.GetData( only_selected = True ):
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit gallery url generator' ) as dlg:
+                
+                panel = EditGUGPanel( dlg, gug )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._list_ctrl.DeleteDatas( ( gug, ) )
+                    
+                    gug = panel.GetValue()
+                    
+                    HydrusSerialisable.SetNonDupeName( gug, self._GetExistingNames() )
+                    
+                    self._list_ctrl.AddDatas( ( gug, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._list_ctrl.Sort()
+        
+    
+    def _GetExistingNames( self ):
+        
+        gugs = self._list_ctrl.GetData()
+        
+        names = { gug.GetName() for gug in gugs }
+        
+        return names
+        
+    
+    def GetValue( self ):
+        
+        gugs = self._list_ctrl.GetData()
+        
+        return gugs
+        
+    
 class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, info ):

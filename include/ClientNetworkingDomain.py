@@ -14,19 +14,9 @@ import time
 import urllib
 import urlparse
 
-def CombineGETURLWithParameters( url, params_dict ):
+def AlphabetiseQueryText( query_text ):
     
-    def make_safe( text ):
-        
-        # convert unicode to raw bytes
-        # quote that to be url-safe, ignoring the default '/' 'safe' character
-        
-        return urllib.quote( HydrusData.ToByteString( text ), '' )
-        
-    
-    request_string = '&'.join( ( make_safe( key ) + '=' + make_safe( value ) for ( key, value ) in params_dict.items() ) )
-    
-    return url + '?' + request_string
+    return ConvertQueryDictToText( ConvertQueryTextToDict( query_text ) )
     
 def ConvertDomainIntoAllApplicableDomains( domain ):
     
@@ -103,6 +93,25 @@ def ConvertHTTPToHTTPS( url ):
         raise Exception( 'Given a url that did not have a scheme!' )
         
     
+def ConvertQueryDictToText( query_dict ):
+    
+    # we now do everything with requests, which does all the unicode -> ascii -> %20 business naturally, phew
+    # so lets just stick with unicode, which we still want to call explicitly to coerce integers and so on that'll slip in here and there
+    
+    param_pairs = list( query_dict.items() )
+    
+    param_pairs.sort()
+    
+    query_text = u'&'.join( ( unicode( key ) + u'=' + unicode( value ) for ( key, value ) in param_pairs ) )
+    
+    return query_text
+    
+def ConvertQueryTextToDict( query_text ):
+    
+    query_dict = dict( urlparse.parse_qsl( query_text ) )
+    
+    return query_dict
+    
 def ConvertURLMatchesIntoAPIPairs( url_matches ):
     
     pairs = []
@@ -149,6 +158,12 @@ def ConvertURLIntoDomain( url ):
     domain = HydrusData.ToByteString( parser_result.netloc )
     
     return domain
+    
+def ConvertURLIntoSecondLevelDomain( url ):
+    
+    domain = ConvertURLIntoDomain( url )
+    
+    return ConvertDomainIntoSecondLevelDomain( domain )
     
 def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
     
@@ -263,6 +278,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self.engine = None
         
+        self._gugs = HydrusSerialisable.SerialisableList()
         self._url_matches = HydrusSerialisable.SerialisableList()
         self._parsers = HydrusSerialisable.SerialisableList()
         self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
@@ -282,9 +298,6 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._url_match_keys_to_default_tag_import_options = {}
         
         self._parser_keys_to_parsers = {}
-        
-        self._last_pages_gallery_query_timestamp = 0
-        self._last_subscriptions_gallery_query_timestamp = 0
         
         self._dirty = False
         
@@ -748,6 +761,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetGUGs( self ):
+        
+        with self._lock:
+            
+            return list( self._gugs )
+            
+        
+    
     def GetHeaders( self, network_contexts ):
         
         with self._lock:
@@ -919,10 +940,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if url_match is None:
                 
-                return url
+                p = urlparse.urlparse( url )
                 
-            
-            normalised_url = url_match.Normalise( url )
+                scheme = p.scheme
+                netloc = p.netloc
+                path = p.path
+                params = p.params
+                query = AlphabetiseQueryText( p.query )
+                fragment = p.fragment
+                
+                r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+                
+                normalised_url = r.geturl()
+                
+            else:
+                
+                normalised_url = url_match.Normalise( url )
+                
             
             return normalised_url
             
@@ -935,6 +969,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             import ClientDefaults
             
             default_parsers = ClientDefaults.GetDefaultParsers()
+            
+            for parser in default_parsers:
+                
+                parser.RegenerateParserKey()
+                
             
             existing_parsers = list( self._parsers )
             
@@ -952,6 +991,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             import ClientDefaults
             
             default_url_matches = ClientDefaults.GetDefaultURLMatches()
+            
+            for url_match in default_url_matches:
+                
+                url_match.RegenMatchKey()
+                
             
             existing_url_matches = list( self._url_matches )
             
@@ -991,6 +1035,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._url_match_keys_to_default_tag_import_options = url_match_keys_to_tag_import_options
             
             self._SetDirty()
+            
+        
+    
+    def SetGUGs( self, gugs ):
+        
+        with self._lock:
+            
+            #check ngugs maybe
+            
+            self._gugs = gugs
             
         
     
@@ -1153,49 +1207,6 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._url_match_keys_to_parser_keys.update( new_url_match_keys_to_parser_keys )
             
             self._SetDirty()
-            
-        
-    
-    def TryToConsumeAGalleryQuery( self, query_type ):
-        
-        with self._lock:
-            
-            if query_type == 'pages':
-                
-                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_pages' )
-                
-                next_timestamp = self._last_pages_gallery_query_timestamp + delay
-                
-                if HydrusData.TimeHasPassed( next_timestamp ):
-                    
-                    self._last_pages_gallery_query_timestamp = HydrusData.GetNow()
-                    
-                    return ( True, 0 )
-                    
-                else:
-                    
-                    return ( False, next_timestamp )
-                    
-                
-            elif query_type == 'subscriptions':
-                
-                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
-                
-                next_timestamp = self._last_subscriptions_gallery_query_timestamp + delay
-                
-                if HydrusData.TimeHasPassed( next_timestamp ):
-                    
-                    self._last_subscriptions_gallery_query_timestamp = HydrusData.GetNow()
-                    
-                    return ( True, 0 )
-                    
-                else:
-                    
-                    return ( False, next_timestamp )
-                    
-                
-            
-            raise NotImplementedError( 'Unknown query type' )
             
         
     
@@ -1436,6 +1447,183 @@ class DomainValidationPopupProcess( object ):
 GALLERY_INDEX_TYPE_PATH_COMPONENT = 0
 GALLERY_INDEX_TYPE_PARAMETER = 1
 
+class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR
+    SERIALISABLE_NAME = 'Gallery URL Generator'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name, gug_key = None, url_template = None, replacement_phrase = None, search_terms_separator = None, initial_search_text = None, example_search_text = None ):
+        
+        if gug_key is None:
+            
+            gug_key = HydrusData.GenerateKey()
+            
+        
+        if url_template is None:
+            
+            url_template = 'https://example.com/search?q=%tags%&index=0'
+            
+        
+        if replacement_phrase is None:
+            
+            replacement_phrase = '%tags%'
+            
+        
+        if search_terms_separator is None:
+            
+            search_terms_separator = '+'
+            
+        
+        if initial_search_text is None:
+            
+            initial_search_text = 'search tags'
+            
+        
+        if example_search_text is None:
+            
+            example_search_text = 'blue_eyes blonde_hair'
+            
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._gallery_url_generator_key = gug_key
+        self._url_template = url_template
+        self._replacement_phrase = replacement_phrase
+        self._search_terms_separator = search_terms_separator
+        self._initial_search_text = initial_search_text
+        self._example_search_text = example_search_text
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_gallery_url_generator_key = self._gallery_url_generator_key.encode( 'hex' )
+        
+        return ( serialisable_gallery_url_generator_key, self._url_template, self._replacement_phrase, self._search_terms_separator, self._initial_search_text, self._example_search_text )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_gallery_url_generator_key, self._url_template, self._replacement_phrase, self._search_terms_separator, self._initial_search_text, self._example_search_text ) = serialisable_info
+        
+        self._gallery_url_generator_key = serialisable_gallery_url_generator_key.decode( 'hex' )
+        
+    
+    def GenerateGalleryURL( self, search_terms ):
+        
+        if self._replacement_phrase == '':
+            
+            raise HydrusExceptions.GUGException( 'No replacement phrase!' )
+            
+        
+        if self._replacement_phrase not in self._url_template:
+            
+            raise HydrusExceptions.GUGException( 'Replacement phrase not in URL template!' )
+            
+        
+        try:
+            
+            search_phrase = self._search_terms_separator.join( search_terms )
+            
+            gallery_url = self._url_template.replace( self._replacement_phrase, search_phrase )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.GUGException( unicode( e ) )
+            
+        
+        return gallery_url
+        
+    
+    def GetExampleURL( self ):
+        
+        return self.GenerateGalleryURL( self._example_search_text.split( ' ' ) )
+        
+    
+    def GetGUGKey( self ):
+        
+        return self._gallery_url_generator_key
+        
+    
+    def GetInitialSearchText( self ):
+        
+        return self._initial_search_text
+        
+    
+    def GetURLTemplateVariables( self ):
+        
+        return ( self._url_template, self._replacement_phrase, self._search_terms_separator, self._example_search_text )
+        
+    
+    def RegenerateGUGKey( self ):
+        
+        self._gallery_url_generator_key = HydrusData.GenerateKey()
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR ] = GalleryURLGenerator
+
+class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR
+    SERIALISABLE_NAME = 'Nested Gallery URL Generator'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name, initial_search_text = None, gug_keys = None ):
+        
+        if initial_search_text is None:
+            
+            initial_search_text = 'search tags'
+            
+        
+        if gug_keys is None:
+            
+            gug_keys = []
+            
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._initial_search_text = initial_search_text
+        self._gug_keys = gug_keys
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_gug_keys = [ gug_key.encode( 'hex' ) for gug_key in self._gug_keys ]
+        
+        return ( self._initial_search_text, serialisable_gug_keys )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._initial_search_text, serialisable_gug_keys ) = serialisable_info
+        
+        self._gug_keys = [ gug_key.decode( 'hex' ) for gug_key in serialisable_gug_keys ]
+        
+    
+    def GenerateGalleryURLs( self, search_terms ):
+        
+        gallery_urls = []
+        
+        for gug_key in self._gug_keys:
+            
+            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key )
+            
+            if gug is not None:
+                
+                gallery_urls.append( gug.GenerateGalleryURL( search_terms ) )
+                
+            
+        
+        return gallery_urls
+        
+    
+    def GetInitialSearchText( self ):
+        
+        return self._initial_search_text
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR ] = NestedGalleryURLGenerator
+
 class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH
@@ -1553,19 +1741,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ClipQuery( self, query ):
         
-        valid_parameters = []
+        query_dict = ConvertQueryTextToDict( query )
         
-        for ( key, value ) in urlparse.parse_qsl( query ):
-            
-            if key in self._parameters:
-                
-                valid_parameters.append( ( key, value ) )
-                
-            
+        valid_parameters = { key : value for ( key, value ) in query_dict.items() if key in self._parameters }
         
-        valid_parameters.sort()
-        
-        query = '&'.join( ( key + '=' + value for ( key, value ) in valid_parameters ) )
+        query = ConvertQueryDictToText( valid_parameters )
         
         return query
         
@@ -1746,7 +1926,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                 raise HydrusExceptions.URLMatchException( 'Could not generate next gallery page--index component was not an integer!' )
                 
             
-            path_components[ page_index_path_component_index ] = page_index + self._gallery_index_delta
+            path_components[ page_index_path_component_index ] = str( page_index + self._gallery_index_delta )
             
             path = '/' + '/'.join( path_components )
             
@@ -1754,7 +1934,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             page_index_name = self._gallery_index_identifier
             
-            query_dict = { key : value_list[0] for ( key, value_list ) in urlparse.parse_qs( query ).items() }
+            query_dict = ConvertQueryTextToDict( query )
             
             if page_index_name not in query_dict:
                 
@@ -1774,7 +1954,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             query_dict[ page_index_name ] = page_index + self._gallery_index_delta
             
-            query = urllib.urlencode( query_dict )
+            query = ConvertQueryDictToText( query_dict )
             
         else:
             
@@ -1850,7 +2030,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             netloc = p.netloc
             path = p.path
-            query = p.query
+            query = AlphabetiseQueryText( p.query )
             
         
         r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
@@ -1922,9 +2102,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        url_parameters_list = urlparse.parse_qsl( p.query )
-        
-        url_parameters = dict( url_parameters_list )
+        url_parameters = ConvertQueryTextToDict( p.query )
         
         if len( url_parameters ) < len( self._parameters ):
             
@@ -1962,4 +2140,3 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH ] = URLMatch
-

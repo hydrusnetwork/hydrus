@@ -799,7 +799,12 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             status_hook = lambda s: s
             title_hook = lambda s: s
             
-            gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
+            def file_seeds_callable( file_seeds ):
+                
+                return ClientImporting.UpdateFileSeedCacheWithFileSeeds( self._file_seed_cache, file_seeds )
+                
+            
+            gallery_seed.WorkOnURL( 'download page', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
             
         except Exception as e:
             

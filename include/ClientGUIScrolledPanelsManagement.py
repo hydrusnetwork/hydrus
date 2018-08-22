@@ -1732,6 +1732,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             watchers = ClientGUICommon.StaticBox( self, 'watchers' )
             
+            self._watcher_page_wait_period = wx.SpinCtrl( watchers, min = 1, max = 120 )
             self._highlight_new_watcher = wx.CheckBox( watchers )
             
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
@@ -1756,9 +1757,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gallery_page_tt += os.linesep
             gallery_page_tt += '- To give servers a break (some gallery pages can be CPU-expensive to generate).'
             gallery_page_tt += os.linesep * 2
-            gallery_page_tt += 'After this fixed wait has occurred, the gallery download job will run like any other network job, except that it will ignore bandwidth limits after thirty seconds to guarantee throughput and to stay synced with the source.'
-            gallery_page_tt += os.linesep * 2
-            gallery_page_tt += 'Update: Now that it is much easier to run multiple downloaders simultaneously, these delays are now global across the whole program. There is one page gallery download slot per x seconds and one subscription gallery download slot per y seconds.'
+            gallery_page_tt += 'These delays/lots are per-domain.'
             gallery_page_tt += os.linesep * 2
             gallery_page_tt += 'If you do not understand this stuff, you can just leave it alone.'
             
@@ -1777,6 +1776,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._stop_character.SetValue( self._new_options.GetString( 'stop_character' ) )
             self._show_deleted_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
             
+            self._watcher_page_wait_period.SetValue( self._new_options.GetInteger( 'watcher_page_wait_period' ) )
+            self._watcher_page_wait_period.SetToolTip( gallery_page_tt )
             self._highlight_new_watcher.SetValue( self._new_options.GetBoolean( 'highlight_new_watcher' ) )
             
             #
@@ -1808,6 +1809,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Additional fixed time (in seconds) to wait between watcher checks:', self._watcher_page_wait_period ) )
             rows.append( ( 'If new watcher entered and no current highlight, highlight the new watcher:', self._highlight_new_watcher ) )
             
             gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
@@ -1849,6 +1851,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.GetValue() )
             self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
             
+            self._new_options.SetInteger( 'watcher_page_wait_period', self._watcher_page_wait_period.GetValue() )
             self._new_options.SetBoolean( 'highlight_new_watcher', self._highlight_new_watcher.GetValue() )
             
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
@@ -6034,34 +6037,42 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _EnterURL( self, url, only_add = False ):
         
-        if url in self._current_urls:
+        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        
+        for u in ( url, normalised_url ):
             
-            if only_add:
+            if u in self._current_urls:
                 
-                return
-                
-            
-            for index in range( self._urls_listbox.GetCount() ):
-                
-                existing_url = self._urls_listbox.GetClientData( index )
-                
-                if existing_url == url:
-                    
-                    self._RemoveURL( index )
+                if only_add:
                     
                     return
                     
                 
-            
-        else:
-            
-            self._urls_listbox.Append( url, url )
-            
-            self._current_urls.add( url )
-            
-            if url not in self._original_urls:
+                for index in range( self._urls_listbox.GetCount() ):
+                    
+                    existing_url = self._urls_listbox.GetClientData( index )
+                    
+                    if existing_url == u:
+                        
+                        self._RemoveURL( index )
+                        
+                        return
+                        
+                    
                 
-                self._urls_to_add.add( url )
+            
+        
+        u = normalised_url
+        
+        if u not in self._current_urls:
+            
+            self._urls_listbox.Append( u, u )
+            
+            self._current_urls.add( u )
+            
+            if u not in self._original_urls:
+                
+                self._urls_to_add.add( u )
                 
             
         

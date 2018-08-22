@@ -1007,7 +1007,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                     elif len( all_parse_results ) > 1:
                         
-                        ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.file_seed_data )
+                        file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.file_seed_data )
+                        
+                        ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason ) = ClientImporting.UpdateFileSeedCacheWithFileSeeds( file_seed_cache, file_seeds )
                         
                         status = CC.STATUS_SUCCESSFUL_AND_NEW
                         note = 'Found ' + HydrusData.ToHumanInt( num_urls_added ) + ' new URLs.'
@@ -1245,6 +1247,8 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE
     SERIALISABLE_NAME = 'Import File Status Cache'
     SERIALISABLE_VERSION = 8
+    
+    COMPACT_NUMBER = 100
     
     def __init__( self ):
         
@@ -1615,12 +1619,12 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._file_seeds ) <= 100:
+            if len( self._file_seeds ) <= self.COMPACT_NUMBER:
                 
                 return False
                 
             
-            for file_seed in self._file_seeds[:-100]:
+            for file_seed in self._file_seeds[:-self.COMPACT_NUMBER]:
                 
                 if file_seed.status == CC.STATUS_UNKNOWN:
                     
@@ -1641,14 +1645,14 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._file_seeds ) <= 100:
+            if len( self._file_seeds ) <= self.COMPACT_NUMBER:
                 
                 return
                 
             
             new_file_seeds = HydrusSerialisable.SerialisableList()
             
-            for file_seed in self._file_seeds[:-100]:
+            for file_seed in self._file_seeds[:-self.COMPACT_NUMBER]:
                 
                 still_to_do = file_seed.status == CC.STATUS_UNKNOWN
                 still_relevant = self._GetSourceTimestamp( file_seed ) > compact_before_this_source_time
@@ -1659,7 +1663,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            new_file_seeds.extend( self._file_seeds[-100:] )
+            new_file_seeds.extend( self._file_seeds[-self.COMPACT_NUMBER:] )
             
             self._file_seeds = new_file_seeds
             self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }

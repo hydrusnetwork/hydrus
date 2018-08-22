@@ -425,28 +425,24 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            ( consumed, next_timestamp ) = HG.client_controller.network_engine.domain_manager.TryToConsumeAGalleryQuery( 'pages' )
-            
-            if not consumed:
-                
-                if self._current_page_index == 0:
-                    
-                    page_check_status = 'checking first page (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
-                    
-                else:
-                    
-                    page_check_status = 'checking next page (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
-                    
-                
-                self._gallery_status = page_check_status
-                
-                return
-                
-            
-            self._gallery_status = 'now checking next page'
+            self._gallery_status = 'checking next page'
             
         
         if gallery_seed.WorksInNewSystem():
+            
+            def file_seeds_callable( file_seeds ):
+                
+                if self._file_limit is None:
+                    
+                    max_new_urls_allowed = None
+                    
+                else:
+                    
+                    max_new_urls_allowed = self._file_limit - self._num_new_urls_found
+                    
+                
+                return ClientImporting.UpdateFileSeedCacheWithFileSeeds( self._file_seed_cache, file_seeds, max_new_urls_allowed )
+                
             
             def status_hook( text ):
                 
@@ -461,18 +457,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            if self._file_limit is None:
-                
-                max_new_urls_allowed = None
-                
-            else:
-                
-                max_new_urls_allowed = self._file_limit - self._num_new_urls_found
-                
-            
             try:
                 
-                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options, max_new_urls_allowed = max_new_urls_allowed )
+                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, can_add_more_file_urls, stop_reason ) = gallery_seed.WorkOnURL( 'download page', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
                 
                 self._num_new_urls_found += num_urls_added
                 self._num_urls_found += num_urls_total
@@ -513,6 +500,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             def network_job_factory( method, url, **kwargs ):
                 
                 network_job = ClientNetworkingJobs.NetworkJobDownloader( self._gallery_import_key, method, url, **kwargs )
+                
+                network_job.SetGalleryToken( 'download page' )
                 
                 network_job.OverrideBandwidth( 30 )
                 

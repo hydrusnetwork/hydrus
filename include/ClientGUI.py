@@ -1720,9 +1720,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'UNDER CONSTRUCTION: manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
-            ClientGUIMenus.AppendMenuLabel( submenu, 'UNDER CONSTRUCTION: manage searchers', 'Manage the client\'s searchers, which convert search terms into URLs.' )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -2320,6 +2320,33 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.CallToThread( THREAD_do_it, self._controller )
+        
+    
+    def _ManageGUGs( self ):
+        
+        title = 'manage gallery url generators'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            gugs = domain_manager.GetGUGs()
+            
+            import ClientNetworkingDomain
+            
+            gugs.append( ClientNetworkingDomain.GalleryURLGenerator( 'test gug', url_template = 'https://www.gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=0' ) )
+            
+            panel = ClientGUIScrolledPanelsEdit.EditGUGsPanel( dlg, gugs )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                gugs = panel.GetValue()
+                
+                domain_manager.SetGUGs( gugs )
+                
+            
         
     
     def _ManageImportFolders( self ):

@@ -156,6 +156,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         return network_job_factory
         
+    
     def _NoDelays( self ):
         
         return HydrusData.TimeHasPassed( self._no_work_until )
@@ -601,7 +602,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             done_first_page = False
-            seen_some_existing_urls = False
             
             query_text = query.GetQueryText()
             file_seed_cache = query.GetFileSeedCache()
@@ -672,8 +672,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if gallery_seed.WorksInNewSystem():
                     
-                    num_existing_urls = 0
-                    
                     def status_hook( text ):
                         
                         job_key.SetVariable( 'popup_text_1', prefix + ': ' + text )
@@ -686,11 +684,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
                     
+                    num_existing_urls_this_stream = 0
+                    
                     stop_reason = 'unknown stop reason'
                     
+                    keep_checking = True
+                    
                     try:
-                        
-                        keep_checking = True
                         
                         while keep_checking and gallery_seed_log.WorkToDo():
                             
@@ -720,33 +720,71 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 break
                                 
                             
-                            ( consumed, next_timestamp ) = HG.client_controller.network_engine.domain_manager.TryToConsumeAGalleryQuery( 'subscriptions' )
-                            
-                            if not consumed:
-                                
-                                if not done_first_page:
-                                    
-                                    page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp )
-                                    
-                                else:
-                                    
-                                    page_check_status = HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls found (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
-                                    
-                                
-                                job_key.SetVariable( 'popup_text_1', prefix + ': ' + page_check_status )
-                                
-                                time.sleep( 1 )
-                                
-                                continue
-                                
-                            
                             job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
                             
-                            this_page_file_seed_cache = ClientImportFileSeeds.FileSeedCache()
+                            def file_seeds_callable( file_seeds ):
+                                
+                                num_urls_added = 0
+                                num_urls_already_in_file_seed_cache = 0
+                                can_add_more_file_urls = True
+                                
+                                for file_seed in file_seeds:
+                                    
+                                    if file_limit_for_this_sync is not None and total_new_urls_for_this_sync + num_urls_added >= file_limit_for_this_sync:
+                                        
+                                        if this_is_initial_sync:
+                                            
+                                            stop_reason = 'hit initial file limit'
+                                            
+                                        else:
+                                            
+                                            self._ShowHitPeriodicFileLimitMessage( query_text )
+                                            
+                                            stop_reason = 'hit periodic file limit'
+                                            
+                                        
+                                        can_add_more_file_urls = False
+                                        
+                                        break
+                                        
+                                    
+                                    if file_seed in file_seeds_to_add:
+                                        
+                                        # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
+                                        
+                                        continue
+                                        
+                                    
+                                    if file_seed_cache.HasFileSeed( file_seed ):
+                                        
+                                        num_urls_already_in_file_seed_cache += 1
+                                        
+                                        WE_HIT_OLD_GROUND_THRESHOLD = 5
+                                        
+                                        if num_urls_already_in_file_seed_cache > WE_HIT_OLD_GROUND_THRESHOLD:
+                                            
+                                            can_add_more_file_urls = False
+                                            
+                                            stop_reason = 'saw ' + HydrusData.ToHumanInt( WE_HIT_OLD_GROUND_THRESHOLD ) + ' previously seen urls, so assuming we caught up'
+                                            
+                                            break
+                                            
+                                        
+                                    else:
+                                        
+                                        num_urls_added += 1
+                                        
+                                        file_seeds_to_add.add( file_seed )
+                                        file_seeds_to_add_ordered.append( file_seed )
+                                        
+                                    
+                                
+                                return ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason )
+                                
                             
                             try:
                                 
-                                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( gallery_seed_log, this_page_file_seed_cache, status_hook, title_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
+                                ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, can_add_more_file_urls, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
                                 
                             except HydrusExceptions.CancelledException as e:
                                 
@@ -767,71 +805,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 done_first_page = True
                                 
                             
-                            if num_urls_already_in_file_seed_cache > 0:
-                                
-                                seen_some_existing_urls = True
-                                
+                            keep_checking = can_add_more_file_urls
                             
-                            if num_urls_total == 0:
-                                
-                                stop_reason = 'finished query'
-                                
-                                break
-                                
+                            num_existing_urls_this_stream += num_urls_already_in_file_seed_cache
                             
-                            for file_seed in this_page_file_seed_cache.GetFileSeeds():
-                                
-                                if file_limit_for_this_sync is not None and total_new_urls_for_this_sync >= file_limit_for_this_sync:
-                                    
-                                    if this_is_initial_sync:
-                                        
-                                        stop_reason = 'hit initial file limit'
-                                        
-                                    else:
-                                        
-                                        if not seen_some_existing_urls: # this tests if we saw some urls in another gallery identifier
-                                            
-                                            self._ShowHitPeriodicFileLimitMessage( query_text )
-                                            
-                                        
-                                        stop_reason = 'hit periodic file limit'
-                                        
-                                    
-                                    keep_checking = False
-                                    
-                                    break
-                                    
-                                
-                                if file_seed in file_seeds_to_add:
-                                    
-                                    # this catches the occasional overflow when a new file is uploaded while gallery parsing is going on
-                                    
-                                    continue
-                                    
-                                
-                                if file_seed_cache.HasFileSeed( file_seed ):
-                                    
-                                    num_existing_urls += 1
-                                    
-                                    WE_HIT_OLD_GROUND_THRESHOLD = 5
-                                    
-                                    if num_existing_urls > WE_HIT_OLD_GROUND_THRESHOLD:
-                                        
-                                        keep_checking = False
-                                        
-                                        stop_reason = 'saw ' + HydrusData.ToHumanInt( WE_HIT_OLD_GROUND_THRESHOLD ) + ' previously seen urls, so assuming we caught up'
-                                        
-                                        break
-                                        
-                                    
-                                else:
-                                    
-                                    file_seeds_to_add.add( file_seed )
-                                    file_seeds_to_add_ordered.append( file_seed )
-                                    
-                                    total_new_urls_for_this_sync += 1
-                                    
-                                
+                            total_new_urls_for_this_sync += num_urls_added
                             
                         
                     finally:
@@ -857,6 +835,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_network_job', network_job )
                         
+                        network_job.SetGalleryToken( 'subscription' )
+                        
                         network_job.OverrideBandwidth( 30 )
                         
                         return network_job
@@ -865,7 +845,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     gallery.SetNetworkJobFactory( network_job_factory )
                     
                     page_index = 0
-                    num_existing_urls = 0
+                    num_existing_urls_this_stream = 0
                     keep_checking = True
                     
                     while keep_checking:
@@ -883,26 +863,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         if job_key.IsCancelled():
                             
                             raise HydrusExceptions.CancelledException( 'gallery parsing cancelled, likely by user' )
-                            
-                        
-                        ( consumed, next_timestamp ) = HG.client_controller.network_engine.domain_manager.TryToConsumeAGalleryQuery( 'subscriptions' )
-                        
-                        if not consumed:
-                            
-                            if not done_first_page:
-                                
-                                page_check_status = 'checking first page ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp )
-                                
-                            else:
-                                
-                                page_check_status = HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls found, checking next page (next slot ' + HydrusData.TimestampToPrettyTimeDelta( next_timestamp, just_now_threshold = 0 ) + ')'
-                                
-                            
-                            job_key.SetVariable( 'popup_text_1', prefix + ': ' + page_check_status )
-                            
-                            time.sleep( 1 )
-                            
-                            continue
                             
                         
                         job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
@@ -930,7 +890,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                                 if file_limit_for_this_sync is not None and total_new_urls_for_this_sync >= file_limit_for_this_sync:
                                     
-                                    if not seen_some_existing_urls and not this_is_initial_sync:
+                                    if not this_is_initial_sync:
                                         
                                         self._ShowHitPeriodicFileLimitMessage( query_text )
                                         
@@ -949,11 +909,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                                 if file_seed_cache.HasFileSeed( file_seed ):
                                     
-                                    seen_some_existing_urls = True
+                                    num_existing_urls_this_stream += 1
                                     
-                                    num_existing_urls += 1
-                                    
-                                    if num_existing_urls > 5:
+                                    if num_existing_urls_this_stream > 5:
                                         
                                         keep_checking = False
                                         

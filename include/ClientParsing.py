@@ -2382,7 +2382,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'Cannot have a file as an argument on a GET query!' )
                 
             
-            full_request_url = ClientNetworkingDomain.CombineGETURLWithParameters( self._url, request_args )
+            full_request_url = self._url + '?' + ClientNetworkingDomain.ConvertQueryDictToText( request_args )
             
             job_key.SetVariable( 'script_status', 'fetching ' + full_request_url )
             

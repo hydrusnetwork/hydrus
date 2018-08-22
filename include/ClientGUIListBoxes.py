@@ -2235,6 +2235,11 @@ class ListBoxTagsCensorship( ListBoxTags ):
         self._DataHasChanged()
         
     
+    def GetTags( self ):
+        
+        return list( self._ordered_terms )
+        
+    
     def RemoveTags( self, tags ):
         
         for tag in tags:

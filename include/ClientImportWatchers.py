@@ -22,7 +22,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Multiple Watcher'
     SERIALISABLE_VERSION = 2
     
-    ADDED_TIMESTAMP_DURATION = 5
+    ADDED_TIMESTAMP_DURATION = 15
     
     def __init__( self, url = None ):
         
@@ -570,6 +570,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _CheckWatchableURL( self ):
         
+        def file_seeds_callable( file_seeds ):
+            
+            return ClientImporting.UpdateFileSeedCacheWithFileSeeds( self._file_seed_cache, file_seeds )
+            
+        
         def status_hook( text ):
             
             with self._lock:
@@ -590,9 +595,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
         
+        with self._lock:
+            
+            self._watcher_status = 'checking'
+            
+        
         try:
             
-            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, self._NetworkJobFactory, self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, can_add_more_file_urls, stop_reason ) = gallery_seed.WorkOnURL( 'watcher', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
             
             if num_urls_added > 0:
                 
@@ -648,6 +658,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._UpdateNextCheckTime()
             
+            self._Compact()
+            
         
         if not watcher_status_should_stick:
             
@@ -658,6 +670,15 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._watcher_status = ''
                 
             
+        
+    
+    def _Compact( self ):
+        
+        death_period = self._checker_options.GetDeathFileVelocityPeriod()
+        
+        compact_before_this_time = self._last_check_time - ( death_period * 2 )
+        
+        self._gallery_seed_log.Compact( compact_before_this_time )
         
     
     def _DelayWork( self, time_delta, reason ):

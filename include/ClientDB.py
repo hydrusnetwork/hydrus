@@ -10823,6 +10823,68 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 318:
+            
+            try:
+                
+                import urlparse
+                
+                self._controller.pub( 'splash_set_status_subtext', 'normalising some urls: initialising' )
+                
+                all_url_ids = self._STL( self._c.execute( 'SELECT url_id FROM urls;' ) )
+                
+                num_to_do = len( all_url_ids )
+                
+                for ( i, url_id ) in enumerate( all_url_ids ):
+                    
+                    ( url, ) = self._c.execute( 'SELECT url FROM urls WHERE url_id = ?;', ( url_id, ) ).fetchone()
+                    
+                    p = urlparse.urlparse( url )
+                    
+                    scheme = p.scheme
+                    netloc = p.netloc
+                    path = p.path
+                    params = p.params
+                    query = ClientNetworkingDomain.AlphabetiseQueryText( p.query )
+                    fragment = p.fragment
+                    
+                    r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+                    
+                    normalised_url = r.geturl()
+                    
+                    #
+                    
+                    if normalised_url != url:
+                        
+                        # ok, it changed, so lets remap the files if needed and then delete the old record
+                        
+                        hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM url_map WHERE url_id = ?;', ( url_id, ) ) )
+                        
+                        normalised_url_id = self._GetURLId( normalised_url )
+                        
+                        self._c.executemany( 'INSERT OR IGNORE INTO url_map ( hash_id, url_id ) VALUES ( ?, ? );', ( ( hash_id, normalised_url_id ) for hash_id in hash_ids ) )
+                        
+                        self._c.execute( 'DELETE FROM url_map WHERE url_id = ?;', ( url_id, ) )
+                        
+                        self._c.execute( 'DELETE FROM urls WHERE url = ?;', ( url, ) )
+                        
+                    
+                    if i % 100 == 0:
+                        
+                        self._controller.pub( 'splash_set_status_subtext', 'normalising some uls: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to normalise urls at the db level failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

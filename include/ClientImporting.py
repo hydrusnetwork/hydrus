@@ -35,6 +35,28 @@ DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
+def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url ):
+    
+    file_seeds = []
+    
+    for parse_results in all_parse_results:
+        
+        parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
+        
+        for url in parsed_urls:
+            
+            file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
+            
+            file_seed.SetReferralURL( source_url )
+            
+            file_seed.AddParseResults( parse_results )
+            
+            file_seeds.append( file_seed )
+            
+        
+    
+    return file_seeds
+    
 def GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ):
     
     def network_job_presentation_context_factory( network_job ):
@@ -268,49 +290,41 @@ def THREADDownloadURLs( job_key, urls, title ):
     
     job_key.Finish()
     
-def UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, source_url, max_new_urls_allowed = None ):
+def UpdateFileSeedCacheWithFileSeeds( file_seed_cache, file_seeds, max_new_urls_allowed = None ):
     
     new_file_seeds = []
     
     num_urls_added = 0
     num_urls_already_in_file_seed_cache = 0
-    num_urls_total = 0
+    can_add_more_file_urls = True
+    stop_reason = ''
     
-    for parse_results in all_parse_results:
+    for file_seed in file_seeds:
         
-        parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
+        if max_new_urls_allowed is not None and num_urls_added >= max_new_urls_allowed:
+            
+            can_add_more_file_urls = False
+            
+            stop_reason = 'hit file limit'
+            
+            break
+            
         
-        for url in parsed_urls:
+        if file_seed_cache.HasFileSeed( file_seed ):
             
-            num_urls_total += 1
+            num_urls_already_in_file_seed_cache += 1
             
-            if max_new_urls_allowed is not None and num_urls_added == max_new_urls_allowed:
-                
-                continue
-                
+        else:
             
-            file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
+            num_urls_added += 1
             
-            file_seed.SetReferralURL( source_url )
-            
-            if file_seed_cache.HasFileSeed( file_seed ):
-                
-                num_urls_already_in_file_seed_cache += 1
-                
-            else:
-                
-                num_urls_added += 1
-                
-                file_seed.AddParseResults( parse_results )
-                
-                new_file_seeds.append( file_seed )
-                
+            new_file_seeds.append( file_seed )
             
         
     
     file_seed_cache.AddFileSeeds( new_file_seeds )
     
-    return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total )
+    return ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason )
     
 def WakeRepeatingJob( job ):
     
