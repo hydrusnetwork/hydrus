@@ -818,6 +818,10 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
+    domain_manager.SetGUGs( GetDefaultGUGs() )
+    
+    #
+    
     domain_manager.SetURLMatches( GetDefaultURLMatches() )
     
     #

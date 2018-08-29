@@ -797,7 +797,51 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if status != CC.STATUS_UNKNOWN:
                         
-                        break # if a known one-file url gives a single clear result, that result is reliable
+                        # a known one-file url has given a single clear result. sounds good
+                        
+                        we_have_a_match = True
+                        
+                        if self.file_seed_type == FILE_SEED_TYPE_URL:
+                            
+                            # to double-check, let's see if the file that claims that url has any other interesting urls
+                            # if the file has another url with the same url class as ours, then this is prob an unreliable 'alternate' source url attribution, and untrustworthy
+                            
+                            my_url = self.file_seed_data
+                            
+                            if url != my_url:
+                                
+                                my_url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( my_url )
+                                
+                                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                                
+                                this_files_urls = media_result.GetLocationsManager().GetURLs()
+                                
+                                for this_files_url in this_files_urls:
+                                    
+                                    if this_files_url != my_url:
+                                        
+                                        this_url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( this_files_url )
+                                        
+                                        if my_url_match == this_url_match:
+                                            
+                                            # oh no, the file this source url refers to has a different known url in this same domain
+                                            # it is more likely that an edit on this site points to the original elsewhere
+                                            
+                                            ( status, hash, note ) = UNKNOWN_DEFAULT
+                                            
+                                            we_have_a_match = False
+                                            
+                                            break
+                                            
+                                        
+                                    
+                                
+                            
+                        
+                        if we_have_a_match:
+                            
+                            break # if a known one-file url gives a single clear result, that result is reliable
+                            
                         
                     
                 

@@ -247,9 +247,12 @@ class RelatedTagsPanel( wx.Panel ):
         
         if canvas_key == self._canvas_key:
             
-            self._media = ( new_media_singleton.Duplicate(), )
-            
-            self._QuickSuggestedRelatedTags()
+            if new_media_singleton is not None:
+                
+                self._media = ( new_media_singleton.Duplicate(), )
+                
+                self._QuickSuggestedRelatedTags()
+                
             
         
     
@@ -372,9 +375,12 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         if canvas_key == self._canvas_key:
             
-            self._media = ( new_media_singleton.Duplicate(), )
-            
-            self._SetTags( [] )
+            if new_media_singleton is not None:
+                
+                self._media = ( new_media_singleton.Duplicate(), )
+                
+                self._SetTags( [] )
+                
             
         
     

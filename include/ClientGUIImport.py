@@ -30,7 +30,6 @@ import HydrusText
 import os
 import re
 import wx
-import wx.adv
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
@@ -253,8 +252,8 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
             
-            self._regex_intro_link = wx.adv.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-            self._regex_practise_link = wx.adv.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
+            self._regex_intro_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'a good regex introduction', 'http://www.aivosto.com/vbtips/regex.html' )
+            self._regex_practise_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'regex practise', 'http://regexr.com/3cvmf' )
             
             #
             

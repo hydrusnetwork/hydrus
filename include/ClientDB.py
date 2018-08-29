@@ -2431,6 +2431,10 @@ class DB( HydrusDB.HydrusDB ):
             self._CacheSpecificMappingsAddFiles( file_service_id, tag_service_id, hash_ids )
             
         
+        self._CreateIndex( cache_current_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
+        self._CreateIndex( cache_deleted_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
+        self._CreateIndex( cache_pending_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
+        
     
     def _CacheSpecificMappingsGetAutocompleteCounts( self, file_service_id, tag_service_id, tag_ids ):
         
@@ -3925,6 +3929,17 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return names_to_analyze
+        
+    
+    def _GetBonedStats( self ):
+        
+        ( num_total, size_total ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchone()
+        ( num_inbox, size_inbox ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files NATURAL JOIN file_inbox WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchone()
+        
+        num_archive = num_total - num_inbox
+        size_archive = size_total - size_inbox
+        
+        return ( num_inbox, num_archive, size_inbox, size_archive )
         
     
     def _GetClientFilesLocations( self ):
@@ -8627,6 +8642,7 @@ class DB( HydrusDB.HydrusDB ):
     def _Read( self, action, *args, **kwargs ):
         
         if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
+        elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'duplicate_hashes': result = self._CacheSimilarFilesGetDuplicateHashes( *args, **kwargs )
@@ -9389,194 +9405,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 260:
-            
-            self._controller.pub( 'splash_set_status_subtext', 'generating some new tag search data' )
-            
-            self._c.execute( 'CREATE TABLE external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
-            
-            existing_subtag_data = self._c.execute( 'SELECT subtag_id, subtag FROM subtags;' ).fetchall()
-            
-            inserts = []
-            
-            for ( subtag_id, subtag ) in existing_subtag_data:
-                
-                try:
-                    
-                    integer_subtag = int( subtag )
-                    
-                    if CanCacheInteger( integer_subtag ):
-                        
-                        inserts.append( ( subtag_id, integer_subtag ) )
-                        
-                    
-                except ValueError:
-                    
-                    pass
-                    
-                
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', inserts )
-            
-            self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
-            
-            #
-            
-            do_the_message = False
-            
-            subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-            
-            for subscription in subscriptions:
-                
-                g_i = subscription._gallery_identifier
-                
-                if g_i.GetSiteType() == HC.SITE_TYPE_TUMBLR:
-                    
-                    do_the_message = True
-                    
-                    break
-                    
-                
-            
-            if do_the_message:
-                
-                message = 'The tumblr downloader can now produce \'raw\' urls for images that have >1280px width. It is possible some of your tumblr subscriptions\' urls are resizes, so at some point you may want to reset their url caches. I recommend you not do it yet--wait for the upcoming downloader overhaul, which will provide other benefits such as associating the \'post\' url with the image, rather than the ugly API url.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 262:
-            
-            self._controller.pub( 'splash_set_status_subtext', 'moving some hash data' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
-            
-            self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-            self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
-            self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
-            self._CreateIndex( 'external_master.local_hashes', [ 'sha512' ] )
-            
-            self._c.execute( 'INSERT INTO external_master.local_hashes SELECT * FROM main.local_hashes;' )
-            
-            self._c.execute( 'DROP TABLE main.local_hashes;' )
-            
-            self._c.execute( 'ANALYZE external_master.local_hashes;' )
-            
-            self._CloseDBCursor()
-            
-            self._controller.pub( 'splash_set_status_subtext', 'vacuuming main db ' )
-            
-            db_path = os.path.join( self._db_dir, 'client.db' )
-            
-            try:
-                
-                if HydrusDB.CanVacuum( db_path ):
-                    
-                    HydrusDB.VacuumDB( db_path )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'Vacuum failed!' )
-                HydrusData.PrintException( e )
-                
-            
-            self._InitDBCursor()
-            
-            #
-            
-            bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
-            
-            ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager ) 
-            
-            self._SetJSONDump( bandwidth_manager )
-            
-            session_manager = ClientNetworkingSessions.NetworkSessionManager()
-            
-            self._SetJSONDump( session_manager )
-            
-            #
-            
-            self._controller.pub( 'splash_set_status_subtext', 'generating deleted tag cache' )
-            
-            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
-            file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
-            
-            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
-                
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
-                
-                self._c.execute( 'CREATE TABLE IF NOT EXISTS ' + cache_deleted_mappings_table_name + ' ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;' )
-                
-                hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( file_service_id, ) ) )
-                
-                if len( hash_ids ) > 0:
-                    
-                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
-                    
-                    for group_of_hash_ids in HydrusData.SplitListIntoChunks( hash_ids, 100 ):
-                        
-                        splayed_group_of_hash_ids = HydrusData.SplayListForDB( group_of_hash_ids )
-                        
-                        deleted_mapping_ids_raw = self._c.execute( 'SELECT tag_id, hash_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN ' + splayed_group_of_hash_ids + ';' ).fetchall()
-                        
-                        deleted_mapping_ids_dict = HydrusData.BuildKeyToSetDict( deleted_mapping_ids_raw )
-                        
-                        all_ids_seen = set( deleted_mapping_ids_dict.keys() )
-                        
-                        for tag_id in all_ids_seen:
-                            
-                            deleted_hash_ids = deleted_mapping_ids_dict[ tag_id ]
-                            
-                            num_deleted = len( deleted_hash_ids )
-                            
-                            if num_deleted > 0:
-                                
-                                self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_deleted_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in deleted_hash_ids ) )
-                                
-                            
-                        
-                    
-                
-                self._c.execute( 'ANALYZE ' + cache_deleted_mappings_table_name + ';' )
-                
-            
-        
-        if version == 263:
-            
-            self._controller.pub( 'splash_set_status_subtext', 'rebuilding urls table' )
-            
-            self._c.execute( 'ALTER TABLE urls RENAME TO urls_old;' )
-            
-            self._c.execute( 'CREATE TABLE urls ( hash_id INTEGER, url TEXT, PRIMARY KEY ( hash_id, url ) );' )
-            self._CreateIndex( 'urls', [ 'url' ] )
-            
-            self._c.execute( 'INSERT INTO urls SELECT hash_id, url FROM urls_old;' )
-            
-            self._c.execute( 'DROP TABLE urls_old;' )
-            
-            self._c.execute( 'ANALYZE urls;' )
-            
-        
-        if version == 264:
-            
-            default_bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
-            
-            ClientDefaults.SetDefaultBandwidthManagerRules( default_bandwidth_manager )
-            
-            bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
-            
-            bandwidth_manager._network_contexts_to_bandwidth_rules = dict( default_bandwidth_manager._network_contexts_to_bandwidth_rules )
-            
-            self._SetJSONDump( bandwidth_manager )
-            
-        
-        if version == 266:
-            
-            self._c.execute( 'DROP TABLE IF EXISTS web_sessions;' )
-            
         
         if version == 272:
             
@@ -10871,7 +10699,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if i % 100 == 0:
                         
-                        self._controller.pub( 'splash_set_status_subtext', 'normalising some uls: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
+                        self._controller.pub( 'splash_set_status_subtext', 'normalising some urls: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
                         
                     
                 
@@ -10880,6 +10708,85 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to normalise urls at the db level failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 319:
+            
+            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                try:
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'generating some new indices: ' + str( file_service_id ) + ', ' + str( tag_service_id ) )
+                    
+                    ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    self._CreateIndex( cache_current_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
+                    self._CreateIndex( cache_deleted_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
+                    self._CreateIndex( cache_pending_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
+                    
+                except:
+                    
+                    message = 'Trying to create some new tag lookup indices failed! This is not a huge deal, particularly if you have had service errors in the past, but you might want to let hydrus dev know! Your magic failure numbers are: ' + str( ( file_service_id, tag_service_id ) )
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                gugs = ClientDefaults.GetDefaultGUGs()
+                
+                domain_manager.SetGUGs( gugs )
+                
+                #
+                
+                # lots of gallery updates this week, so let's just do them all
+                
+                default_url_matches = ClientDefaults.GetDefaultURLMatches()
+                
+                overwrite_names = [ url_match.GetName() for url_match in default_url_matches if url_match.GetURLType() == HC.URL_TYPE_GALLERY ]
+                
+                domain_manager.OverwriteDefaultURLMatches( overwrite_names )
+                
+                # now clear out some failed experiments
+                
+                url_matches = domain_manager.GetURLMatches()
+                
+                url_matches = [ url_match for url_match in url_matches if 'search initialisation' not in url_match.GetName() ]
+                
+                domain_manager.SetURLMatches( url_matches )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'artstation file page api parser', 'artstation gallery page api parser', 'hentai foundry gallery page parser', 'inkbunny gallery page parser', 'moebooru gallery page parser', 'newgrounds gallery page parser', 'pixiv static html gallery page parser', 'rule34hentai gallery page parser', 'sankaku gallery page parser', 'deviant art gallery page parser' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

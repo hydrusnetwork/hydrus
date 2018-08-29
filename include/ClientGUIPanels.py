@@ -594,6 +594,13 @@ class ReviewServicePanel( wx.Panel ):
                 wx.CallAfter( self._Refresh )
                 
             
+            if HG.client_controller.options[ 'pause_repo_sync' ]:
+                
+                wx.MessageBox( 'All repositories are currently paused under the services->pause menu! Please unpause them and then try again!' )
+                
+                return
+                
+            
             self._refresh_account_button.Disable()
             self._refresh_account_button.SetLabelText( u'fetching\u2026' )
             

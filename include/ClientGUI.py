@@ -1720,7 +1720,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'UNDER CONSTRUCTION: manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
             
@@ -1907,6 +1907,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
             
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
+                
+            
             ClientGUIMenus.AppendSeparator( menu )
             
             currently_darkmode = self._new_options.GetString( 'current_colourset' ) == 'darkmode'
@@ -2013,6 +2018,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _GenerateNewAccounts( self, service_key ):
         
         with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.ShowModal()
+        
+    
+    def _HowBonedAmI( self ):
+        
+        boned_stats = self._controller.Read( 'boned_stats' )
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review your fate' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
+        
+        frame.SetPanel( panel )
         
     
     def _ImportFiles( self, paths = None ):
@@ -2331,10 +2347,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             domain_manager = self._controller.network_engine.domain_manager
             
             gugs = domain_manager.GetGUGs()
-            
-            import ClientNetworkingDomain
-            
-            gugs.append( ClientNetworkingDomain.GalleryURLGenerator( 'test gug', url_template = 'https://www.gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=0' ) )
             
             panel = ClientGUIScrolledPanelsEdit.EditGUGsPanel( dlg, gugs )
             
@@ -3622,7 +3634,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        if self.IsIconized():
+        dialog_open = False
+        
+        tlps = wx.GetTopLevelWindows()
+        
+        for tlp in tlps:
+            
+            if isinstance( tlp, wx.Dialog ):
+                
+                dialog_open = True
+                
+            
+        
+        if self.IsIconized() or dialog_open:
             
             self._controller.CallLaterWXSafe( self, 10, self.AddModalMessage, job_key )
             

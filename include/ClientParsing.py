@@ -1355,12 +1355,25 @@ class ParseFormulaJSON( ParseFormula ):
                 
                 if parse_rule is None:
                     
-                    if not isinstance( root, list ):
+                    if isinstance( root, list ):
+                        
+                        next_roots.extend( root )
+                        
+                    elif isinstance( root, dict ):
+                        
+                        pairs = list( root.items() )
+                        
+                        pairs.sort()
+                        
+                        for ( key, value ) in pairs:
+                            
+                            next_roots.append( value )
+                            
+                        
+                    else:
                         
                         continue
                         
-                    
-                    next_roots.extend( root )
                     
                 elif isinstance( parse_rule, int ):
                     

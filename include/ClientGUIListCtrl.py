@@ -704,9 +704,19 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         deletees.sort( reverse = True )
         
+        # I am not sure, but I think if subsequent deleteitems occur in the same event, the event processing of the first is forced!!
+        # this means that button checking and so on occurs for n-1 times on an invalid indices structure in this thing before correcting itself in the last one
+        # if a button update then tests selected data against the invalid index and a selection is on the i+1 or whatever but just got bumped up into invalid area, we are exception city
+        # this doesn't normally affect us because mostly we _are_ deleting selections when we do deletes, but 'try to link url stuff' auto thing hit this
+        # I obviously don't want to recalc all indices for every delete
+        # so I wrote a catch in getdata to skip the missing error, and now I'm moving the data deletion to a second loop, which seems to help
+        
         for ( index, data ) in deletees:
             
             self.DeleteItem( index )
+            
+        
+        for ( index, data ) in deletees:
             
             del self._data_to_indices[ data ]
             
@@ -828,6 +838,12 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         result = []
         
         for index in indices:
+            
+            # this can get fired while indices are invalid, wew
+            if index not in self._indices_to_data_info:
+                
+                continue
+                
             
             ( data, display_tuple, sort_tuple ) = self._indices_to_data_info[ index ]
             

@@ -8,11 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<ul>
+				<li><h3>version 320</h3></li>
+					<li>clients should now have objects for all default downloaders. everything should be prepped for the big switchover:</li>
+					<li>wrote gallery url generators for all the default downloaders and a couple more as well</li>
+					<li>wrote a gallery parser for deviant art--it also comes with an update to the DA url class because the meta 'next page' link on DA gallery pages is invalid wew!</li>
+					<li>wrote a gallery parser for hentai foundry, inkbunny, rule34hentai, moebooru (konachan, sakugabooru, yande.re), artstation, newgrounds, and pixiv artist galleries (static html)</li>
+					<li>added a gallery parser for sankaku</li>
+					<li>the artstation post url parser no longer fetches cover images</li>
+					<li>url classes can now support 'default' values for path components and query parameters! so, if your url might be missing a page=1 initialsation value due to user drag-and-drop, you can auto-add it in the normalisation step!</li>
+					<li>if the entered default does not match the rules of the component or parameter, it will be cleared back to none!</li>
+					<li>all appropriate default gallery url classes (which is most) now have these default values. all default gallery url classes will be overwritten on db update</li>
+					<li>three test 'search initialisation' url classes that attempted to fix this problem a different way will be deleted on update, if present</li>
+					<li>updated some other url classes</li>
+					<li>when checking source urls during the pre-download import status check, the client will now distrust parsed source urls if the files they seem to refer to also have other urls of the same url class as the file import object being actioned (basically, this is some logic that tries to detect bad source url attribution, where multiple files on a booru (typically including alternate edits) are all source-url'd back to a single original)</li>
+					<li>gallery page parsing now discounts parsed 'next page' urls that are the same as the page that fetched them (some gallery end-points link themselves as the next page, wew)</li>
+					<li>json parsing formulae that are set to parse all 'list' items will now also parse all dictionary entries if faced with a dict instead!</li>
+					<li>added new stop-gap 'stop checking' logic in subscription syncing for certain low-gallery-count edge-cases</li>
+					<li>fixed an issue where (typically new) subscriptions were bugging out trying to figure a default stop_reason on certain page results</li>
+					<li>fixed an unusual listctrl delete item index-tracking error that would sometimes cause exceptions on the 'try to link url stuff together' button press and maybe some other places</li>
+					<li>thanks to a submission from user prkc on the discord, we now have 'import cookies.txt' buttons on the review sessions panels! if you are interested in 'manual' logins through browser-cookie-copying, please give this a go and let me know which kinds of cookies.txt do and do not work, and how your different site cookie-copy-login tests work in hydrus.</li>
+					<li>the mappings cache tables now have some new indices that speed up certain kinds of tag search significantly. db update will spend a minute or two generating these indices for existing users</li>
+					<li>advanced mode users will discover a fun new entry on the help menu</li>
+					<li>the hyperlinks on the media viewer hover window and a couple of other places are now a custom control that uses any custom browser launch path in options->files and trash</li>
+					<li>fixed an issue where certain canvas edge-case media clearing events could be caught incorrectly by the manage tags dialog and its subsidiary panels</li>
+					<li>think I fixed an issue where a client left with a dialog open could sometimes run into trouble later trying to show an idle time maintenance modal popup and give a 'C++ assertion IsRunning()' exception and end up locking the client's ui</li>
+					<li>manage parsers dialog will now autosort after an add event</li>
+					<li>the gug panels now normalise example urls</li>
+					<li>improved some misc service error handling</li>
+					<li>rewrote some url parsing to stop forcing '+'->' ' in our urls' query texts</li>
+					<li>fixed some bad error handling for matplotlib import</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 319</h3></li>
 				<ul>
 					<li>started the new convert-query-text-to-gallery-urls object. these objects, which I was thinking of calling 'Searchers', will be called the more specific and practical 'Gallery URL Generators', or GUGs for short</li>
 					<li>the first version of GUGs is done, and I've written some test ui for advanced users under network->downloader definitions->manage gugs. this ui doesn't save anything yet, but lets you mess around with different values. if we don't think of anything else needed in the next week, I will fix this code for v320 and start filling in defaults</li>
-					<li>watchers now have a global checking slot, much like the recent change to galleries and subs. it safely throttles dozens of threads so they don't rudely hammer your (or the destination server's) CPU if they all happen to want to go at once (like just after your computer wakes up). the option is similarly under options->downloading, and is global for the moment</li>
+					<li>watchers now have a checking slot, much like the recent change to galleries and subs. it safely throttles dozens of threads so they don't rudely hammer your (or the destination server's) CPU if they all happen to want to go at once (like just after your computer wakes up). the option is similarly under options->downloading</li>
 					<li>moved the new gallery delay/token management code to the better-fit bandwidth manager (it was in domain manager before)</li>
 					<li>the gallery delay/token code now works per-domain!</li>
 					<li>moved the gallery delay/token checking code into the network job proper, simplifying a bunch of import-level code and making the text display now appear in the network job control. token consumption now occurs after bandwidth (it is now the last hoop to jump through, which reduces the chance of a pileup in unusual situations) I expect to soon add some kind of 'force-go' action to the cog menu</li>

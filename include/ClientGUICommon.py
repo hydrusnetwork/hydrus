@@ -4,6 +4,7 @@ import ClientConstants as CC
 import ClientGUIMenus
 import ClientGUITopLevelWindows
 import ClientMedia
+import ClientPaths
 import ClientRatings
 import ClientThreading
 import HydrusConstants as HC
@@ -696,6 +697,33 @@ class BetterStaticText( wx.StaticText ):
             
             self.Wrap( self._wrap_width )
             
+        
+    
+class BetterHyperLink( BetterStaticText ):
+    
+    def __init__( self, parent, label, url ):
+        
+        BetterStaticText.__init__( self, parent, label )
+        
+        self._url = url
+        
+        self.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
+        self.SetForegroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_HOTLIGHT ) )
+        
+        font = self.GetFont()
+        
+        font.SetUnderlined( True )
+        
+        self.SetFont( font )
+        
+        self.SetToolTipString( self._url )
+        
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventClick )
+        
+    
+    def EventClick( self, event ):
+        
+        ClientPaths.LaunchURLInWebBrowser( self._url )
         
     
 class BufferedWindow( wx.Window ):

@@ -5214,11 +5214,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if canvas_key == self._canvas_key:
             
-            self._current_media = ( new_media_singleton.Duplicate(), )
-            
-            for page in self._tag_repositories.GetPages():
+            if new_media_singleton is not None:
                 
-                page.SetMedia( self._current_media )
+                self._current_media = ( new_media_singleton.Duplicate(), )
+                
+                for page in self._tag_repositories.GetPages():
+                    
+                    page.SetMedia( self._current_media )
+                    
                 
             
         

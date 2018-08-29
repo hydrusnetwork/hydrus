@@ -44,7 +44,6 @@ import traceback
 import urllib
 import wx
 import wx.lib.agw.customtreectrl
-import wx.adv
 import yaml
 import HydrusData
 import ClientSearch
@@ -1343,8 +1342,8 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self._shortcuts = ClientGUICommon.RegexButton( self )
         
-        self._regex_intro_link = wx.adv.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-        self._regex_practise_link = wx.adv.HyperlinkCtrl( self, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
+        self._regex_intro_link = ClientGUICommon.BetterHyperLink( self, 'a good regex introduction', 'http://www.aivosto.com/vbtips/regex.html' )
+        self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practise', 'http://regexr.com/3cvmf' )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )

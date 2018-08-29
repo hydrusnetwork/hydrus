@@ -1443,6 +1443,8 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = gug.GetExampleURL()
             
+            example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
+            
             self._example_url.SetValue( example_url )
             
         except HydrusExceptions.GUGException as e:
@@ -1514,7 +1516,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', 16 ), ( 'example url', -1 ), ( 'gallery url class?', 20 ) ]
+        columns = [ ( 'name', 24 ), ( 'example url', -1 ), ( 'gallery url class?', 20 ) ]
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'gugs', 30, 74, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
@@ -1578,6 +1580,8 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = gug.GetName()
         example_url = gug.GetExampleURL()
+        
+        example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
         
         url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( example_url )
         
@@ -4809,7 +4813,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         path_components_panel = ClientGUICommon.StaticBox( self, 'path components' )
         
-        self._path_components = ClientGUIListBoxes.QueueListBox( path_components_panel, 6, self._ConvertPathComponentToString, self._AddPathComponent, self._EditPathComponent )
+        self._path_components = ClientGUIListBoxes.QueueListBox( path_components_panel, 6, self._ConvertPathComponentRowToString, self._AddPathComponent, self._EditPathComponent )
         
         #
         
@@ -4999,13 +5003,36 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 string_match = panel.GetValue()
                 
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter optional \'default\' value for this parameter, which will be filled in if missing. Leave blank for none (recommended).', allow_blank = True ) as dlg_default:
+                    
+                    if dlg_default.ShowModal() == wx.ID_OK:
+                        
+                        default = dlg_default.GetValue()
+                        
+                        if default == '':
+                            
+                            default = None
+                            
+                        elif not string_match.Matches( default ):
+                            
+                            wx.MessageBox( 'That default does not match the given rule! Clearing it to none!' )
+                            
+                            default = None
+                            
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
             else:
                 
                 return
                 
             
         
-        data = ( key, string_match )
+        data = ( key, ( string_match, default ) )
         
         self._parameters.AddDatas( ( data, ) )
         
@@ -5017,16 +5044,22 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     def _AddPathComponent( self ):
         
         string_match = ClientParsing.StringMatch()
+        default = None
         
-        return self._EditPathComponent( string_match )
+        return self._EditPathComponent( ( string_match, default ) )
         
     
     def _ConvertParameterToListCtrlTuples( self, data ):
         
-        ( key, string_match ) = data
+        ( key, ( string_match, default ) ) = data
         
         pretty_key = key
         pretty_string_match = string_match.ToUnicode()
+        
+        if default is not None:
+            
+            pretty_string_match += ' (default "' + default + '")'
+            
         
         sort_key = pretty_key
         sort_string_match = pretty_string_match
@@ -5037,9 +5070,18 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _ConvertPathComponentToString( self, path_component ):
+    def _ConvertPathComponentRowToString( self, row ):
         
-        return path_component.ToUnicode()
+        ( string_match, default ) = row
+        
+        s = string_match.ToUnicode()
+        
+        if default is not None:
+            
+            s += ' (default "' + default + '")'
+            
+        
+        return s
         
     
     def _DeleteParameters( self ):
@@ -5061,7 +5103,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for parameter in selected_params:
             
-            ( original_key, original_string_match ) = parameter
+            ( original_key, ( original_string_match, original_default ) ) = parameter
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = original_key, allow_blank = False ) as dlg:
                 
@@ -5097,6 +5139,34 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     string_match = panel.GetValue()
                     
+                    if original_default is None:
+                        
+                        original_default = ''
+                        
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, 'Enter optional \'default\' value for this parameter, which will be filled in if missing. Leave blank for none (recommended).', default = original_default, allow_blank = True ) as dlg_default:
+                        
+                        if dlg_default.ShowModal() == wx.ID_OK:
+                            
+                            default = dlg_default.GetValue()
+                            
+                            if default == '':
+                                
+                                default = None
+                                
+                            elif not string_match.Matches( default ):
+                                
+                                wx.MessageBox( 'That default does not match the given rule! Clearing it to none!' )
+                                
+                                default = None
+                                
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
                 else:
                     
                     return
@@ -5105,7 +5175,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._parameters.DeleteDatas( ( parameter, ) )
             
-            new_parameter = ( key, string_match )
+            new_parameter = ( key, ( string_match, default ) )
             
             self._parameters.AddDatas( ( new_parameter, ) )
             
@@ -5115,7 +5185,9 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
     
-    def _EditPathComponent( self, string_match ):
+    def _EditPathComponent( self, row ):
+        
+        ( string_match, default ) = row
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit path component' ) as dlg:
             
@@ -5127,12 +5199,36 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_string_match = panel.GetValue()
                 
-                return ( True, new_string_match )
+                if default is None:
+                    
+                    default = ''
+                    
                 
-            else:
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter optional \'default\' value for this path component, which will be filled in if missing. Leave blank for none (recommended).', default = default, allow_blank = True ) as dlg_default:
+                    
+                    if dlg_default.ShowModal() == wx.ID_OK:
+                        
+                        new_default = dlg_default.GetValue()
+                        
+                        if new_default == '':
+                            
+                            new_default = None
+                            
+                        elif not string_match.Matches( new_default ):
+                            
+                            wx.MessageBox( 'That default does not match the given rule! Clearing it to none!' )
+                            
+                            new_default = None
+                            
+                        
+                        new_row = ( new_string_match, new_default )
+                        
+                        return ( True, new_row )
+                        
+                    
                 
-                return ( False, None )
-                
+            
+            return ( False, None )
             
         
     
@@ -5180,17 +5276,17 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             choices = [ ( 'no next gallery page info set', ( None, None ) ) ]
             
-            for ( index, path_component ) in enumerate( self._path_components.GetData() ):
+            for ( index, ( string_match, default ) ) in enumerate( self._path_components.GetData() ):
                 
-                if True in ( path_component.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
+                if True in ( string_match.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
                     
                     choices.append( ( HydrusData.ConvertIntToPrettyOrdinalString( index + 1 ) + ' path component', ( ClientNetworkingDomain.GALLERY_INDEX_TYPE_PATH_COMPONENT, index ) ) )
                     
                 
             
-            for ( index, ( key, value ) ) in enumerate( self._parameters.GetData() ):
+            for ( index, ( key, ( string_match, default ) ) ) in enumerate( self._parameters.GetData() ):
                 
-                if True in ( value.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
+                if True in ( string_match.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
                     
                     choices.append( ( key + ' parameter', ( ClientNetworkingDomain.GALLERY_INDEX_TYPE_PARAMETER, key ) ) )
                     
@@ -5238,7 +5334,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             self._can_produce_multiple_files.Disable()
             
         
-        if url_match.NormalisationIsAppropriate():
+        if url_match.ClippingIsAppropriate():
             
             if self._match_subdomains.GetValue():
                 

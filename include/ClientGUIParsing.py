@@ -1106,7 +1106,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._type = ClientGUICommon.BetterChoice( self )
         
         self._type.Append( 'dictionary entry', self.DICT_ENTRY )
-        self._type.Append( 'all list items', self.ALL_LIST_ITEMS )
+        self._type.Append( 'all dictionary/list items', self.ALL_LIST_ITEMS )
         self._type.Append( 'indexed list item', self.INDEXED_LIST_ITEM)
         
         self._key = wx.TextCtrl( self )
@@ -2946,6 +2946,8 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._AddParser( new_parser )
                 
+                self._parsers.Sort()
+                
             
         
     
@@ -3716,7 +3718,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_encoding = ClientGUICommon.BetterChoice( self )
             self._data_regex_pattern = wx.TextCtrl( self )
             self._data_regex_repl = wx.TextCtrl( self )
-            self._data_date_link = wx.adv.HyperlinkCtrl( self, label = 'link to date info', url = 'https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior' )
+            self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone = ClientGUICommon.BetterChoice( self )
             self._data_timezone_offset = wx.SpinCtrl( self, min = -86400, max = 86400 )
             

@@ -271,6 +271,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
                 
+                if self.url in next_page_urls:
+                    
+                    next_page_urls.remove( self.url )
+                    
+                
                 if len( next_page_urls ) > 0:
                     
                     next_page_generation_phrase = ' next gallery pages found'

@@ -727,6 +727,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 num_urls_added = 0
                                 num_urls_already_in_file_seed_cache = 0
                                 can_add_more_file_urls = True
+                                stop_reason = 'no known stop reason'
                                 
                                 for file_seed in file_seeds:
                                     
@@ -761,7 +762,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                         
                                         WE_HIT_OLD_GROUND_THRESHOLD = 5
                                         
-                                        if num_urls_already_in_file_seed_cache > WE_HIT_OLD_GROUND_THRESHOLD:
+                                        if num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
                                             
                                             can_add_more_file_urls = False
                                             
@@ -808,6 +809,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             keep_checking = can_add_more_file_urls
                             
                             num_existing_urls_this_stream += num_urls_already_in_file_seed_cache
+                            
+                            WE_HIT_OLD_GROUND_TOTAL_THRESHOLD = 15
+                            
+                            if num_existing_urls_this_stream >= WE_HIT_OLD_GROUND_TOTAL_THRESHOLD:
+                                
+                                keep_checking = False
+                                stop_reason = 'saw ' + HydrusData.ToHumanInt( WE_HIT_OLD_GROUND_TOTAL_THRESHOLD ) + ' previously seen urls in the whole sync, so assuming we caught up'
+                                
                             
                             total_new_urls_for_this_sync += num_urls_added
                             

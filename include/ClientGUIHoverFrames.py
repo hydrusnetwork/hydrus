@@ -16,7 +16,6 @@ import HydrusSerialisable
 import urlparse
 import os
 import wx
-import wx.adv
 
 class FullscreenHoverFrame( wx.Frame ):
     
@@ -934,9 +933,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
                 
                 for ( display_string, url ) in url_tuples:
                     
-                    link = wx.adv.HyperlinkCtrl( self, id = -1, label = display_string, url = url )
-                    
-                    link.SetToolTip( url )
+                    link = ClientGUICommon.BetterHyperLink( self, display_string, url )
                     
                     self._urls_vbox.Add( link, CC.FLAGS_EXPAND_PERPENDICULAR )
                     

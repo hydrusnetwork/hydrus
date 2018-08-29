@@ -12,18 +12,21 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIPanels
 import ClientGUIPopupMessages
+import ClientGUITags
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingContexts
+import ClientNetworkingDomain
 import ClientPaths
-import ClientGUITags
+import ClientRendering
 import ClientTags
 import ClientThreading
 import collections
 import cookielib
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNATPunch
 import HydrusPaths
@@ -42,7 +45,7 @@ try:
     
     MATPLOTLIB_OK = True
     
-except ImportError:
+except:
     
     MATPLOTLIB_OK = False
     
@@ -1885,6 +1888,62 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._RefreshTags()
         
     
+class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, stats ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        ( num_inbox, num_archive, size_inbox, size_archive ) = stats
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        num_total = num_archive + num_inbox
+        size_total = size_archive + size_inbox
+        
+        if num_total < 1000:
+            
+            get_more = ClientGUICommon.BetterStaticText( self, label = 'I hope you enjoy my software. You might like to check out the downloaders!' )
+            
+            vbox.Add( get_more, CC.FLAGS_CENTER )
+            
+        elif num_inbox <= num_archive / 100:
+            
+            hooray = ClientGUICommon.BetterStaticText( self, label = 'CONGRATULATIONS, YOU APPEAR TO BE UNBONED, BUT REMAIN EVER VIGILANT' )
+            
+            vbox.Add( hooray, CC.FLAGS_CENTER )
+            
+        else:
+            
+            boned_path = os.path.join( HC.STATIC_DIR, 'boned.jpg' )
+            
+            boned_bmp = ClientRendering.GenerateHydrusBitmap( boned_path, HC.IMAGE_JPEG ).GetWxBitmap()
+            
+            win = ClientGUICommon.BufferedWindowIcon( self, boned_bmp )
+            
+            vbox.Add( win, CC.FLAGS_CENTER )
+            
+        
+        num_archive_percent = float( num_archive ) / num_total
+        size_archive_percent = float( size_archive ) / size_total
+        
+        num_inbox_percent = float( num_inbox ) / num_total
+        size_inbox_percent = float( size_inbox ) / size_total
+        
+        archive_label = 'Archive: ' + HydrusData.ToHumanInt( num_archive ) + ' files (' + ClientData.ConvertZoomToPercentage( num_archive_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_archive ) + '(' + ClientData.ConvertZoomToPercentage( size_archive_percent ) + ')'
+        
+        archive_st = ClientGUICommon.BetterStaticText( self, label = archive_label )
+        
+        inbox_label = 'Inbox: ' + HydrusData.ToHumanInt( num_inbox ) + ' files (' + ClientData.ConvertZoomToPercentage( num_inbox_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_inbox ) + '(' + ClientData.ConvertZoomToPercentage( size_inbox_percent ) + ')'
+        
+        inbox_st = ClientGUICommon.BetterStaticText( self, label = inbox_label )
+        
+        vbox.Add( archive_st, CC.FLAGS_CENTER )
+        vbox.Add( inbox_st, CC.FLAGS_CENTER )
+        
+        self.SetSizer( vbox )
+        
+    
 class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller, network_context ):
@@ -2226,6 +2285,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'create new', self._Add )
+        listctrl_panel.AddButton( 'import cookies.txt', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'review', self._Review, enabled_only_on_selection = True )
         listctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
         listctrl_panel.AddSeparator()
@@ -2320,6 +2380,42 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return ( display_tuple, sort_tuple )
         
     
+    # this method is thanks to user prkc on the discord!
+    def _ImportCookiesTXT( self ):
+        
+        with wx.FileDialog( self, 'select cookies.txt', style = wx.FD_OPEN ) as f_dlg:
+            
+            if f_dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( f_dlg.GetPath() )
+                
+                cj = cookielib.MozillaCookieJar()
+                
+                cj.load( path, ignore_discard = True, ignore_expires = True )
+                
+                for cookie in cj:
+                    
+                    try:
+                        
+                        nc_domain = ClientNetworkingDomain.ConvertDomainIntoSecondLevelDomain( cookie.domain )
+                        
+                    except HydrusExceptions.URLMatchException:
+                        
+                        continue
+                        
+                    
+                    context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, nc_domain )
+                    
+                    session = self._session_manager.GetSession( context )
+                    
+                    session.cookies.set_cookie( cookie )
+                    
+                
+            
+        
+        self._Update()
+        
+    
     def _Review( self ):
         
         for network_context in self._listctrl.GetData( only_selected = True ):
@@ -2365,6 +2461,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'import cookies.txt', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
         listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         listctrl_panel.AddSeparator()
@@ -2502,6 +2599,29 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
+    # this method is thanks to user prkc on the discord!
+    def _ImportCookiesTXT( self ):
+        
+        with wx.FileDialog( self, 'select cookies.txt', style = wx.FD_OPEN ) as f_dlg:
+            
+            if f_dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( f_dlg.GetPath() )
+                
+                cj = cookielib.MozillaCookieJar()
+                
+                cj.load( path, ignore_discard = True, ignore_expires = True )
+                
+                for cookie in cj:
+                    
+                    self._session.cookies.set_cookie( cookie )
+                    
+                
+            
+        
+        self._Update()
+        
+
     def _SetCookie( self, name, value, domain, path, expires ):
         
         version = 0
