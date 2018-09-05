@@ -1371,13 +1371,20 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         
     
-class GallerySelector( ClientGUICommon.BetterButton ):
+class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, gallery_identifier, update_callable = None ):
+    def __init__( self, parent, gug_key_and_name, update_callable = None ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'gallery selector', self._Edit )
         
-        self._gallery_identifier = gallery_identifier
+        gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+        
+        if gug is not None:
+            
+            gug_key_and_name = gug.GetGUGKeyAndName()
+            
+        
+        self._gug_key_and_name = gug_key_and_name
         self._update_callable = update_callable
         
         self._SetLabel()
@@ -1385,73 +1392,128 @@ class GallerySelector( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        gallery_identifiers = []
+        domain_manager = HG.client_controller.network_engine.domain_manager
         
-        site_types = [ HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ]
+        # maybe relegate to hidden page and something like "(does not work)" if no gallery url class match
         
-        result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
+        my_gug = domain_manager.GetGUG( self._gug_key_and_name )
         
-        if result is not None:
-            
-            site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
-            
+        gugs = domain_manager.GetGUGs()
+        gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
         
-        for site_type in site_types:
-            
-            gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
-            
-            gallery_identifiers.append( gallery_identifier )
-            
+        functional_gugs = []
+        non_functional_gugs = []
         
-        boorus = HG.client_controller.Read( 'remote_boorus' )
-        
-        for booru_name in boorus.keys():
+        for gug in gugs:
             
-            gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name )
-            
-            gallery_identifiers.append( gallery_identifier )
+            if gug.IsFunctional():
+                
+                functional_gugs.append( gug )
+                
+            else:
+                
+                non_functional_gugs.append( gug )
+                
             
         
-        choice_tuples = [ ( gallery_identifier.ToString(), gallery_identifier ) for gallery_identifier in gallery_identifiers ]
+        choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() in gug_keys_to_display ]
         
         choice_tuples.sort()
         
-        with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', choice_tuples, value_to_select = self._gallery_identifier ) as dlg:
+        second_choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() not in gug_keys_to_display ]
+        
+        second_choice_tuples.sort()
+        
+        if len( second_choice_tuples ) > 0:
+            
+            choice_tuples.append( ( '--other galleries', -1 ) )
+            
+        
+        if len( non_functional_gugs ) > 0:
+            
+            non_functional_choice_tuples = [ ( gug.GetName(), gug ) for gug in non_functional_gugs ]
+            
+            non_functional_choice_tuples.sort()
+            
+            choice_tuples.append( ( '--non-functional galleries', -2 ) )
+            
+        
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                gallery_identifier = dlg.GetChoice()
+                gug = dlg.GetChoice()
                 
-                self._SetValue( gallery_identifier )
+                if gug == -1:
+                    
+                    with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', second_choice_tuples, value_to_select = my_gug ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            gug = dlg.GetChoice()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                elif gug == -2:
+                    
+                    with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            gug = dlg.GetChoice()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                
+                gug_key_and_name = gug.GetGUGKeyAndName()
+                
+                self._SetValue( gug_key_and_name )
                 
             
         
     
     def _SetLabel( self ):
         
-        self.SetLabelText( self._gallery_identifier.ToString() )
+        label = self._gug_key_and_name[1]
+        
+        gug = HG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
+        
+        if gug is None:
+            
+            label = 'not found: ' + label
+            
+        
+        self.SetLabelText( label )
         
     
-    def _SetValue( self, gallery_identifier ):
+    def _SetValue( self, gug_key_and_name ):
         
-        self._gallery_identifier = gallery_identifier
+        self._gug_key_and_name = gug_key_and_name
         
         self._SetLabel()
         
         if self._update_callable is not None:
             
-            self._update_callable( self._gallery_identifier )
+            self._update_callable( gug_key_and_name )
             
         
     
     def GetValue( self ):
         
-        return self._gallery_identifier
+        return self._gug_key_and_name
         
     
-    def SetValue( self, gallery_identifier ):
+    def SetValue( self, gug_key_and_name ):
         
-        self._SetValue( gallery_identifier )
+        self._SetValue( gug_key_and_name )
         
     
 class TagImportOptionsButton( ClientGUICommon.BetterButton ):

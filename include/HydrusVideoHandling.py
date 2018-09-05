@@ -789,7 +789,13 @@ class VideoRendererFFMPEG( object ):
         rewind = pos < self.pos
         jump_a_long_way_ahead = pos > self.pos + 60
         
-        if rewind or jump_a_long_way_ahead: self.initialize( pos )
-        else: self.skip_frames( pos - self.pos )
+        if rewind or jump_a_long_way_ahead:
+            
+            self.initialize( pos )
+            
+        else:
+            
+            self.skip_frames( pos - self.pos )
+            
         
     

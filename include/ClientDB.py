@@ -2947,8 +2947,6 @@ class DB( HydrusDB.HydrusDB ):
             self._AddService( service_key, service_type, name, dictionary )
             
         
-        self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in ClientDefaults.GetDefaultBoorus().items() ) )
-        
         self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
         
         new_options = ClientOptions.ClientOptions( self._db_dir )
@@ -3935,6 +3933,16 @@ class DB( HydrusDB.HydrusDB ):
         
         ( num_total, size_total ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchone()
         ( num_inbox, size_inbox ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files NATURAL JOIN file_inbox WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchone()
+        
+        if size_total is None:
+            
+            size_total = 0
+            
+        
+        if size_inbox is None:
+            
+            size_inbox = 0
+            
         
         num_archive = num_total - num_inbox
         size_archive = size_total - size_inbox
@@ -8390,11 +8398,19 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessRepositoryUpdates( self, service_key, only_when_idle = False, stop_time = None ):
         
-        if HydrusPaths.GetFreeSpace( self._db_dir ) < 1024 * 1048576:
+        db_path = os.path.join( self._db_dir, 'client.mappings.db' )
+        
+        db_size = os.path.getsize( db_path )
+        
+        ( has_space, reason ) = HydrusPaths.HasSpaceForDBTransaction( self._db_dir, db_size / 2 )
+        
+        if not has_space:
             
-            HydrusData.ShowText( 'The db partition has <1GB free space, so will not sync repositories.' )
+            message = 'Not enough free disk space to guarantee a safe repository processing job. Full text: ' + os.linesep * 2 + reason
             
-            return
+            HydrusData.DebugPrint( message )
+            
+            raise Exception( message )
             
         
         service_id = self._GetServiceId( service_key )
@@ -8673,8 +8689,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
-        elif action == 'remote_booru': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
-        elif action == 'remote_boorus': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU )
         elif action == 'repository_progress': result = self._GetRepositoryProgress( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
         elif action == 'serialisable_simple': result = self._GetJSONSimple( *args, **kwargs )
@@ -10792,6 +10806,111 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 320:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.DeleteGUGs( [ 'rule.34.paheal tag search' ] )
+                domain_manager.OverwriteDefaultGUGs( [ 'rule34.paheal tag search' ] )
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'newgrounds artist lookup', 'hentai foundry artist lookup', 'danbooru & gelbooru tag search' ] )
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'derpibooru tag search' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ 'derpibooru gallery page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'derpibooru gallery page parser' ] )
+                
+                #
+                
+                boorus = self._STL( self._c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_REMOTE_BOORU, ) ) )
+                
+                default_names = { 'derpibooru', 'gelbooru', 'safebooru', 'e621', 'rule34@paheal', 'danbooru', 'mishimmie', 'rule34@booru.org', 'furry@booru.org', 'xbooru', 'konachan', 'yande.re', 'tbib', 'sankaku chan', 'sankaku idol', 'rule34hentai' }
+                
+                new_gugs = []
+                new_parsers = []
+                
+                import ClientDownloading
+                
+                for booru in boorus:
+                    
+                    name = booru.GetName()
+                    
+                    if name in default_names:
+                        
+                        continue # we already have an update in place, so no need for legacy update
+                        
+                    
+                    try:
+                        
+                        ( gug, gallery_parser, post_parser ) = ClientDownloading.ConvertBooruToNewObjects( booru )
+                        
+                        new_gugs.append( gug )
+                        
+                        new_parsers.extend( ( gallery_parser, post_parser ) )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.PrintException( e )
+                        
+                    
+                
+                if len( new_gugs ) > 0:
+                    
+                    try:
+                        
+                        domain_manager.AddGUGs( new_gugs )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.PrintException( e )
+                        
+                    
+                
+                if len( new_parsers ) > 0:
+                    
+                    try:
+                        
+                        domain_manager.AddParsers( new_parsers )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.PrintException( e )
+                        
+                    
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                message = 'The final big step of the downloader overhaul has just occurred! It looks like it went well. All of your default downloaders and subs should have updated smoothly, but if you use any \'custom\' boorus that you created or imported yourself, these will need more work to get going again. The subs using these old boorus will notice the problem and safely pause on their next sync attempt. Please see my v321 release post for more information.'
+                
+                self.pub_initial_message( message )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11364,7 +11483,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'delete_pending': result = self._DeletePending( *args, **kwargs )
-        elif action == 'delete_remote_booru': result = self._DeleteYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'delete_serialisable_named': result = self._DeleteJSONDumpNamed( *args, **kwargs )
         elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
         elif action == 'delete_unknown_duplicate_pairs': result = self._CacheSimilarFilesDeleteUnknownDuplicatePairs( *args, **kwargs )
@@ -11386,7 +11504,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
-        elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'repair_client_files': result = self._RepairClientFiles( *args, **kwargs )
         elif action == 'reparse_files': result = self._ReparseFiles( *args, **kwargs )
         elif action == 'reset_repository': result = self._ResetRepository( *args, **kwargs )

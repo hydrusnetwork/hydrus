@@ -191,52 +191,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, [] )
         
     
-    def test_booru( self ):
-        
-        default_boorus = ClientDefaults.GetDefaultBoorus()
-        
-        for ( name, booru ) in default_boorus.items():
-            
-            read_booru = self._read( 'remote_booru', name )
-            
-            self.assertEqual( booru.GetData(), read_booru.GetData() )
-            
-        
-        #
-        
-        result = self._read( 'remote_boorus' )
-        
-        for ( name, booru ) in default_boorus.items(): self.assertEqual( result[ name ].GetData(), booru.GetData() )
-        
-        #
-    
-        name = 'blah'
-        search_url = 'url'
-        search_separator = '%20'
-        advance_by_page_num = True
-        thumb_classname = 'thumb'
-        image_id = None
-        image_data = 'Download'
-        tag_classnames_to_namespaces = { 'tag' : '' }
-        
-        booru = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-        
-        self._write( 'remote_booru', 'blah', booru )
-        
-        read_booru = self._read( 'remote_booru', name )
-        
-        self.assertEqual( booru.GetData(), read_booru.GetData() )
-        
-        #
-        
-        self._write( 'delete_remote_booru', 'blah' )
-        
-        with self.assertRaises( Exception ):
-            
-            read_booru = self._read( 'remote_booru', name )
-            
-        
-    
     def test_export_folders( self ):
         
         file_search_context = ClientSearch.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test' ) ] )
@@ -634,8 +588,6 @@ class TestClientDB( unittest.TestCase ):
             session = ClientGUIPages.GUISession( 'test_session' )
             
             #
-            
-            gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
             
             management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
             

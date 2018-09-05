@@ -178,7 +178,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         num_urls_already_in_file_seed_cache = 0
         num_urls_total = 0
         result_404 = False
-        can_add_more_file_urls = False
+        added_new_gallery_pages = False
         stop_reason = ''
         
         try:
@@ -246,7 +246,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             num_urls_total = len( file_seeds )
             
-            ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason ) = file_seeds_callable( file_seeds )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason ) = file_seeds_callable( file_seeds )
             
             status = CC.STATUS_SUCCESSFUL_AND_NEW
             
@@ -257,13 +257,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 note += ' (' + HydrusData.ToHumanInt( num_urls_already_in_file_seed_cache ) + ' of page already in)'
                 
             
-            if not can_add_more_file_urls:
+            if not can_search_for_more_files:
                 
                 note += ' - ' + stop_reason
                 
             
             # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
-            can_add_more_gallery_urls = num_urls_total > 0 and can_add_more_file_urls
+            can_add_more_gallery_urls = num_urls_total > 0 and can_search_for_more_files
             
             if self._can_generate_more_pages and can_add_more_gallery_urls:
                 
@@ -321,6 +321,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         next_gallery_seeds = [ GallerySeed( next_page_url ) for next_page_url in new_next_page_urls ]
                         
                         gallery_seed_log.AddGallerySeeds( next_gallery_seeds )
+                        
+                        added_new_gallery_pages = True
                         
                         gallery_urls_seen_before.update( new_next_page_urls )
                         
@@ -405,7 +407,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
         
-        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, can_add_more_file_urls, stop_reason )
+        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed

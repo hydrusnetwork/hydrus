@@ -184,6 +184,7 @@ class RasterContainerVideo( RasterContainer ):
         self._initialised = False
         
         self._frames = {}
+        
         self._buffer_start_index = -1
         self._buffer_end_index = -1
         
@@ -198,9 +199,9 @@ class RasterContainerVideo( RasterContainer ):
         video_buffer_size_mb = new_options.GetInteger( 'video_buffer_size_mb' )
         
         duration = self._media.GetDuration()
-        num_frames = self._media.GetNumFrames()
+        num_frames_in_video = self._media.GetNumFrames()
         
-        if num_frames is None or num_frames == 0:
+        if num_frames_in_video is None or num_frames_in_video == 0:
             
             message = 'The file with hash ' + media.GetHash().encode( 'hex' ) + ', had an invalid number of frames.'
             message += os.linesep * 2
@@ -208,18 +209,18 @@ class RasterContainerVideo( RasterContainer ):
             
             HydrusData.ShowText( message )
             
-            num_frames = 1
+            num_frames_in_video = 1
             
         
-        self._average_frame_duration = float( duration ) / num_frames
+        self._average_frame_duration = float( duration ) / num_frames_in_video
         
         frame_buffer_length = ( video_buffer_size_mb * 1024 * 1024 ) / ( x * y * 3 )
         
         # if we can't buffer the whole vid, then don't have a clunky massive buffer
         
-        max_streaming_buffer_size = max( 48, int( num_frames / ( duration / 3.0 ) ) ) # 48 or 3 seconds
+        max_streaming_buffer_size = max( 48, int( num_frames_in_video / ( duration / 3.0 ) ) ) # 48 or 3 seconds
         
-        if max_streaming_buffer_size < frame_buffer_length and frame_buffer_length < num_frames:
+        if max_streaming_buffer_size < frame_buffer_length and frame_buffer_length < num_frames_in_video:
             
             frame_buffer_length = max_streaming_buffer_size
             
@@ -227,16 +228,24 @@ class RasterContainerVideo( RasterContainer ):
         self._num_frames_backwards = frame_buffer_length * 2 / 3
         self._num_frames_forwards = frame_buffer_length / 3
         
-        self._render_lock = threading.Lock()
-        self._buffer_lock = threading.Lock()
+        self._lock = threading.Lock()
         
         self._last_index_rendered = -1
         self._next_render_index = -1
-        self._render_to_index = -1
         self._rendered_first_frame = False
-        self._rush_to_index = None
+        self._ideal_next_frame = 0
         
         HG.client_controller.CallToThread( self.THREADRender )
+        
+    
+    def _HasFrame( self, index ):
+        
+        return index in self._frames
+        
+    
+    def _IndexInRange( self, index, range_start, range_end ):
+        
+        return not self._IndexOutOfRange( index, range_start, range_end )
         
     
     def _IndexOutOfRange( self, index, range_start, range_end ):
@@ -264,64 +273,11 @@ class RasterContainerVideo( RasterContainer ):
     
     def _MaintainBuffer( self ):
         
-        with self._buffer_lock:
-            
-            deletees = [ index for index in self._frames.keys() if self._IndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
-            
-            for i in deletees:
-                
-                del self._frames[ i ]
-                
-            
+        deletees = [ index for index in self._frames.keys() if self._IndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
         
-    
-    def THREADMoveRenderTo( self, render_to_index ):
-        
-        with self._render_lock:
+        for i in deletees:
             
-            if self._render_to_index != render_to_index:
-                
-                self._render_to_index = render_to_index
-                
-                self._render_event.set()
-                
-                self._initialised = True
-                
-            
-        
-    
-    def THREADMoveRenderer( self, start_index, rush_to_index, render_to_index ):
-        
-        with self._render_lock:
-            
-            if self._next_render_index != start_index:
-                
-                self._renderer.set_position( start_index )
-                
-                self._last_index_rendered = -1
-                
-                self._next_render_index = start_index
-                
-                self._rush_to_index = rush_to_index
-                
-                self._render_to_index = render_to_index
-                
-                self._render_event.set()
-                
-                self._initialised = True
-                
-            
-        
-    
-    def THREADRushTo( self, rush_to_index ):
-        
-        with self._render_lock:
-            
-            self._rush_to_index = rush_to_index
-            
-            self._render_event.set()
-            
-            self._initialised = True
+            del self._frames[ i ]
             
         
     
@@ -330,7 +286,7 @@ class RasterContainerVideo( RasterContainer ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         duration = self._media.GetDuration()
-        num_frames = self._media.GetNumFrames()
+        num_frames_in_video = self._media.GetNumFrames()
         
         client_files_manager = HG.client_controller.client_files_manager
         
@@ -338,14 +294,19 @@ class RasterContainerVideo( RasterContainer ):
             
             self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
             
-            self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames, self._target_resolution )
+            self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
             
         else:
             
-            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames, self._target_resolution )
+            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
             
         
         self.GetReadyForFrame( self._init_position )
+        
+        with self._lock:
+            
+            self._initialised = True
+            
         
         while True:
             
@@ -354,12 +315,42 @@ class RasterContainerVideo( RasterContainer ):
                 return
                 
             
-            ready_to_render = self._initialised
-            frames_needed = not self._rendered_first_frame or self._next_render_index != ( self._render_to_index + 1 ) % num_frames
+            #
             
-            if ready_to_render and frames_needed:
+            with self._lock:
                 
-                with self._render_lock:
+                # lets see if we should move the renderer to a new position
+                
+                next_render_is_out_of_buffer = self._IndexOutOfRange( self._next_render_index, self._buffer_start_index, self._buffer_end_index )
+                buffer_not_fully_rendered = self._last_index_rendered != self._buffer_end_index
+                
+                currently_rendering_out_of_buffer = next_render_is_out_of_buffer and buffer_not_fully_rendered
+                
+                will_render_ideal_frame_soon = self._IndexInRange( self._next_render_index, self._buffer_start_index, self._ideal_next_frame )
+                
+                need_ideal_next_frame = not self._HasFrame( self._ideal_next_frame )
+                
+                will_not_get_to_ideal_frame = need_ideal_next_frame and not will_render_ideal_frame_soon
+                
+                if currently_rendering_out_of_buffer or will_not_get_to_ideal_frame:
+                    
+                    # we cannot get to the ideal next frame, so we need to rewind/reposition
+                    
+                    self._renderer.set_position( self._buffer_start_index )
+                    
+                    self._last_index_rendered = -1
+                    
+                    self._next_render_index = self._buffer_start_index
+                    
+                
+                #
+                
+                need_to_render = self._last_index_rendered != self._buffer_end_index
+                
+            
+            if need_to_render:
+                
+                with self._lock:
                     
                     self._rendered_first_frame = True
                     
@@ -379,38 +370,42 @@ class RasterContainerVideo( RasterContainer ):
                         
                         self._last_index_rendered = frame_index
                         
-                        self._next_render_index = ( self._next_render_index + 1 ) % num_frames
+                        self._next_render_index = ( self._next_render_index + 1 ) % num_frames_in_video
                         
                     
                 
-                with self._buffer_lock:
+                with self._lock:
                     
-                    frame_needed = frame_index not in self._frames
+                    if self._next_render_index == 0 and self._buffer_end_index != num_frames_in_video - 1:
+                        
+                        # we need to rewind renderer
+                        
+                        self._renderer.set_position( 0 )
+                        
+                        self._last_index_rendered = -1
+                        
                     
-                    if self._rush_to_index is not None:
-                        
-                        reached_it = self._rush_to_index == frame_index
-                        already_got_it = self._rush_to_index in self._frames
-                        can_no_longer_reach_it = self._IndexOutOfRange( self._rush_to_index, self._next_render_index, self._render_to_index )
-                        
-                        if reached_it or already_got_it or can_no_longer_reach_it:
-                            
-                            self._rush_to_index = None
-                            
-                        
+                    should_save_frame = not self._HasFrame( frame_index )
                     
                 
-                if frame_needed:
+                if should_save_frame:
                     
                     frame = GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
                     
-                    with self._buffer_lock:
+                    with self._lock:
                         
                         self._frames[ frame_index ] = frame
                         
+                        self._MaintainBuffer()
+                        
                     
                 
-                if self._rush_to_index is not None:
+                with self._lock:
+                    
+                    we_have_the_ideal_next_frame = self._HasFrame( self._ideal_next_frame )
+                    
+                
+                if not we_have_the_ideal_next_frame: # there is work to do!
                     
                     time.sleep( 0.00001 )
                     
@@ -418,7 +413,9 @@ class RasterContainerVideo( RasterContainer ):
                     
                     half_a_frame = ( self._average_frame_duration / 1000.0 ) * 0.5
                     
-                    time.sleep( half_a_frame ) # just so we don't spam cpu
+                    sleep_duration = min( 0.1, half_a_frame ) # for 10s-long 3-frame gifs, wew
+                    
+                    time.sleep( sleep_duration ) # just so we don't spam cpu
                     
                 
             else:
@@ -456,14 +453,14 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetFrame( self, index ):
         
-        with self._buffer_lock:
+        with self._lock:
             
             frame = self._frames[ index ]
             
         
-        num_frames = self.GetNumFrames()
+        num_frames_in_video = self.GetNumFrames()
         
-        if index == num_frames - 1:
+        if index == num_frames_in_video - 1:
             
             next_index = 0
             
@@ -477,81 +474,96 @@ class RasterContainerVideo( RasterContainer ):
         return frame
         
     
-    def GetHash( self ): return self._media.GetHash()
+    def GetHash( self ):
+        
+        return self._media.GetHash()
+        
     
-    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
+    def GetKey( self ):
+        
+        return ( self._media.GetHash(), self._target_resolution )
+        
     
-    def GetNumFrames( self ): return self._media.GetNumFrames()
+    def GetNumFrames( self ):
+        
+        return self._media.GetNumFrames()
+        
     
     def GetReadyForFrame( self, next_index_to_expect ):
         
-        num_frames = self.GetNumFrames()
+        num_frames_in_video = self.GetNumFrames()
         
-        frame_exists = 0 <= next_index_to_expect and next_index_to_expect <= ( num_frames - 1 )
+        frame_request_is_impossible = self._IndexOutOfRange( next_index_to_expect, 0, num_frames_in_video - 1 )
         
-        if not frame_exists:
+        if frame_request_is_impossible:
             
             return
             
         
-        if num_frames > self._num_frames_backwards + 1 + self._num_frames_forwards:
+        with self._lock:
             
-            index_out_of_buffer = self._IndexOutOfRange( next_index_to_expect, self._buffer_start_index, self._buffer_end_index )
+            self._ideal_next_frame = next_index_to_expect
             
-            ideal_buffer_start_index = max( 0, next_index_to_expect - self._num_frames_backwards )
+            video_is_bigger_than_buffer = num_frames_in_video > self._num_frames_backwards + 1 + self._num_frames_forwards
             
-            ideal_buffer_end_index = ( next_index_to_expect + self._num_frames_forwards ) % num_frames
-            
-            if not self._rendered_first_frame or index_out_of_buffer:
+            if video_is_bigger_than_buffer:
                 
-                self._buffer_start_index = ideal_buffer_start_index
+                current_ideal_is_out_of_buffer = self._buffer_start_index == -1 or self._IndexOutOfRange( self._ideal_next_frame, self._buffer_start_index, self._buffer_end_index )
                 
-                self._buffer_end_index = ideal_buffer_end_index
+                ideal_buffer_start_index = max( 0, self._ideal_next_frame - self._num_frames_backwards )
                 
-                HG.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
+                ideal_buffer_end_index = ( self._ideal_next_frame + self._num_frames_forwards ) % num_frames_in_video
                 
-            else:
-                
-                # rendering can't go backwards, so dragging caret back shouldn't rewind either of these!
-                
-                if self.HasFrame( ideal_buffer_start_index ):
+                if current_ideal_is_out_of_buffer:
+                    
+                    # the current buffer won't get to where we want, so remake it
                     
                     self._buffer_start_index = ideal_buffer_start_index
-                    
-                
-                if not self._IndexOutOfRange( self._next_render_index + 1, self._buffer_start_index, ideal_buffer_end_index ):
-                    
                     self._buffer_end_index = ideal_buffer_end_index
                     
+                else:
+                    
+                    # we can get to our desired position, but should we move the start and beginning on a bit?
+                    
+                    # we do not ever want to shunt left (rewind)
+                    # we do not want to shunt right if we don't have the earliest frames yet--be patient
+                    
+                    # i.e. it is between the current start and the ideal
+                    next_ideal_start_would_shunt_right = self._IndexInRange( ideal_buffer_start_index, self._buffer_start_index, self._ideal_next_frame )
+                    have_next_ideal_start = self._HasFrame( ideal_buffer_start_index )
+                    
+                    if next_ideal_start_would_shunt_right and have_next_ideal_start:
+                        
+                        self._buffer_start_index = ideal_buffer_start_index
+                        
+                    
+                    next_ideal_end_would_shunt_right = self._IndexInRange( ideal_buffer_end_index, self._buffer_end_index, self._buffer_start_index )
+                    
+                    if next_ideal_end_would_shunt_right:
+                    
+                        self._buffer_end_index = ideal_buffer_end_index
+                        
                 
-                HG.client_controller.CallToThread( self.THREADMoveRenderTo, self._buffer_end_index )
-                
-            
-        else:
-            
-            if self._buffer_end_index == -1:
+            else:
                 
                 self._buffer_start_index = 0
                 
-                self._buffer_end_index = num_frames - 1
-                
-                HG.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
-                
-            else:
-                
-                if not self.HasFrame( next_index_to_expect ):
-                    
-                    HG.client_controller.CallToThread( self.THREADRushTo, next_index_to_expect )
-                    
+                self._buffer_end_index = num_frames_in_video - 1
                 
             
         
-        self._MaintainBuffer()
+        self._render_event.set()
         
     
-    def GetResolution( self ): return self._media.GetResolution()
+    def GetResolution( self ):
+        
+        return self._media.GetResolution()
+        
     
-    def GetSize( self ): return self._target_resolution
+    def GetSize( self ):
+        
+        return self._target_resolution
+        
     
     def GetTotalDuration( self ):
         
@@ -567,18 +579,24 @@ class RasterContainerVideo( RasterContainer ):
     
     def HasFrame( self, index ):
         
-        with self._buffer_lock:
+        with self._lock:
             
-            return index in self._frames
+            return self._HasFrame( index )
             
         
     
     def IsInitialised( self ):
         
-        return self._initialised
+        with self._lock:
+            
+            return self._initialised
+            
         
     
-    def IsScaled( self ): return self._zoom != 1.0
+    def IsScaled( self ):
+        
+        return self._zoom != 1.0
+        
     
     def Stop( self ):
         

@@ -2,17 +2,18 @@ import gc
 import hashlib
 import HydrusAudioHandling
 import HydrusConstants as HC
+import HydrusData
 import HydrusDocumentHandling
 import HydrusExceptions
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusPaths
+import HydrusText
 import HydrusVideoHandling
 import os
 import threading
 import traceback
 import cStringIO
-import HydrusData
 
 # Mime
 
@@ -194,7 +195,18 @@ def GetFileInfo( path, mime = None ):
     
     if mime not in HC.ALLOWED_MIMES:
         
-        raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
+        if mime == HC.TEXT_HTML:
+            
+            raise HydrusExceptions.MimeException( 'Looks like HTML -- maybe the client needs to be taught how to parse this?' )
+            
+        elif mime == HC.APPLICATION_UNKNOWN:
+            
+            raise HydrusExceptions.MimeException( 'Unknown filetype!' )
+            
+        else:
+            
+            raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
+            
         
     
     width = None
@@ -280,8 +292,6 @@ def GetMime( path ):
     
     with open( path, 'rb' ) as f:
         
-        f.seek( 0 )
-        
         bit_to_check = f.read( 256 )
         
     
@@ -335,6 +345,11 @@ def GetMime( path ):
         
         HydrusData.Print( 'FFMPEG couldn\'t figure out the mime for: ' + path )
         HydrusData.PrintException( e, do_wait = False )
+        
+    
+    if HydrusText.LooksLikeHTML( bit_to_check ):
+        
+        return HC.TEXT_HTML
         
     
     return HC.APPLICATION_UNKNOWN

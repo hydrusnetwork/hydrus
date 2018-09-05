@@ -59,20 +59,6 @@ def PressKey( window, key ):
     
 class TestDBDialogs( unittest.TestCase ):
     
-    def test_dialog_select_booru( self ):
-        
-        HG.test_controller.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
-        
-        with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
-            
-            HitCancelButton( dlg )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_CANCEL )
-            
-        
-    
     def test_dialog_manage_subs( self ):
         
         title = 'subs test'

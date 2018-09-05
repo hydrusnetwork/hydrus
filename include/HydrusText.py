@@ -20,6 +20,10 @@ def DeserialiseNewlinedTexts( text ):
     
     return texts
     
+def LooksLikeHTML( file_data ):
+    
+    return '<html' in file_data or '<HTML' in file_data
+    
 def SortStringsIgnoringCase( list_of_strings ):
     
     list_of_strings.sort( key = lambda s: s.lower() )

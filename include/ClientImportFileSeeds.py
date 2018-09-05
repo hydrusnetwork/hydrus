@@ -1053,7 +1053,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.file_seed_data )
                         
-                        ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason ) = ClientImporting.UpdateFileSeedCacheWithFileSeeds( file_seed_cache, file_seeds )
+                        ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason ) = ClientImporting.UpdateFileSeedCacheWithFileSeeds( file_seed_cache, file_seeds )
                         
                         status = CC.STATUS_SUCCESSFUL_AND_NEW
                         note = 'Found ' + HydrusData.ToHumanInt( num_urls_added ) + ' new URLs.'

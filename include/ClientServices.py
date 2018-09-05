@@ -1447,7 +1447,7 @@ class ServiceRepository( ServiceRestricted ):
             
             with self._lock:
                 
-                message = 'While processing updates for the ' + self._name + ' repository, one failed! The error follows:'
+                message = 'Failed to process updates for the ' + self._name + ' repository! The error follows:'
                 
                 HydrusData.ShowText( message )
                 

@@ -103,7 +103,9 @@ def CreateManagementControllerImportGallery():
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY )
     
-    multiple_gallery_import = ClientImportGallery.MultipleGalleryImport()
+    gug_key_and_name = HG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+    
+    multiple_gallery_import = ClientImportGallery.MultipleGalleryImport( gug_key_and_name = gug_key_and_name )
     
     management_controller.SetVariable( 'multiple_gallery_import', multiple_gallery_import )
     
@@ -1585,7 +1587,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._query_input = ClientGUIControls.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
         
-        self._gallery_selector = ClientGUIImport.GallerySelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGalleryIdentifier(), update_callable = self._SetGalleryIdentifier )
+        self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
@@ -1594,10 +1596,6 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         file_import_options = self._multiple_gallery_import.GetFileImportOptions()
         tag_import_options = self._multiple_gallery_import.GetTagImportOptions()
         file_limit = self._multiple_gallery_import.GetFileLimit()
-        
-        gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
-        
-        search_value = ClientDefaults.GetDefaultSearchValue( gallery_identifier )
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._multiple_gallery_import.SetFileImportOptions )
         self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, tag_import_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
@@ -1608,7 +1606,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_downloader_panel.Add( self._gallery_importers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gallery_importers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._gallery_downloader_panel.Add( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._gallery_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1636,7 +1634,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         #
         
-        self._query_input.SetValue( search_value )
+        initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
+        
+        self._query_input.SetValue( initial_search_text )
         
         self._file_limit.SetValue( file_limit )
         
@@ -1707,9 +1707,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             pretty_query_text = '* ' + pretty_query_text
             
         
-        source = gallery_import.GetGalleryIdentifier()
+        source = gallery_import.GetSourceName()
         
-        pretty_source = source.ToString()
+        pretty_source = source
         
         files_paused = gallery_import.FilesPaused()
         
@@ -1921,22 +1921,22 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._UpdateImportStatusNow()
         
     
-    def _SetGalleryIdentifier( self, gallery_identifier ):
+    def _SetGUGKeyAndName( self, gug_key_and_name ):
         
-        current_gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
-        
-        current_search_value = ClientDefaults.GetDefaultSearchValue( current_gallery_identifier )
+        current_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
         
         current_input_value = self._query_input.GetValue()
         
-        if current_input_value in ( current_search_value, '' ):
-            
-            search_value = ClientDefaults.GetDefaultSearchValue( gallery_identifier )
-            
-            self._query_input.SetValue( search_value )
-            
+        should_initialise_new_text = current_input_value in ( current_initial_search_text, '' )
         
-        self._multiple_gallery_import.SetGalleryIdentifier( gallery_identifier )
+        self._multiple_gallery_import.SetGUGKeyAndName( gug_key_and_name )
+        
+        if should_initialise_new_text:
+            
+            new_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
+            
+            self._query_input.SetValue( new_initial_search_text )
+            
         
     
     def _SetOptionsToGalleryImports( self ):

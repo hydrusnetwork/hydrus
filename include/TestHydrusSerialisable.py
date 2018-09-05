@@ -9,6 +9,7 @@ import ClientImporting
 import ClientImportOptions
 import ClientImportSubscriptions
 import ClientMedia
+import ClientNetworkingDomain
 import ClientRatings
 import ClientSearch
 import ClientTags
@@ -473,8 +474,7 @@ class TestSerialisables( unittest.TestCase ):
             
             self.assertEqual( obj.GetName(), dupe_obj.GetName() )
             
-            self.assertEqual( obj._gallery_identifier, dupe_obj._gallery_identifier )
-            self.assertEqual( obj._gallery_stream_identifiers, dupe_obj._gallery_stream_identifiers )
+            self.assertEqual( obj._gug_key_and_name, dupe_obj._gug_key_and_name )
             self.assertEqual( len( obj._queries ), len( dupe_obj._queries ) )
             self.assertEqual( obj._initial_file_limit, dupe_obj._initial_file_limit )
             self.assertEqual( obj._periodic_file_limit, dupe_obj._periodic_file_limit )
@@ -490,8 +490,7 @@ class TestSerialisables( unittest.TestCase ):
         
         self._dump_and_load_and_test( sub, test )
         
-        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, 'gelbooru' )
-        gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
+        gug_key_and_name = ( HydrusData.GenerateKey(), 'muh test gug' )
         queries = [ ClientImportSubscriptions.SubscriptionQuery( 'test query' ), ClientImportSubscriptions.SubscriptionQuery( 'test query 2' ) ]
         checker_options = ClientImportOptions.CheckerOptions()
         initial_file_limit = 100
@@ -506,9 +505,9 @@ class TestSerialisables( unittest.TestCase ):
         
         no_work_until = HydrusData.GetNow() - 86400 * 20
         
-        sub.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
+        sub.SetTuple( gug_key_and_name, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
         
-        self.assertEqual( sub.GetGalleryIdentifier(), gallery_identifier )
+        self.assertEqual( sub.GetGUGKeyAndName(), gug_key_and_name )
         self.assertEqual( sub.GetTagImportOptions(), tag_import_options )
         self.assertEqual( sub.GetQueries(), queries )
         

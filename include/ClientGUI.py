@@ -1703,6 +1703,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
             
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.pub, 'notify_restart_subs_sync_daemon' )
+                
+            
             ClientGUIMenus.AppendSeparator( submenu )
             
             # this will be the easy-mode 'export ability to download from blahbooru' that'll bundle it all into a nice package with a neat png.
@@ -1713,6 +1718,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
             
@@ -1730,7 +1736,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'LEGACY: manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
@@ -2240,11 +2245,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ManageBoorus( self ):
-        
-        with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
-        
-    
     def _ManageDefaultTagImportOptions( self ):
         
         title = 'manage default tag import options'
@@ -2258,7 +2258,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             url_matches = domain_manager.GetURLMatches()
             parsers = domain_manager.GetParsers()
             
-            ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = domain_manager.GetURLMatchLinks()
+            url_match_keys_to_parser_keys = domain_manager.GetURLMatchKeysToParserKeys()
             
             panel = ClientGUIScrolledPanelsEdit.EditDefaultTagImportOptionsPanel( dlg, url_matches, parsers, url_match_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options )
             
@@ -2269,6 +2269,36 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options ) = panel.GetValue()
                 
                 domain_manager.SetDefaultTagImportOptions( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options )
+                
+            
+        
+    
+    def _ManageDownloaderDisplay( self ):
+        
+        title = 'manage downloader display'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            gugs = domain_manager.GetGUGs()
+            
+            gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
+            
+            url_matches = domain_manager.GetURLMatches()
+            
+            url_match_keys_to_display = domain_manager.GetURLMatchKeysToDisplay()
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_matches, url_match_keys_to_display )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( gug_keys_to_display, url_match_keys_to_display ) = panel.GetValue()
+                
+                domain_manager.SetGUGKeysToDisplay( gug_keys_to_display )
+                domain_manager.SetURLMatchKeysToDisplay( url_match_keys_to_display )
                 
             
         
@@ -2727,17 +2757,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             url_matches = domain_manager.GetURLMatches()
             parsers = domain_manager.GetParsers()
             
-            ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = domain_manager.GetURLMatchLinks()
+            url_match_keys_to_parser_keys = domain_manager.GetURLMatchKeysToParserKeys()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_matches, parsers, url_match_keys_to_display, url_match_keys_to_parser_keys )
+            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_matches, parsers, url_match_keys_to_parser_keys )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = panel.GetValue()
+                url_match_keys_to_parser_keys = panel.GetValue()
                 
-                domain_manager.SetURLMatchLinks( url_match_keys_to_display, url_match_keys_to_parser_keys )
+                domain_manager.SetURLMatchKeysToParserKeys( url_match_keys_to_parser_keys )
                 
             
         

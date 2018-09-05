@@ -5823,7 +5823,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            wx.CallAfter( do_it )
+            HG.client_controller.CallLaterWXSafe( HG.client_controller.gui, 0.5, do_it )
             
         
         def EventCheckAddParents( self, event ):
@@ -5922,7 +5922,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def OK( self ):
             
-            wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+            # nice to have this happen immediately so the 'advanced content update' stuff can occur in a neat event order afterwards
+            self.GetEventHandler().ProcessEvent( ClientGUITopLevelWindows.OKEvent( -1 ) )
+            
+            # old call:
+            # wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
             
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):

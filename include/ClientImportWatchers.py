@@ -602,7 +602,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, can_add_more_file_urls, stop_reason ) = gallery_seed.WorkOnURL( 'watcher', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, stop_reason ) = gallery_seed.WorkOnURL( 'watcher', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
             
             if num_urls_added > 0:
                 

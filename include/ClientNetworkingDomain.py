@@ -304,7 +304,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER
     SERIALISABLE_NAME = 'Domain Manager'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self ):
         
@@ -319,6 +319,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._parser_namespaces = []
         
+        self._gug_keys_to_display = set()
+        
         self._url_match_keys_to_display = set()
         self._url_match_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
         
@@ -330,6 +332,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
         
         self._url_match_keys_to_default_tag_import_options = {}
+        
+        self._gug_keys_to_gugs = {}
+        self._gug_names_to_gugs = {}
         
         self._parser_keys_to_parsers = {}
         
@@ -380,6 +385,24 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 raise HydrusExceptions.URLMatchException( 'Could not find tag import options for that kind of URL Class!' )
                 
+            
+        
+    
+    def _GetGUG( self, gug_key_and_name ):
+        
+        ( gug_key, gug_name ) = gug_key_and_name
+        
+        if gug_key in self._gug_keys_to_gugs:
+            
+            return self._gug_keys_to_gugs[ gug_key ]
+            
+        elif gug_name in self._gug_names_to_gugs:
+            
+            return self._gug_names_to_gugs[ gug_name ]
+            
+        else:
+            
+            return None
             
         
     
@@ -467,6 +490,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_gugs = self._gugs.GetSerialisableTuple()
+        serialisable_gug_keys_to_display = [ gug_key.encode( 'hex' ) for gug_key in self._gug_keys_to_display ]
         
         serialisable_url_matches = self._url_matches.GetSerialisableTuple()
         serialisable_url_match_keys_to_display = [ url_match_key.encode( 'hex' ) for url_match_key in self._url_match_keys_to_display ]
@@ -481,7 +505,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         serialisable_parsers = self._parsers.GetSerialisableTuple()
         serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), custom_header_dict.items() ) for ( network_context, custom_header_dict ) in self._network_contexts_to_custom_header_dicts.items() ]
         
-        return ( serialisable_gugs, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts )
+        return ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts )
         
     
     def _GetURLMatch( self, url ):
@@ -512,9 +536,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gugs, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
+        ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
         
         self._gugs = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gugs )
+        
+        self._gug_keys_to_display = { serialisable_gug_key.decode( 'hex' ) for serialisable_gug_key in serialisable_gug_keys_to_display }
         
         self._url_matches = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_matches )
         
@@ -557,12 +583,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             NetworkDomainManager.STATICSortURLMatchesDescendingComplexity( url_matches )
             
         
-        self._parser_keys_to_parsers = {}
+        self._gug_keys_to_gugs = { gug.GetGUGKey() : gug for gug in self._gugs }
+        self._gug_names_to_gugs = { gug.GetName() : gug for gug in self._gugs }
         
-        for parser in self._parsers:
-            
-            self._parser_keys_to_parsers[ parser.GetParserKey() ] = parser
-            
+        self._parser_keys_to_parsers = { parser.GetParserKey() : parser for parser in self._parsers }
         
         namespaces = set()
         
@@ -696,6 +720,45 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( serialisable_gugs, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
+            
+            gugs = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gugs )
+            
+            gug_keys_to_display = [ gug.GetGUGKey() for gug in gugs if 'ugoira' not in gug.GetName() ]
+            
+            serialisable_gug_keys_to_display = [ gug_key.encode( 'hex' ) for gug_key in gug_keys_to_display ]
+            
+            new_serialisable_info = ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts )
+            
+            return ( 6, new_serialisable_info )
+            
+        
+    
+    def AddGUGs( self, new_gugs ):
+        
+        with self._lock:
+            
+            gugs = list( self._gugs )
+            
+            gugs.extend( new_gugs )
+            
+        
+        self.SetGUGs( gugs )
+        
+    
+    def AddParsers( self, new_parsers ):
+        
+        with self._lock:
+            
+            parsers = list( self._parsers )
+            
+            parsers.extend( new_parsers )
+            
+        
+        self.SetParsers( parsers )
+        
     
     def CanValidateInPopup( self, network_contexts ):
         
@@ -747,6 +810,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return url_tuples
         
     
+    def DeleteGUGs( self, deletee_names ):
+        
+        with self._lock:
+            
+            gugs = [ gug for gug in self._gugs if gug.GetName() not in deletee_names ]
+            
+        
+        self.SetGUGs( gugs )
+        
+    
     def GenerateValidationPopupProcess( self, network_contexts ):
         
         with self._lock:
@@ -772,6 +845,27 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             process = DomainValidationPopupProcess( self, header_tuples )
             
             return process
+            
+        
+    
+    def GetDefaultGUGKeyAndName( self ):
+        
+        with self._lock:
+            
+            if len( self._gugs ) == 0:
+                
+                return ( HydrusData.GenerateKey(), 'unknown source' )
+                
+            else:
+                
+                gugs = list( self._gugs )
+                
+                gugs.sort( key = lambda g: g.GetName() )
+                
+                gug = gugs[0]
+                
+                return ( gug.GetGUGKey(), gug.GetName() )
+                
             
         
     
@@ -812,11 +906,27 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetGUG( self, gug_key_and_name ):
+        
+        with self._lock:
+            
+            return self._GetGUG( gug_key_and_name )
+            
+        
+    
     def GetGUGs( self ):
         
         with self._lock:
             
             return list( self._gugs )
+            
+        
+    
+    def GetGUGKeysToDisplay( self ):
+        
+        with self._lock:
+            
+            return set( self._gug_keys_to_display )
             
         
     
@@ -843,6 +953,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
             
             return headers
+            
+        
+    
+    def GetInitialSearchText( self, gug_key_and_name ):
+        
+        with self._lock:
+            
+            gug = self._GetGUG( gug_key_and_name )
+            
+            if gug is None:
+                
+                return 'unknown downloader'
+                
+            else:
+                
+                return gug.GetInitialSearchText()
+                
             
         
     
@@ -902,11 +1029,19 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetURLMatchLinks( self ):
+    def GetURLMatchKeysToParserKeys( self ):
         
         with self._lock:
             
-            return ( set( self._url_match_keys_to_display ), dict( self._url_match_keys_to_parser_keys ) )
+            return dict( self._url_match_keys_to_parser_keys )
+            
+        
+    
+    def GetURLMatchKeysToDisplay( self ):
+        
+        with self._lock:
+            
+            return set( self._url_match_keys_to_display )
             
         
     
@@ -1013,6 +1148,28 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def OverwriteDefaultGUGs( self, gug_names ):
+        
+        with self._lock:
+            
+            import ClientDefaults
+            
+            default_gugs = ClientDefaults.GetDefaultGUGs()
+            
+            for gug in default_gugs:
+                
+                gug.RegenerateGUGKey()
+                
+            
+            existing_gugs = list( self._gugs )
+            
+            new_gugs = [ gug for gug in existing_gugs if gug.GetName() not in gug_names ]
+            new_gugs.extend( [ gug for gug in default_gugs if gug.GetName() in gug_names ] )
+            
+        
+        self.SetGUGs( new_gugs )
+        
+    
     def OverwriteDefaultParsers( self, parser_names ):
         
         with self._lock:
@@ -1093,9 +1250,32 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            #check ngugs maybe
+            # by default, we will show new gugs
+            
+            old_gug_keys = { gug.GetGUGKey() for gug in self._gugs }
+            gug_keys = { gug.GetGUGKey() for gug in gugs }
+            
+            added_gug_keys = gug_keys.difference( old_gug_keys )
+            
+            self._gug_keys_to_display.update( added_gug_keys )
+            
+            #
             
             self._gugs = HydrusSerialisable.SerialisableList( gugs )
+            
+            self._RecalcCache()
+            
+            self._SetDirty()
+            
+        
+    
+    def SetGUGKeysToDisplay( self, gug_keys_to_display ):
+        
+        with self._lock:
+            
+            self._gug_keys_to_display = set()
+            
+            self._gug_keys_to_display.update( gug_keys_to_display )
             
             self._SetDirty()
             
@@ -1222,15 +1402,25 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetURLMatchLinks( self, url_match_keys_to_display, url_match_keys_to_parser_keys ):
+    def SetURLMatchKeysToParserKeys( self, url_match_keys_to_parser_keys ):
+        
+        with self._lock:
+            
+            self._url_match_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
+            
+            self._url_match_keys_to_parser_keys.update( url_match_keys_to_parser_keys )
+            
+            self._SetDirty()
+            
+        
+    
+    def SetURLMatchKeysToDisplay( self, url_match_keys_to_display ):
         
         with self._lock:
             
             self._url_match_keys_to_display = set()
-            self._url_match_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
             
             self._url_match_keys_to_display.update( url_match_keys_to_display )
-            self._url_match_keys_to_parser_keys.update( url_match_keys_to_parser_keys )
             
             self._SetDirty()
             
@@ -1562,7 +1752,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         self._gallery_url_generator_key = serialisable_gallery_url_generator_key.decode( 'hex' )
         
     
-    def GenerateGalleryURL( self, search_terms ):
+    def GenerateGalleryURL( self, query_text ):
         
         if self._replacement_phrase == '':
             
@@ -1572,6 +1762,20 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         if self._replacement_phrase not in self._url_template:
             
             raise HydrusExceptions.GUGException( 'Replacement phrase not in URL template!' )
+            
+        
+        ( first_part, second_part ) = self._url_template.split( self._replacement_phrase, 1 )
+        
+        search_phrase_seems_to_go_in_path = '?' not in first_part
+        
+        search_terms = query_text.split( ' ' )
+        
+        if search_phrase_seems_to_go_in_path:
+            
+            # encode this gubbins since requests won't be able to do it
+            # this basically fixes e621 searches for 'male/female', which through some httpconf trickery are embedded in path but end up in a query, so need to be encoded right beforehand
+            
+            search_terms = [ urllib.quote( search_term, safe = '' ) for search_term in search_terms ]
             
         
         try:
@@ -1588,14 +1792,24 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         return gallery_url
         
     
+    def GenerateGalleryURLs( self, query_text ):
+        
+        return ( self.GenerateGalleryURL( query_text ), )
+        
+    
     def GetExampleURL( self ):
         
-        return self.GenerateGalleryURL( self._example_search_text.split( ' ' ) )
+        return self.GenerateGalleryURL( self._example_search_text )
         
     
     def GetGUGKey( self ):
         
         return self._gallery_url_generator_key
+        
+    
+    def GetGUGKeyAndName( self ):
+        
+        return ( self._gallery_url_generator_key, self._name )
         
     
     def GetInitialSearchText( self ):
@@ -1606,6 +1820,15 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     def GetURLTemplateVariables( self ):
         
         return ( self._url_template, self._replacement_phrase, self._search_terms_separator, self._example_search_text )
+        
+    
+    def IsFunctional( self ):
+        
+        example_url = self.GetExampleURL()
+        
+        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
+        
+        return can_parse
         
     
     def RegenerateGUGKey( self ):
@@ -1621,58 +1844,142 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_NAME = 'Nested Gallery URL Generator'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name, initial_search_text = None, gug_keys = None ):
+    def __init__( self, name, gug_key = None, initial_search_text = None, gug_keys_and_names = None ):
+        
+        if gug_key is None:
+            
+            gug_key = HydrusData.GenerateKey()
+            
         
         if initial_search_text is None:
             
             initial_search_text = 'search tags'
             
         
-        if gug_keys is None:
+        if gug_keys_and_names is None:
             
-            gug_keys = []
+            gug_keys_and_names = []
             
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
+        self._gallery_url_generator_key = gug_key
         self._initial_search_text = initial_search_text
-        self._gug_keys = gug_keys
+        self._gug_keys_and_names = gug_keys_and_names
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_gug_keys = [ gug_key.encode( 'hex' ) for gug_key in self._gug_keys ]
+        serialisable_gug_key = self._gallery_url_generator_key.encode( 'hex' )
+        serialisable_gug_keys_and_names = [ ( gug_key.encode( 'hex' ), gug_name ) for ( gug_key, gug_name ) in self._gug_keys_and_names ]
         
-        return ( self._initial_search_text, serialisable_gug_keys )
+        return ( serialisable_gug_key, self._initial_search_text, serialisable_gug_keys_and_names )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._initial_search_text, serialisable_gug_keys ) = serialisable_info
+        ( serialisable_gug_key, self._initial_search_text, serialisable_gug_keys_and_names ) = serialisable_info
         
-        self._gug_keys = [ gug_key.decode( 'hex' ) for gug_key in serialisable_gug_keys ]
+        self._gallery_url_generator_key = serialisable_gug_key.decode( 'hex' )
+        self._gug_keys_and_names = [ ( gug_key.decode( 'hex' ), gug_name ) for ( gug_key, gug_name ) in serialisable_gug_keys_and_names ]
         
     
-    def GenerateGalleryURLs( self, search_terms ):
+    def GenerateGalleryURLs( self, query_text ):
         
         gallery_urls = []
         
-        for gug_key in self._gug_keys:
+        for gug_key_and_name in self._gug_keys_and_names:
             
-            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key )
+            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
             
             if gug is not None:
                 
-                gallery_urls.append( gug.GenerateGalleryURL( search_terms ) )
+                gallery_urls.append( gug.GenerateGalleryURL( query_text ) )
                 
             
         
         return gallery_urls
         
     
+    def GetGUGKey( self ):
+        
+        return self._gallery_url_generator_key
+        
+    
+    def GetGUGKeys( self ):
+        
+        return [ gug_key for ( gug_key, gug_name ) in self._gug_keys_and_names ]
+        
+    
+    def GetGUGKeysAndNames( self ):
+        
+        return list( self._gug_keys_and_names )
+        
+    
+    def GetGUGKeyAndName( self ):
+        
+        return ( self._gallery_url_generator_key, self._name )
+        
+    
+    def GetGUGNames( self ):
+        
+        return [ gug_name for ( gug_key, gug_name ) in self._gug_keys_and_names ]
+        
+    
     def GetInitialSearchText( self ):
         
         return self._initial_search_text
+        
+    
+    def IsFunctional( self ):
+        
+        for gug_key_and_name in self._gug_keys_and_names:
+            
+            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            
+            if gug is not None:
+                
+                if gug.IsFunctional():
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def RegenerateGUGKey( self ):
+        
+        self._gallery_url_generator_key = HydrusData.GenerateKey()
+        
+    
+    def RepairGUGs( self, available_gugs ):
+        
+        available_keys_to_gugs = { gug.GetGUGKey() : gug for gug in available_gugs }
+        available_names_to_gugs = { gug.GetName() : gug for gug in available_gugs }
+        
+        good_gug_keys_and_names = []
+        
+        for ( gug_key, gug_name ) in self._gug_keys_and_names:
+            
+            if gug_key in available_keys_to_gugs:
+                
+                gug = available_keys_to_gugs[ gug_key ]
+                
+            elif gug_name in available_names_to_gugs:
+                
+                gug = available_names_to_gugs[ gug_name ]
+                
+            else:
+                
+                continue
+                
+            
+            good_gug_keys_and_names.append( ( gug.GetGUGKey(), gug.GetName() ) )
+            
+        
+        self._gug_keys_and_names = good_gug_keys_and_names
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR ] = NestedGalleryURLGenerator
@@ -1709,7 +2016,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             parameters[ 's' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
             parameters[ 'id' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '123456' ), None )
-            parameters[ 'page' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' ), 1 )
+            parameters[ 'page' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' ), '1' )
             
         
         if api_lookup_converter is None:

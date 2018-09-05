@@ -165,249 +165,29 @@ def GetDefaultHentaiFoundryInfo():
     
     return info
     
-def GetDefaultSearchValue( gallery_identifier ):
-    
-    site_type = gallery_identifier.GetSiteType()
-    
-    if site_type == HC.SITE_TYPE_DEFAULT:
-        
-        search_value = ''
-        
-    elif site_type == HC.SITE_TYPE_BOORU:
-        
-        search_value = 'search tags'
-        
-    elif site_type == HC.SITE_TYPE_DEVIANT_ART:
-        
-        search_value = 'artist username'
-        
-    elif site_type == HC.SITE_TYPE_GIPHY:
-        
-        search_value = 'search tag'
-        
-    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ):
-        
-        if site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
-            
-            search_value = 'search'
-            
-        elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST:
-            
-            search_value = 'artist username'
-            
-        elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS:
-            
-            search_value = 'search tags'
-            
-        
-    elif site_type == HC.SITE_TYPE_NEWGROUNDS:
-        
-        search_value = 'artist username'
-        
-    elif site_type in ( HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ):
-        
-        if site_type == HC.SITE_TYPE_PIXIV:
-            
-            search_value = 'search'
-            
-        elif site_type == HC.SITE_TYPE_PIXIV_ARTIST_ID:
-            
-            search_value = 'numerical artist id'
-            
-        elif site_type == HC.SITE_TYPE_PIXIV_TAG:
-            
-            search_value = 'search tag'
-            
-        
-    elif site_type == HC.SITE_TYPE_TUMBLR:
-        
-        search_value = 'username'
-        
-    elif site_type == HC.SITE_TYPE_WATCHER:
-        
-        search_value = 'thread url'
-        
-    
-    return search_value
-    
-def GetDefaultBoorus():
-    
-    boorus = {}
-    
-    name = 'gelbooru'
-    search_url = 'https://gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
-    search_separator = '+'
-    advance_by_page_num = False
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'gelbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'safebooru'
-    search_url = 'https://safebooru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
-    search_separator = '+'
-    advance_by_page_num = False
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'safebooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'e621'
-    search_url = 'https://e621.net/post/index/%index%/%tags%'
-    search_separator = '%20'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Download'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-species' : 'species' }
-    
-    boorus[ 'e621' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'rule34@paheal'
-    search_url = 'https://rule34.paheal.net/post/list/%tags%/%index%'
-    search_separator = '%20'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = 'main_image'
-    image_data = None
-    tag_classnames_to_namespaces = { 'tag_name' : '' }
-    
-    boorus[ 'rule34@paheal' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'danbooru'
-    search_url = 'https://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
-    search_separator = '%20'
-    advance_by_page_num = True
-    thumb_classname = 'post-preview'
-    image_id = 'image'
-    image_data = None
-    tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
-    
-    boorus[ 'danbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'mishimmie'
-    search_url = 'https://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'
-    search_separator = '%20'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = 'main_image'
-    image_data = None
-    tag_classnames_to_namespaces = { 'tag_name' : '' }
-    
-    boorus[ 'mishimmie' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'rule34@booru.org'
-    search_url = 'https://rule34.xxx/index.php?page=post&s=list&tags=%tags%&pid=%index%'
-    search_separator = '%20'
-    advance_by_page_num = False
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'rule34@booru.org' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'furry@booru.org'
-    search_url = 'http://furry.booru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
-    search_separator = '+'
-    advance_by_page_num = False
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'furry@booru.org' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'xbooru'
-    search_url = 'https://xbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
-    search_separator = '+'
-    advance_by_page_num = False
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'xbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'konachan'
-    search_url = 'https://konachan.com/post?page=%index%&tags=%tags%'
-    search_separator = '+'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'View larger version'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'konachan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'yande.re'
-    search_url = 'https://yande.re/post?page=%index%&tags=%tags%'
-    search_separator = '+'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'View larger version'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'yande.re' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'tbib'
-    search_url = 'https://tbib.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
-    search_separator = '+'
-    advance_by_page_num = False
-    thumb_classname = 'thumb'
-    image_id = None
-    image_data = 'Original image'
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-    
-    boorus[ 'tbib' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'sankaku chan'
-    search_url = 'https://chan.sankakucomplex.com/?tags=%tags%&page=%index%'
-    search_separator = '+'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = 'highres'
-    image_data = None
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium', 'tag-type-meta' : 'meta', 'tag-type-studio' : 'studio' }
-    
-    boorus[ 'sankaku chan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'sankaku idol'
-    search_url = 'https://idol.sankakucomplex.com/?tags=%tags%&page=%index%'
-    search_separator = '+'
-    advance_by_page_num = True
-    thumb_classname = 'thumb'
-    image_id = 'highres'
-    image_data = None
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium', 'tag-type-meta' : 'meta', 'tag-type-photo_set' : 'photo set', 'tag-type-idol' : 'person' }
-    
-    boorus[ 'sankaku idol' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    name = 'rule34hentai'
-    search_url = 'https://rule34hentai.net/post/list/%tags%/%index%'
-    search_separator = '%20'
-    advance_by_page_num = True
-    thumb_classname = 'shm-thumb'
-    image_id = 'main_image'
-    image_data = None
-    tag_classnames_to_namespaces = { 'tag_name' : '' }
-    
-    boorus[ 'rule34hentai' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-    
-    return boorus
-    
 def GetDefaultGUGs():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
     
     import ClientNetworkingDomain
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ) )
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) )
+    
+def GetDefaultNGUGs():
+    
+    import ClientNetworkingDomain
+    
+    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
+    
+    return gugs
+    
+def GetDefaultSingleGUGs():
+    
+    import ClientNetworkingDomain
+    
+    gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ) ]
+    
+    return gugs
     
 def GetDefaultImageboards():
     
@@ -818,7 +598,13 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    domain_manager.SetGUGs( GetDefaultGUGs() )
+    gugs = GetDefaultGUGs()
+    
+    domain_manager.SetGUGs( gugs )
+    
+    gug_keys_to_display = [ gug.GetGUGKey() for gug in gugs if 'ugoira' not in gug.GetName() ]
+    
+    domain_manager.SetGUGKeysToDisplay( gug_keys_to_display )
     
     #
     

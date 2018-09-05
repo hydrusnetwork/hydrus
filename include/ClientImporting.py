@@ -296,14 +296,14 @@ def UpdateFileSeedCacheWithFileSeeds( file_seed_cache, file_seeds, max_new_urls_
     
     num_urls_added = 0
     num_urls_already_in_file_seed_cache = 0
-    can_add_more_file_urls = True
+    can_search_for_more_files = True
     stop_reason = ''
     
     for file_seed in file_seeds:
         
         if max_new_urls_allowed is not None and num_urls_added >= max_new_urls_allowed:
             
-            can_add_more_file_urls = False
+            can_search_for_more_files = False
             
             stop_reason = 'hit file limit'
             
@@ -324,7 +324,7 @@ def UpdateFileSeedCacheWithFileSeeds( file_seed_cache, file_seeds, max_new_urls_
     
     file_seed_cache.AddFileSeeds( new_file_seeds )
     
-    return ( num_urls_added, num_urls_already_in_file_seed_cache, can_add_more_file_urls, stop_reason )
+    return ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason )
     
 def WakeRepeatingJob( job ):
     

@@ -22,6 +22,7 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
+import HydrusText
 import json
 import os
 import sys
@@ -4747,7 +4748,7 @@ class TestPanel( wx.Panel ):
             parse_phrase = 'uncertain data type'
             
             # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
-            if '<html' in example_data:
+            if HydrusText.LooksLikeHTML( example_data ):
                 
                 parse_phrase = 'looks like HTML'
                 

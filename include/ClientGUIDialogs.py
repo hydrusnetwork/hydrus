@@ -1869,84 +1869,6 @@ class DialogModifyAccounts( Dialog ):
             
         
     
-class DialogSelectBooru( Dialog ):
-    
-    def __init__( self, parent ):
-        
-        Dialog.__init__( self, parent, 'select booru' )
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
-        self._boorus = wx.ListBox( self )
-        self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventDoubleClick )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetDefault()
-        
-        #
-        
-        boorus = HG.client_controller.Read( 'remote_boorus' )
-        
-        booru_names = boorus.keys()
-        
-        booru_names.sort()
-        
-        for name in booru_names:
-            
-            self._boorus.Append( name )
-            
-        
-        self._boorus.Select( 0 )
-        
-        self._boorus.SetFocus()
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        x = max( x, 320 )
-        y = max( y, 320 )
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        if len( boorus ) == 1:
-            
-            wx.CallAfter( self.EndModal, wx.ID_OK )
-            
-        
-    
-    def EventDoubleClick( self, event ):
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-    def EventOK( self, event ):
-    
-        selection = self._boorus.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            self.EndModal( wx.ID_OK )
-            
-        
-    
-    def GetGalleryIdentifier( self ):
-        
-        name = self._boorus.GetString( self._boorus.GetSelection() )
-        
-        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = name )
-        
-        return gallery_identifier
-        
-    
 class DialogSelectFromURLTree( Dialog ):
     
     def __init__( self, parent, url_tree ):
@@ -2124,7 +2046,7 @@ class DialogSelectImageboard( Dialog ):
     
 class DialogSelectFromList( Dialog ):
     
-    def __init__( self, parent, title, choice_tuples, value_to_select = None ):
+    def __init__( self, parent, title, choice_tuples, value_to_select = None, sort_tuples = True ):
         
         Dialog.__init__( self, parent, title )
         
@@ -2140,7 +2062,10 @@ class DialogSelectFromList( Dialog ):
         
         selected_a_value = False
         
-        choice_tuples.sort()
+        if sort_tuples:
+            
+            choice_tuples.sort()
+            
         
         for ( i, ( label, value ) ) in enumerate( choice_tuples ):
             

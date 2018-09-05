@@ -790,6 +790,13 @@ class HydrusDB( object ):
                 
                 try:
                     
+                    if HG.db_report_mode:
+                        
+                        summary = 'Running ' + job.ToString()
+                        
+                        HydrusData.ShowText( summary )
+                        
+                    
                     if HG.db_profile_mode:
                         
                         summary = 'Profiling ' + job.ToString()

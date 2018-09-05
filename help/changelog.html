@@ -8,8 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 321</h3></li>
 				<ul>
+					<li>downloader overhaul</li>
+					<li>the basic downloader overhaul is complete! at this point, any user can create and share the objects required for a completely new downloader! it is still rough in some places, so a round of EZ-import is coming to make adding new downloaders a single easy drag and drop action</li>
+					<li>rounded out the ngug (nested gugs, which contain multiple gugs) code</li>
+					<li>updated the edit gug panel to deal with gugs and ngugs on different notebook pages</li>
+					<li>added a bunch of logic to this panel and backend data handling to deal with missing gugs in ngugs</li>
+					<li>if an ngug cannot find a gug by its internal identifier key, it will now attempt to fallback to its simple name, and will silently fail if no gug can be found. all gug tracking now uses this 'key first, name later' id method, so downloaders and subs should generally survive gug renames and same-name overwrites</li>
+					<li>the gallery selector now works in gugs. it has two 'pages', depending on which gugs are set to 'display', and will note if the chosen gug is cannot be found in the current definitions. the gugs have slightly more specific names ('gelbooru tag search', 'hentai foundry artist lookup', etc...) than before</li>
+					<li>the gallery selector also puts 'non-functional' gugs (i.e. those with no parsable gallery url class) to a third page</li>
+					<li>moved the gallery downloader gallery and file pipeline completely over to the new system</li>
+					<li>the gallery downloader will now bundle nested gugs (like hentai foundry artist, which searches both works and scraps) into a single downloader</li>
+					<li>moved the subs gallery and file pipeline comppletely over to the new system</li>
+					<li>the subs gallery sync now handles nested gugs (like hentai foundry artist, which searches both works and scraps) in an interleaved manner and make behind-the-scenes checking decisions in a clearer and more logical way</li>
+					<li>subs should now make correct 'hit limit' stop reason reports and not generate new gallery pages when the current page has exactly enough results to hit the current file limit</li>
+					<li>artstation artist lookup is now available as a default downloader</li>
+					<li>newgrounds artist lookup makes a triumphant return. it works pretty well, given how flash and NG has changed since</li>
+					<li>derpibooru tag lookup is now available as a default downloader. due to unusual search syntax on derpibooru, please enter queries exactly as you would on derpi, using ',' or ' AND ' to separate tags (such as 'rainbow dash,straight')</li>
+					<li>pixiv now has multiple artist lookup options--either images, manga, ugoira (doesn't work yet!), or everything</li>
+					<li>the old downloader code is deleted!</li>
+					<li>the old manage booru dialog is deleted!</li>
+					<li>'custom' boorus (i.e. new ones you created or imported to 'manage boorus'), cannot be completely automatically updated to the new system. I've figured out a way to generate new gugs and gallery&post parsers, but they will miss url classes to get working again. your custom-booru subs will notice this and safely pause until the issue is fixed. if you rely on custom boorus, please check the release post for info on this--you might like to put off updating</li>
+					<li>many misc changes and fixes to gugs and overall gallery url handling pipeline</li>
+					<li>some misc refactoring and concept-renaming in gallery pipeline r.e. gugs</li>
+					<li>when the downloader tries to import what looks like a raw html file, its error notes will specify this and suggest a parser may be needed</li>
+					<li>moved the 'media viewer url display' options panel from the manage url match links dialog to the new network->downloaders->manage downloader and url display</li>
+					<li>this new dialog also hosts a list for managing which downloaders to show in the first list of the downloader selector</li>
+					<li>.</li>
+					<li>misc</li>
+					<li>gave the video rendering pipeline communication logic a quick pass, cleaning up a bunch of bad code and other decisions. the video renderer should be quicker to respond to various changes in scanbar position, and incidences of the frame buffer suddenly sperging out (usually inexplicably falling behind the current frame position or deciding to regen for no apparent reason) should be greatly reduced if not completely eliminated</li>
+					<li>the test that stops repository processing if there is not enough disk space now uses half the current size of client.mappings.db for its estimate (previously 1GB) and also tests temp folder location free space (just as the vacuum test does) and reports this nature of the error along with pausing the repo, stopping further attempts</li>
+					<li>might have fixed another out-of-order dialog close/open event combination during manage tags close->advanced content update open</li>
+					<li>fixed gallery queries that include '/' (or some other unusual characters) that end up in the 'path' of the url (as opposed to the query). this fixes 'male/female' on e621, for instance</li>
+					<li>'advanced mode' users now have a 'nudge subs awake' menu entry below 'manage subs'. this simply wakes the subs daemon (which usually only checks once every four hours), in case any subs are due</li>
+					<li>'db report mode' now reports every db job as it comes in (formerly, it only reported some optimisation esoterica). this makes it a more lightweight version of 'db profile mode' for several debugging tasks</li>
+					<li>fixed a tiny issue in fetching the 'how boned am I?' stats when the user had zero inbox/everything count</li>
+					<li>fixed a typo in the default new url class object that was breaking the edit ui panel</li>
+					<li>highlighted the quiet filename tagging options on edit import folder panel</li>
+				</ul>
 				<li><h3>version 320</h3></li>
+				<ul>
 					<li>clients should now have objects for all default downloaders. everything should be prepped for the big switchover:</li>
 					<li>wrote gallery url generators for all the default downloaders and a couple more as well</li>
 					<li>wrote a gallery parser for deviant art--it also comes with an update to the DA url class because the meta 'next page' link on DA gallery pages is invalid wew!</li>
