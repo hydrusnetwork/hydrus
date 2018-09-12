@@ -8,9 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 322</h3></li>
+				<ul>
+					<li>wrote gugs help</li>
+					<li>gave url classes and parsers help a pass</li>
+					<li>wrote e621 html gallery page example help</li>
+					<li>wrote gelbooru html file page example help</li>
+					<li>wrote artstation json file page example help</li>
+					<li>wrote url class links help</li>
+					<li>gallery logs for the gallery downloader and url downloader now support 'try again' and 'skip' right-click menu for gallery log entries. the try again allows just the one page or also allowing search to continue) so, if a gallery query fails for some reason, you can now try again/continue where it broke. subs/watcher/simple downloader work on more complicated gallery search logic, so their gallery logs will remain read-only for now</li>
+					<li>all gallery log buttons now support right-click menu to mass-export urls to png or clipboard. non read-only also support import</li>
+					<li>fixed an issue with gallery searches that rely on both api url conversions and url class next gallery page urls (I think just artstation and tumblr by default) not generating the next page url correctly</li>
+					<li>improved some misc gallery url processing logic</li>
+					<li>fixed some issues with gallery url generators with invalid example urls causing problems opening the edit gug and gallery selector panels</li>
+					<li>fixed an issue where you could only delete a gug if it was in an ngug, ha ha</li>
+					<li>thanks to a different submission by prkc on the discord, collections now have a _right-click->set collections as groups of alternates_ duplicate action (note the duplicate menu only appears in advanced mode). the related shortcut action duplicate_media_set_alternate_collections is also added</li>
+					<li>export phrases now support '\' ('/' in linux) in the path export phrase in order to create folders. you should also be able to do \[series]\ to create optional namespace folders. slashes in tags will still be replaced with _</li>
+					<li>to stop the client sometimes doing laggy vacuum checks every maintenance cycle, vacuums that cannot occur due to limited disk space now will still count as 'done' for the purposes of rescheduling</li>
+					<li>added 'file report mode' to the help debug menu. This will spam popups as file and thumbnail actions are requested</li>
+					<li>tightened up some network job status setting to help us debug the 'there are a ton of jobs in network engine, but the three active on this domain seem stalled' issue</li>
+					<li>wrote a simple 'review threads' panel under help->debug->data actions->review threads. I knocked it together in about ten minutes, and it's likely unstable as hell, but it's pretty neat!</li>
+					<li>some instances where many file paths are copied quickly (exporting paths to clipboard and drag and drop) no longer do a safety check for file existence, so should be much faster to go. this particularly reduces startup lag for large file drag and drops!</li>
+					<li>the 'would you like to do maintenance work in this shutdown?' dialog now lists a summary of what it thinks it'll be working on. I _could_ make this more detailed, so let me know how it works for you</li>
+					<li>tags with numbers should now sort according to the new improved human sorting method--it now shouldn't matter where the numbers are in the tag--as long as the text-and-number-breaks lines up with another tag, they'll be compared each part in turn correctly</li>
+					<li>fixed some human sorting code for unusual number characters like ?. they will be treated as text, not a number, for now</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 321</h3></li>
 				<ul>
-					<li>downloader overhaul</li>
+					<li>downloader overhaul:</li>
 					<li>the basic downloader overhaul is complete! at this point, any user can create and share the objects required for a completely new downloader! it is still rough in some places, so a round of EZ-import is coming to make adding new downloaders a single easy drag and drop action</li>
 					<li>rounded out the ngug (nested gugs, which contain multiple gugs) code</li>
 					<li>updated the edit gug panel to deal with gugs and ngugs on different notebook pages</li>
@@ -36,7 +62,7 @@
 					<li>moved the 'media viewer url display' options panel from the manage url match links dialog to the new network->downloaders->manage downloader and url display</li>
 					<li>this new dialog also hosts a list for managing which downloaders to show in the first list of the downloader selector</li>
 					<li>.</li>
-					<li>misc</li>
+					<li>misc:</li>
 					<li>gave the video rendering pipeline communication logic a quick pass, cleaning up a bunch of bad code and other decisions. the video renderer should be quicker to respond to various changes in scanbar position, and incidences of the frame buffer suddenly sperging out (usually inexplicably falling behind the current frame position or deciding to regen for no apparent reason) should be greatly reduced if not completely eliminated</li>
 					<li>the test that stops repository processing if there is not enough disk space now uses half the current size of client.mappings.db for its estimate (previously 1GB) and also tests temp folder location free space (just as the vacuum test does) and reports this nature of the error along with pausing the repo, stopping further attempts</li>
 					<li>might have fixed another out-of-order dialog close/open event combination during manage tags close->advanced content update open</li>

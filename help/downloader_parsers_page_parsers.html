@@ -51,12 +51,7 @@ tag: species:mammal
 *** RESULTS END ***</pre></p>
 			<p>When the client sees this in a downloader context, it will where to download the file and which tags to associate with it based on what the user has chosen in their 'tag import options'.</p>
 			<h3>subsidiary page parsers</h3>
-			<p>But what if you have multiple files per page? What sort of <i>shape</i> of parsing would you need? You might be able to get away with a single content parser for a simple gallery page, where you could just find n thumbnail links, but what if you want to pull some other metadata for each thumbnail (like a title or ratings tag) at the same time? What if you are parsing an imageboard thread, where each file's links and filename tags and source times are all on just the one page? It is easy to find such a page's tags and URLs, but not so easy to group the correct rows together.</p>
-			<p>The solution is to split the file up into smaller 'posts' and to parse each in turn with a subsidiary page parsers:</p>
-			<p><img src="edit_page_parser_panel_4chan_subsidiary_page_parsers.png" /></p>
-			<p>talk about get html/json in the formula, show the new fourth tab and delve into that. show how splitting the html of an example html thread parser goes</p>
-			<p>Each subsidiary page parser will produce 0-n file results (typically for a Gallery or Watchable URL).</p>
-			<p>mention vetos again</p>
+			<p>Here be dragons. This was an attempt to make parsing more helpful in certain API situations, but it ended up ugly. I do not recommend you use it, as I will likely scratch the whole thing and replace it with something better one day. It basically splits the page up into pieces that can then be parsed by nested page parsers as separate objects, but the UI and workflow is hell. Afaik, the imageboard API parsers use it, but little/nothing else. If you are really interested, check out how those work and maybe duplicate to figure out your own imageboard parser and/or send me your thoughts on how to separate File URL/timestamp combos better.</p>
 		</div>
 	</body>
 </html>

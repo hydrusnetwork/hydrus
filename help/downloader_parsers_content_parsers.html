@@ -16,21 +16,21 @@
 			<ul>
 				<li>
 					<h3>urls</h3>
-					<p>This should be applied to relative ('/image/smile.jpg') and absolute ('https://mysite.com/content/image/smile.jpg') URLs. If the URL is relative, the client will attempt to generate an absolute URL based on the original URL used to fetch the current data being parsed.</p>
+					<p>This should be applied to relative ('/image/smile.jpg') and absolute ('https://mysite.com/content/image/smile.jpg') URLs. If the URL is relative, the client will generate an absolute URL based on the original URL used to fetch the data being parsed (i.e. it should all just work).</p>
 					<p>You can set several types of URL:</p>
 					<ul>
-						<li><b>actual file</b> means a File URL in our URL Classes system. An actual raw file like a jpg or webm. The client will typically be downloading and attempting to import these URLs, so make sure you are not accidentally linking to an html wrapper page.</li>
-						<li><b>post page</b> means a Post URL. You will typically find these URLs as linked from thumbnails on a gallery page.</li>
-						<li><b>next gallery page</b> means the next Gallery URL on from the current one. This will aid the downloader engine in finding a next page if that is otherwise difficult to guess (some sites have a nice page=1, page=2, page=3 system that we can predict elsewhere in the system, but others are not so simple).</b>
+						<li><b>url to download/pursue</b> means a Post URL or a File URL in our URL Classes system, like a booru post or an actual raw file like a jpg or webm.</li>
+						<li><b>url to associate</b> means an URL you want added to the list of 'known urls' for the file, but not one you want to client to actually download and parse. Use this to neatly add booru 'source' urls.</li>
+						<li><b>next gallery page</b> means the next Gallery URL on from the current one.</b>
 					</ul>
-					<p>The 'quality precedence' allows the client to select the best of several possible URLs. Given multiple content parsers producing URLs at the same 'level' of parsing, it will select the one with the highest value. Consider these two posts:</p>
+					<p>The 'file url quality precedence' allows the client to select the best of several possible URLs. Given multiple content parsers producing URLs at the same 'level' of parsing, it will select the one with the highest value. Consider these two posts:</p>
 					<ul>
 						<li><a href="https://danbooru.donmai.us/posts/3016415">https://danbooru.donmai.us/posts/3016415</a></li>
 						<li><a href="https://danbooru.donmai.us/posts/3040603">https://danbooru.donmai.us/posts/3040603</a></li>
 					</ul>
 					<p>The Garnet image fits into a regular page and so Danbooru embed the whole original file in the main media canvas. One easy way to find the full File URL in this case would be to select the "src" attribute of the "img" tag with id="image".</p>
 					<p>The Cirno one, however, is much larger and has been scaled down. The src of the main canvas tag points to a resized 'sample' link. The full link can be found at the 'view original' link up top, which is an "a" tag with id="image-resize-link".</p>
-					<p>The Garnet post does not have the 'view original' link, so to cover both situations we might want two content parsers--one fetching the 'canvas' "src" and the other finding the 'view original' "href". If we set the canvas one with a quality of 40 and the view original 60, then the parsing system would know to select the 60 when it was available but to fall back to the 40 if not.</p>
+					<p>The Garnet post does not have the 'view original' link, so to cover both situations we might want two content parsers--one fetching the 'canvas' "src" and the other finding the 'view original' "href". If we set the 'canvas' one with a quality of 40 and the 'view original' 60, then the parsing system would know to select the 60 when it was available but to fall back to the 40 if not.</p>
 					<p>As it happens, Danbooru (afaik, always) gives a link to the original file under the 'Size:' metadata to the left. This is the same 'best link' for both posts above, but it isn't so easy to identify. It is a quiet "a" tag without an "id" and it isn't always in the same location, but if you could pin it down reliably, it might be nice to circumvent the whole issue.</p>
 					<p>Sites can change suddenly, so it is nice to have a bit of redundancy here if it is easy.</p>
 				</li>
@@ -48,11 +48,12 @@
 				</li>
 				<li>
 					<h3>timestamp</h3>
-					<p>This lets you say that a given number refers to a particular time for a file. At the moment, I only support 'source time', which represents a 'post' time for the file and is useful for thread and subscription check time calculations. It takes a Unix time integer, like 1520203484, which many APIs will provide. If you are feeling very clever, you can decode a 'MM/DD/YYYY hh:mm:ss' style string to a Unix time integer using string converters, but I may need to put more time into that UI to make it more user friendly!</p>
+					<p>This lets you say that a given number refers to a particular time for a file. At the moment, I only support 'source time', which represents a 'post' time for the file and is useful for thread and subscription check time calculations. It takes a Unix time integer, like 1520203484, which many APIs will provide.</p>
+					<p>If you are feeling very clever, you can decode a 'MM/DD/YYYY hh:mm:ss' style string to a Unix time integer using string converters, which use some hacky and semi-reliable python %d-style values as per <a href="https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior">here</a>. Look at the existing defaults for examples of this, and don't worry about being more accurate than 12/24 hours--trying to figure out timezone is a hell not worth attempting, and doesn't really matter in the long-run for subscriptions and thread watchers that might care.</p>
 				</li>
 				<li>
-					<h3>thread watcher page title</h3>
-					<p>This lets the thread watcher know a good name for its page tab. The subject of a thread is obviously ideal here, but failing that you can try to fetch the first part of the first post's comment. It has precendence, like for URLs, so you can tell the parser which to prefer if you have multiple options. Just for neatness and ease of testing, you probably want to use a string converter here to cut it down to the first 64 characters or so.</p>
+					<h3>watcher page title</h3>
+					<p>This lets the watcher know a good name/subject for its entries. The subject of a thread is obviously ideal here, but failing that you can try to fetch the first part of the first post's comment. It has precendence, like for URLs, so you can tell the parser which to prefer if you have multiple options. Just for neatness and ease of testing, you probably want to use a string converter here to cut it down to the first 64 characters or so.</p>
 				</li>
 				<li>
 					<h3>veto</h3>
