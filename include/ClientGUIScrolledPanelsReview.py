@@ -1767,6 +1767,10 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     path = self._GetPath( media )
                     
+                    path_dir = os.path.dirname( path )
+                    
+                    HydrusPaths.MakeSureDirectoryExists( path_dir )
+                    
                     if export_tag_txts:
                         
                         tags_manager = media.GetTagsManager()
@@ -1800,7 +1804,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                             
                         
                     
-                    source_path = client_files_manager.GetFilePath( hash, mime )
+                    source_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
                     
                     HydrusPaths.MirrorFile( source_path, path )
                     
@@ -2810,5 +2814,63 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def RefreshServices( self ):
         
         self._InitialiseServices()
+        
+    
+class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller ):
+        
+        self._controller = controller
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( 'name', 24 ), ( 'type', 20 ), ( 'current job', -1 ) ]
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'threads review', 20, 30, columns, self._ConvertDataToListCtrlTuples )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        # maybe some buttons to control behaviour here for debug
+        
+        self._list_ctrl_panel.AddButton( 'refresh snapshot', self._RefreshSnapshot )
+        
+        #
+        
+        self._list_ctrl.Sort( 0 )
+        
+        self._RefreshSnapshot()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, thread ):
+        
+        name = thread.GetName()
+        thread_type = repr( type( thread ) )
+        current_job = repr( thread.GetCurrentJobSummary() )
+        
+        pretty_name = name
+        pretty_thread_type = thread_type
+        pretty_current_job = current_job
+        
+        display_tuple = ( pretty_name, pretty_thread_type, pretty_current_job )
+        sort_tuple = ( name, thread_type, current_job )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _RefreshSnapshot( self ):
+        
+        threads = self._controller.GetThreadsSnapshot()
+        
+        self._list_ctrl.SetData( threads )
         
     

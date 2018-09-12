@@ -95,9 +95,17 @@ def CollapseMultipleSortedNumericTagsToMinMax( tags ):
             
         
     
-def ConvertTagToSortable( t ):
+def ConvertTagToSortable( tag ):
     
-    if len( t ) > 0 and t[0].isdecimal():
+    # this copies the human sort in hydrustext
+    
+    convert = lambda text: int( text ) if text.isdecimal() else text
+    
+    return tuple( [ convert( c ) for c in re.split( '([0-9]+)', tag.lower(), flags = re.UNICODE ) ] )
+    
+    # old method
+    
+    '''if len( t ) > 0 and t[0].isdecimal():
         
         # We want to maintain that:
         # 0 < 0a < 0b < 1 ( lexicographic comparison )
@@ -132,7 +140,7 @@ def ConvertTagToSortable( t ):
     else:
         
         return t
-        
+        '''
 
 def FilterNamespaces( tags, namespaces ):
     

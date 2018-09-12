@@ -20,12 +20,13 @@ import wx
 
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller, read_only, gallery_seed_log ):
+    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_seed_log ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._controller = controller
         self._read_only = read_only
+        self._can_generate_more_pages = can_generate_more_pages
         self._gallery_seed_log = gallery_seed_log
         
         self._text = ClientGUICommon.BetterStaticText( self, 'initialising' )
@@ -34,7 +35,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( '#', 3 ), ( 'url', -1 ), ( 'status', 12 ), ( 'added', 23 ), ( 'last modified', 23 ), ( 'note', 20 ) ]
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'gallery_seed_log', 30, 30, columns, self._ConvertGallerySeedToListCtrlTuples, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'gallery_seed_log', 30, 30, columns, self._ConvertGallerySeedToListCtrlTuples )
         
         #
         
@@ -126,29 +127,6 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _DeleteSelected( self ):
-        
-        if self._read_only:
-            
-            return
-            
-        
-        gallery_seeds_to_delete = self._list_ctrl.GetData( only_selected = True )
-        
-        if len( gallery_seeds_to_delete ) > 0:
-            
-            message = 'Are you sure you want to delete all the selected entries?'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._gallery_seed_log.RemoveGallerySeeds( gallery_seeds_to_delete )
-                    
-                
-            
-        
-    
     def _OpenSelectedGalleryURLs( self ):
         
         gallery_seeds = self._list_ctrl.GetData( only_selected = True )
@@ -202,17 +180,37 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
             
+            ClientGUIMenus.AppendSeparator( menu )
+            
             if not self._read_only:
                 
-                ClientGUIMenus.AppendSeparator( menu )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'try again (just this one page)', 'Schedule this url to occur again.', HydrusData.Call( self._TrySelectedAgain, False ) )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'try again', 'Reset the progress of all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from list', 'Remove all the selected urls.', self._DeleteSelected )
+                if self._can_generate_more_pages:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'try again (and allow search to continue)', 'Schedule this url to occur again and continue.', HydrusData.Call( self._TrySelectedAgain, True ) )
+                    
                 
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
             
             HG.client_controller.PopupMenu( self, menu )
             
+        
+    
+    def _TrySelectedAgain( self, can_generate_more_pages ):
+        
+        new_gallery_seeds = []
+        
+        gallery_seeds = self._list_ctrl.GetData( only_selected = True )
+        
+        for gallery_seed in gallery_seeds:
+            
+            new_gallery_seeds.append( gallery_seed.GenerateRestartedDuplicate( can_generate_more_pages ) )
+            
+        
+        self._gallery_seed_log.AddGallerySeeds( new_gallery_seeds )
+        self._gallery_seed_log.NotifyGallerySeedsUpdated( new_gallery_seeds )
         
     
     def _UpdateListCtrl( self, gallery_seeds ):
@@ -291,21 +289,19 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
-    def __init__( self, parent, controller, read_only, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
+    def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
         ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalBMPs.listctrl, self._ShowGallerySeedLogFrame )
         
         self._controller = controller
         self._read_only = read_only
+        self._can_generate_more_pages = can_generate_more_pages
         self._gallery_seed_log_get_callable = gallery_seed_log_get_callable
         self._gallery_seed_log_set_callable = gallery_seed_log_set_callable
         
         self.SetToolTip( 'open detailed gallery log--right-click for quick actions, if applicable' )
         
-        if not self._read_only:
-            
-            self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
-            
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
     
     def _ClearGallerySeeds( self, statuses_to_remove ):
@@ -417,18 +413,23 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                 
             
         
-        message = 'Would you like the URLs you are adding to be checked for just files, or would you like them to also follow subsequent gallery pages, like a regular search would?'
+        can_generate_more_pages = False
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' ) as dlg:
+        if self._can_generate_more_pages:
             
-            result = dlg.ShowModal()
+            message = 'Would you like these urls to only check for new files, or would you like them to also generate subsequent gallery pages, like a regular search would?'
             
-            if result == wx.ID_CANCEL:
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' ) as dlg:
                 
-                return
+                result = dlg.ShowModal()
                 
-            
-            can_generate_more_pages = result == wx.ID_NO
+                if result == wx.ID_CANCEL:
+                    
+                    return
+                    
+                
+                can_generate_more_pages = result == wx.ID_NO
+                
             
         
         gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages ) for url in urls_to_add ]
@@ -484,7 +485,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                 
                 with ClientGUITopLevelWindows.DialogNullipotent( self, 'gallery import log' ) as dlg:
                     
-                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, gallery_seed_log )
+                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
                     
                     dlg.SetPanel( panel )
                     
@@ -497,7 +498,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'gallery import log' ) as dlg:
                     
-                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, dupe_gallery_seed_log )
+                    panel = EditGallerySeedLogPanel( dlg, self._controller, self._read_only, self._can_generate_more_pages, dupe_gallery_seed_log )
                     
                     dlg.SetPanel( panel )
                     
@@ -515,7 +516,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = EditGallerySeedLogPanel( frame, self._controller, self._read_only, gallery_seed_log )
+            panel = EditGallerySeedLogPanel( frame, self._controller, self._read_only, self._can_generate_more_pages, gallery_seed_log )
             
             frame.SetPanel( panel )
             
@@ -527,47 +528,6 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
-        num_gallery_seeds = len( gallery_seed_log )
-        num_successful = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SUCCESSFUL_AND_NEW )
-        num_vetoed = gallery_seed_log.GetGallerySeedCount( CC.STATUS_VETOED )
-        num_errors = gallery_seed_log.GetGallerySeedCount( CC.STATUS_ERROR )
-        num_skipped = gallery_seed_log.GetGallerySeedCount( CC.STATUS_SKIPPED )
-        
-        if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' error failures', 'Tell this log to reattempt all its error failures.', self._RetryErrors )
-            
-        
-        if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' ignored', 'Tell this log to reattempt all its ignored/vetoed results.', self._RetryIgnored )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        if num_successful > 0:
-            
-            num_deletees = num_successful
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' successful gallery urls from the queue', 'Tell this log to clear out successful gallery page urls, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, ) )
-            
-        
-        if num_vetoed > 0:
-            
-            num_deletees = num_vetoed
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' ignored gallery urls from the queue', 'Tell this log to clear out ignored gallery urls, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_VETOED, ) )
-            
-        
-        if num_errors + num_skipped > 0:
-            
-            num_deletees = num_errors + num_skipped
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' error/skipped gallery urls from the queue', 'Tell this log to clear out errored and skipped gallery urls, reducing the size of the queue.', self._ClearGallerySeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
-            
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
         if len( gallery_seed_log ) > 0:
             
             submenu = wx.Menu()
@@ -578,31 +538,35 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
             
         
-        submenu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPng )
-        
-        ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
+        if not self._read_only:
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPng )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
+            
         
         HG.client_controller.PopupMenu( self, menu )
         
     
 class GallerySeedLogStatusControl( wx.Panel ):
     
-    def __init__( self, parent, controller, read_only, page_key = None ):
+    def __init__( self, parent, controller, read_only, can_generate_more_pages, page_key = None ):
         
         wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
         
         self._controller = controller
         self._read_only = read_only
+        self._can_generate_more_pages = can_generate_more_pages
         self._page_key = page_key
         
         self._gallery_seed_log = None
         
         self._log_summary_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
         
-        self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._GetGallerySeedLog )
+        self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._can_generate_more_pages, self._GetGallerySeedLog )
         
         #
         

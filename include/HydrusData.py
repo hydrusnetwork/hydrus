@@ -647,9 +647,9 @@ def HumanTextSort( texts ):
     """Solves the 19, 20, 200, 21, 22 issue when sorting 'Page 21.jpg' type strings.
     Breaks the string into groups of text and int."""
     
-    convert = lambda text: int( text ) if text.isdigit() else text
+    convert = lambda text: int( text ) if text.isdecimal() else text
     
-    alphanum = lambda key: [ convert( c ) for c in re.split( '([0-9]+)', key.lower() ) ]
+    alphanum = lambda key: [ convert( c ) for c in re.split( '([0-9]+)', key.lower(), flags = re.UNICODE ) ]
     
     texts.sort( key = alphanum ) 
     

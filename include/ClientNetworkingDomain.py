@@ -1824,9 +1824,16 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     
     def IsFunctional( self ):
         
-        example_url = self.GetExampleURL()
-        
-        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
+        try:
+            
+            example_url = self.GetExampleURL()
+            
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
+            
+        except:
+            
+            return False
+            
         
         return can_parse
         

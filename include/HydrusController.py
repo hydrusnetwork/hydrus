@@ -372,6 +372,20 @@ class HydrusController( object ):
         return self._managers[ name ]
         
     
+    def GetThreadsSnapshot( self ):
+        
+        threads = []
+        
+        threads.extend( self._daemons )
+        threads.extend( self._call_to_threads )
+        threads.extend( self._long_running_call_to_threads )
+        
+        threads.append( self._slow_job_scheduler )
+        threads.append( self._fast_job_scheduler )
+        
+        return threads
+        
+    
     def GoodTimeToDoBackgroundWork( self ):
         
         return self.CurrentlyIdle() and not ( self.JustWokeFromSleep() or self.SystemBusy() )

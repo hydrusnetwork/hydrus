@@ -719,7 +719,7 @@ class ReviewServicePanel( wx.Panel ):
                                 
                                 try:
                                     
-                                    update_path = client_files_manager.GetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT )
+                                    update_path = client_files_manager.GetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, check_file_exists = False )
                                     
                                     dest_path = os.path.join( dest_dir, update_hash.encode( 'hex' ) )
                                     

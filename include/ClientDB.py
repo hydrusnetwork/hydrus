@@ -5485,6 +5485,82 @@ class DB( HydrusDB.HydrusDB ):
         return sessions
         
     
+    def _GetMaintenanceDue( self, stop_time ):
+        
+        jobs_to_do = []
+        
+        # vacuum
+        
+        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        
+        if maintenance_vacuum_period_days is not None:
+            
+            stale_time_delta = maintenance_vacuum_period_days * 86400
+            
+            existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
+            
+            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+            
+            due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
+            
+            possible_due_names = set()
+            
+            if len( due_names ) > 0:
+                
+                self._CloseDBCursor()
+                
+                try:
+                    
+                    for name in due_names:
+                        
+                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                        
+                        if HydrusDB.CanVacuum( db_path, stop_time = stop_time ):
+                            
+                            possible_due_names.add( name )
+                            
+                        
+                    
+                    possible_due_names = list( possible_due_names )
+                    
+                    possible_due_names.sort()
+                    
+                    if len( possible_due_names ) > 0:
+                        
+                        jobs_to_do.append( 'vacuum ' + ','.join( possible_due_names ) )
+                        
+                    
+                finally:
+                    
+                    self._InitDBCursor()
+                    
+                
+            
+        
+        # analyze
+        
+        names_to_analyze = self._GetBigTableNamesToAnalyze()
+        
+        if len( names_to_analyze ) > 0:
+            
+            jobs_to_do.append( 'analyze ' + HydrusData.ToHumanInt( len( names_to_analyze ) ) + ' tables' )
+            
+        
+        similar_files_due = self._CacheSimilarFilesMaintenanceDue()
+        
+        if similar_files_due:
+            
+            jobs_to_do.append( 'similar files work' )
+            
+        
+        if self._MaintainReparseFilesDue():
+            
+            jobs_to_do.append( 'reparse files work' )
+            
+        
+        return jobs_to_do
+        
+    
     def _GetJSONDump( self, dump_type ):
         
         result = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) ).fetchone()
@@ -7264,71 +7340,6 @@ class DB( HydrusDB.HydrusDB ):
         return True
         
     
-    def _MaintenanceDue( self, stop_time ):
-        
-        # vacuum
-        
-        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
-        
-        if maintenance_vacuum_period_days is not None:
-            
-            stale_time_delta = maintenance_vacuum_period_days * 86400
-            
-            existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
-            
-            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
-            
-            due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
-            
-            possible_due_names = set()
-            
-            if len( due_names ) > 0:
-                
-                self._CloseDBCursor()
-                
-                try:
-                    
-                    for name in due_names:
-                        
-                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
-                        
-                        if HydrusDB.CanVacuum( db_path, stop_time = stop_time ):
-                            
-                            possible_due_names.add( name )
-                            
-                        
-                    
-                    if len( possible_due_names ) > 0:
-                        
-                        return True
-                        
-                    
-                finally:
-                    
-                    self._InitDBCursor()
-                    
-                
-            
-        
-        # analyze
-        
-        names_to_analyze = self._GetBigTableNamesToAnalyze()
-        
-        if len( names_to_analyze ) > 0:
-            
-            return True
-            
-        
-        similar_files_due = self._CacheSimilarFilesMaintenanceDue()
-        
-        if similar_files_due:
-            
-            return True
-            
-        
-        return self._MaintainReparseFilesDue()
-        
-    
     def _MaintainReparseFiles( self, stop_time = None ):
         
         if stop_time is None:
@@ -8408,7 +8419,7 @@ class DB( HydrusDB.HydrusDB ):
             
             message = 'Not enough free disk space to guarantee a safe repository processing job. Full text: ' + os.linesep * 2 + reason
             
-            HydrusData.DebugPrint( message )
+            HydrusData.ShowText( message )
             
             raise Exception( message )
             
@@ -8679,7 +8690,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
-        elif action == 'maintenance_due': result = self._MaintenanceDue( *args, **kwargs )
+        elif action == 'maintenance_due': result = self._GetMaintenanceDue( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
         elif action == 'missing_repository_update_hashes': result = self._GetRepositoryUpdateHashesIDoNotHave( *args, **kwargs )
@@ -11424,8 +11435,12 @@ class DB( HydrusDB.HydrusDB ):
                             
                             HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
                             
-                            names_done.append( name )
+                        else:
                             
+                            HydrusData.Print( 'Could not vacuum ' + db_path + ' (probably due to limited disk space on db or system drive).' )
+                            
+                        
+                        names_done.append( name )
                         
                     except Exception as e:
                         

@@ -716,7 +716,7 @@ class BetterHyperLink( BetterStaticText ):
         
         self.SetFont( font )
         
-        self.SetToolTipString( self._url )
+        self.SetToolTip( self._url )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventClick )
         

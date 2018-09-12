@@ -687,6 +687,11 @@ class ClientFilesManager( object ):
     
     def LocklessAddFileFromString( self, hash, mime, data ):
         
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Adding file from string: ' + HydrusData.ToUnicode( ( hash, mime, HydrusData.ToByteString( len( data ) ) ) ) )
+            
+        
         dest_path = self._GenerateExpectedFilePath( hash, mime )
         
         HydrusPaths.MakeFileWritable( dest_path )
@@ -698,6 +703,11 @@ class ClientFilesManager( object ):
         
     
     def LocklessAddFile( self, hash, mime, source_path ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Adding file from path: ' + HydrusData.ToUnicode( ( hash, mime, source_path ) ) )
+            
         
         dest_path = self._GenerateExpectedFilePath( hash, mime )
         
@@ -721,6 +731,11 @@ class ClientFilesManager( object ):
         
     
     def LocklessAddFullSizeThumbnail( self, hash, thumbnail ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Adding full-size thumbnail: ' + HydrusData.ToUnicode( ( hash, HydrusData.ToByteString( len( thumbnail ) ) ) ) )
+            
         
         path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
@@ -932,6 +947,11 @@ class ClientFilesManager( object ):
     
     def DelayedDeleteFiles( self, hashes, time_to_delete ):
         
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Delayed delete files call: ' + HydrusData.ToUnicode( ( len( hashes ), time_to_delete ) ) )
+            
+        
         while not HydrusData.TimeHasPassed( time_to_delete ):
             
             time.sleep( 0.5 )
@@ -960,6 +980,11 @@ class ClientFilesManager( object ):
     
     def DelayedDeleteThumbnails( self, hashes, time_to_delete ):
         
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Delayed delete thumbs call: ' + HydrusData.ToUnicode( ( len( hashes ), time_to_delete ) ) )
+            
+        
         while not HydrusData.TimeHasPassed( time_to_delete ):
             
             time.sleep( 0.5 )
@@ -982,15 +1007,20 @@ class ClientFilesManager( object ):
             
         
     
-    def GetFilePath( self, hash, mime = None ):
+    def GetFilePath( self, hash, mime = None, check_file_exists = True ):
         
         with self._lock:
             
-            return self.LocklessGetFilePath( hash, mime )
+            return self.LocklessGetFilePath( hash, mime = mime, check_file_exists = check_file_exists )
             
         
     
     def ImportFile( self, file_import_job ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'New file import job!' )
+            
         
         ( pre_import_status, hash, note ) = file_import_job.GenerateHashAndStatus()
         
@@ -1026,7 +1056,12 @@ class ClientFilesManager( object ):
         return ( import_status, hash, note )
         
     
-    def LocklessGetFilePath( self, hash, mime = None ):
+    def LocklessGetFilePath( self, hash, mime = None, check_file_exists = True ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'File path request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            
         
         if mime is None:
             
@@ -1037,7 +1072,7 @@ class ClientFilesManager( object ):
             path = self._GenerateExpectedFilePath( hash, mime )
             
         
-        if not os.path.exists( path ):
+        if check_file_exists and not os.path.exists( path ):
             
             raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
             
@@ -1046,6 +1081,11 @@ class ClientFilesManager( object ):
         
     
     def GetFullSizeThumbnailPath( self, hash, mime = None ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Full-size thumbnail path request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            
         
         with self._lock:
             
@@ -1069,6 +1109,11 @@ class ClientFilesManager( object ):
     
     def GetResizedThumbnailPath( self, hash, mime ):
         
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Resized thumbnail path request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            
+        
         with self._lock:
             
             path = self._GenerateExpectedResizedThumbnailPath( hash )
@@ -1083,6 +1128,11 @@ class ClientFilesManager( object ):
         
     
     def LocklessHasFullSizeThumbnail( self, hash ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Full-size thumbnail path test: ' + HydrusData.ToUnicode( hash ) )
+            
         
         path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
@@ -1180,6 +1230,11 @@ class ClientFilesManager( object ):
         
     
     def LocklessRegenerateResizedThumbnail( self, hash, mime ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Thumbnail regen request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            
         
         self._GenerateResizedThumbnail( hash, mime )
         

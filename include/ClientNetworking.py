@@ -280,11 +280,17 @@ class NetworkEngine( object ):
                 
                 return False
                 
+            elif job.IsAsleep():
+                
+                return True
+                
             elif len( self._jobs_running ) < self.MAX_JOBS:
                 
                 if self._pause_all_new_network_traffic:
                     
                     job.SetStatus( u'all new network traffic is paused\u2026' )
+                    
+                    job.Sleep( 2 )
                     
                     return True
                     
@@ -292,11 +298,15 @@ class NetworkEngine( object ):
                     
                     job.SetStatus( u'looks like computer just woke up, waiting a bit' )
                     
+                    job.Sleep( 5 )
+                    
                     return True
                     
                 elif self._active_domains_counter[ job.GetSecondLevelDomain() ] >= self.MAX_JOBS_PER_DOMAIN:
                     
                     job.SetStatus( u'waiting for a slot on this domain' )
+                    
+                    job.Sleep( 2 )
                     
                     return True
                     
@@ -322,7 +332,7 @@ class NetworkEngine( object ):
                 
             else:
                 
-                job.SetStatus( u'waiting for slot\u2026' )
+                job.SetStatus( u'waiting for a slot\u2026' )
                 
                 return True
                 

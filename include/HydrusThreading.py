@@ -112,6 +112,16 @@ class DAEMON( threading.Thread ):
             
         
     
+    def GetCurrentJobSummary( self ):
+        
+        return 'unknown job'
+        
+    
+    def GetName( self ):
+        
+        return self._name
+        
+    
     def shutdown( self ):
         
         ShutdownThread( self )
@@ -165,6 +175,11 @@ class DAEMONWorker( DAEMON ):
         time_to_start = ( float( time_started_waiting ) - 0.1 ) + self._pre_call_wait
         
         return HydrusData.TimeHasPassed( time_to_start )
+        
+    
+    def GetCurrentJobSummary( self ):
+        
+        return self._callable
         
     
     def run( self ):
@@ -239,6 +254,8 @@ class THREADCallToThread( DAEMON ):
         
         DAEMON.__init__( self, controller, name )
         
+        self._callable = None
+        
         self._queue = Queue.Queue()
         
         self._currently_working = True # start off true so new threads aren't used twice by two quick successive calls
@@ -247,6 +264,11 @@ class THREADCallToThread( DAEMON ):
     def CurrentlyWorking( self ):
         
         return self._currently_working
+        
+    
+    def GetCurrentJobSummary( self ):
+        
+        return self._callable
         
     
     def put( self, callable, *args, **kwargs ):
@@ -280,7 +302,11 @@ class THREADCallToThread( DAEMON ):
                 
                 ( callable, args, kwargs ) = self._queue.get()
                 
+                self._callable = ( callable, args, kwargs )
+                
                 callable( *args, **kwargs )
+                
+                self._callable = None
                 
                 del callable
                 
@@ -316,6 +342,8 @@ class JobScheduler( threading.Thread ):
         self._waiting_lock = threading.Lock()
         
         self._new_job_arrived = threading.Event()
+        
+        self._current_job = None
         
         self._cancel_filter_needed = threading.Event()
         self._sort_needed = threading.Event()
@@ -431,6 +459,19 @@ class JobScheduler( threading.Thread ):
         with self._waiting_lock:
             
             self._waiting = [ job for job in self._waiting if not job.IsDead() ]
+            
+        
+    
+    def GetName( self ):
+        
+        return 'Job Scheduler'
+        
+    
+    def GetCurrentJobSummary( self ):
+        
+        with self._waiting_lock:
+            
+            return HydrusData.ToHumanInt( len( self._waiting ) ) + ' jobs'
             
         
     

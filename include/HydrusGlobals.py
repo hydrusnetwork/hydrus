@@ -14,6 +14,7 @@ subscriptions_running = False
 callto_report_mode = False
 db_report_mode = False
 db_profile_mode = False
+file_report_mode = False
 gui_report_mode = False
 shortcut_report_mode = False
 subscription_report_mode = False

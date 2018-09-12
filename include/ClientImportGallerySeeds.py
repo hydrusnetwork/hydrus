@@ -124,6 +124,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self.modified = HydrusData.GetNow()
         
     
+    def GenerateRestartedDuplicate( self, can_generate_more_pages ):
+        
+        gallery_seed = GallerySeed( url = self.url, can_generate_more_pages = can_generate_more_pages )
+        
+        return gallery_seed
+        
+    
     def SetReferralURL( self, referral_url ):
         
         self._referral_url = referral_url
@@ -276,6 +283,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     next_page_urls.remove( self.url )
                     
                 
+                if url_to_check in next_page_urls:
+                    
+                    next_page_urls.remove( url_to_check )
+                    
+                
                 if len( next_page_urls ) > 0:
                     
                     next_page_generation_phrase = ' next gallery pages found'
@@ -284,13 +296,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
                     
-                    url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( self.url )
+                    url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url_to_check )
                     
                     if url_match is not None and url_match.CanGenerateNextGalleryPage():
                         
                         try:
                             
-                            next_page_url = url_match.GetNextGalleryPage( self.url )
+                            next_page_url = url_match.GetNextGalleryPage( url_to_check )
                             
                             next_page_urls = [ next_page_url ]
                             

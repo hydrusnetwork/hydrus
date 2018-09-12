@@ -16,6 +16,20 @@ MAX_PATH_LENGTH = 245 # bit of padding from 255 for .txt neigbouring and other s
 
 def GenerateExportFilename( destination_directory, media, terms ):
     
+    def clean_tag_text( t ):
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            t = re.sub( r'\\', '_', t, flags = re.UNICODE )
+            
+        else:
+            
+            t = re.sub( '/', '_', t, flags = re.UNICODE )
+            
+        
+        return t
+        
+    
     if len( destination_directory ) > ( MAX_PATH_LENGTH - 10 ):
         
         raise Exception( 'The destination directory is too long!' )
@@ -39,7 +53,7 @@ def GenerateExportFilename( destination_directory, media, terms ):
             
             subtags.sort()
             
-            filename += ', '.join( subtags )
+            filename += clean_tag_text( ', '.join( subtags ) )
             
         elif term_type == 'predicate':
             
@@ -61,7 +75,7 @@ def GenerateExportFilename( destination_directory, media, terms ):
                 
                 tags.sort()
                 
-                filename += ', '.join( tags )
+                filename += clean_tag_text( ', '.join( tags ) )
                 
             elif term == 'hash':
                 
@@ -78,14 +92,18 @@ def GenerateExportFilename( destination_directory, media, terms ):
             
             if tags_manager.HasTag( subtag ):
                 
-                filename += subtag
+                filename += clean_tag_text( subtag )
                 
             
         
     
     if HC.PLATFORM_WINDOWS:
         
-        filename = re.sub( '\\\\|/|:|\\*|\\?|"|<|>|\\|', '_', filename, flags = re.UNICODE )
+        # replace many consecutive backspace with single backspace
+        filename = re.sub( r'\\+', r'\\', filename, flags = re.UNICODE )
+        
+        # /, :, *, ?, ", <, >, |
+        filename = re.sub( r'/|:|\*|\?|"|<|>|\|', '_', filename, flags = re.UNICODE )
         
     else:
         
@@ -327,6 +345,10 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     filename = GenerateExportFilename( folder_path, media_result, terms )
                     
                     dest_path = os.path.join( folder_path, filename )
+                    
+                    dest_path_dir = os.path.dirname( dest_path )
+                    
+                    HydrusPaths.MakeSureDirectoryExists( dest_path_dir )
                     
                     if filename not in sync_filenames:
                         

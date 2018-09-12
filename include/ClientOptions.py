@@ -106,8 +106,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'do_human_sort_on_hdd_file_import_paths' ] = True
         
-        self._dictionary[ 'booleans' ][ 'highlight_new_watcher' ] = False
-        self._dictionary[ 'booleans' ][ 'highlight_new_query' ] = False
+        self._dictionary[ 'booleans' ][ 'highlight_new_watcher' ] = True
+        self._dictionary[ 'booleans' ][ 'highlight_new_query' ] = True
         
         #
         

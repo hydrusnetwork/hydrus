@@ -93,6 +93,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._gallery_repeating_job = None
         
         HG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        HG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
     
     def _AmOverFileLimit( self ):
@@ -555,6 +556,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         if file_seed_cache_key == self._file_seed_cache.GetFileSeedCacheKey():
             
             ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+            
+        
+    
+    def NotifyGallerySeedsUpdated( self, gallery_seed_log_key, gallery_seeds ):
+        
+        if gallery_seed_log_key == self._gallery_seed_log.GetGallerySeedLogKey():
+            
+            ClientImporting.WakeRepeatingJob( self._gallery_repeating_job )
             
         
     

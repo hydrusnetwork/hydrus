@@ -53,12 +53,22 @@
   &lt;a href="(search page)"&gt;blonde hair&lt;/a&gt; (3456)
 &lt;/span&gt;</pre></p>
 			<p>Without any more attributes, there isn't a great way to distinguish the &lt;a&gt; with "blonde hair" from the other two--so just set 'get the 3rd &lt;a&gt; tag' and you are good.</p>
+			<p>Most of the time, you'll be searching descendants (i.e. walking down the tree), but sometimes you might have this:</p>
+			<p><pre>&lt;span&gt;
+  &lt;a href="(link to post url)"&gt;
+    &lt;img class="thumb" src="(thumbnail image)" /&gt;
+  &lt;/a&gt;
+&lt;/span&gt;</pre></p>
+			<p>There isn't a great way to find the &lt;span&gt; or the &lt;a&gt; when looking from above here, as they are lacking a class or id, but you can find the &lt;img&gt; ok, so if you find those and then add a rule where instead of searching descendants, you are 'walking back up ancestors' like this:</p>
+			<p><img src="edit_html_formula_panel_descendants_ancestors.png" /></p>
+			<p>You can solve some tricky problems this way!</p>
+			<p>You can also set a String Match, which is the same panel as you say in with URL Classes. It tests its best guess at the tag's 'string' value, so you can find a tag with 'Original Image' as its text or that with a regex starts with 'Posted on: '. Have a play with it and you'll figure it out.</p>
 			<p><b>content to fetch</b></p>
 			<p>Once you have narrowed down the right nodes you want, you can decide what text to fetch. Given a node of:</p>
 			<p><pre>&lt;a href="(URL A)" class="thumb_title"&gt;Forest Glade&lt;/a&gt;</pre></p>
 			<p>Returning the 'href' attribute would return the string "(URL A)", returning the string content would give "Forest Glade", and returning the full html would give "&lt;a href="(URL A)" class="thumb"&gt;Forest Glade&lt;/a&gt;". This last choice is useful in complicated situations where you want a second, separated layer of parsing, which we will get to later.</p>
 			<p><b>string match and conversion</b></p>
-			<p>If you like, you can set a 'string match' (e.g. "only allow strings that only contain numbers" or "only allow full URLs as based on (complicated regex)") or 'string converter' (e.g. "remove the first three characters of whatever you find" or "decode from base64") like with URL Classes before.</p>
+			<p>You can set a final String Match to filter the parsed results (e.g. "only allow strings that only contain numbers" or "only allow full URLs as based on (complicated regex)") and String Converter to edit it (e.g. "remove the first three characters of whatever you find" or "decode from base64").</p>
 			<p>You won't use these much, but they can sometimes get you out of a complicated situation.</p>
 			<p><b>testing</b></p>
 			<p>The testing panel on the right is important and worth using. Copy the html from the source you want to parse and then hit the paste buttons to set that as the data to test with.</p>
@@ -79,11 +89,12 @@
 			<p>This is a complicated example taken from one of my thread parsers. I have to take a modified version of the original thread URL (the first rule, so \1) and then append the filename (\2) and its extension (\3) on the end to get the final file URL of a post. You can mix in more characters in the substitution phrase, like "\1.jpg" or even have multiple instances ("https://\2.muhsite.com/\2/\1"), if that is appropriate.</p>
 			<p>This is where the magic happens, sometimes, so keep it in mind if you need to do something cleverer than the data you have seems to provide.</p>
 			<p><h3 id="context_variable_formula">context variable</h3></p>
-			<p>This is a very basic system that I expect to expand in future. It is a simple key:value dictionary that at the moment only stores one variable, 'url', which contains the original URL used to fetch the data being parsed.</p>
+			<p>This is a basic hacky answer to a particular problem. It is a simple key:value dictionary that at the moment only stores one variable, 'url', which contains the original URL used to fetch the data being parsed.</p>
 			<p class="warning">If a different URL Class links to this parser via an API URL, this 'url' variable will always be the API URL (i.e. it literally is the URL used to fetch the data), not any thread/whatever URL the user entered.</p>
 			<p><img src="edit_context_variable_formula_panel.png" /></p>
 			<p>Hit the 'edit example parsing context' to change the URL used for testing.</p>
-			<p>I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the compound formula example above. In this case, the starting URL is "https://a.4cdn.org/tg/thread/57806016.json", from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (https:/i.4cdn.org/tg/) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. 8chan on the other hand, for instance, has a static "https://media.8ch.net/file_store/" for all files, so it is a little easier (I think I just do a single 'prepend' string transformation somewhere). If you want to make some parsers, you will have to get familiar with how different sites store and present their data!</p>
+			<p>I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the compound formula example above. In this case, the starting URL is "https://a.4cdn.org/tg/thread/57806016.json", from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (https:/i.4cdn.org/tg/) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. 8chan on the other hand, for instance, has a static "https://media.8ch.net/file_store/" for all files, so it is a little easier (I think I just do a single 'prepend' string transformation somewhere).</p>
+			<p>If you want to make some parsers, you will have to get familiar with how different sites store and present their data!</p>
 		</div>
 	</body>
 </html>

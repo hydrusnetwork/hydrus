@@ -1141,7 +1141,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._gallery_pause_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.pause )
         self._gallery_pause_button.Bind( wx.EVT_BUTTON, self.EventGalleryPause )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, True, page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, page_key = self._page_key )
         
         self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
         
@@ -1681,7 +1681,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._check_now_button = wx.Button( checker_panel, label = 'check now' )
         self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, HG.client_controller, True, page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, HG.client_controller, True, False, page_key = self._page_key )
         
         checker_options = ClientImportOptions.CheckerOptions()
         

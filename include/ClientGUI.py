@@ -1957,6 +1957,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
@@ -1983,9 +1984,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
-            ClientGUIMenus.AppendMenuItem( self, data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
@@ -3045,6 +3047,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         frame.SetPanel( panel )
         
     
+    def _ReviewThreads( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review threads' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewThreads( frame, self._controller )
+        
+        frame.SetPanel( panel )
+        
+    
     def _SaveSplitterPositions( self ):
         
         page = self._notebook.GetCurrentMediaPage()
@@ -3279,6 +3290,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'db_profile_mode':
             
             HG.db_profile_mode = not HG.db_profile_mode
+            
+        elif name == 'file_report_mode':
+            
+            HG.file_report_mode = not HG.file_report_mode
             
         elif name == 'gui_report_mode':
             

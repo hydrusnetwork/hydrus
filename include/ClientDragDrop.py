@@ -47,7 +47,7 @@ def DoFileExportDragDrop( window, page_key, media, cmd_down ):
         hash = m.GetHash()
         mime = m.GetMime()
         
-        original_path = client_files_manager.GetFilePath( hash, mime )
+        original_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
         
         original_paths.append( original_path )
         

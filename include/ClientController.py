@@ -422,11 +422,17 @@ class Controller( HydrusController.HydrusController ):
                     
                     time_to_stop = HydrusData.GetNow() + ( idle_shutdown_max_minutes * 60 )
                     
-                    if self.ThereIsIdleShutdownWorkDue( time_to_stop ):
+                    work_to_do = self.GetIdleShutdownWorkDue( time_to_stop )
+                    
+                    if len( work_to_do ) > 0:
                         
                         if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
                             
                             text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
+                            text += os.linesep * 2
+                            text += 'The outstanding jobs appear to be:'
+                            text += os.linesep * 2
+                            text += os.linesep.join( work_to_do )
                             
                             with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
                                 
@@ -507,6 +513,25 @@ class Controller( HydrusController.HydrusController ):
     def GetGUI( self ):
         
         return self.gui
+        
+    
+    def GetIdleShutdownWorkDue( self, time_to_stop ):
+        
+        work_to_do = []
+        
+        work_to_do.extend( self.Read( 'maintenance_due', time_to_stop ) )
+        
+        services = self.services_manager.GetServices( HC.REPOSITORIES )
+        
+        for service in services:
+            
+            if service.CanDoIdleShutdownWork():
+                
+                work_to_do.append( service.GetName + ' repository processing' )
+                
+            
+        
+        return work_to_do
         
     
     def GetNewOptions( self ):
@@ -1204,28 +1229,6 @@ class Controller( HydrusController.HydrusController ):
             
         
         return self._system_busy
-        
-    
-    def ThereIsIdleShutdownWorkDue( self, time_to_stop ):
-        
-        maintenance_due = self.Read( 'maintenance_due', time_to_stop )
-        
-        if maintenance_due:
-            
-            return True
-            
-        
-        services = self.services_manager.GetServices( HC.REPOSITORIES )
-        
-        for service in services:
-            
-            if service.CanDoIdleShutdownWork():
-                
-                return True
-                
-            
-        
-        return False
         
     
     def THREADBootEverything( self ):

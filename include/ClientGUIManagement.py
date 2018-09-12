@@ -2649,7 +2649,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel, style = wx.ST_ELLIPSIZE_END )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._simple_parsing_jobs_panel, self._controller, True, self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._simple_parsing_jobs_panel, self._controller, True, False, self._page_key )
         
         self._page_download_control = ClientGUIControls.NetworkJobControl( self._simple_parsing_jobs_panel )
         
@@ -3072,7 +3072,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._url_panel, self._controller, True, page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._url_panel, self._controller, False, False, page_key = self._page_key )
         
         self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         

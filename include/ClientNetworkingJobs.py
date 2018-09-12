@@ -191,14 +191,17 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            session = self._GetSession()
+            ncs = list( self._network_contexts )
+            
+        
+        headers = self.engine.domain_manager.GetHeaders( ncs )
+        
+        with self._lock:
             
             method = self._method
             url = self._url
             data = self._body
             files = self._files
-            
-            headers = self.engine.domain_manager.GetHeaders( self._network_contexts )
             
             if self.IS_HYDRUS_SERVICE:
                 
@@ -217,6 +220,10 @@ class NetworkJob( object ):
             
             self._status_text = u'sending request\u2026'
             
+            snc = self._session_network_context
+            
+        
+        session = self.engine.session_manager.GetSession( snc )
         
         connect_timeout = HG.client_controller.new_options.GetInteger( 'network_timeout' )
         
@@ -225,11 +232,6 @@ class NetworkJob( object ):
         response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
         
         return response
-        
-    
-    def _GetSession( self ):
-        
-        return self.engine.session_manager.GetSession( self._session_network_context )
         
     
     def _IsCancelled( self ):
@@ -799,6 +801,11 @@ class NetworkJob( object ):
         
         try:
             
+            with self._lock:
+                
+                self._status_text = u'job started'
+                
+            
             request_completed = False
             
             while not request_completed:
@@ -959,11 +966,21 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if self._gallery_token_name is not None and not self._gallery_token_consumed:
-                
-                ( consumed, next_timestamp ) = HG.client_controller.network_engine.bandwidth_manager.TryToConsumeAGalleryToken( self._second_level_domain, self._gallery_token_name )
+            need_token = self._gallery_token_name is not None and not self._gallery_token_consumed
+            
+            sld = self._second_level_domain
+            gtn = self._gallery_token_name
+            
+        
+        if need_token:
+            
+            ( consumed, next_timestamp ) = HG.client_controller.network_engine.bandwidth_manager.TryToConsumeAGalleryToken( sld, gtn )
+            
+            with self._lock:
                 
                 if consumed:
+                    
+                    self._status_text = 'slot consumed, starting soon'
                     
                     self._gallery_token_consumed = True
                     
@@ -977,8 +994,8 @@ class NetworkJob( object ):
                     
                 
             
-            return True
-            
+        
+        return True
         
     
     def WaitUntilDone( self ):

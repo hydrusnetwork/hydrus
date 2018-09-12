@@ -644,6 +644,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._gallery_repeating_job = None
         
         HG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        HG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
     
     def _FileNetworkJobPresentationContextFactory( self, network_job ):

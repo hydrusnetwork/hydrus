@@ -1662,7 +1662,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._example_url.SetValue( example_url )
             
-        except HydrusExceptions.GUGException as e:
+        except ( HydrusExceptions.GUGException, HydrusExceptions.URLMatchException ) as e:
             
             reason = HydrusData.ToUnicode( e )
             
@@ -2005,9 +2005,17 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         name = gug.GetName()
         example_url = gug.GetExampleURL()
         
-        example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
-        
-        url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( example_url )
+        try:
+            
+            example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
+            
+            url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( example_url )
+            
+        except:
+            
+            example_url = 'unable to parse example url'
+            url_match = None
+            
         
         if url_match is None:
             
@@ -2091,16 +2099,14 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         with ClientGUIDialogs.DialogYesNo( self, message ) as ngug_dlg:
                             
-                            if ngug_dlg.ShowModal() == wx.ID_YES:
-                                
-                                self._gug_list_ctrl.DeleteDatas( ( deletee, ) )
-                                
-                            else:
+                            if ngug_dlg.ShowModal() != wx.ID_YES:
                                 
                                 break
                                 
                             
                         
+                    
+                    self._gug_list_ctrl.DeleteDatas( ( deletee, ) )
                     
                 
             
@@ -3749,7 +3755,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, HG.client_controller )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, HG.client_controller, True )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, HG.client_controller, True, True )
         
         #
         
