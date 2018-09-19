@@ -741,6 +741,16 @@ class NetworkJob( object ):
             
         
     
+    def OverrideToken( self ):
+        
+        with self._lock:
+            
+            self._gallery_token_consumed = True
+            
+            self._wake_time = 0
+            
+        
+    
     def SetError( self, e, error ):
         
         with self._lock:

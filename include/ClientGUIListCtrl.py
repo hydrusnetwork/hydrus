@@ -512,6 +512,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._data_to_tuples_func = data_to_tuples_func
         
+        self._menu_callable = None
+        
         self._sort_column = 0
         self._sort_asc = True
         
@@ -624,6 +626,20 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
     
+    def _ShowMenu( self ):
+        
+        try:
+            
+            menu = self._menu_callable()
+            
+        except HydrusExceptions.DataMissing:
+            
+            return
+            
+        
+        HG.client_controller.PopupMenu( self, menu )
+        
+    
     def _SortDataInfo( self ):
         
         data_infos = list( self._indices_to_data_info.values() )
@@ -696,6 +712,13 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
         wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        
+    
+    def AddMenuCallable( self, menu_callable ):
+        
+        self._menu_callable = menu_callable
+        
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
     
     def DeleteDatas( self, datas ):
@@ -822,6 +845,13 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             event.Skip()
             
+        
+    
+    def EventShowMenu( self, event ):
+        
+        wx.CallAfter( self._ShowMenu )
+        
+        event.Skip() # let the right click event go through before doing menu, in case selection should happen
         
     
     def GetData( self, only_selected = False ):
@@ -1153,7 +1183,6 @@ class BetterListCtrlPanel( wx.Panel ):
             
             dlg.ShowModal()
             
-        
         
     
     def _GetExportObject( self ):

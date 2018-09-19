@@ -12,6 +12,7 @@ import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusPaths
 import HydrusText
@@ -52,7 +53,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.SetSizer( vbox )
         
-        self._list_ctrl.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self._list_ctrl.AddMenuCallable( self._GetListCtrlMenu )
         
         self._controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
@@ -127,6 +128,41 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _GetListCtrlMenu( self ):
+        
+        selected_gallery_seeds = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected_gallery_seeds ) == 0:
+            
+            raise HydrusExceptions.DataMissing()
+            
+        
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        if not self._read_only:
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'try again (just this one page)', 'Schedule this url to occur again.', HydrusData.Call( self._TrySelectedAgain, False ) )
+            
+            if self._can_generate_more_pages:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'try again (and allow search to continue)', 'Schedule this url to occur again and continue.', HydrusData.Call( self._TrySelectedAgain, True ) )
+                
+            
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
+        
+        return menu
+        
+    
     def _OpenSelectedGalleryURLs( self ):
         
         gallery_seeds = self._list_ctrl.GetData( only_selected = True )
@@ -163,39 +199,6 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._gallery_seed_log.NotifyGallerySeedsUpdated( gallery_seeds )
-        
-    
-    def _ShowMenuIfNeeded( self ):
-        
-        selected_gallery_seeds = self._list_ctrl.GetData( only_selected = True )
-        
-        if len( selected_gallery_seeds ) > 0:
-            
-            menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if not self._read_only:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'try again (just this one page)', 'Schedule this url to occur again.', HydrusData.Call( self._TrySelectedAgain, False ) )
-                
-                if self._can_generate_more_pages:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'try again (and allow search to continue)', 'Schedule this url to occur again and continue.', HydrusData.Call( self._TrySelectedAgain, True ) )
-                    
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
-            
-            HG.client_controller.PopupMenu( self, menu )
-            
         
     
     def _TrySelectedAgain( self, can_generate_more_pages ):
@@ -264,13 +267,6 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         self._text.SetLabelText( status )
         
         self.Layout()
-        
-    
-    def EventShowMenu( self, event ):
-        
-        wx.CallAfter( self._ShowMenuIfNeeded )
-        
-        event.Skip() # let the right click event go through before doing menu, in case selection should happen
         
     
     def GetValue( self ):

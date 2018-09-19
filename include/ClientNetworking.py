@@ -112,6 +112,14 @@ class NetworkEngine( object ):
             
         
     
+    def IsBusy( self ):
+        
+        with self._lock:
+            
+            return len( self._jobs_awaiting_validity ) + len( self._jobs_awaiting_bandwidth ) + len( self._jobs_awaiting_login ) + len( self._jobs_awaiting_slot ) + len( self._jobs_running ) > 50
+            
+        
+    
     def IsRunning( self ):
         
         with self._lock:

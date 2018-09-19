@@ -949,7 +949,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'duplicates.html' ) )
         
         menu_items.append( ( 'normal', 'show some simpler help here', 'Throw up a message box with some simple help.', self._ShowSimpleHelp ) )
-        menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
         self._help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -1642,6 +1642,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._UpdateImportStatus()
         
+        self._gallery_importers_listctrl.AddMenuCallable( self._GetListCtrlMenu )
+        
     
     def _CanClearHighlight( self ):
         
@@ -1770,6 +1772,41 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress, added )
         
         return ( display_tuple, sort_tuple )
+        
+    
+    def _CopySelectedQueries( self ):
+        
+        gallery_importers = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( gallery_importers ) > 0:
+            
+            separator = os.linesep * 2
+            
+            text = separator.join( ( gallery_importer.GetQueryText() for gallery_importer in gallery_importers ) )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
+    def _GetListCtrlMenu( self ):
+        
+        selected_watchers = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( selected_watchers ) == 0:
+            
+            raise HydrusExceptions.DataMissing()
+            
+        
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy queries', 'Copy all the selected downloaders\' queries to clipboard.', self._CopySelectedQueries )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'pause/play files', 'Pause/play all the selected downloaders\' file queues.', self._PausePlayFiles )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'pause/play search', 'Pause/play all the selected downloaders\' gallery searches.', self._PausePlayGallery )
+        
+        return menu
         
     
     def _HighlightGalleryImport( self, new_highlight ):
@@ -2164,6 +2201,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         #
         
+        self._watchers_listctrl.AddMenuCallable( self._GetListCtrlMenu )
+        
         self._UpdateImportStatus()
         
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
@@ -2325,6 +2364,42 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         return ( display_tuple, sort_tuple )
         
     
+    def _CopySelectedURLs( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) > 0:
+            
+            separator = os.linesep * 2
+            
+            text = separator.join( ( watcher.GetURL() for watcher in watchers ) )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
+    def _GetListCtrlMenu( self ):
+        
+        selected_watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( selected_watchers ) == 0:
+            
+            raise HydrusExceptions.DataMissing()
+            
+        
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected watchers\' urls to clipboard.', self._CopySelectedURLs )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected watchers\' urls in your browser.', self._OpenSelectedURLs )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'pause/play files', 'Pause/play all the selected watchers\' file queues.', self._PausePlayFiles )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'pause/play checking', 'Pause/play all the selected watchers\' checking routines.', self._PausePlayChecking )
+        
+        return menu
+        
+    
     def _HighlightWatcher( self, new_highlight ):
         
         if new_highlight == self._highlighted_watcher:
@@ -2370,6 +2445,32 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             new_highlight = selected[0]
             
             self._HighlightWatcher( new_highlight )
+            
+        
+    
+    def _OpenSelectedURLs( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) > 0:
+            
+            if len( watchers ) > 10:
+                
+                message = 'You have many watchers selected--are you sure you want to open them all?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    
+                    if dlg.ShowModal() != wx.ID_YES:
+                        
+                        return
+                        
+                    
+                
+            
+            for watcher in watchers:
+                
+                ClientPaths.LaunchURLInWebBrowser( watcher.GetURL() )
+                
             
         
     

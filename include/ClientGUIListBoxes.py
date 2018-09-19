@@ -2578,11 +2578,6 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
-        if not include_counts and self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
-            
-            self._sort = CC.SORT_BY_LEXICOGRAPHIC_ASC
-            
-        
         self._last_media = set()
         
         self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
@@ -2724,130 +2719,14 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _SortTags( self ):
         
-        def lexicographic_key( term ):
-            
-            tag = self._terms_to_texts[ term ]
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-            
-            comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
-            
-            # 'cat' < 'character:rei'
-            # 'page:3' < 'page:20'
-            # '1' < 'series:eva'
-            
-            # note that 'test' < ( 1, '' ) but u'test' > ( 1, '' ) wew
-            
-            if namespace == '':
-                
-                return ( comparable_subtag, comparable_subtag )
-                
-            else:
-                
-                return ( namespace, comparable_subtag )
-                
-            
+        tags_to_count = collections.Counter()
         
-        def incidence_key( term ):
-            
-            return tags_to_count[ term ]
-            
+        if self._show_current: tags_to_count.update( self._current_tags_to_count )
+        if self._show_deleted: tags_to_count.update( self._deleted_tags_to_count )
+        if self._show_pending: tags_to_count.update( self._pending_tags_to_count )
+        if self._show_petitioned: tags_to_count.update( self._petitioned_tags_to_count )
         
-        def namespace_key( term ):
-            
-            tag = term
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-            
-            if namespace == '':
-                
-                namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
-                
-            
-            return namespace
-            
-        
-        def namespace_lexicographic_key( term ):
-            
-            tag = term
-            
-            # '{' is above 'z' in ascii, so this works for most situations
-            
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-            
-            if namespace == '':
-                
-                return ( '{', HydrusTags.ConvertTagToSortable( subtag ) )
-                
-            else:
-                
-                return ( namespace, HydrusTags.ConvertTagToSortable( subtag ) )
-                
-            
-        
-        if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
-            
-            tags_to_count = collections.Counter()
-            
-            if self._show_current: tags_to_count.update( self._current_tags_to_count )
-            if self._show_deleted: tags_to_count.update( self._deleted_tags_to_count )
-            if self._show_pending: tags_to_count.update( self._pending_tags_to_count )
-            if self._show_petitioned: tags_to_count.update( self._petitioned_tags_to_count )
-            
-            # let's establish a-z here for equal incidence values later
-            if self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC ):
-                
-                self._ordered_terms.sort( key = lexicographic_key, reverse = True )
-                
-                reverse = False
-                
-            elif self._sort in ( CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
-                
-                self._ordered_terms.sort( key = lexicographic_key )
-                
-                reverse = True
-                
-            
-            self._ordered_terms.sort( key = incidence_key, reverse = reverse )
-            
-            if self._sort in ( CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
-                
-                # python list sort is stable, so lets now sort again
-                
-                if self._sort == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC:
-                    
-                    reverse = True
-                    
-                elif self._sort == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC:
-                    
-                    reverse = False
-                    
-                
-                self._ordered_terms.sort( key = namespace_key, reverse = reverse )
-                
-            
-        else:
-            
-            if self._sort in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
-                
-                reverse = True
-                
-            elif self._sort in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
-                
-                reverse = False
-                
-            
-            if self._sort in ( CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
-                
-                key = namespace_lexicographic_key
-                
-            elif self._sort in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_DESC ):
-                
-                key = lexicographic_key
-                
-            
-            self._ordered_terms.sort( key = key, reverse = reverse )
-            
+        ClientTags.SortTags( self._sort, self._ordered_terms, tags_to_count )
         
         self._DataHasChanged()
         

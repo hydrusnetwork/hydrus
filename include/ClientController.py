@@ -527,7 +527,7 @@ class Controller( HydrusController.HydrusController ):
             
             if service.CanDoIdleShutdownWork():
                 
-                work_to_do.append( service.GetName + ' repository processing' )
+                work_to_do.append( service.GetName() + ' repository processing' )
                 
             
         

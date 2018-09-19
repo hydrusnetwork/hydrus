@@ -51,6 +51,9 @@ class HydrusController( object ):
         self._call_to_threads = []
         self._long_running_call_to_threads = []
         
+        self._thread_pool_busy_status_text = ''
+        self._thread_pool_busy_status_text_new_check_time = 0
+        
         self._call_to_thread_lock = threading.Lock()
         
         self._timestamps = collections.defaultdict( lambda: 0 )
@@ -370,6 +373,38 @@ class HydrusController( object ):
     def GetManager( self, name ):
         
         return self._managers[ name ]
+        
+    
+    def GetThreadPoolBusyStatus( self ):
+        
+        if HydrusData.TimeHasPassed( self._thread_pool_busy_status_text_new_check_time ):
+            
+            with self._call_to_thread_lock:
+                
+                num_threads = sum( ( 1 for t in self._call_to_threads if t.CurrentlyWorking() ) )
+                
+            
+            if num_threads < 4:
+                
+                self._thread_pool_busy_status_text = ''
+                
+            elif num_threads < 10:
+                
+                self._thread_pool_busy_status_text = 'working'
+                
+            elif num_threads < 20:
+                
+                self._thread_pool_busy_status_text = 'busy'
+                
+            else:
+                
+                self._thread_pool_busy_status_text = 'very busy!'
+                
+            
+            self._thread_pool_busy_status_text_new_check_time = HydrusData.GetNow() + 10
+            
+        
+        return self._thread_pool_busy_status_text
         
     
     def GetThreadsSnapshot( self ):

@@ -79,13 +79,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         bandwidth_width = ClientGUICommon.ConvertTextToPixelWidth( self, 17 )
         idle_width = ClientGUICommon.ConvertTextToPixelWidth( self, 6 )
+        hydrus_busy_width = ClientGUICommon.ConvertTextToPixelWidth( self, 11 )
         system_busy_width = ClientGUICommon.ConvertTextToPixelWidth( self, 13 )
         db_width = ClientGUICommon.ConvertTextToPixelWidth( self, 14 )
         
         stb_style = wx.STB_SIZEGRIP | wx.STB_ELLIPSIZE_END | wx.FULL_REPAINT_ON_RESIZE
         
-        self._statusbar = self.CreateStatusBar( 5, stb_style )
-        self._statusbar.SetStatusWidths( [ -1, bandwidth_width, idle_width, system_busy_width, db_width ] )
+        self._statusbar = self.CreateStatusBar( 6, stb_style )
+        self._statusbar.SetStatusWidths( [ -1, bandwidth_width, idle_width, hydrus_busy_width, system_busy_width, db_width ] )
         
         self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         
@@ -1109,6 +1110,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _ExportDownloader( self ):
+        
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export downloaders' ) as dlg:
+            
+            panel = ClientGUIParsing.DownloaderExportPanel( dlg, self._controller.network_engine )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+    
     def _FetchIP( self, service_key ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the file\'s hash.' ) as dlg:
@@ -1713,7 +1726,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             # this will be the easy-mode 'export ability to download from blahbooru' that'll bundle it all into a nice package with a neat png.
             # need a name for this that isn't 'downloader', or maybe it should be, and I should rename downloaders below to 'gallery query generator' or whatever.
             
-            ClientGUIMenus.AppendMenuLabel( submenu, 'UNDER CONSTRUCTION: review and import/export downloaders', 'Review where you can download from and import or export that data in order to share with other users.' )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -1733,6 +1746,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -2034,6 +2048,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review your fate' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
+        
+        frame.SetPanel( panel )
+        
+    
+    def _ImportDownloaders( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'import downloaders' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewDownloaderImport( frame, self._controller.network_engine )
         
         frame.SetPanel( panel )
         
@@ -2905,9 +2928,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             idle_status = ''
             
         
+        hydrus_busy_status = self._controller.GetThreadPoolBusyStatus()
+        
         if self._controller.SystemBusy():
             
-            busy_status = 'system busy'
+            busy_status = 'CPU busy'
             
         else:
             
@@ -2920,8 +2945,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._statusbar.SetStatusText( media_status, 0 )
         self._statusbar.SetStatusText( idle_status, 2 )
-        self._statusbar.SetStatusText( busy_status, 3 )
-        self._statusbar.SetStatusText( db_status, 4 )
+        self._statusbar.SetStatusText( hydrus_busy_status, 3 )
+        self._statusbar.SetStatusText( busy_status, 4 )
+        self._statusbar.SetStatusText( db_status, 5 )
         
     
     def _RegenerateACCache( self ):

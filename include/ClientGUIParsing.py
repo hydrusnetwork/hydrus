@@ -9,8 +9,10 @@ import ClientGUIControls
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIScrolledPanels
+import ClientGUIScrolledPanelsEdit
 import ClientGUISerialisable
 import ClientGUITopLevelWindows
+import ClientNetworkingDomain
 import ClientNetworkingJobs
 import ClientParsing
 import ClientPaths
@@ -145,6 +147,345 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         self._UpdateLabel()
         
     
+class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, network_engine ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._network_engine = network_engine
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_sharing.html' ) )
+        
+        menu_items.append( ( 'normal', 'open the downloader sharing help', 'Open the help page for sharing downloaders in your web browser.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( 'name', -1 ), ( 'type', 40 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'dowloader_export', 14, 36, columns, self._ConvertContentToListCtrlTuples, delete_key_callback = self._Delete )
+        
+        self._listctrl.Sort( 1 )
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add gug', self._AddGUG )
+        listctrl_panel.AddButton( 'add url class', self._AddURLMatch )
+        listctrl_panel.AddButton( 'add parser', self._AddParser )
+        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        listctrl_panel.AddSeparator()
+        listctrl_panel.AddButton( 'export to png', self._Export, enabled_check_func = self._CanExport )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _AddGUG( self ):
+        
+        choosable_gugs = [ gug for gug in self._network_engine.domain_manager.GetGUGs() if gug.IsFunctional() ]
+        
+        for obj in self._listctrl.GetData():
+            
+            if obj in choosable_gugs:
+                
+                choosable_gugs.remove( obj )
+                
+            
+        
+        choice_tuples = [ ( gug.GetName(), gug, False ) for gug in choosable_gugs ]
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select gugs' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                gugs_to_include = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        url_matches_to_include = self._GetURLMatchesToInclude( gugs_to_include )
+        
+        url_matches_to_include = self._FlushOutURLMatchesWithAPILinks( url_matches_to_include )
+        
+        parsers_to_include = self._GetParsersToInclude( url_matches_to_include )
+        
+        self._listctrl.AddDatas( gugs_to_include )
+        self._listctrl.AddDatas( url_matches_to_include )
+        self._listctrl.AddDatas( parsers_to_include )
+        
+    
+    def _AddParser( self ):
+        
+        choosable_parsers = list( self._network_engine.domain_manager.GetParsers() )
+        
+        for obj in self._listctrl.GetData():
+            
+            if obj in choosable_parsers:
+                
+                choosable_parsers.remove( obj )
+                
+            
+        
+        choice_tuples = [ ( parser.GetName(), parser, False ) for parser in choosable_parsers ]
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select parsers' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                parsers_to_include = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        self._listctrl.AddDatas( parsers_to_include )
+        
+    
+    def _AddURLMatch( self ):
+        
+        choosable_url_matches = list( self._network_engine.domain_manager.GetURLMatches() )
+        
+        for obj in self._listctrl.GetData():
+            
+            if obj in choosable_url_matches:
+                
+                choosable_url_matches.remove( obj )
+                
+            
+        
+        choice_tuples = [ ( url_match.GetName(), url_match, False ) for url_match in choosable_url_matches ]
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select url classes' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                url_matches_to_include = panel.GetValue()
+                
+            
+        
+        url_matches_to_include = self._FlushOutURLMatchesWithAPILinks( url_matches_to_include )
+        
+        parsers_to_include = self._GetParsersToInclude( url_matches_to_include )
+        
+        self._listctrl.AddDatas( url_matches_to_include )
+        self._listctrl.AddDatas( parsers_to_include )
+        
+    
+    def _CanExport( self ):
+        
+        return len( self._listctrl.GetData() ) > 0
+        
+    
+    def _ConvertContentToListCtrlTuples( self, content ):
+        
+        name = content.GetName()
+        t = content.SERIALISABLE_NAME
+        
+        pretty_name = name
+        pretty_t = t
+        
+        display_tuple = ( pretty_name, pretty_t )
+        sort_tuple = ( name, t )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._listctrl.DeleteSelected()
+                
+            
+        
+    
+    def _Export( self ):
+        
+        export_object = HydrusSerialisable.SerialisableList( self._listctrl.GetData() )
+        
+        message = 'The end-user will see this sort of summary:'
+        message += os.linesep * 2
+        message += os.linesep.join( ( obj.GetSafeSummary() for obj in export_object[:20] ) )
+        
+        if len( export_object ) > 20:
+            
+            message += os.linesep
+            message += '(and ' + HydrusData.ToHumanInt( len( export_object ) - 20 ) + ' others)'
+            
+        
+        message += os.linesep * 2
+        message += 'Does that look good? (Ideally, every object should have correct and sane domains listed here)'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES:
+                
+                return
+                
+            
+        
+        gug_names = set()
+        
+        for obj in export_object:
+            
+            if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ):
+                
+                gug_names.add( obj.GetName() )
+                
+            
+        
+        gug_names = list( gug_names )
+        
+        gug_names.sort()
+        
+        num_gugs = len( gug_names )
+        
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            
+            title = 'easy-import downloader png'
+            
+            if num_gugs == 0:
+                
+                description = 'some download components'
+                
+            else:
+                
+                title += ' - ' + HydrusData.ToHumanInt( num_gugs ) + ' downloaders'
+                
+                description = ', '.join( gug_names )
+                
+            
+            panel = ClientGUISerialisable.PngExportPanel( dlg, export_object, title = title, description = description )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+    
+    def _FlushOutURLMatchesWithAPILinks( self, url_matches ):
+        
+        url_matches_to_include = set( url_matches )
+        
+        api_links_dict = dict( ClientNetworkingDomain.ConvertURLMatchesIntoAPIPairs( self._network_engine.domain_manager.GetURLMatches() ) )
+        
+        for url_match in url_matches:
+            
+            added_this_cycle = set()
+            
+            while url_match in api_links_dict and url_match not in added_this_cycle:
+                
+                added_this_cycle.add( url_match )
+                
+                url_match = api_links_dict[ url_match ]
+                
+                url_matches_to_include.add( url_match )
+                
+            
+        
+        return list( url_matches_to_include )
+        
+    
+    def _GetParsersToInclude( self, url_matches ):
+        
+        parsers_to_include = set()
+        
+        for url_match in url_matches:
+            
+            example_url = url_match.GetExampleURL()
+            
+            ( url_type, match_name, can_parse ) = self._network_engine.domain_manager.GetURLParseCapability( example_url )
+            
+            if can_parse:
+                
+                try:
+                    
+                    ( url_to_fetch, parser ) = self._network_engine.domain_manager.GetURLToFetchAndParser( example_url )
+                    
+                    parsers_to_include.add( parser )
+                    
+                except:
+                    
+                    pass
+                    
+                
+            
+        
+        return list( parsers_to_include )
+        
+    
+    def _GetURLMatchesToInclude( self, gugs ):
+        
+        url_matches_to_include = set()
+        
+        for gug in gugs:
+            
+            if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ):
+                
+                example_urls = ( gug.GetExampleURL(), )
+                
+            elif isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ):
+                
+                example_urls = gug.GetExampleURLs()
+                
+            
+            for example_url in example_urls:
+                
+                url_match = self._network_engine.domain_manager.GetURLMatch( example_url )
+                
+                if url_match is not None:
+                    
+                    url_matches_to_include.add( url_match )
+                    
+                    # add post url matches from same domain
+                    
+                    domain = ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( example_url )
+                    
+                    for um in list( self._network_engine.domain_manager.GetURLMatches() ):
+                        
+                        if ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( um.GetExampleURL() ) == domain and um.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE ):
+                            
+                            url_matches_to_include.add( um )
+                            
+                        
+                    
+                
+            
+        
+        return list( url_matches_to_include )
+        
+    
 class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, formula, test_context ):
@@ -157,7 +498,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#compound_formula' ) )
         
-        menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -387,7 +728,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#context_variable_formula' ) )
         
-        menu_items.append( ( 'normal', 'open the context variable formula help', 'Open the help page for context variable formulae in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the context variable formula help', 'Open the help page for context variable formulae in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -842,7 +1183,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#html_formula' ) )
         
-        menu_items.append( ( 'normal', 'open the html formula help', 'Open the help page for html formulae in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the html formula help', 'Open the help page for html formulae in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -1210,7 +1551,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#json_formula' ) )
         
-        menu_items.append( ( 'normal', 'open the json formula help', 'Open the help page for json formulae in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the json formula help', 'Open the help page for json formulae in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -1440,7 +1781,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_content_parsers.html#content_parsers' ) )
         
-        menu_items.append( ( 'normal', 'open the content parsers help', 'Open the help page for content parsers in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the content parsers help', 'Open the help page for content parsers in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -2454,7 +2795,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_page_parsers.html#page_parsers' ) )
         
-        menu_items.append( ( 'normal', 'open the page parser help', 'Open the help page for page parsers in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         

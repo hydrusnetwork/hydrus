@@ -93,9 +93,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._redundant_st = ClientGUICommon.BetterStaticText( self, '' )
+        self._redundant_st = ClientGUICommon.BetterStaticText( self, '', style = wx.ST_ELLIPSIZE_END )
         
-        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ' )
+        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ', style = wx.ST_ELLIPSIZE_END )
         
         #
         

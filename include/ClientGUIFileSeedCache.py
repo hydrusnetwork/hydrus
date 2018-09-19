@@ -12,6 +12,7 @@ import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusPaths
 import HydrusText
@@ -50,7 +51,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.SetSizer( vbox )
         
-        self._list_ctrl.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self._list_ctrl.AddMenuCallable( self._GetListCtrlMenu )
         
         self._controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
@@ -154,6 +155,42 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _GetListCtrlMenu( self ):
+        
+        selected_file_seeds = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected_file_seeds ) == 0:
+            
+            raise HydrusExceptions.DataMissing()
+            
+        
+        menu = wx.Menu()
+        
+        can_show_files_in_new_page = True in ( file_seed.HasHash() for file_seed in selected_file_seeds )
+        
+        if can_show_files_in_new_page:
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
+        
+        return menu
+        
+    
     def _OpenSelectedFileSeedData( self ):
         
         file_seeds = self._list_ctrl.GetData( only_selected = True )
@@ -207,40 +244,6 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._file_seed_cache.NotifyFileSeedsUpdated( file_seeds )
-        
-    
-    def _ShowMenuIfNeeded( self ):
-        
-        selected_file_seeds = self._list_ctrl.GetData( only_selected = True )
-        
-        if len( selected_file_seeds ) > 0:
-            
-            menu = wx.Menu()
-            
-            can_show_files_in_new_page = True in ( file_seed.HasHash() for file_seed in selected_file_seeds )
-            
-            if can_show_files_in_new_page:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
-            
-            HG.client_controller.PopupMenu( self, menu )
-            
         
     
     def _ShowSelectionInNewPage( self ):
@@ -312,13 +315,6 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self._text.SetLabelText( status )
         
         self.Layout()
-        
-    
-    def EventShowMenu( self, event ):
-        
-        wx.CallAfter( self._ShowMenuIfNeeded )
-        
-        event.Skip() # let the right click event go through before doing menu, in case selection should happen
         
     
     def GetValue( self ):

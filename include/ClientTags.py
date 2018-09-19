@@ -67,41 +67,126 @@ def RenderTag( tag, render_for_user ):
         return namespace + connector + subtag
         
     
-def SortTagsList( tags, sort_type ):
+def SortTags( sort_by, tags_list, tags_to_count = None ):
     
-    if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+    def lexicographic_key( tag ):
         
-        reverse = True
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+        
+        # 'cat' < 'character:rei'
+        # 'page:3' < 'page:20'
+        # '1' < 'series:eva'
+        
+        # note that 'test' < ( 1, '' ) but u'test' > ( 1, '' ) wew
+        
+        if namespace == '':
+            
+            return ( comparable_subtag, comparable_subtag )
+            
+        else:
+            
+            return ( namespace, comparable_subtag )
+            
+        
+    
+    def incidence_key( tag ):
+        
+        if tags_to_count is None:
+            
+            return 1
+            
+        else:
+            
+            return tags_to_count[ tag ]
+            
+        
+    
+    def namespace_key( tag ):
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        if namespace == '':
+            
+            namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
+            
+        
+        return namespace
+        
+    
+    def namespace_lexicographic_key( tag ):
+        
+        # '{' is above 'z' in ascii, so this works for most situations
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        if namespace == '':
+            
+            return ( '{', HydrusTags.ConvertTagToSortable( subtag ) )
+            
+        else:
+            
+            return ( namespace, HydrusTags.ConvertTagToSortable( subtag ) )
+            
+        
+    
+    if sort_by in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
+        
+        # let's establish a-z here for equal incidence values later
+        if sort_by in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_ASC ):
+            
+            tags_list.sort( key = lexicographic_key, reverse = True )
+            
+            reverse = False
+            
+        elif sort_by in ( CC.SORT_BY_INCIDENCE_DESC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
+            
+            tags_list.sort( key = lexicographic_key )
+            
+            reverse = True
+            
+        
+        tags_list.sort( key = incidence_key, reverse = reverse )
+        
+        if sort_by in ( CC.SORT_BY_INCIDENCE_NAMESPACE_ASC, CC.SORT_BY_INCIDENCE_NAMESPACE_DESC ):
+            
+            # python list sort is stable, so lets now sort again
+            
+            if sort_by == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC:
+                
+                reverse = True
+                
+            elif sort_by == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC:
+                
+                reverse = False
+                
+            
+            tags_list.sort( key = namespace_key, reverse = reverse )
+            
         
     else:
         
-        reverse = False
-        
-    
-    if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
-        
-        def key( tag ):
+        if sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
             
-            # '{' is above 'z' in ascii, so this works for most situations
+            reverse = True
             
-            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        elif sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
             
-            if namespace == '':
-                
-                return ( '{', subtag )
-                
-            else:
-                
-                return ( namespace, subtag )
-                
+            reverse = False
             
         
-    else:
+        if sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+            
+            key = namespace_lexicographic_key
+            
+        elif sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_DESC ):
+            
+            key = lexicographic_key
+            
         
-        key = None
+        tags_list.sort( key = key, reverse = reverse )
         
-    
-    tags.sort( key = key, reverse = reverse )
     
 class TagFilter( HydrusSerialisable.SerialisableBase ):
     

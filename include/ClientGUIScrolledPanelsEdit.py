@@ -1863,7 +1863,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_gugs.html' ) )
         
-        menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -3849,7 +3849,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'getting_started_subscriptions.html' ) )
         
-        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -3900,6 +3900,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._subscriptions.AddDatas( subscriptions )
+        
+        self._subscriptions.Sort( 0 )
         
         #
         
@@ -6042,7 +6044,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_url_classes.html' ) )
         
-        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -6120,7 +6122,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         HydrusSerialisable.SetNonDupeName( url_match, self._GetExistingNames() )
         
-        url_match.RegenMatchKey()
+        url_match.RegenerateMatchKey()
         
         self._list_ctrl.AddDatas( ( url_match, ) )
         
@@ -6286,6 +6288,8 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         api_pairs = ClientNetworkingDomain.ConvertURLMatchesIntoAPIPairs( url_matches )
         
         self._api_pairs_list_ctrl.AddDatas( api_pairs )
+        
+        self._api_pairs_list_ctrl.Sort( 0 )
         
         # anything that goes to an api url will be parsed by that api's parser--it can't have its own
         api_pair_unparsable_url_matches = set()

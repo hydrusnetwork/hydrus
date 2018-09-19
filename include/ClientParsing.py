@@ -1937,6 +1937,15 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return self._parser_key
         
     
+    def GetSafeSummary( self ):
+        
+        domains = list( { ClientNetworkingDomain.ConvertURLIntoDomain( url ) for url in self._example_urls } )
+        
+        domains.sort()
+        
+        return 'Parser "' + self._name + '" - ' + ', '.join( domains )
+        
+    
     def GetStringConverter( self ):
         
         return self._string_converter
@@ -2082,6 +2091,21 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     def RegenerateParserKey( self ):
         
         self._parser_key = HydrusData.GenerateKey()
+        
+    
+    def SetExampleURLs( self, example_urls ):
+        
+        self._example_urls = list( example_urls )
+        
+    
+    def SetExampleParsingContext( self, example_parsing_context ):
+        
+        self._example_parsing_context = example_parsing_context
+        
+    
+    def SetParserKey( self, parser_key ):
+        
+        self._parser_key = parser_key
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER ] = PageParser

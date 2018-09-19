@@ -2630,7 +2630,7 @@ class CanvasWithDetails( Canvas ):
             
             tags_i_want_to_display = list( tags_i_want_to_display )
             
-            ClientTags.SortTagsList( tags_i_want_to_display, HC.options[ 'default_tag_sort' ] )
+            ClientTags.SortTags( HC.options[ 'default_tag_sort' ], tags_i_want_to_display )
             
             current_y = 3
             

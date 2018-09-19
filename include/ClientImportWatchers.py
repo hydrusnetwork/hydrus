@@ -1182,8 +1182,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._checker_options = checker_options
             
-            self._checking_paused = False
-            
             self._UpdateNextCheckTime()
             
             self._UpdateFileVelocityStatus()
@@ -1255,8 +1253,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+            network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
-            ok_to_work = work_pending and no_delays and page_shown
+            ok_to_work = work_pending and no_delays and page_shown and network_engine_good
             
         
         while ok_to_work:
@@ -1284,8 +1283,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
                 no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+                network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
-                ok_to_work = work_pending and no_delays and page_shown
+                ok_to_work = work_pending and no_delays and page_shown and network_engine_good
                 
             
         
@@ -1305,8 +1305,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             check_due = HydrusData.TimeHasPassed( self._next_check_time )
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+            network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
-            time_to_check = able_to_check and check_due and no_delays and page_shown
+            time_to_check = able_to_check and check_due and no_delays and page_shown and network_engine_good
             
         
         if time_to_check:

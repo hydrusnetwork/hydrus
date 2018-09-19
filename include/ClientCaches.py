@@ -687,12 +687,12 @@ class ClientFilesManager( object ):
     
     def LocklessAddFileFromString( self, hash, mime, data ):
         
+        dest_path = self._GenerateExpectedFilePath( hash, mime )
+        
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Adding file from string: ' + HydrusData.ToUnicode( ( hash, mime, HydrusData.ToByteString( len( data ) ) ) ) )
+            HydrusData.ShowText( 'Adding file from string: ' + HydrusData.ToUnicode( ( HydrusData.ToByteString( len( data ) ), dest_path ) ) )
             
-        
-        dest_path = self._GenerateExpectedFilePath( hash, mime )
         
         HydrusPaths.MakeFileWritable( dest_path )
         
@@ -704,12 +704,12 @@ class ClientFilesManager( object ):
     
     def LocklessAddFile( self, hash, mime, source_path ):
         
+        dest_path = self._GenerateExpectedFilePath( hash, mime )
+        
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Adding file from path: ' + HydrusData.ToUnicode( ( hash, mime, source_path ) ) )
+            HydrusData.ShowText( 'Adding file from path: ' + HydrusData.ToUnicode( ( source_path, dest_path ) ) )
             
-        
-        dest_path = self._GenerateExpectedFilePath( hash, mime )
         
         if not os.path.exists( dest_path ):
             
@@ -732,16 +732,16 @@ class ClientFilesManager( object ):
     
     def LocklessAddFullSizeThumbnail( self, hash, thumbnail ):
         
+        dest_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Adding full-size thumbnail: ' + HydrusData.ToUnicode( ( hash, HydrusData.ToByteString( len( thumbnail ) ) ) ) )
+            HydrusData.ShowText( 'Adding full-size thumbnail: ' + HydrusData.ToUnicode( ( HydrusData.ToByteString( len( thumbnail ) ), dest_path ) ) )
             
         
-        path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        HydrusPaths.MakeFileWritable( dest_path )
         
-        HydrusPaths.MakeFileWritable( path )
-        
-        with open( path, 'wb' ) as f:
+        with open( dest_path, 'wb' ) as f:
             
             f.write( thumbnail )
             
@@ -1072,6 +1072,11 @@ class ClientFilesManager( object ):
             path = self._GenerateExpectedFilePath( hash, mime )
             
         
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'File path request success: ' + HydrusData.ToUnicode( path ) )
+            
+        
         if check_file_exists and not os.path.exists( path ):
             
             raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
@@ -1103,20 +1108,25 @@ class ClientFilesManager( object ):
                     
                 
             
+            if HG.file_report_mode:
+                
+                HydrusData.ShowText( 'Full-size thumbnail path request success: ' + HydrusData.ToUnicode( path ) )
+                
+            
             return path
             
         
     
     def GetResizedThumbnailPath( self, hash, mime ):
         
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'Resized thumbnail path request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
-            
-        
         with self._lock:
             
             path = self._GenerateExpectedResizedThumbnailPath( hash )
+            
+            if HG.file_report_mode:
+                
+                HydrusData.ShowText( 'Resized thumbnail path request: ' + HydrusData.ToUnicode( path ) )
+                
             
             if not os.path.exists( path ):
                 
@@ -1129,12 +1139,12 @@ class ClientFilesManager( object ):
     
     def LocklessHasFullSizeThumbnail( self, hash ):
         
+        path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Full-size thumbnail path test: ' + HydrusData.ToUnicode( hash ) )
+            HydrusData.ShowText( 'Full-size thumbnail path test: ' + HydrusData.ToUnicode( path ) )
             
-        
-        path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
         return os.path.exists( path )
         

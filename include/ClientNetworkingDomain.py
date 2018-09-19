@@ -148,6 +148,10 @@ def ConvertQueryTextToDict( query_text ):
     
 def ConvertURLMatchesIntoAPIPairs( url_matches ):
     
+    url_matches = list( url_matches )
+    
+    NetworkDomainManager.STATICSortURLMatchesDescendingComplexity( url_matches )
+    
     pairs = []
     
     for url_match in url_matches:
@@ -169,6 +173,8 @@ def ConvertURLMatchesIntoAPIPairs( url_matches ):
             if other_url_match.Matches( api_url ):
                 
                 pairs.append( ( url_match, other_url_match ) )
+                
+                break
                 
             
         
@@ -742,7 +748,12 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             gugs = list( self._gugs )
             
-            gugs.extend( new_gugs )
+            for gug in new_gugs:
+                
+                gug.SetNonDupeName( [ g.GetName() for g in gugs ] )
+                
+                gugs.append( gug )
+                
             
         
         self.SetGUGs( gugs )
@@ -754,10 +765,210 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             parsers = list( self._parsers )
             
-            parsers.extend( new_parsers )
+            for parser in new_parsers:
+                
+                parser.SetNonDupeName( [ p.GetName() for p in parsers ] )
+                
+                parsers.append( parser )
+                
             
         
         self.SetParsers( parsers )
+        
+    
+    def AddURLMatches( self, new_url_matches ):
+        
+        with self._lock:
+            
+            url_matches = list( self._url_matches )
+            
+            for url_match in new_url_matches:
+                
+                url_match.SetNonDupeName( [ u.GetName() for u in url_matches ] )
+                
+                url_matches.append( url_match )
+                
+            
+        
+        self.SetURLMatches( url_matches )
+        
+    
+    def AlreadyHaveExactlyThisGUG( self, new_gug ):
+        
+        with self._lock:
+            
+            # absent irrelevant variables, do we have the exact same object already in?
+            
+            gug_key_and_name = new_gug.GetGUGKeyAndName()
+            
+            dupe_gugs = [ gug.Duplicate() for gug in self._gugs ]
+            
+            for dupe_gug in dupe_gugs:
+                
+                dupe_gug.SetGUGKeyAndName( gug_key_and_name )
+                
+                if dupe_gug.DumpToString() == new_gug.DumpToString():
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def AlreadyHaveExactlyThisParser( self, new_parser ):
+        
+        with self._lock:
+            
+            # absent irrelevant variables, do we have the exact same object already in?
+            
+            new_name = new_parser.GetName()
+            new_parser_key = new_parser.GetParserKey()
+            new_example_urls = new_parser.GetExampleURLs()
+            new_example_parsing_context = new_parser.GetExampleParsingContext()
+            
+            dupe_parsers = [ ( parser.Duplicate(), parser ) for parser in self._parsers ]
+            
+            for ( dupe_parser, parser ) in dupe_parsers:
+                
+                dupe_parser.SetName( new_name )
+                dupe_parser.SetParserKey( new_parser_key )
+                dupe_parser.SetExampleURLs( new_example_urls )
+                dupe_parser.SetExampleParsingContext( new_example_parsing_context )
+                
+                if dupe_parser.DumpToString() == new_parser.DumpToString():
+                    
+                    # since these are the 'same', let's merge example urls
+                    
+                    parser_example_urls = set( parser.GetExampleURLs() )
+                    
+                    parser_example_urls.update( new_example_urls )
+                    
+                    parser_example_urls = list( parser_example_urls )
+                    
+                    parser.SetExampleURLs( parser_example_urls )
+                    
+                    self._SetDirty()
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def AlreadyHaveExactlyThisURLMatch( self, new_url_match ):
+        
+        with self._lock:
+            
+            # absent irrelevant variables, do we have the exact same object already in?
+            
+            name = new_url_match.GetName()
+            match_key = new_url_match.GetMatchKey()
+            example_url = new_url_match.GetExampleURL()
+            
+            dupe_url_matches = [ url_match.Duplicate() for url_match in self._url_matches ]
+            
+            for dupe_url_match in dupe_url_matches:
+                
+                dupe_url_match.SetName( name )
+                dupe_url_match.SetMatchKey( match_key )
+                dupe_url_match.SetExampleURL( example_url )
+                
+                if dupe_url_match.DumpToString() == new_url_match.DumpToString():
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def AutoAddURLMatchesAndParsers( self, new_url_matches, dupe_url_matches, new_parsers ):
+        
+        for url_match in new_url_matches:
+            
+            url_match.RegenerateMatchKey()
+            
+        
+        for parser in new_parsers:
+            
+            parser.RegenerateParserKey()
+            
+        
+        # any existing url matches that already do the job of the new ones should be hung on to but renamed
+        
+        with self._lock:
+            
+            prefix = 'zzz - renamed due to auto-import - '
+            
+            renamees = []
+            
+            for existing_url_match in self._url_matches:
+                
+                if existing_url_match.GetName().startswith( prefix ):
+                    
+                    continue
+                    
+                
+                for new_url_match in new_url_matches:
+                    
+                    if new_url_match.Matches( existing_url_match.GetExampleURL() ) and existing_url_match.Matches( new_url_match.GetExampleURL ):
+                        
+                        # the url matches match each other, so they are doing the same job
+                        
+                        renamees.append( existing_url_match )
+                        
+                        break
+                        
+                    
+                
+                
+            
+            for renamee in renamees:
+                
+                existing_names = [ url_match.GetName() for url_match in self._url_matches if url_match != renamee ]
+                
+                renamee.SetName( prefix + renamee.GetName() )
+                
+                renamee.SetNonDupeName( existing_names )
+                
+            
+        
+        self.AddURLMatches( new_url_matches )
+        self.AddParsers( new_parsers )
+        
+        # we want to match these url matches and parsers together if possible
+        
+        with self._lock:
+            
+            url_matches_to_link = list( new_url_matches )
+            
+            # if downloader adds existing url match but updated parser, we want to update the existing link
+            
+            for dupe_url_match in dupe_url_matches:
+                
+                # this is to make sure we have the right match keys for the link update in a minute
+                
+                actual_existing_dupe_url_match = self._GetURLMatch( dupe_url_match.GetExampleURL() )
+                
+                if actual_existing_dupe_url_match is not None:
+                    
+                    url_matches_to_link.append( actual_existing_dupe_url_match )
+                    
+                
+            
+            new_url_match_keys_to_parser_keys = NetworkDomainManager.STATICLinkURLMatchesAndParsers( url_matches_to_link, new_parsers, {} )
+            
+            self._url_match_keys_to_parser_keys.update( new_url_match_keys_to_parser_keys )
+            
+        
+        # let's do a trytolink just in case there are loose ends due to some dupe being discarded earlier (e.g. url match is new, but parser was not).
+        
+        self.TryToLinkURLMatchesAndParsers()
         
     
     def CanValidateInPopup( self, network_contexts ):
@@ -1202,7 +1413,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             for url_match in default_url_matches:
                 
-                url_match.RegenMatchKey()
+                url_match.RegenerateMatchKey()
                 
             
             existing_url_matches = list( self._url_matches )
@@ -1774,8 +1985,9 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
             # encode this gubbins since requests won't be able to do it
             # this basically fixes e621 searches for 'male/female', which through some httpconf trickery are embedded in path but end up in a query, so need to be encoded right beforehand
+            # we need ToByteString as urllib.quote can't handle unicode hiragana etc...
             
-            search_terms = [ urllib.quote( search_term, safe = '' ) for search_term in search_terms ]
+            search_terms = [ urllib.quote( HydrusData.ToByteString( search_term ), safe = '' ) for search_term in search_terms ]
             
         
         try:
@@ -1817,9 +2029,22 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         return self._initial_search_text
         
     
+    def GetSafeSummary( self ):
+        
+        return 'Downloader "' + self._name + '" - ' + ConvertURLIntoDomain( self.GetExampleURL() )
+        
+    
     def GetURLTemplateVariables( self ):
         
         return ( self._url_template, self._replacement_phrase, self._search_terms_separator, self._example_search_text )
+        
+    
+    def SetGUGKeyAndName( self, gug_key_and_name ):
+        
+        ( gug_key, name ) = gug_key_and_name
+        
+        self._gallery_url_generator_key = gug_key
+        self._name = name
         
     
     def IsFunctional( self ):
@@ -1908,6 +2133,23 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         return gallery_urls
         
     
+    def GetExampleURLs( self ):
+        
+        example_urls = []
+        
+        for gug_key_and_name in self._gug_keys_and_names:
+            
+            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            
+            if gug is not None:
+                
+                example_urls.append( gug.GetExampleURL() )
+                
+            
+        
+        return example_urls
+        
+    
     def GetGUGKey( self ):
         
         return self._gallery_url_generator_key
@@ -1936,6 +2178,11 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     def GetInitialSearchText( self ):
         
         return self._initial_search_text
+        
+    
+    def GetSafeSummary( self ):
+        
+        return 'Nested downloader "' + self._name + '" - ' + ', '.join( ( name for ( gug_key, name ) in self._gug_keys_and_names ) )
         
     
     def IsFunctional( self ):
@@ -1987,6 +2234,14 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self._gug_keys_and_names = good_gug_keys_and_names
+        
+    
+    def SetGUGKeyAndName( self, gug_key_and_name ):
+        
+        ( gug_key, name ) = gug_key_and_name
+        
+        self._gallery_url_generator_key = gug_key
+        self._name = name
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR ] = NestedGalleryURLGenerator
@@ -2400,6 +2655,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         return r.geturl()
         
     
+    def GetSafeSummary( self ):
+        
+        return 'URL Class "' + self._name + '" - ' + ConvertURLIntoDomain( self.GetExampleURL() )
+        
+    
     def GetURLType( self ):
         
         return self._url_type
@@ -2474,9 +2734,19 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         return is_a_direct_file_page or is_a_single_file_post_page
         
     
-    def RegenMatchKey( self ):
+    def RegenerateMatchKey( self ):
         
         self._url_match_key = HydrusData.GenerateKey()
+        
+    
+    def SetExampleURL( self, example_url ):
+        
+        self._example_url = example_url
+        
+    
+    def SetMatchKey( self, match_key ):
+        
+        self._url_match_key = match_key
         
     
     def ShouldAssociateWithFiles( self ):

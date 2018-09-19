@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
+import ClientDragDrop
 import ClientExporting
 import ClientGUICommon
 import ClientGUIControls
@@ -18,8 +19,10 @@ import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingContexts
 import ClientNetworkingDomain
+import ClientParsing
 import ClientPaths
 import ClientRendering
+import ClientSerialisable
 import ClientTags
 import ClientThreading
 import collections
@@ -333,7 +336,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'database_migration.html' ) )
         
-        menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browesr.', page_func ) )
+        menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
@@ -1496,6 +1499,276 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, network_engine ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._network_engine = network_engine
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'adding_new_downloaders.html' ) )
+        
+        menu_items.append( ( 'normal', 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
+        st = ClientGUICommon.BetterStaticText( self, label = 'Drop downloader-encoded pngs onto Lain to import.' )
+        
+        lain_path = os.path.join( HC.STATIC_DIR, 'lain.jpg' )
+        
+        lain_bmp = ClientRendering.GenerateHydrusBitmap( lain_path, HC.IMAGE_JPEG ).GetWxBitmap()
+        
+        win = ClientGUICommon.BufferedWindowIcon( self, lain_bmp )
+        
+        self._select_from_list = wx.CheckBox( self )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            self._select_from_list.SetValue( True )
+            
+        
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( st, CC.FLAGS_CENTER )
+        vbox.Add( win, CC.FLAGS_CENTER )
+        vbox.Add( ClientGUICommon.WrapInText( self._select_from_list, self, 'select objects from list' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        win.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
+        
+    
+    def ImportFromDragDrop( self, paths ):
+        
+        gugs = []
+        
+        url_matches = []
+        
+        parsers = []
+        
+        num_misc_objects = 0
+        
+        domain_manager = self._network_engine.domain_manager
+        
+        for path in paths:
+            
+            path = HydrusData.ToUnicode( path )
+            
+            try:
+                
+                payload = ClientSerialisable.LoadFromPng( path )
+                
+            except Exception as e:
+                
+                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                
+                return
+                
+            
+            try:
+                
+                obj_list = HydrusSerialisable.CreateFromNetworkString( payload )
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was encoded in the file ' + path + '!' )
+                
+                continue
+                
+            
+            if not isinstance( obj_list, HydrusSerialisable.SerialisableList ):
+                
+                wx.MessageBox( 'Unfortunately, ' + path + ' did not look like a package of download data! Instead, it looked like: ' + obj_list.SERIALISABLE_NAME )
+                
+                continue
+                
+            
+            for obj in obj_list:
+                
+                if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ):
+                    
+                    gugs.append( obj )
+                    
+                elif isinstance( obj, ClientNetworkingDomain.URLMatch ):
+                    
+                    url_matches.append( obj )
+                    
+                elif isinstance( obj, ClientParsing.PageParser ):
+                    
+                    parsers.append( obj )
+                    
+                else:
+                    
+                    num_misc_objects += 1
+                    
+                
+            
+        
+        if len( gugs ) + len( url_matches ) + len( parsers ) == 0:
+            
+            if len( num_misc_objects ) > 0:
+                
+                wx.MessageBox( 'I found ' + HydrusData.ToHumanInt( num_misc_objects ) + ' misc objects in that png, but nothing downloader related.' )
+                
+            
+            return
+            
+        
+        # url matches first
+        
+        dupe_url_matches = []
+        num_exact_dupe_url_matches = 0
+        new_url_matches = []
+        
+        for url_match in url_matches:
+            
+            if domain_manager.AlreadyHaveExactlyThisURLMatch( url_match ):
+                
+                dupe_url_matches.append( url_match )
+                num_exact_dupe_url_matches += 1
+                
+            else:
+                
+                new_url_matches.append( url_match )
+                
+            
+        
+        # now gugs
+        
+        num_exact_dupe_gugs = 0
+        new_gugs = []
+        
+        for gug in gugs:
+            
+            if domain_manager.AlreadyHaveExactlyThisGUG( gug ):
+                
+                num_exact_dupe_gugs += 1
+                
+            else:
+                
+                new_gugs.append( gug )
+                
+            
+        
+        #
+        
+        # now parsers
+        
+        num_exact_dupe_parsers = 0
+        new_parsers = []
+        
+        for parser in parsers:
+            
+            if domain_manager.AlreadyHaveExactlyThisParser( parser ):
+                
+                num_exact_dupe_parsers += 1
+                
+            else:
+                
+                new_parsers.append( parser )
+                
+            
+        
+        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_matches + num_exact_dupe_parsers
+        
+        if len( new_gugs ) + len( new_url_matches ) + len( new_parsers ) == 0:
+            
+            wx.MessageBox( 'All ' + HydrusData.ToHumanInt( total_num_dupes ) + ' downloader objects in that package appeared to already be in the client, so nothing need be added.' )
+            
+            return
+            
+        
+        # let's start selecting what we want
+        
+        if self._select_from_list.GetValue() == True:
+            
+            choice_tuples = []
+            choice_tuples.extend( [ ( 'GUG: ' + gug.GetName(), gug, True ) for gug in new_gugs ] )
+            choice_tuples.extend( [ ( 'URL Class: ' + url_match.GetName(), url_match, True ) for url_match in new_url_matches ] )
+            choice_tuples.extend( [ ( 'Parser: ' + parser.GetName(), parser, True ) for parser in new_parsers ] )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'select objects to add' ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    new_objects = panel.GetValue()
+                    
+                    new_gugs = [ obj for obj in new_objects if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ) ]
+                    new_url_matches = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.URLMatch ) ]
+                    new_parsers = [ obj for obj in new_objects if isinstance( obj, ClientParsing.PageParser ) ]
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        
+        # final ask
+        
+        new_gugs.sort( key = lambda o: o.GetName() )
+        new_url_matches.sort( key = lambda o: o.GetName() )
+        new_parsers.sort( key = lambda o: o.GetName() )
+        
+        all_to_add = list( new_gugs )
+        all_to_add.extend( new_url_matches )
+        all_to_add.extend( new_parsers )
+        
+        message = 'The client is about to add and link these objects:'
+        message += os.linesep * 2
+        message += os.linesep.join( ( obj.GetSafeSummary() for obj in all_to_add[:20] ) )
+        
+        if len( all_to_add ) > 20:
+            
+            message += os.linesep
+            message += '(and ' + HydrusData.ToHumanInt( len( all_to_add ) - 20 ) + ' others)'
+            
+        
+        message += os.linesep * 2
+        message += 'Does that sound good?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES:
+                
+                return
+                
+            
+        
+        # ok, do it
+        
+        if len( new_gugs ) > 0:
+            
+            domain_manager.AddGUGs( new_gugs )
+            
+        
+        domain_manager.AutoAddURLMatchesAndParsers( new_url_matches, dupe_url_matches, new_parsers )
+        
+        num_new_gugs = len( new_gugs )
+        num_aux = len( new_url_matches ) + len( new_parsers )
+        
+        final_message = 'Successfully added ' + HydrusData.ToHumanInt( len( new_gugs ) ) + ' new downloaders and ' + HydrusData.ToHumanInt( len( new_url_matches ) + len( new_parsers ) ) + ' auxiliary objects.'
+        
+        if total_num_dupes > 0:
+            
+            final_message += ' ' + HydrusData.ToHumanInt( total_num_dupes ) + ' duplicate objects were not added (but some additional metadata may have been merged).'
+            
+        
+        wx.MessageBox( final_message )
+        
+    
 class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, flat_media ):
@@ -1928,22 +2201,33 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             vbox.Add( win, CC.FLAGS_CENTER )
             
         
-        num_archive_percent = float( num_archive ) / num_total
-        size_archive_percent = float( size_archive ) / size_total
-        
-        num_inbox_percent = float( num_inbox ) / num_total
-        size_inbox_percent = float( size_inbox ) / size_total
-        
-        archive_label = 'Archive: ' + HydrusData.ToHumanInt( num_archive ) + ' files (' + ClientData.ConvertZoomToPercentage( num_archive_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_archive ) + '(' + ClientData.ConvertZoomToPercentage( size_archive_percent ) + ')'
-        
-        archive_st = ClientGUICommon.BetterStaticText( self, label = archive_label )
-        
-        inbox_label = 'Inbox: ' + HydrusData.ToHumanInt( num_inbox ) + ' files (' + ClientData.ConvertZoomToPercentage( num_inbox_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_inbox ) + '(' + ClientData.ConvertZoomToPercentage( size_inbox_percent ) + ')'
-        
-        inbox_st = ClientGUICommon.BetterStaticText( self, label = inbox_label )
-        
-        vbox.Add( archive_st, CC.FLAGS_CENTER )
-        vbox.Add( inbox_st, CC.FLAGS_CENTER )
+        if num_total == 0:
+            
+            nothing_label = 'You have yet to board the ride. Why don\'t you try importing some files? :^)'
+            
+            nothing_st = ClientGUICommon.BetterStaticText( self, label = nothing_label )
+            
+            vbox.Add( nothing_st, CC.FLAGS_CENTER )
+            
+        else:
+            
+            num_archive_percent = float( num_archive ) / num_total
+            size_archive_percent = float( size_archive ) / size_total
+            
+            num_inbox_percent = float( num_inbox ) / num_total
+            size_inbox_percent = float( size_inbox ) / size_total
+            
+            archive_label = 'Archive: ' + HydrusData.ToHumanInt( num_archive ) + ' files (' + ClientData.ConvertZoomToPercentage( num_archive_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_archive ) + '(' + ClientData.ConvertZoomToPercentage( size_archive_percent ) + ')'
+            
+            archive_st = ClientGUICommon.BetterStaticText( self, label = archive_label )
+            
+            inbox_label = 'Inbox: ' + HydrusData.ToHumanInt( num_inbox ) + ' files (' + ClientData.ConvertZoomToPercentage( num_inbox_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_inbox ) + '(' + ClientData.ConvertZoomToPercentage( size_inbox_percent ) + ')'
+            
+            inbox_st = ClientGUICommon.BetterStaticText( self, label = inbox_label )
+            
+            vbox.Add( archive_st, CC.FLAGS_CENTER )
+            vbox.Add( inbox_st, CC.FLAGS_CENTER )
+            
         
         self.SetSizer( vbox )
         

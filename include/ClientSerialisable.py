@@ -3,6 +3,7 @@ import ClientImageHandling
 import ClientImporting
 import ClientParsing
 import ClientPaths
+import collections
 import cv2
 import HydrusConstants as HC
 import HydrusData
@@ -205,7 +206,16 @@ def GetPayloadTypeString( payload_obj ):
         
     elif isinstance( payload_obj, HydrusSerialisable.SerialisableList ):
         
-        return 'A list of ' + HydrusData.ToHumanInt( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] )
+        type_string_counts = collections.Counter()
+        
+        for o in payload_obj:
+            
+            type_string_counts[ GetPayloadTypeString( o ) ] += 1
+            
+        
+        type_string = ', '.join( ( HydrusData.ToHumanInt( count ) + ' ' + s for ( s, count ) in type_string_counts.items() ) )
+        
+        return 'A list of ' + type_string
         
     elif isinstance( payload_obj, HydrusSerialisable.SerialisableBase ):
         

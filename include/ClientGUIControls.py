@@ -551,25 +551,7 @@ class NetworkJobControl( wx.Panel ):
         
         self._gauge = ClientGUICommon.Gauge( self )
         
-        menu_items = []
-        
-        invert_call = self.FlipOverrideBandwidthForCurrentJob
-        value_call = self.CurrentJobOverridesBandwidth
-        
-        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
-        
-        menu_items.append( ( 'check', 'override bandwidth rules for this job', 'Tell the current job to ignore existing bandwidth rules and go ahead anyway.', check_manager ) )
-        
-        menu_items.append( ( 'separator', 0, 0, 0 ) )
-        
-        invert_call = self.FlipAutoOverrideBandwidth
-        value_call = self.AutoOverrideBandwidth
-        
-        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
-        
-        menu_items.append( ( 'check', 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', check_manager ) )
-        
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.cog, self._ShowCogMenu )
         self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.Cancel )
         
         #
@@ -595,6 +577,30 @@ class NetworkJobControl( wx.Panel ):
         hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
+        
+    
+    def _ShowCogMenu( self ):
+        
+        menu = wx.Menu()
+        
+        if self._network_job is not None:
+            
+            if self._network_job.ObeysBandwidth():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'override bandwidth rules for this job', 'Tell the current job to ignore existing bandwidth rules and go ahead anyway.', self._network_job.OverrideBandwidth )
+                
+            
+            if not self._network_job.TokensOK():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'override gallery slot requirements for this job', 'Force-allow this download to proceed, ignoring the normal gallery wait times.', self._network_job.OverrideToken )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', self._auto_override_bandwidth_rules, self.FlipAutoOverrideBandwidth )
+        
+        HG.client_controller.PopupMenu( self._cog_button, menu )
         
     
     def _OverrideBandwidthIfAppropriate( self ):
@@ -700,11 +706,6 @@ class NetworkJobControl( wx.Panel ):
             
         
     
-    def AutoOverrideBandwidth( self ):
-        
-        return self._auto_override_bandwidth_rules
-        
-    
     def Cancel( self ):
         
         if self._network_job is not None:
@@ -718,29 +719,9 @@ class NetworkJobControl( wx.Panel ):
         self.SetNetworkJob( None )
         
     
-    def CurrentJobOverridesBandwidth( self ):
-        
-        if self._network_job is None:
-            
-            return None
-            
-        else:
-            
-            return not self._network_job.ObeysBandwidth()
-            
-        
-    
     def FlipAutoOverrideBandwidth( self ):
         
         self._auto_override_bandwidth_rules = not self._auto_override_bandwidth_rules
-        
-    
-    def FlipOverrideBandwidthForCurrentJob( self ):
-        
-        if self._network_job is not None:
-            
-            self._network_job.OverrideBandwidth()
-            
         
     
     def SetNetworkJob( self, network_job ):

@@ -13,7 +13,7 @@ import wx
 
 class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, payload_obj ):
+    def __init__( self, parent, payload_obj, title = None, description = None, payload_description = None ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
@@ -37,7 +37,16 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        ( payload_description, payload_string ) = ClientSerialisable.GetPayloadDescriptionAndString( self._payload_obj )
+        if payload_description is None:
+            
+            ( payload_description, payload_string ) = ClientSerialisable.GetPayloadDescriptionAndString( self._payload_obj )
+            
+        else:
+            
+            payload_string = ClientSerialisable.GetPayloadString( self._payload_obj )
+            
+            payload_description += ' - ' + HydrusData.ConvertIntToBytes( len( payload_string ) )
+            
         
         self._payload_description.SetValue( payload_description )
         
@@ -47,7 +56,11 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         last_png_export_dir = HG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
         
-        if isinstance( self._payload_obj, HydrusSerialisable.SerialisableBaseNamed ):
+        if title is not None:
+            
+            name = title
+            
+        elif isinstance( self._payload_obj, HydrusSerialisable.SerialisableBaseNamed ):
             
             name = self._payload_obj.GetName()
             
@@ -57,6 +70,11 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         self._title.SetValue( name )
+        
+        if description is not None:
+            
+            self._text.SetValue( description )
+            
         
         if last_png_export_dir is not None:
             
@@ -127,7 +145,8 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         width = self._width.GetValue()
         
-        ( payload_description, payload_string ) = ClientSerialisable.GetPayloadDescriptionAndString( self._payload_obj )
+        payload_description = self._payload_description.GetValue()
+        payload_string = ClientSerialisable.GetPayloadString( self._payload_obj )
         
         title = self._title.GetValue()
         text = self._text.GetValue()

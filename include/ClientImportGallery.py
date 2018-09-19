@@ -666,8 +666,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+            network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
-            ok_to_work = work_pending and no_delays and page_shown
+            ok_to_work = work_pending and no_delays and page_shown and network_engine_good
             
         
         while ok_to_work:
@@ -695,8 +696,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
                 no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+                network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
-                ok_to_work = work_pending and no_delays and page_shown
+                ok_to_work = work_pending and no_delays and page_shown and network_engine_good
                 
             
         
@@ -715,8 +717,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             work_pending = self._gallery_seed_log.WorkToDo() and not self._gallery_paused
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+            network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
-            ok_to_work = work_pending and no_delays and page_shown
+            ok_to_work = work_pending and no_delays and page_shown and network_engine_good
             
         
         while ok_to_work:
@@ -746,8 +749,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 work_pending = self._gallery_seed_log.WorkToDo() and not self._gallery_paused
                 no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+                network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
-                ok_to_work = work_pending and no_delays and page_shown
+                ok_to_work = work_pending and no_delays and page_shown and network_engine_good
                 
             
         
