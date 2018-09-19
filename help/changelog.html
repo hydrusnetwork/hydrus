@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 323</h3></li>
+				<ul>
+					<li>wrote first version of the new downloader easy-import drop-panel. you drop downloader-encoded pngs on it, and it maybe asks you a question and jumbles its way through auto-importing all the required data to the client</li>
+					<li>extended this file import to do some cleverer 'example url merging' when parsers are otherwise dupes, rather than spamming similar dupes on import</li>
+					<li>wrote first version of the new downloader export panel. it takes gugs, url classes and parsers, and predicts sensible sub-objects to include to make functional downloaders, and bundles it into one png</li>
+					<li>fleshed out help for the new easy import/export system</li>
+					<li>the client now slows down gallery and watcher processing when the network engine is under heavy load, aiming for no more than 50 jobs in system at once. the solution is a bit hacky for now, but it should alleviate the deadlock issue when there are ~180+ simultaneous gallery/watcher network jobs pending</li>
+					<li>the multi-watcher panel's list of watchers now supports right-click menu to copy/open urls and pause/play files/checking</li>
+					<li>the multi-downloader panel's list of downloaders now supports right-click menu to copy query texts and pause/play files/searching</li>
+					<li>added a 'derpibooru tag search - no filter' GUG that disables the default derpi no-explicit-files rule</li>
+					<li>added basic gfycat support to default client--drag and drop any typical video page, and it should import ok</li>
+					<li>fixed the canvas/hover window tag sorting discrepancy--all tags are now sorted with the same code, and the media view sort order should be the same as your default sort order (although in this case incidence has no effect as there are no tag counts)</li>
+					<li>rewrote the network job control's cog menu to be a bit more dynamic, and added 'override gallery slot requirements for this job' if appropriate</li>
+					<li>fixed a stupid typo bug in the shutdown maintenance jobs test code that was causing pending repository work to not report right</li>
+					<li>fixed gallery searches that include unicode characters that end up in the path of the url (rather than the query parameters)</li>
+					<li>fixed an issue where highlighting a watcher would unpause its checking</li>
+					<li>generalised the way the new listctrl class can produce right-click menus</li>
+					<li>fixed some api link calculation that was over-prescribing api link display pairs (this affected the artstation file page url class by default). these pairs are now also sorted in the links dialog</li>
+					<li>misc png-export improvements to present better with the new easy import/export stuff</li>
+					<li>the summary texts in the tag filter panel now ellipsize (...), so if the tag filter is complicated, it won't try to boot a superwide edit panel!</li>
+					<li>the manage subscriptions panel now correctly initially sorts in a case-insensitive way (previously, it was usually sorting A-Za-z, which is different to regular aA-zZ resorting behaviour, so it always sort-flickered after the first edit)</li>
+					<li>the status bar has a new segment for reporting when the client is 'busy' with different jobs. for most typical usage, it'll just stay blank. let's see how it goes.</li>
+					<li>fixed mr. bones's wild review when the client currently has no files</li>
+					<li>punched up the new file report mode to specify full paths where available</li>
+					<li>improved some misc downloader code</li>
+				</ul>
 				<li><h3>version 322</h3></li>
 				<ul>
 					<li>wrote gugs help</li>

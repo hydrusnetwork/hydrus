@@ -7,7 +7,13 @@
 	<body>
 		<div class="content">
 			<h3>all downloaders are user-creatable and -shareable</h3>
-			<p>Under construction! I haven't got easy import going yet!</p>
+			<p>Since the big downloader overhaul, all downloaders can be created, edited, and shared by any user. Creating one from scratch is not simple, and it takes a little technical knowledge, but importing what someone else has created is easy.</p>
+			<p>Hydrus objects like downloaders can sometimes be shared as data encoded into png files, like this:</p>
+			<p><img src="safebooru_downloader.png" /></p>
+			<p>This contains all the information needed for a client to add a 'safebooru tag search' entry to the list you select from when you start a new download or subscription.</p>
+			<p>You can get these pngs from anyone who has experience in the downloader system. I expect an archive to appear <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Download%20System">here</a>.</p>
+			<p>To 'add' these pngs to your client, hit <i>network->downloaders->import downloaders</i>. A little image-panel will appear onto which you can drag-and-drop these png files. The client will then decode and go through the png, looking for interesting new objects and automatically import and link them up without you having to do any more. Your only further input on your end is a 'does this look correct?' check right before the actual import, just to make sure there isn't some mistake or other glaring problem.</p>
+			<p>Objects imported this way will take precedence over existing functionality, so if your safebooru downloader were to stop working due to some site change and someone gave you a new fixed png, drag-and-dropping the png <i>should</i> import and move to using the the new updated downloader components.</i>
 		</div>
 	</body>
 </html>
