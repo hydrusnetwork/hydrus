@@ -400,6 +400,8 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
+        
     
     def Exit( self ):
         
@@ -414,9 +416,15 @@ class Controller( HydrusController.HydrusController ):
             
             try:
                 
+                last_shutdown_work_time = self.Read( 'last_shutdown_work_time' )
+                
+                shutdown_work_period = self.new_options.GetInteger( 'shutdown_work_period' )
+                
+                we_can_shutdown_work = HydrusData.TimeHasPassed( last_shutdown_work_time + shutdown_work_period )
+                
                 idle_shutdown_action = self.options[ 'idle_shutdown' ]
                 
-                if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+                if we_can_shutdown_work and idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
                     
                     idle_shutdown_max_minutes = self.options[ 'idle_shutdown_max_minutes' ]
                     
@@ -443,6 +451,10 @@ class Controller( HydrusController.HydrusController ):
                                     if dlg_yn.ShowModal() == wx.ID_YES:
                                         
                                         HG.do_idle_shutdown_work = True
+                                        
+                                    else:
+                                        
+                                        self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
                                         
                                     
                                 finally:

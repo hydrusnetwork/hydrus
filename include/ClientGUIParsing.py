@@ -579,6 +579,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -769,6 +770,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1277,6 +1279,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1437,41 +1440,33 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    DICT_ENTRY = 0
-    ALL_LIST_ITEMS = 1
-    INDEXED_LIST_ITEM = 2
-    
     def __init__( self, parent, rule ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._type = ClientGUICommon.BetterChoice( self )
+        self._parse_rule_type = ClientGUICommon.BetterChoice( self )
         
-        self._type.Append( 'dictionary entry', self.DICT_ENTRY )
-        self._type.Append( 'all dictionary/list items', self.ALL_LIST_ITEMS )
-        self._type.Append( 'indexed list item', self.INDEXED_LIST_ITEM)
+        self._parse_rule_type.Append( 'dictionary entry', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
+        self._parse_rule_type.Append( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
+        self._parse_rule_type.Append( 'indexed list item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
         
-        self._key = wx.TextCtrl( self )
+        self._string_match = EditStringMatchPanel( self, string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
         
         self._index = wx.SpinCtrl( self, min = 0, max = 65535 )
         
         #
         
-        if rule is None:
+        ( parse_rule_type, parse_rule ) = rule
+        
+        self._parse_rule_type.SelectClientData( parse_rule_type )
+        
+        if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
-            self._type.SelectClientData( self.ALL_LIST_ITEMS )
+            self._index.SetValue( parse_rule )
             
-        elif isinstance( rule, int ):
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
-            self._type.SelectClientData( self.INDEXED_LIST_ITEM )
-            
-            self._index.SetValue( rule )
-            
-        else:
-            
-            self._type.SelectClientData( self.DICT_ENTRY )
-            
-            self._key.SetValue( rule )
+            self._string_match.SetValue( parse_rule )
             
         
         self._UpdateHideShow()
@@ -1482,33 +1477,33 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'dict entry: ', self._key ) )
         rows.append( ( 'list index: ', self._index ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._parse_rule_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._string_match, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
         #
         
-        self._type.Bind( wx.EVT_CHOICE, self.EventChoice )
+        self._parse_rule_type.Bind( wx.EVT_CHOICE, self.EventChoice )
         
     
     def _UpdateHideShow( self ):
         
-        self._key.Disable()
+        self._string_match.Disable()
         self._index.Disable()
         
-        choice = self._type.GetChoice()
+        parse_rule_type = self._parse_rule_type.GetChoice()
         
-        if choice == self.DICT_ENTRY:
+        if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
-            self._key.Enable()
+            self._string_match.Enable()
             
-        elif choice == self.INDEXED_LIST_ITEM:
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
             self._index.Enable()
             
@@ -1521,22 +1516,22 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        choice = self._type.GetChoice()
+        parse_rule_type = self._parse_rule_type.GetChoice()
         
-        if choice == self.DICT_ENTRY:
+        if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
-            rule = self._key.GetValue()
+            parse_rule = self._string_match.GetValue()
             
-        elif choice == self.INDEXED_LIST_ITEM:
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
-            rule = self._index.GetValue()
+            parse_rule = self._index.GetValue()
             
-        else:
+        elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS:
             
-            rule = None
+            parse_rule = None
             
         
-        return rule
+        return ( parse_rule_type, parse_rule )
         
     
 class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1579,6 +1574,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
         self._content_to_fetch.Append( 'string', ClientParsing.JSON_CONTENT_STRING )
+        self._content_to_fetch.Append( 'dictionary keys', ClientParsing.JSON_CONTENT_DICT_KEYS )
         self._content_to_fetch.Append( 'json', ClientParsing.JSON_CONTENT_JSON )
         
         ( parse_rules, content_to_fetch, string_match, string_converter ) = formula.ToTuple()
@@ -1635,6 +1631,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1663,7 +1660,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            new_rule = 'post'
+            new_rule = ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
             
             panel = EditJSONParsingRulePanel( dlg, new_rule )
             
@@ -1848,7 +1845,20 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._veto_if_matches_found = wx.CheckBox( self._veto_panel )
         self._string_match = EditStringMatchPanel( self._veto_panel )
         
-        ( name, content_type, formula, additional_info ) = content_parser.ToTuple()
+        self._sort_type = ClientGUICommon.BetterChoice( self._content_panel )
+        
+        self._sort_type.Append( 'do not sort formula text results', ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE )
+        self._sort_type.Append( 'sort by human-friendly lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT )
+        self._sort_type.Append( 'sort by strict lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC )
+        
+        self._sort_type.Bind( wx.EVT_CHOICE, self.EventSortTypeChange )
+        
+        self._sort_asc = ClientGUICommon.BetterChoice( self._content_panel )
+        
+        self._sort_asc.Append( 'sort ascending', True )
+        self._sort_asc.Append( 'sort descending', False )
+        
+        ( name, content_type, formula, sort_type, sort_asc, additional_info ) = content_parser.ToTuple()
         
         self._formula = EditFormulaPanel( self._edit_panel, formula, self.GetTestContext )
         
@@ -1904,6 +1914,9 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             self._veto_if_matches_found.SetValue( veto_if_matches_found )
             self._string_match.SetValue( string_match )
             
+        
+        self._sort_type.SelectClientData( sort_type )
+        self._sort_asc.SelectClientData( sort_asc )
         
         #
         
@@ -1987,6 +2000,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_panel.Add( self._timestamp_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._title_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._sort_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._content_panel.Add( self._sort_asc, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2021,6 +2036,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self.SetSizer( vbox )
         
         self.EventContentTypeChange( None )
+        self.EventSortTypeChange( None )
         
     
     def EventContentTypeChange( self, event ):
@@ -2063,6 +2079,20 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._edit_panel.Layout()
         
     
+    def EventSortTypeChange( self, event ):
+        
+        choice = self._sort_type.GetChoice()
+        
+        if choice == ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE:
+            
+            self._sort_asc.Disable()            
+            
+        else:
+            
+            self._sort_asc.Enable()
+            
+        
+    
     def GetTestContext( self ):
         
         return self._test_panel.GetTestContext()
@@ -2075,6 +2105,9 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         content_type = self._content_type.GetChoice()
         
         formula = self._formula.GetValue()
+        
+        sort_type = self._sort_type.GetChoice()
+        sort_asc = self._sort_asc.GetChoice()
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
@@ -2115,7 +2148,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             additional_info = ( veto_if_matches_found, string_match )
             
         
-        content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
+        content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, sort_type = sort_type, sort_asc = sort_asc, additional_info = additional_info )
         
         return content_parser
         
@@ -2889,11 +2922,11 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if formula is None:
             
-            self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+            self._test_panel = TestPanelPageParser( test_panel, self.GetValue, self._string_converter.GetValue, test_context = test_context )
             
         else:
             
-            self._test_panel = TestPanelSubsidiary( test_panel, self.GetValue, self.GetFormula, test_context = test_context )
+            self._test_panel = TestPanelPageParserSubsidiary( test_panel, self.GetValue, self._string_converter.GetValue, self.GetFormula, test_context = test_context )
             
         
         #
@@ -4956,28 +4989,32 @@ class TestPanel( wx.Panel ):
         
         self._example_parsing_context = ClientGUIControls.StringToStringDictButton( self, 'edit example parsing context' )
         
-        self._example_data_description = ClientGUICommon.BetterStaticText( self )
+        self._data_preview_notebook = wx.Notebook( self )
         
-        self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.copy, self._Copy )
+        raw_data_panel = wx.Panel( self._data_preview_notebook )
+        
+        self._example_data_raw_description = ClientGUICommon.BetterStaticText( raw_data_panel )
+        
+        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalBMPs.copy, self._Copy )
         self._copy_button.SetToolTip( 'Copy the current example data to the clipboard.' )
         
-        self._fetch_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.link, self._FetchFromURL )
+        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalBMPs.link, self._FetchFromURL )
         self._fetch_button.SetToolTip( 'Fetch data from a URL.' )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalBMPs.paste, self._Paste )
         self._paste_button.SetToolTip( 'Paste the current clipboard data into here.' )
         
-        self._example_data_preview = ClientGUICommon.SaneMultilineTextCtrl( self, style = wx.TE_READONLY )
+        self._example_data_raw_preview = ClientGUICommon.SaneMultilineTextCtrl( raw_data_panel, style = wx.TE_READONLY )
         
-        size = ClientGUICommon.ConvertTextToPixels( self._example_data_preview, ( 80, 12 ) )
+        size = ClientGUICommon.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
         
-        self._example_data_preview.SetInitialSize( size )
+        self._example_data_raw_preview.SetInitialSize( size )
         
         self._test_parse = ClientGUICommon.BetterButton( self, 'test parse', self.TestParse )
         
         self._results = ClientGUICommon.SaneMultilineTextCtrl( self )
         
-        size = ClientGUICommon.ConvertTextToPixels( self._example_data_preview, ( 80, 12 ) )
+        size = ClientGUICommon.ConvertTextToPixels( self._example_data_raw_preview, ( 80, 12 ) )
         
         self._results.SetInitialSize( size )
         
@@ -4987,37 +5024,45 @@ class TestPanel( wx.Panel ):
         
         self._example_parsing_context.SetValue( example_parsing_context )
         
-        self._SetExampleData( example_data )
+        self._example_data_raw = ''
         
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
         
         #
         
-        buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
-        buttons_hbox.Add( self._fetch_button, CC.FLAGS_VCENTER )
-        buttons_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._example_data_raw_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._fetch_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
         
-        desc_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
-        desc_hbox.Add( self._example_data_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        desc_hbox.Add( buttons_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._example_data_raw_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        raw_data_panel.SetSizer( vbox )
+        
+        self._data_preview_notebook.AddPage( raw_data_panel, 'raw data', select = True )
+        
+        #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( self._example_parsing_context, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( desc_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._example_data_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._data_preview_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
+        wx.CallAfter( self._SetExampleData, example_data )
+        
     
     def _Copy( self ):
         
-        HG.client_controller.pub( 'clipboard', 'text', self._example_data )
+        HG.client_controller.pub( 'clipboard', 'text', self._example_data_raw )
         
     
     def _FetchFromURL( self ):
@@ -5082,7 +5127,7 @@ class TestPanel( wx.Panel ):
     
     def _SetExampleData( self, example_data ):
         
-        self._example_data = example_data
+        self._example_data_raw = example_data
         
         if len( example_data ) > 0:
             
@@ -5127,8 +5172,8 @@ class TestPanel( wx.Panel ):
             self._test_parse.Disable()
             
         
-        self._example_data_description.SetLabelText( description )
-        self._example_data_preview.SetValue( preview )
+        self._example_data_raw_description.SetLabelText( description )
+        self._example_data_raw_preview.SetValue( preview )
         
     
     def GetExampleParsingContext( self ):
@@ -5140,7 +5185,7 @@ class TestPanel( wx.Panel ):
         
         example_parsing_context = self._example_parsing_context.GetValue()
         
-        return ( example_parsing_context, self._example_data )
+        return ( example_parsing_context, self._example_data_raw )
         
     
     def TestParse( self ):
@@ -5176,37 +5221,203 @@ class TestPanel( wx.Panel ):
         self._SetExampleData( example_data )
         
     
-class TestPanelSubsidiary( TestPanel ):
+class TestPanelPageParser( TestPanel ):
     
-    def __init__( self, parent, object_callable, formula_callable, test_context = None ):
+    def __init__( self, parent, object_callable, pre_parsing_conversion_callable, test_context = None ):
+        
+        self._pre_parsing_conversion_callable = pre_parsing_conversion_callable
         
         TestPanel.__init__( self, parent, object_callable, test_context = test_context )
         
-        self._formula_callable = formula_callable
+        post_conversion_panel = wx.Panel( self._data_preview_notebook )
         
-        self._formula_description = ClientGUICommon.BetterStaticText( self )
+        self._example_data_post_conversion_description = ClientGUICommon.BetterStaticText( post_conversion_panel )
         
-        self._refresh_formula_description_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.refresh, self._UpdateFormulaDescription )
+        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalBMPs.copy, self._CopyPostConversion )
+        self._copy_button_post_conversion.SetToolTip( 'Copy the current post conversion data to the clipboard.' )
+        
+        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalBMPs.refresh, self._RefreshDataPreviews )
+        self._example_data_post_conversion_preview = ClientGUICommon.SaneMultilineTextCtrl( post_conversion_panel, style = wx.TE_READONLY )
+        
+        #
+        
+        self._example_data_post_conversion = ''
+        
+        #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._refresh_formula_description_button, CC.FLAGS_LONE_BUTTON )
+        hbox.Add( self._example_data_post_conversion_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._copy_button_post_conversion, CC.FLAGS_VCENTER )
+        hbox.Add( self._refresh_post_conversion_button, CC.FLAGS_VCENTER )
         
-        vbox = self.GetSizer()
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Insert( 2, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._example_data_post_conversion_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._UpdateFormulaDescription()
+        post_conversion_panel.SetSizer( vbox )
+        
+        #
+        
+        self._data_preview_notebook.AddPage( post_conversion_panel, 'post pre-parsing conversion', select = False )
         
     
-    def _UpdateFormulaDescription( self ):
+    def _CopyPostConversion( self ):
+        
+        HG.client_controller.pub( 'clipboard', 'text', self._example_data_post_conversion )
+        
+    
+    def _RefreshDataPreviews( self ):
+        
+        self._SetExampleData( self._example_data_raw )
+        
+    
+    def _SetExampleData( self, example_data ):
+        
+        TestPanel._SetExampleData( self, example_data )
+        
+        pre_parsing_conversion = self._pre_parsing_conversion_callable()
+        
+        if pre_parsing_conversion.MakesChanges():
+            
+            try:
+                
+                post_conversion_example_data = pre_parsing_conversion.Convert( self._example_data_raw )
+                
+                if len( post_conversion_example_data ) > 1024:
+                    
+                    preview = 'PREVIEW:' + os.linesep + HydrusData.ToUnicode( post_conversion_example_data[:1024] )
+                    
+                else:
+                    
+                    preview = post_conversion_example_data
+                    
+                
+                parse_phrase = 'uncertain data type'
+                
+                # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
+                if HydrusText.LooksLikeHTML( post_conversion_example_data ):
+                    
+                    parse_phrase = 'looks like HTML'
+                    
+                
+                # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
+                try:
+                    
+                    json.loads( post_conversion_example_data )
+                    
+                    parse_phrase = 'looks like JSON'
+                    
+                except:
+                    
+                    pass
+                    
+                
+                description = HydrusData.ConvertIntToBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase
+                
+            except Exception as e:
+                
+                post_conversion_example_data = self._example_data_raw
+                
+                etype = type( e )
+                
+                value = HydrusData.ToUnicode( e )
+                
+                ( etype, value, tb ) = sys.exc_info()
+                
+                trace = ''.join( traceback.format_exception( etype, value, tb ) )
+                
+                message = 'Exception:' + os.linesep + HydrusData.ToUnicode( etype.__name__ ) + ': ' + HydrusData.ToUnicode( value ) + os.linesep + HydrusData.ToUnicode( trace )
+                
+                preview = message
+                
+                description = 'Could not convert.'
+                
+            
+        else:
+            
+            post_conversion_example_data = self._example_data_raw
+            
+            preview = 'No changes made.'
+            
+            description = self._example_data_raw_description.GetLabelText()
+            
+        
+        self._example_data_post_conversion_description.SetLabelText( description )
+        
+        self._example_data_post_conversion = post_conversion_example_data
+        
+        self._example_data_post_conversion_preview.SetValue( preview )
+        
+    
+    def GetTestContext( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        return ( example_parsing_context, self._example_data_post_conversion )
+        
+    
+class TestPanelPageParserSubsidiary( TestPanelPageParser ):
+    
+    def __init__( self, parent, object_callable, pre_parsing_conversion_callable, formula_callable, test_context = None ):
+        
+        TestPanelPageParser.__init__( self, parent, object_callable, pre_parsing_conversion_callable, test_context = test_context )
+        
+        self._formula_callable = formula_callable
+        
+        post_separation_panel = wx.Panel( self._data_preview_notebook )
+        
+        self._example_data_post_separation_description = ClientGUICommon.BetterStaticText( post_separation_panel )
+        
+        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalBMPs.copy, self._CopyPostSeparation )
+        self._copy_button_post_separation.SetToolTip( 'Copy the current post separation data to the clipboard.' )
+        
+        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalBMPs.refresh, self._RefreshDataPreviews )
+        self._example_data_post_separation_preview = ClientGUICommon.SaneMultilineTextCtrl( post_separation_panel, style = wx.TE_READONLY )
+        
+        #
+        
+        self._example_data_post_separation = []
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._example_data_post_separation_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._copy_button_post_separation, CC.FLAGS_VCENTER )
+        hbox.Add( self._refresh_post_separation_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._example_data_post_separation_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        post_separation_panel.SetSizer( vbox )
+        
+        #
+        
+        self._data_preview_notebook.AddPage( post_separation_panel, 'post separation conversion', select = False )
+        
+    
+    def _CopyPostSeparation( self ):
+        
+        joiner = os.linesep * 2
+        
+        HG.client_controller.pub( 'clipboard', 'text', joiner.join( self._example_data_post_separation ) )
+        
+    
+    def _SetExampleData( self, example_data ):
+        
+        TestPanelPageParser._SetExampleData( self, example_data )
         
         formula = self._formula_callable()
         
         if formula is None:
             
-            description = 'No formula set'
+            separation_example_data = []
+            description = 'No formula set!'
+            preview = ''
             
         else:
             
@@ -5214,22 +5425,65 @@ class TestPanelSubsidiary( TestPanel ):
                 
                 example_parsing_context = self._example_parsing_context.GetValue()
                 
-                posts = formula.Parse( example_parsing_context, self._example_data )
+                separation_example_data = formula.Parse( example_parsing_context, self._example_data_post_conversion )
                 
-                description = HydrusData.ToHumanInt( len( posts ) ) + ' subsidiary posts parsed'
+                joiner = os.linesep * 2
                 
-            except HydrusExceptions.ParseException as e:
+                preview = joiner.join( separation_example_data )
                 
-                description = HydrusData.ToUnicode( e )
+                if len( preview ) > 1024:
+                    
+                    preview = 'PREVIEW:' + os.linesep + HydrusData.ToUnicode( preview[:1024] )
+                    
+                
+                description = HydrusData.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
+                
+            except Exception as e:
+                
+                separation_example_data = []
+                
+                etype = type( e )
+                
+                value = HydrusData.ToUnicode( e )
+                
+                ( etype, value, tb ) = sys.exc_info()
+                
+                trace = ''.join( traceback.format_exception( etype, value, tb ) )
+                
+                message = 'Exception:' + os.linesep + HydrusData.ToUnicode( etype.__name__ ) + ': ' + HydrusData.ToUnicode( value ) + os.linesep + HydrusData.ToUnicode( trace )
+                
+                preview = message
+                
+                description = 'Could not convert.'
                 
             
         
-        self._formula_description.SetLabelText( description )
+        self._example_data_post_separation_description.SetLabelText( description )
+        
+        self._example_data_post_separation = separation_example_data
+        
+        self._example_data_post_separation_preview.SetValue( preview )
+        
+    
+    def GetTestContext( self ):
+        
+        example_parsing_context = self._example_parsing_context.GetValue()
+        
+        if len( self._example_data_post_separation ) == 0:
+            
+            example_data = ''
+            
+        else:
+            
+            # I had ideas on making this some clever random stuff, but screw it, let's just KISS and send up the first
+            
+            example_data = self._example_data_post_separation[0]
+            
+        
+        return ( example_parsing_context, example_data )
         
     
     def TestParse( self ):
-        
-        self._UpdateFormulaDescription()
         
         formula = self._formula_callable()
         
@@ -5241,11 +5495,11 @@ class TestPanelSubsidiary( TestPanel ):
             
             if formula is None:
                 
-                posts = [ self._example_data ]
+                posts = [ self._example_data_raw ]
                 
             else:
                 
-                posts = formula.Parse( example_parsing_context, self._example_data )
+                posts = formula.Parse( example_parsing_context, self._example_data_raw )
                 
             
             pretty_texts = []

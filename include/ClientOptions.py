@@ -5,6 +5,7 @@ import ClientDuplicates
 import ClientImporting
 import HydrusConstants as HC
 import HydrusGlobals as HG
+import HydrusData
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -183,6 +184,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
         
+        self._dictionary[ 'integers' ][ 'shutdown_work_period' ] = 86400
+        
+        self._dictionary[ 'integers' ][ 'max_network_jobs' ] = 15
+        self._dictionary[ 'integers' ][ 'max_network_jobs_per_domain' ] = 3
+        
         self._dictionary[ 'integers' ][ 'max_simultaneous_subscriptions' ] = 1
         
         self._dictionary[ 'integers' ][ 'gallery_page_wait_period_pages' ] = 15
@@ -208,6 +214,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'keys' ] = {}
         
         self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.encode( 'hex' )
+        self._dictionary[ 'keys' ][ 'default_gug_key' ] = HydrusData.GenerateKey().encode( 'hex' )
         
         self._dictionary[ 'key_list' ] = {}
         
@@ -255,6 +262,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'thumbnail_scroll_rate' ] = '1.0'
         self._dictionary[ 'strings' ][ 'pause_character' ] = u'\u23F8'
         self._dictionary[ 'strings' ][ 'stop_character' ] = u'\u23F9'
+        self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'artstation artist lookup'
         
         self._dictionary[ 'string_list' ] = {}
         

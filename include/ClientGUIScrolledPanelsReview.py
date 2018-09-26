@@ -1584,6 +1584,11 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
+            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLMatch, ClientParsing.PageParser ) ):
+                
+                obj_list = HydrusSerialisable.SerialisableList( [ obj_list ] )
+                
+            
             if not isinstance( obj_list, HydrusSerialisable.SerialisableList ):
                 
                 wx.MessageBox( 'Unfortunately, ' + path + ' did not look like a package of download data! Instead, it looked like: ' + obj_list.SERIALISABLE_NAME )
@@ -1614,7 +1619,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( gugs ) + len( url_matches ) + len( parsers ) == 0:
             
-            if len( num_misc_objects ) > 0:
+            if num_misc_objects > 0:
                 
                 wx.MessageBox( 'I found ' + HydrusData.ToHumanInt( num_misc_objects ) + ' misc objects in that png, but nothing downloader related.' )
                 

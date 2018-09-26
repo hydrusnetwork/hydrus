@@ -6,6 +6,7 @@ import HydrusGlobals as HG
 import HydrusThreading
 import os
 import psutil
+import re
 import send2trash
 import shlex
 import shutil
@@ -784,9 +785,9 @@ def PathIsFree( path ):
         
         return True
         
-    except OSError as e: # 'already in use by another process'
+    except OSError as e: # 'already in use by another process' or an odd filename too long error
         
-        HydrusData.Print( 'Already in use: ' + path )
+        HydrusData.Print( 'Already in use/inaccessible: ' + path )
         
     
     return False
@@ -846,4 +847,18 @@ def RecyclePath( path ):
             DeletePath( original_path )
             
         
+    
+def SanitizeFilename( filename ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        # \, /, :, *, ?, ", <, >, |
+        filename = re.sub( r'\\|/|:|\*|\?|"|<|>|\|', '_', filename, flags = re.UNICODE )
+        
+    else:
+        
+        filename = re.sub( '/', '_', filename, flags = re.UNICODE )
+        
+    
+    return filename
     

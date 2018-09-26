@@ -97,7 +97,7 @@ def CollapseMultipleSortedNumericTagsToMinMax( tags ):
     
 def ConvertTagToSortable( tag ):
     
-    # this copies the human sort in hydrustext
+    # this copies the human sort in hydrusdata
     
     convert = lambda text: int( text ) if text.isdecimal() else text
     

@@ -41,9 +41,6 @@ job_status_str_lookup[ JOB_STATUS_RUNNING ] = 'running'
 
 class NetworkEngine( object ):
     
-    MAX_JOBS_PER_DOMAIN = 3 # also turn this into an option
-    MAX_JOBS = 15 # turn this into an option
-    
     def __init__( self, controller, bandwidth_manager, session_manager, domain_manager, login_manager ):
         
         self.controller = controller
@@ -59,6 +56,8 @@ class NetworkEngine( object ):
         self.login_manager.engine = self
         
         self._lock = threading.Lock()
+        
+        self.RefreshOptions()
         
         self._new_work_to_do = threading.Event()
         
@@ -77,6 +76,8 @@ class NetworkEngine( object ):
         self._is_running = False
         self._is_shutdown = False
         self._local_shutdown = False
+        
+        self.controller.sub( self, 'RefreshOptions', 'notify_new_options' )
         
     
     def AddJob( self, job ):
@@ -415,6 +416,15 @@ class NetworkEngine( object ):
         self._pause_all_new_network_traffic = not self._pause_all_new_network_traffic
         
         self.controller.new_options.SetBoolean( 'pause_all_new_network_traffic', self._pause_all_new_network_traffic )
+        
+    
+    def RefreshOptions( self ):
+        
+        with self._lock:
+            
+            self.MAX_JOBS = self.controller.new_options.GetInteger( 'max_network_jobs' )
+            self.MAX_JOBS_PER_DOMAIN = self.controller.new_options.GetInteger( 'max_network_jobs_per_domain' )
+            
         
     
     def Shutdown( self ):

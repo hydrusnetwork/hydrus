@@ -1128,21 +1128,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( len( services ), NUM_DEFAULT_SERVICES )
         
     
-    def test_sessions( self ):
-        
-        result = self._read( 'hydrus_sessions' )
-        
-        self.assertEqual( result, [] )
-        
-        session = ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.GenerateKey(), HydrusData.GetNow() + 100000 )
-        
-        self._write( 'hydrus_session', *session )
-        
-        result = self._read( 'hydrus_sessions' )
-        
-        self.assertEqual( result, [ session ] )
-        
-    
     def test_shortcuts( self ):
         
         num_default = len( ClientDefaults.GetDefaultShortcuts() )

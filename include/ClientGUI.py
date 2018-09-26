@@ -2685,10 +2685,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     job_key.SetVariable( 'popup_title', 'loading subscriptions' )
                     
+                    controller.CallLater( 1.0, controller.pub, 'message', job_key )
+                    
                     subscription_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
                     
-                    pubbed_it = False
-                    started = HydrusData.GetNowFloat()
                     num_to_do = len( subscription_names )
                     
                     subscriptions = []
@@ -2700,13 +2700,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             job_key.Delete()
                             
                             return
-                            
-                        
-                        if not pubbed_it and HydrusData.TimeHasPassedFloat( started + 1.0 ):
-                            
-                            self._controller.pub( 'message', job_key )
-                            
-                            pubbed_it = True
                             
                         
                         job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) + ': ' + name )

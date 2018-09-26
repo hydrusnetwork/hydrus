@@ -10,6 +10,7 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
+import HydrusText
 import json
 import os
 import re
@@ -446,13 +447,15 @@ def MakeParsedTextPretty( parsed_text ):
     
     return parsed_text
     
-def RenderJSONParseRule( parse_rule ):
+def RenderJSONParseRule( rule ):
     
-    if parse_rule is None:
+    ( parse_rule_type, parse_rule ) = rule
+    
+    if parse_rule_type == JSON_PARSE_RULE_TYPE_ALL_ITEMS:
         
         s = 'get all items'
         
-    elif isinstance( parse_rule, int ):
+    elif parse_rule_type == JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
         
         index = parse_rule
         
@@ -460,9 +463,9 @@ def RenderJSONParseRule( parse_rule ):
         
         s = 'get the ' + HydrusData.ConvertIntToPrettyOrdinalString( num ) + ' item'
         
-    else:
+    elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
         
-        s = 'get the "' + HydrusData.ToUnicode( parse_rule ) + '" entry'
+        s = 'get the entries that match "' + parse_rule.ToUnicode() + '"'
         
     
     return s
@@ -502,6 +505,8 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         texts = []
         
         for raw_text in raw_texts:
+            
+            raw_text = HydrusText.RemoveNewlines( raw_text )
             
             try:
                 
@@ -1305,12 +1310,17 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 JSON_CONTENT_STRING = 0
 JSON_CONTENT_JSON = 1
+JSON_CONTENT_DICT_KEYS = 2
+
+JSON_PARSE_RULE_TYPE_DICT_KEY = 0
+JSON_PARSE_RULE_TYPE_ALL_ITEMS = 1
+JSON_PARSE_RULE_TYPE_INDEXED_ITEM = 2
 
 class ParseFormulaJSON( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON
     SERIALISABLE_NAME = 'JSON Parsing Formula'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, parse_rules = None, content_to_fetch = None, string_match = None, string_converter = None ):
         
@@ -1318,7 +1328,7 @@ class ParseFormulaJSON( ParseFormula ):
         
         if parse_rules is None:
             
-            parse_rules = [ 'posts'  ]
+            parse_rules = [ ( JSON_PARSE_RULE_TYPE_DICT_KEY, StringMatch( match_type = STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) ) ]
             
         
         if content_to_fetch is None:
@@ -1347,13 +1357,13 @@ class ParseFormulaJSON( ParseFormula ):
         
         roots = ( j, )
         
-        for parse_rule in self._parse_rules:
+        for ( parse_rule_type, parse_rule ) in self._parse_rules:
             
             next_roots = []
             
             for root in roots:
                 
-                if parse_rule is None:
+                if parse_rule_type == JSON_PARSE_RULE_TYPE_ALL_ITEMS:
                     
                     if isinstance( root, list ):
                         
@@ -1375,7 +1385,7 @@ class ParseFormulaJSON( ParseFormula ):
                         continue
                         
                     
-                elif isinstance( parse_rule, int ):
+                elif parse_rule_type == JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
                     
                     if not isinstance( root, list ):
                         
@@ -1391,21 +1401,26 @@ class ParseFormulaJSON( ParseFormula ):
                     
                     next_roots.append( root[ index ] )
                     
-                else:
+                elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
                     
                     if not isinstance( root, dict ):
                         
                         continue
                         
                     
-                    key = parse_rule
+                    string_match = parse_rule
                     
-                    if key not in root:
-                        
-                        continue
-                        
+                    pairs = list( root.items() )
                     
-                    next_roots.append( root[ key ] )
+                    pairs.sort()
+                    
+                    for ( key, value ) in pairs:
+                        
+                        if string_match.Matches( key ):
+                            
+                            next_roots.append( value )
+                            
+                        
                     
                 
             
@@ -1425,12 +1440,30 @@ class ParseFormulaJSON( ParseFormula ):
                 
                 raw_content = HydrusData.ToUnicode( root )
                 
+                raw_contents.append( raw_content )
+                
             elif self._content_to_fetch == JSON_CONTENT_JSON:
                 
                 raw_content = json.dumps( root )
                 
-            
-            raw_contents.append( raw_content )
+                raw_contents.append( raw_content )
+                
+            elif self._content_to_fetch == JSON_CONTENT_DICT_KEYS:
+                
+                if isinstance( root, dict ):
+                    
+                    pairs = list( root.items() )
+                    
+                    pairs.sort()
+                    
+                    for ( key, value ) in pairs:
+                        
+                        raw_content = HydrusData.ToUnicode( key )
+                        
+                        raw_contents.append( raw_content )
+                        
+                    
+                
             
         
         return raw_contents
@@ -1438,16 +1471,18 @@ class ParseFormulaJSON( ParseFormula ):
     
     def _GetSerialisableInfo( self ):
         
+        serialisable_parse_rules = [ ( parse_rule_type, parse_rule.GetSerialisableTuple() ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, parse_rule ) for ( parse_rule_type, parse_rule ) in self._parse_rules ]
         serialisable_string_match = self._string_match.GetSerialisableTuple()
         serialisable_string_converter = self._string_converter.GetSerialisableTuple()
         
-        return ( self._parse_rules, self._content_to_fetch, serialisable_string_match, serialisable_string_converter )
+        return ( serialisable_parse_rules, self._content_to_fetch, serialisable_string_match, serialisable_string_converter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._parse_rules, self._content_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( serialisable_parse_rules, self._content_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
         
+        self._parse_rules = [ ( parse_rule_type, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parse_rule ) ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, serialisable_parse_rule ) for ( parse_rule_type, serialisable_parse_rule ) in serialisable_parse_rules ]
         self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
@@ -1466,6 +1501,40 @@ class ParseFormulaJSON( ParseFormula ):
         raw_contents = self._GetRawContentsFromJSON( j )
         
         return raw_contents
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( parse_rules, content_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            new_parse_rules = []
+            
+            for parse_rule in parse_rules:
+                
+                if parse_rule is None:
+                    
+                    new_parse_rules.append( ( JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ) )
+                    
+                elif isinstance( parse_rule, int ):
+                    
+                    new_parse_rules.append( ( JSON_PARSE_RULE_TYPE_INDEXED_ITEM, parse_rule ) )
+                    
+                else:
+                    
+                    sm = StringMatch( match_type = STRING_MATCH_FIXED, match_value = parse_rule, example_string = parse_rule )
+                    
+                    new_parse_rules.append( ( JSON_PARSE_RULE_TYPE_DICT_KEY, sm ) )
+                    
+                
+            
+            serialisable_parse_rules = [ ( parse_rule_type, parse_rule.GetSerialisableTuple() ) if parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY else ( parse_rule_type, parse_rule ) for ( parse_rule_type, parse_rule ) in new_parse_rules ]
+            
+            new_serialisable_info = ( serialisable_parse_rules, content_to_fetch, serialisable_string_match, serialisable_string_converter )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def ParsesSeparatedContent( self ):
@@ -1489,6 +1558,10 @@ class ParseFormulaJSON( ParseFormula ):
         elif self._content_to_fetch == JSON_CONTENT_JSON:
             
             pretty_strings.append( 'get the json beneath' )
+            
+        elif self._content_to_fetch == JSON_CONTENT_DICT_KEYS:
+            
+            pretty_strings.append( 'get the dictionary keys' )
             
         
         pretty_strings.extend( self._string_converter.GetTransformationStrings() )
@@ -1551,13 +1624,17 @@ class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed )
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA ] = SimpleDownloaderParsingFormula
 
+CONTENT_PARSER_SORT_TYPE_NONE = 0
+CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC = 1
+CONTENT_PARSER_SORT_TYPE_HUMAN_SORT = 2
+
 class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
     SERIALISABLE_NAME = 'Content Parser'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
+    def __init__( self, name = None, content_type = None, formula = None, sort_type = CONTENT_PARSER_SORT_TYPE_NONE, sort_asc = False, additional_info = None ):
         
         if name is None:
             
@@ -1585,6 +1662,8 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         self._name = name
         self._content_type = content_type
         self._formula = formula
+        self._sort_type = sort_type
+        self._sort_asc = sort_asc
         self._additional_info = additional_info
         
     
@@ -1603,12 +1682,12 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             serialisable_additional_info = self._additional_info
             
         
-        return ( self._name, self._content_type, serialisable_formula, serialisable_additional_info )
+        return ( self._name, self._content_type, serialisable_formula, self._sort_type, self._sort_asc, serialisable_additional_info )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, self._content_type, serialisable_formula, serialisable_additional_info ) = serialisable_info
+        ( self._name, self._content_type, serialisable_formula, self._sort_type, self._sort_asc, serialisable_additional_info ) = serialisable_info
         
         if self._content_type == HC.CONTENT_TYPE_VETO:
             
@@ -1689,6 +1768,18 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( name, content_type, serialisable_formula, additional_info ) = old_serialisable_info
+            
+            sort_type = CONTENT_PARSER_SORT_TYPE_NONE
+            sort_asc = False
+            
+            new_serialisable_info = ( name, content_type, serialisable_formula, sort_type, sort_asc, additional_info )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def GetName( self ):
         
@@ -1704,7 +1795,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            parsed_texts = self._formula.Parse( parsing_context, data )
+            parsed_texts = list( self._formula.Parse( parsing_context, data ) )
             
         except HydrusExceptions.ParseException as e:
             
@@ -1713,6 +1804,20 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             e = HydrusExceptions.ParseException( prefix + HydrusData.ToUnicode( e ) )
             
             raise e
+            
+        
+        if self._sort_type == CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC:
+            
+            parsed_texts.sort( reverse = not self._sort_asc )
+            
+        elif self._sort_type == CONTENT_PARSER_SORT_TYPE_HUMAN_SORT:
+            
+            HydrusData.HumanTextSort( parsed_texts )
+            
+            if not self._sort_asc:
+                
+                parsed_texts.reverse()
+                
             
         
         if self._content_type == HC.CONTENT_TYPE_URLS:
@@ -1796,7 +1901,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._content_type, self._formula, self._additional_info )
+        return ( self._name, self._content_type, self._formula, self._sort_type, self._sort_asc, self._additional_info )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER ] = ContentParser

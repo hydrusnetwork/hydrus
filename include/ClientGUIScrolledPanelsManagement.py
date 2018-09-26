@@ -1167,8 +1167,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
                     
-                    border_ctrl = wx.ColourPickerCtrl( self )
-                    fill_ctrl = wx.ColourPickerCtrl( self )
+                    border_ctrl = ClientGUICommon.BetterColourControl( self )
+                    fill_ctrl = ClientGUICommon.BetterColourControl( self )
                     
                     border_ctrl.SetMaxSize( ( 20, -1 ) )
                     fill_ctrl.SetMaxSize( ( 20, -1 ) )
@@ -1348,8 +1348,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'duplicates', 'duplicates', self._DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag presentation', 'tag presentation', self._TagPresentationPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'tag summaries', 'tag summaries', self._TagSummariesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
         #
@@ -1406,7 +1406,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for colour_type in colour_types:
                     
-                    ctrl = wx.ColourPickerCtrl( colour_panel )
+                    ctrl = ClientGUICommon.BetterColourControl( colour_panel )
                     
                     ctrl.SetMaxSize( ( 20, -1 ) )
                     
@@ -1454,77 +1454,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            namespace_colours_panel = ClientGUICommon.StaticBox( self, 'namespace colours' )
-            
-            self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( namespace_colours_panel, HC.options[ 'namespace_colours' ] )
-            
-            self._edit_namespace_colour = wx.Button( namespace_colours_panel, label = 'edit selected' )
-            self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
-            
-            self._new_namespace_colour = wx.TextCtrl( namespace_colours_panel, style = wx.TE_PROCESS_ENTER )
-            self._new_namespace_colour.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
-            
-            #
-            
             coloursets_panel.Add( ClientGUICommon.WrapInText( self._current_colourset, coloursets_panel, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             coloursets_panel.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            namespace_colours_panel.Add( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
-            namespace_colours_panel.Add( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
-            namespace_colours_panel.Add( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( coloursets_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( namespace_colours_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
-            
-        
-        def EventEditNamespaceColour( self, event ):
-            
-            results = self._namespace_colours.GetSelectedNamespaceColours()
-            
-            for ( namespace, colour ) in results.items():
-                
-                colour_data = wx.ColourData()
-                
-                colour_data.SetColour( colour )
-                colour_data.SetChooseFull( True )
-                
-                with wx.ColourDialog( self, data = colour_data ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        colour_data = dlg.GetColourData()
-                        
-                        colour = colour_data.GetColour()
-                        
-                        self._namespace_colours.SetNamespaceColour( namespace, colour )
-                        
-                    
-                
-            
-        
-        def EventKeyDownNamespace( self, event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-                
-                namespace = self._new_namespace_colour.GetValue()
-                
-                if namespace != '':
-                    
-                    self._namespace_colours.SetNamespaceColour( namespace, wx.Colour( random.randint( 0, 255 ), random.randint( 0, 255 ), random.randint( 0, 255 ) ) )
-                    
-                    self._new_namespace_colour.SetValue( '' )
-                    
-                
-            else:
-                
-                event.Skip()
-                
             
         
         def UpdateOptions( self ):
@@ -1540,8 +1477,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._new_options.SetString( 'current_colourset', self._current_colourset.GetChoice() )
-            
-            HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
             
         
     
@@ -1559,7 +1494,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._external_host.SetToolTip( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
             
             self._network_timeout = wx.SpinCtrl( self, min = 3, max = 300 )
-            self._network_timeout.SetToolTip( 'If a network connection experiences any uninterrupted inactivity for this duration, it will throw an error.' )
+            self._network_timeout.SetToolTip( 'If a network connection cannot be made in this duration or, if once started, it experiences uninterrupted inactivity for six times this duration, it will be abandoned.' )
+            
+            self._max_network_jobs = wx.SpinCtrl( self, min = 1, max = 30 )
+            self._max_network_jobs_per_domain = wx.SpinCtrl( self, min = 1, max = 5 )
             
             proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
             
@@ -1577,12 +1515,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
             
+            self._network_timeout.SetValue( self._new_options.GetInteger( 'network_timeout' ) )
+            
+            self._max_network_jobs.SetValue( self._new_options.GetInteger( 'max_network_jobs' ) )
+            self._max_network_jobs_per_domain.SetValue( self._new_options.GetInteger( 'max_network_jobs_per_domain' ) )
+            
             if HC.options[ 'external_host' ] is not None:
                 
                 self._external_host.SetValue( HC.options[ 'external_host' ] )
                 
-            
-            self._network_timeout.SetValue( self._new_options.GetInteger( 'network_timeout' ) )
             
             self._proxy_type.Append( 'http', 'http' )
             self._proxy_type.Append( 'socks4', 'socks4' )
@@ -1648,8 +1589,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'external ip/host override: ', self._external_host ) )
             rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
+            rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
+            rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
+            rows.append( ( 'external ip/host override: ', self._external_host ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1694,7 +1637,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'external_host' ] = external_host
             
             self._new_options.SetInteger( 'network_timeout', self._network_timeout.GetValue() )
-            
+            self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.GetValue() )
+            self._new_options.SetInteger( 'max_network_jobs_per_domain', self._max_network_jobs_per_domain.GetValue() )
         
     
     class _DownloadingPanel( wx.Panel ):
@@ -1708,6 +1652,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
+            
+            gug_key_and_name = HG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+            
+            self._default_gug = ClientGUIImport.GUGKeyAndNameSelector( gallery_downloader, gug_key_and_name )
             
             self._gallery_page_wait_period_pages = wx.SpinCtrl( gallery_downloader, min = 1, max = 120 )
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, none_phrase = 'no limit', min = 1, max = 1000000 )
@@ -1784,6 +1732,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Default download source:', self._default_gug ) )
             rows.append( ( 'If new query entered and no current highlight, highlight the new query:', self._highlight_new_query ) )
             rows.append( ( 'Additional fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_pages ) )
             rows.append( ( 'By default, stop searching once this many files are found:', self._gallery_file_limit ) )
@@ -1842,6 +1791,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
+            
+            HG.client_controller.network_engine.domain_manager.SetDefaultGUGKeyAndName( self._default_gug.GetValue() )
             
             self._new_options.SetInteger( 'gallery_page_wait_period_pages', self._gallery_page_wait_period_pages.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
@@ -2016,6 +1967,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_shutdown.Bind( wx.EVT_CHOICE, self.EventIdleShutdown )
             
             self._idle_shutdown_max_minutes = wx.SpinCtrl( self._shutdown_panel, min = 1, max = 1440 )
+            self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 3600, days = True, hours = True )
             
             #
             
@@ -2034,6 +1986,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
+            self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
             
             self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
             
@@ -2055,6 +2008,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Run jobs on shutdown: ', self._idle_shutdown ) )
+            rows.append( ( 'Only run shutdown jobs once per: ', self._shutdown_work_period ) )
             rows.append( ( 'Max number of minutes to run shutdown jobs: ', self._idle_shutdown_max_minutes ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
@@ -2128,10 +2082,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._idle_shutdown.GetChoice() == CC.IDLE_NOT_ON_SHUTDOWN:
                 
+                self._shutdown_work_period.Disable()
                 self._idle_shutdown_max_minutes.Disable()
                 
             else:
                 
+                self._shutdown_work_period.Enable()
                 self._idle_shutdown_max_minutes.Enable()
                 
             
@@ -2156,6 +2112,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
+            
+            self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
             
             self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
@@ -3544,17 +3502,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            render_panel = ClientGUICommon.StaticBox( self, 'tag rendering' )
-            
-            render_st = ClientGUICommon.BetterStaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
-            
-            render_st.SetWrapWidth( 400 )
-            
-            self._show_namespaces = wx.CheckBox( render_panel )
-            self._namespace_connector = wx.TextCtrl( render_panel )
-            
-            #
-            
             favourites_panel = ClientGUICommon.StaticBox( self, 'favourite tags' )
             
             desc = 'These tags will appear in your tag autocomplete results area, under the \'favourites\' tab.'
@@ -3604,11 +3551,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._show_namespaces.SetValue( new_options.GetBoolean( 'show_namespaces' ) )
-            self._namespace_connector.SetValue( new_options.GetString( 'namespace_connector' ) )
-            
-            #
-            
             self._favourites.SetTags( new_options.GetStringList( 'favourite_tags' ) )
             
             #
@@ -3630,20 +3572,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             general_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox.Add( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
-            rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
-            
-            render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            render_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.Add( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3673,12 +3601,161 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.GetValue() )
-            self._new_options.SetString( 'namespace_connector', self._namespace_connector.GetValue() )
+            self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
+            
+        
+    
+    class _TagPresentationPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
             
             #
             
-            self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
+            
+            self._thumbnail_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
+            
+            self._thumbnail_bottom_right = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
+            
+            self._media_viewer_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            #
+            
+            render_panel = ClientGUICommon.StaticBox( self, 'namespace rendering' )
+            
+            render_st = ClientGUICommon.BetterStaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
+            
+            render_st.SetWrapWidth( 400 )
+            
+            self._show_namespaces = wx.CheckBox( render_panel )
+            self._namespace_connector = wx.TextCtrl( render_panel )
+            
+            #
+            
+            namespace_colours_panel = ClientGUICommon.StaticBox( self, 'namespace colours' )
+            
+            self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( namespace_colours_panel, HC.options[ 'namespace_colours' ] )
+            
+            self._edit_namespace_colour = wx.Button( namespace_colours_panel, label = 'edit selected' )
+            self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
+            
+            self._new_namespace_colour = wx.TextCtrl( namespace_colours_panel, style = wx.TE_PROCESS_ENTER )
+            self._new_namespace_colour.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
+            
+            #
+            
+            self._show_namespaces.SetValue( new_options.GetBoolean( 'show_namespaces' ) )
+            self._namespace_connector.SetValue( new_options.GetString( 'namespace_connector' ) )
+            
+            #
+            
+            namespace_colours_panel.Add( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
+            namespace_colours_panel.Add( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            namespace_colours_panel.Add( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'On thumbnail top:', self._thumbnail_top ) )
+            rows.append( ( 'On thumbnail bottom-right:', self._thumbnail_bottom_right ) )
+            rows.append( ( 'On media viewer top:', self._media_viewer_top ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
+            rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
+            
+            render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            render_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.Add( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            vbox.Add( namespace_colours_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            self.SetSizer( vbox )
+            
+        
+        def EventEditNamespaceColour( self, event ):
+            
+            results = self._namespace_colours.GetSelectedNamespaceColours()
+            
+            for ( namespace, colour ) in results.items():
+                
+                colour_data = wx.ColourData()
+                
+                colour_data.SetColour( colour )
+                colour_data.SetChooseFull( True )
+                
+                with wx.ColourDialog( self, data = colour_data ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        colour_data = dlg.GetColourData()
+                        
+                        colour = colour_data.GetColour()
+                        
+                        self._namespace_colours.SetNamespaceColour( namespace, colour )
+                        
+                    
+                
+            
+        
+        def EventKeyDownNamespace( self, event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                namespace = self._new_namespace_colour.GetValue()
+                
+                if namespace != '':
+                    
+                    self._namespace_colours.SetNamespaceColour( namespace, wx.Colour( random.randint( 0, 255 ), random.randint( 0, 255 ), random.randint( 0, 255 ) ) )
+                    
+                    self._new_namespace_colour.SetValue( '' )
+                    
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetTagSummaryGenerator( 'thumbnail_top', self._thumbnail_top.GetValue() )
+            self._new_options.SetTagSummaryGenerator( 'thumbnail_bottom_right', self._thumbnail_bottom_right.GetValue() )
+            self._new_options.SetTagSummaryGenerator( 'media_viewer_top', self._media_viewer_top.GetValue() )
+            
+            self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.GetValue() )
+            self._new_options.SetString( 'namespace_connector', self._namespace_connector.GetValue() )
+            
+            HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
             
         
     
@@ -3921,56 +3998,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetChoice() )
             
             self._new_options.SetNoneableInteger( 'num_recent_tags', self._num_recent_tags.GetValue() )
-            
-        
-    
-    class _TagSummariesPanel( wx.Panel ):
-        
-        def __init__( self, parent, new_options ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._new_options = new_options
-            
-            #
-            
-            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
-            
-            self._thumbnail_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
-            
-            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
-            
-            self._thumbnail_bottom_right = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
-            
-            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
-            
-            self._media_viewer_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
-            
-            # file export favourites
-            # file dnd
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'On thumbnail top:', self._thumbnail_top ) )
-            rows.append( ( 'On thumbnail bottom-right:', self._thumbnail_bottom_right ) )
-            rows.append( ( 'On media viewer top:', self._media_viewer_top ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def UpdateOptions( self ):
-            
-            self._new_options.SetTagSummaryGenerator( 'thumbnail_top', self._thumbnail_top.GetValue() )
-            self._new_options.SetTagSummaryGenerator( 'thumbnail_bottom_right', self._thumbnail_bottom_right.GetValue() )
-            self._new_options.SetTagSummaryGenerator( 'media_viewer_top', self._media_viewer_top.GetValue() )
             
         
     

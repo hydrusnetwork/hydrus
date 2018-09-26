@@ -54,6 +54,16 @@ class MockController( object ):
         return self.model_is_shutdown or HG.test_controller.ModelIsShutdown()
         
     
+    def pub( self, *args, **kwargs ):
+        
+        pass
+        
+    
+    def sub( self, *args, **kwargs ):
+        
+        pass
+        
+    
 class MockServicesManager( object ):
     
     def __init__( self, services ):

@@ -210,12 +210,12 @@ class NetworkJob( object ):
             
             if self._referral_url is not None:
                 
-                headers[ 'referer' ] = self._referral_url
+                headers[ 'referer' ] = HydrusData.ToByteString( self._referral_url )
                 
             
             for ( key, value ) in self._additional_headers.items():
                 
-                headers[ key ] = value
+                headers[ key ] = HydrusData.ToByteString( value )
                 
             
             self._status_text = u'sending request\u2026'

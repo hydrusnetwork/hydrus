@@ -1839,7 +1839,14 @@ class MediaResult( object ):
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        try:
+            
+            service = HG.client_controller.services_manager.GetService( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return
+            
         
         service_type = service.GetServiceType()
         

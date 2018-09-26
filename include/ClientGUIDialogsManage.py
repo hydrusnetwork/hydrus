@@ -4445,7 +4445,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             export_string = self._GetExportString()
             
-            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', style = wx.FD_SAVE ) as dlg:
+            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'siblings.txt', style = wx.FD_SAVE ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     

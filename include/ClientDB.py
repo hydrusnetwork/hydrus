@@ -256,13 +256,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _AddHydrusSession( self, service_key, session_key, expires ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        self._c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expires ) )
-        
-    
     def _AddService( self, service_key, service_type, name, dictionary ):
         
         result = self._c.execute( 'SELECT 1 FROM services WHERE name = ?;', ( name, ) ).fetchone()
@@ -1980,7 +1973,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ?;', ( smaller_hash_id, larger_hash_id ) )
                 
-                return
+                continue
                 
             
             if duplicate_type == HC.DUPLICATE_WORSE:
@@ -2840,11 +2833,11 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, hash_id, reason_id ) );' )
         self._CreateIndex( 'file_petitions', [ 'hash_id' ] )
         
-        self._c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
-        
         self._c.execute( 'CREATE TABLE json_dict ( name TEXT PRIMARY KEY, dump BLOB_BYTES );' )
         self._c.execute( 'CREATE TABLE json_dumps ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );' )
         self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name ) );' )
+        
+        self._c.execute( 'CREATE TABLE last_shutdown_work_time ( last_shutdown_work_time INTEGER );' )
         
         self._c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, rating REAL, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'local_ratings', [ 'hash_id' ] )
@@ -3120,20 +3113,6 @@ class DB( HydrusDB.HydrusDB ):
         # push the info updates, notify
         
         self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
-        
-    
-    def _DeleteHydrusSessionKey( self, service_key ):
-        
-        try:
-            
-            service_id = self._GetServiceId( service_key )
-            
-        except HydrusExceptions.DataMissing: # usually a test service resetting itself--np
-            
-            return
-            
-        
-        self._c.execute( 'DELETE FROM hydrus_sessions WHERE service_id = ?;', ( service_id, ) )
         
     
     def _DeleteJSONDump( self, dump_type ):
@@ -5454,37 +5433,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetHydrusSessions( self ):
-        
-        now = HydrusData.GetNow()
-        
-        self._c.execute( 'DELETE FROM hydrus_sessions WHERE ? > expiry;', ( now, ) )
-        
-        sessions = []
-        
-        results = self._c.execute( 'SELECT service_id, session_key, expiry FROM hydrus_sessions;' ).fetchall()
-        
-        for ( service_id, session_key, expires ) in results:
-            
-            try:
-                
-                service = self._GetService( service_id )
-                
-            except HydrusExceptions.DataMissing:
-                
-                self._c.execute( 'DELETE FROM hydrus_sessions WHERE service_id = ?;', ( service_id, ) )
-                
-                continue
-                
-            
-            service_key = service.GetServiceKey()
-            
-            sessions.append( ( service_key, session_key, expires ) )
-            
-        
-        return sessions
-        
-    
     def _GetMaintenanceDue( self, stop_time ):
         
         jobs_to_do = []
@@ -5527,7 +5475,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if len( possible_due_names ) > 0:
                         
-                        jobs_to_do.append( 'vacuum ' + ','.join( possible_due_names ) )
+                        jobs_to_do.append( 'vacuum ' + ', '.join( possible_due_names ) )
                         
                     
                 finally:
@@ -5627,6 +5575,20 @@ class DB( HydrusDB.HydrusDB ):
         value = json.loads( json_dump )
         
         return value
+        
+    
+    def _GetLastShutdownWorkTime( self ):
+        
+        result = self._c.execute( 'SELECT last_shutdown_work_time FROM last_shutdown_work_time;' ).fetchone()
+        
+        if result is None:
+            
+            return 0
+            
+        
+        ( last_shutdown_work_time, ) = result
+        
+        return last_shutdown_work_time
         
     
     def _GetMediaResults( self, hash_ids ):
@@ -8682,10 +8644,10 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'filter_existing_tags': result = self._FilterExistingTags( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
-        elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'in_inbox': result = self._InInbox( *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
+        elif action == 'last_shutdown_work_time': result = self._GetLastShutdownWorkTime( *args, **kwargs )
         elif action == 'load_into_disk_cache': result = self._LoadIntoDiskCache( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
@@ -9016,7 +8978,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
+                    ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
                     
                     self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
                     
@@ -9208,6 +9170,13 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'REPLACE INTO json_dict ( name, dump ) VALUES ( ?, ? );', ( name, sqlite3.Binary( json_dump ) ) )
             
+        
+    
+    def _SetLastShutdownWorkTime( self, timestamp ):
+        
+        self._c.execute( 'DELETE from last_shutdown_work_time;' )
+        
+        self._c.execute( 'INSERT INTO last_shutdown_work_time ( last_shutdown_work_time ) VALUES ( ? );', ( timestamp, ) )
         
     
     def _SetPassword( self, password ):
@@ -10960,6 +10929,92 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 323:
+            
+            self._c.execute( 'DROP TABLE IF EXISTS hydrus_sessions;' )
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS last_shutdown_work_time ( last_shutdown_work_time INTEGER );' )
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                # pixiv changed how artist lookup works, so let's rename the old objects
+                
+                gugs = domain_manager.GetGUGs()
+                
+                new_gugs = []
+                
+                for gug in gugs:
+                    
+                    if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ):
+                        
+                        if 'pixiv.net' in gug.GetExampleURL() and 'zzz' not in gug.GetName():
+                            
+                            gug.SetName( 'zzz - old gug - ' + gug.GetName() )
+                            
+                            gug.RegenerateGUGKey() # completely disassociate existing subs from these gugs
+                            
+                        
+                    
+                    new_gugs.append( gug )
+                    
+                
+                domain_manager.SetGUGs( new_gugs )
+                
+                url_matches = domain_manager.GetURLMatches()
+                
+                new_url_matches = []
+                
+                for url_match in url_matches:
+                    
+                    if url_match.GetURLType() == HC.URL_TYPE_GALLERY and 'pixiv.net' in url_match.GetExampleURL() and 'zzz' not in url_match.GetName():
+                        
+                        url_match.SetName( 'zzz - old url class - ' + url_match.GetName() )
+                        
+                    
+                    new_url_matches.append( url_match )
+                    
+                
+                domain_manager.SetURLMatches( new_url_matches )
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'twitter username lookup', 'pixiv artist lookup' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ 'twitter tweets api', 'pixiv artist page', 'pixiv artist gallery page api' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'twitter tweets api parser', 'gelbooru 0.1.11 file page parser (simple)', 'pixiv artist gallery page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                message = 'Pixiv should be fixed this week with a new downloader. Your pixiv subscriptions may be able to move to it automatically, or you may need to edit and manually correct them.'
+                
+                self.pub_initial_message( message )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11532,7 +11587,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'clear_orphan_tables': result = self._ClearOrphanTables( *args, **kwargs )
         elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
-        elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
         elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'delete_pending': result = self._DeletePending( *args, **kwargs )
@@ -11543,10 +11597,10 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'duplicate_pair_status': result = self._CacheSimilarFilesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
-        elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )
         elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'import_update': result = self._ImportUpdate( *args, **kwargs )
+        elif action == 'last_shutdown_work_time': result = self._SetLastShutdownWorkTime( *args, **kwargs )
         elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'maintain_file_reparsing': result = self._MaintainReparseFiles( *args, **kwargs )
         elif action == 'maintain_similar_files_duplicate_pairs': result = self._CacheSimilarFilesMaintainDuplicatePairs( *args, **kwargs )

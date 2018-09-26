@@ -3049,6 +3049,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
+        event.Skip()
+        
     
     def EventPaint( self, event ):
         

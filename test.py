@@ -98,7 +98,6 @@ class Controller( object ):
         
         self._reads = {}
         
-        self._reads[ 'hydrus_sessions' ] = []
         self._reads[ 'local_booru_share_keys' ] = []
         self._reads[ 'messaging_sessions' ] = []
         self._reads[ 'tag_censorship' ] = []

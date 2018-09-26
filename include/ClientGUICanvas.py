@@ -2847,6 +2847,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         
         HG.client_controller.sub( self, 'Close', 'canvas_close' )
+        HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
         
     
     def _Close( self ):
@@ -2953,6 +2954,14 @@ class CanvasWithHovers( CanvasWithDetails ):
         else:
             
             self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
+            
+        
+    
+    def FullscreenSwitch( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self.GetParent().FullscreenSwitch()
             
         
     
@@ -3822,8 +3831,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         HG.client_controller.pub( 'set_focus', self._page_key, None )
         
-        HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
-        
     
     def _Close( self ):
         
@@ -4007,14 +4014,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     def EventFullscreenSwitch( self, event ):
         
         self.GetParent().FullscreenSwitch()
-        
-    
-    def FullscreenSwitch( self, canvas_key ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self.GetParent().FullscreenSwitch()
-            
         
     
     def KeepCursorAlive( self ):

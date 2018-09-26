@@ -13,6 +13,7 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusText
 import os
+import re
 import sys
 import threading
 import time
@@ -559,6 +560,11 @@ class BetterButton( wx.Button ):
     
 class BetterCheckListBox( wx.CheckListBox ):
     
+    def __init__( self, parent ):
+        
+        wx.CheckListBox.__init__( self, parent, style = wx.LB_EXTENDED )
+        
+    
     def GetChecked( self ):
         
         result = [ self.GetClientData( index ) for index in self.GetCheckedItems() ]
@@ -603,6 +609,70 @@ class BetterChoice( wx.Choice ):
             
             self.Select( 0 )
             
+        
+    
+class BetterColourControl( wx.ColourPickerCtrl ):
+    
+    def __init__( self, *args, **kwargs ):
+        
+        wx.ColourPickerCtrl.__init__( self, *args, **kwargs )
+        
+        self.GetPickerCtrl().Bind( wx.EVT_RIGHT_DOWN, self.EventMenu )
+        
+    
+    def _ImportHexFromClipboard( self ):
+        
+        try:
+            
+            import_string = HG.client_controller.GetClipboardText()
+            
+        except Exception as e:
+            
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
+            
+            return
+            
+        
+        if import_string.startswith( '#' ):
+            
+            import_string = import_string[1:]
+            
+        
+        import_string = '#' + re.sub( '[^0-9a-fA-F]', '', import_string )
+        
+        if len( import_string ) != 7:
+            
+            wx.MessageBox( 'That did not appear to be a hex string!' )
+            
+            return
+            
+        
+        try:
+            
+            colour = wx.Colour( import_string )
+            
+        except Exception as e:
+            
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
+            
+            HydrusData.ShowException( e )
+            
+            return
+            
+        
+        self.SetColour( colour )
+        
+    
+    def EventMenu( self, event ):
+        
+        menu = wx.Menu()
+        
+        hex_string = self.GetColour().GetAsString( wx.C2S_HTML_SYNTAX )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', HG.client_controller.pub, 'clipboard', 'text', hex_string )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'import a hex colour from the clipboard', 'Look at the clipboard for a colour in the format #FF0000, and set the colour.', self._ImportHexFromClipboard )
+        
+        HG.client_controller.PopupMenu( self, menu )
         
     
 class BetterNotebook( wx.Notebook ):
@@ -1269,7 +1339,7 @@ class AlphaColourControl( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._colour_picker = wx.ColourPickerCtrl( self )
+        self._colour_picker = BetterColourControl( self )
         
         self._alpha_selector = wx.SpinCtrl( self, min = 0, max = 255 )
         

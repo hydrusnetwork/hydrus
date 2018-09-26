@@ -217,7 +217,7 @@ def GetFileInfo( path, mime = None ):
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
         
-        ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path )
+        ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         
     elif mime == HC.APPLICATION_FLASH:
         

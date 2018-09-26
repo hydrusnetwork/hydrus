@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 324</h3></li>
+				<ul>
+					<li>downloaders:</li>
+					<li>after adding some small new parser tools, wrote a new pixiv downloader that should work with their new dynamic gallery's api. it fetches all an artist's work in one page. some existing pixiv download components will be renamed and detached from your existing subs and downloaders. your existing subs may switch over to the correct pixiv downloader automatically, or you may need to manually set them (you'll get a popup to remind you).</li>
+					<li>wrote a twitter username lookup downloader. it should skip retweets. it is a bit hacky, so it may collapse if they change something small with their internal javascript api. it fetches 19-20 tweets per 'page', so if the account has 20 rts in a row, it'll likely stop searching there. also, afaik, twitter browsing only works back 3200 tweets or so. I recommend proceeding slowly.</li>
+					<li>added a simple gelbooru 0.1.11 file page parser to the defaults. it won't link to anything by default, but it is there if you want to put together some booru.org stuff</li>
+					<li>you can now set your default/favourite download source under options->downloading</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>the 'do idle work on shutdown' system will now only ask/run once per x time units (including if you say no to the ask dialog). x is one day by default, but can be set in 'maintenance and processing'</li>
+					<li>added 'max jobs' and 'max jobs per domain' to options->connection. defaults remain 15 and 3</li>
+					<li>the colour selection buttons across the program now have a right-click menu to import/export #FF0000 hex codes from/to the clipboard</li>
+					<li>tag namespace colours and namespace rendering options are moved from 'colours' and 'tags' options pages to 'tag summaries', which is renamed to 'tag presentation'</li>
+					<li>the Lain import dropper now supports pngs with single gugs, url classes, or parsers--not just fully packaged downloaders</li>
+					<li>fixed an issue where trying to remove a selection of files from the duplicate system (through the advanced duplicates menu) would only apply to the first pair of files</li>
+					<li>improved some error reporting related to too-long filenames on import</li>
+					<li>improved error handling for the folder-scanning stage in import folders--now, when it runs into an error, it will preserve its details better, notify the user better, and safely auto-pause the import folder</li>
+					<li>png export auto-filenames will now be sanitized of \, /, :, *-type OS-path-invalid characters as appropriate as the dialog loads</li>
+					<li>the 'loading subs' popup message should appear more reliably (after 1s delay) if the first subs are big and loading slow</li>
+					<li>fixed the 'fullscreen switch' hover window button for the duplicate filter</li>
+					<li>deleted some old hydrus session management code and db table</li>
+					<li>some other things that I lost track of. I think it was mostly some little dialog fixes :/</li>
+					<li>.</li>
+					<li>advanced downloader stuff:</li>
+					<li>the test panel on pageparser edit panels now has a 'post pre-parsing conversion' notebook page that shows the given example data after the pre-parsing conversion has occurred, including error information if it failed. it has a summary size/guessed type description and copy and refresh buttons.</li>
+					<li>the 'raw data' copy/fetch/paste buttons and description are moved down to the raw data page</li>
+					<li>the pageparser now passes up this post-conversion example data to sub-objects, so they now start with the correctly converted example data</li>
+					<li>the subsidiarypageparser edit panel now also has a notebook page, also with brief description and copy/refresh buttons, that summarises the raw separated data</li>
+					<li>the subsidiary page parser now passes up the first post to its sub-objects, so they now start with a single post's example data</li>
+					<li>content parsers can now sort the strings their formulae get back. you can sort strict lexicographic or the new human-friendly sort that does numbers properly, and of course you can go ascending or descending--if you can get the ids of what you want but they are in the wrong order, you can now easily fix it!</li>
+					<li>some json dict parsing code now iterates through dict keys lexicographically ascending by default. unfortunately, due to how the python json parser I use works, there isn't a way to process dict items in the original order</li>
+					<li>the json parsing formula now uses a string match when searching for dictionary keys, so you can now match multiple keys here (as in the pixiv illusts|manga fix). existing dictionary key look-ups will be converted to 'fixed' string matches</li>
+					<li>the json parsing formula can now get the content type 'dictionary keys', which will fetch all the text keys in the dictionary/Object, if the api designer happens to have put useful data in there, wew</li>
+					<li>formulae now remove newlines from their parsed texts before they are sent to the StringMatch! so, if you are grabbing some multi-line html and want to test for 'Posted: ' somewhere in that mess, it is now easy.</li>
+				</ul>
 				<li><h3>version 323</h3></li>
 				<ul>
 					<li>wrote first version of the new downloader easy-import drop-panel. you drop downloader-encoded pngs on it, and it maybe asks you a question and jumbles its way through auto-importing all the required data to the client</li>

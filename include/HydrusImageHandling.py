@@ -258,9 +258,9 @@ def GetGIFFrameDurations( path ):
     
     return frame_durations
     
-def GetImageProperties( path ):
+def GetImageProperties( path, mime ):
     
-    ( ( width, height ), num_frames ) = GetResolutionAndNumFrames( path )
+    ( ( width, height ), num_frames ) = GetResolutionAndNumFrames( path, mime )
     
     if num_frames > 1:
         
@@ -276,30 +276,37 @@ def GetImageProperties( path ):
     
     return ( ( width, height ), duration, num_frames )
     
-def GetResolutionAndNumFrames( path ):
+def GetResolutionAndNumFrames( path, mime ):
     
     pil_image = GeneratePILImage( path )
     
     ( x, y ) = pil_image.size
     
-    try:
+    if mime == HC.IMAGE_GIF: # some jpegs came up with 2 frames and 'duration' because of some embedded thumbnail in the metadata
         
-        pil_image.seek( 1 )
-        pil_image.seek( 0 )
-        
-        num_frames = 1
-        
-        while True:
+        try:
             
-            try:
+            pil_image.seek( 1 )
+            pil_image.seek( 0 )
+            
+            num_frames = 1
+            
+            while True:
                 
-                pil_image.seek( pil_image.tell() + 1 )
-                num_frames += 1
+                try:
+                    
+                    pil_image.seek( pil_image.tell() + 1 )
+                    num_frames += 1
+                    
+                except: break
                 
-            except: break
+            
+        except:
+            
+            num_frames = 1
             
         
-    except:
+    else:
         
         num_frames = 1
         

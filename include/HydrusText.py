@@ -24,6 +24,12 @@ def LooksLikeHTML( file_data ):
     
     return '<html' in file_data or '<HTML' in file_data
     
+def RemoveNewlines( text ):
+    
+    text = re.sub( r'\r|\n', '', text )
+    
+    return text
+    
 def SortStringsIgnoringCase( list_of_strings ):
     
     list_of_strings.sort( key = lambda s: s.lower() )

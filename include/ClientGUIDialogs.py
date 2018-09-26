@@ -1137,7 +1137,7 @@ class FrameInputLocalFiles( wx.Frame ):
                 
                 if num_occupied_files > 0:
                     
-                    bad_comments.append( HydrusData.ToHumanInt( num_occupied_files ) + ' were probably already in use by another process' )
+                    bad_comments.append( HydrusData.ToHumanInt( num_occupied_files ) + ' were inaccessible (maybe in use by another process)' )
                     
                 
                 message += ' and '.join( bad_comments )

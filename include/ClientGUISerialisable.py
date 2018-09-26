@@ -7,6 +7,7 @@ import ClientThreading
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
+import HydrusPaths
 import HydrusSerialisable
 import os
 import wx
@@ -79,6 +80,8 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         if last_png_export_dir is not None:
             
             filename = name + '.png'
+            
+            filename = HydrusPaths.SanitizeFilename( filename )
             
             path = os.path.join( last_png_export_dir, filename )
             

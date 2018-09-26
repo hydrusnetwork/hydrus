@@ -777,53 +777,66 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return
             
         
-        if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
-            
-            return
-            
-        
-        pubbed_job_key = False
-        
-        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
-        
-        due_by_check_now = self._check_now
-        due_by_period = self._check_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )
-        
         checked_folder = False
-        
-        if due_by_check_now or due_by_period:
-            
-            if not pubbed_job_key and self._show_working_popup:
-                
-                HG.client_controller.pub( 'message', job_key )
-                
-                pubbed_job_key = True
-                
-            
-            self._CheckFolder( job_key )
-            
-            checked_folder = True
-            
-        
-        file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
         
         did_import_file_work = False
         
-        if file_seed is not None:
+        error_occured = False
+        
+        try:
             
-            if not pubbed_job_key and self._show_working_popup:
+            if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
                 
-                HG.client_controller.pub( 'message', job_key )
-                
-                pubbed_job_key = True
+                raise Exception( 'Path does not seem to exist, or is not a directory.' )
                 
             
-            did_import_file_work = self._ImportFiles( job_key )
+            pubbed_job_key = False
+            
+            job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
+            
+            job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
+            
+            due_by_check_now = self._check_now
+            due_by_period = self._check_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )
+            
+            if due_by_check_now or due_by_period:
+                
+                if not pubbed_job_key and self._show_working_popup:
+                    
+                    HG.client_controller.pub( 'message', job_key )
+                    
+                    pubbed_job_key = True
+                    
+                
+                self._CheckFolder( job_key )
+                
+                checked_folder = True
+                
+            
+            file_seed = self._file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
+            
+            if file_seed is not None:
+                
+                if not pubbed_job_key and self._show_working_popup:
+                    
+                    HG.client_controller.pub( 'message', job_key )
+                    
+                    pubbed_job_key = True
+                    
+                
+                did_import_file_work = self._ImportFiles( job_key )
+                
+            
+        except Exception as e:
+            
+            error_occured = True
+            self._paused = True
+            
+            HydrusData.ShowText( 'The import folder "' + self._name + '" encountered an exception! It has been paused!' )
+            HydrusData.ShowException( e )
             
         
-        if checked_folder or did_import_file_work:
+        if checked_folder or did_import_file_work or error_occured:
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             

@@ -1063,20 +1063,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._gugs ) == 0:
-                
-                return ( HydrusData.GenerateKey(), 'unknown source' )
-                
-            else:
-                
-                gugs = list( self._gugs )
-                
-                gugs.sort( key = lambda g: g.GetName() )
-                
-                gug = gugs[0]
-                
-                return ( gug.GetGUGKey(), gug.GetName() )
-                
+            gug_key = HG.client_controller.new_options.GetKey( 'default_gug_key' )
+            gug_name = HG.client_controller.new_options.GetString( 'default_gug_name' )
+            
+            return ( gug_key, gug_name )
             
         
     
@@ -1441,6 +1431,17 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dirty = False
+            
+        
+    
+    def SetDefaultGUGKeyAndName( self, gug_key_and_name ):
+        
+        with self._lock:
+            
+            ( gug_key, gug_name ) = gug_key_and_name
+            
+            HG.client_controller.new_options.SetKey( 'default_gug_key', gug_key )
+            HG.client_controller.new_options.SetString( 'default_gug_name', gug_name )
             
         
     
