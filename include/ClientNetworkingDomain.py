@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientNetworkingContexts
 import ClientParsing
 import ClientThreading
 import collections
@@ -6,6 +7,7 @@ import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusData
 import HydrusExceptions
+import HydrusNetworking
 import HydrusSerialisable
 import os
 import re
@@ -102,11 +104,16 @@ def ConvertQueryDictToText( query_dict ):
     
     param_pairs.sort()
     
-    query_text = u'&'.join( ( unicode( key ) + u'=' + unicode( value ) for ( key, value ) in param_pairs ) )
+    query_text = u'&'.join( ( HydrusData.ToUnicode( key ) + u'=' + HydrusData.ToUnicode( value ) for ( key, value ) in param_pairs ) )
     
     return query_text
     
 def ConvertQueryTextToDict( query_text ):
+    
+    # we generally do not want quote characters %20 stuff, in our urls. we would prefer regular ascii and even unicode
+    
+    # first we will decode all unicode, which allows urllib to work
+    query_text = HydrusData.ToByteString( query_text )
     
     query_dict = {}
     
@@ -120,11 +127,26 @@ def ConvertQueryTextToDict( query_text ):
         
         if len( result ) == 2:
             
+            # so, let's replace all keys and values with unquoted versions
+            # -but-
+            # we only replace if it is a completely reversable operation!
+            # odd situations like '6+girls+skirt', which comes here encoded as '6%2Bgirls+skirt', shouldn't turn into '6+girls+skirt'
+            # so if there are a mix of encoded and non-encoded, we won't touch it here m8
+            
+            # we convert to unicode afterwards so %E5%B0%BB%E7%A5%9E%E6%A7%98 -> \xe5\xb0\xbb\xe7\xa5\x9e\xe6\xa7\x98 -> \u5c3b\u795e\u69d8
+            
             ( key, value ) = result
             
             try:
                 
-                key = urllib.unquote( key )
+                unquoted_key = urllib.unquote( key )
+                
+                requoted_key = urllib.quote( unquoted_key )
+                
+                if key == requoted_key:
+                    
+                    key = HydrusData.ToUnicode( unquoted_key )
+                    
                 
             except:
                 
@@ -133,7 +155,14 @@ def ConvertQueryTextToDict( query_text ):
             
             try:
                 
-                value = urllib.unquote( value )
+                unquoted_value = urllib.unquote( value )
+                
+                requoted_value = urllib.quote( unquoted_value )
+                
+                if value == requoted_value:
+                    
+                    value = HydrusData.ToUnicode( unquoted_value )
+                    
                 
             except:
                 
@@ -793,6 +822,41 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self.SetURLMatches( url_matches )
         
     
+    def AlreadyHaveExactlyTheseHeaders( self, network_context, headers_list ):
+        
+        with self._lock:
+            
+            if network_context in self._network_contexts_to_custom_header_dicts:
+                
+                custom_headers_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+                
+                if len( headers_list ) != len( custom_headers_dict ):
+                    
+                    return False
+                    
+                
+                for ( key, value, reason ) in headers_list:
+                    
+                    if key not in custom_headers_dict:
+                        
+                        return False
+                        
+                    
+                    ( existing_value, existing_approved, existing_reason ) = custom_headers_dict[ key ]
+                    
+                    if existing_value != value:
+                        
+                        return False
+                        
+                    
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def AlreadyHaveExactlyThisGUG( self, new_gug ):
         
         with self._lock:
@@ -885,6 +949,30 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
         return False
+        
+    
+    def AutoAddDomainMetadatas( self, domain_metadatas, approved = False ):
+        
+        for domain_metadata in domain_metadatas:
+            
+            if not domain_metadata.HasHeaders():
+                
+                continue
+                
+            
+            with self._lock:
+                
+                domain = domain_metadata.GetDomain()
+                
+                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+                
+                headers_list = domain_metadata.GetHeaders()
+                
+                custom_headers_dict = { key : ( value, approved, reason ) for ( key, value, reason ) in headers_list }
+                
+                self._network_contexts_to_custom_header_dicts[ network_context ] = custom_headers_dict
+                
+            
         
     
     def AutoAddURLMatchesAndParsers( self, new_url_matches, dupe_url_matches, new_parsers ):
@@ -1214,6 +1302,26 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetShareableCustomHeaders( self, network_context ):
+        
+        with self._lock:
+            
+            headers_list = []
+            
+            if network_context in self._network_contexts_to_custom_header_dicts:
+                
+                custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+                
+                for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                    
+                    headers_list.append( ( key, value, reason ) )
+                    
+                
+            
+            return headers_list
+            
+        
+    
     def GetURLMatch( self, url ):
         
         with self._lock:
@@ -1280,6 +1388,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._GetURLToFetchAndParser( url )
+            
+        
+    
+    def HasCustomHeaders( self, network_context ):
+        
+        with self._lock:
+            
+            return network_context in self._network_contexts_to_custom_header_dicts and len( self._network_contexts_to_custom_header_dicts[ network_context ] ) > 0
             
         
     
@@ -1829,6 +1945,127 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
 
+class DomainMetadataPackage( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DOMAIN_METADATA_PACKAGE
+    SERIALISABLE_NAME = 'Domain Metadata'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, domain = None, headers_list = None, bandwidth_rules = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if domain is None:
+            
+            domain = 'example.com'
+            
+        
+        self._domain = domain
+        self._headers_list = headers_list
+        self._bandwidth_rules = bandwidth_rules
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        if self._bandwidth_rules is None:
+            
+            serialisable_bandwidth_rules = self._bandwidth_rules
+            
+        else:
+            
+            serialisable_bandwidth_rules = self._bandwidth_rules.GetSerialisableTuple()
+            
+        
+        return ( self._domain, self._headers_list, serialisable_bandwidth_rules )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._domain, self._headers_list, serialisable_bandwidth_rules ) = serialisable_info
+        
+        if serialisable_bandwidth_rules is None:
+            
+            self._bandwidth_rules = serialisable_bandwidth_rules
+            
+        else:
+            
+            self._bandwidth_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_rules )
+            
+        
+    
+    def GetBandwidthRules( self ):
+        
+        return self._bandwidth_rules
+        
+    
+    def GetDetailedSafeSummary( self ):
+        
+        components = [ 'For domain "' + self._domain + '":' ]
+        
+        if self.HasBandwidthRules():
+            
+            m = 'Bandwidth rules: '
+            m += os.linesep
+            m += os.linesep.join( [ HydrusNetworking.ConvertBandwidthRuleToString( rule ) for rule in self._bandwidth_rules.GetRules() ] )
+            
+            components.append( m )
+            
+        
+        if self.HasHeaders():
+            
+            m = 'Headers: '
+            m += os.linesep
+            m += os.linesep.join( [ key + ' : ' + value + ' - ' + reason for ( key, value, reason ) in self._headers_list ] )
+            
+            components.append( m )
+            
+        
+        joiner = os.linesep * 2
+        
+        s = joiner.join( components )
+        
+        return s
+        
+    
+    def GetDomain( self ):
+        
+        return self._domain
+        
+    
+    def GetHeaders( self ):
+        
+        return self._headers_list
+        
+    
+    def GetSafeSummary( self ):
+        
+        components = []
+        
+        if self.HasBandwidthRules():
+            
+            components.append( 'bandwidth rules' )
+            
+        
+        if self.HasHeaders():
+            
+            components.append( 'headers' )
+            
+        
+        return ' and '.join( components ) + ' - ' + self._domain
+        
+    
+    def HasBandwidthRules( self ):
+        
+        return self._bandwidth_rules is not None
+        
+    
+    def HasHeaders( self ):
+        
+        return self._headers_list is not None
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DOMAIN_METADATA_PACKAGE ] = DomainMetadataPackage
+
 class DomainValidationPopupProcess( object ):
     
     def __init__( self, domain_manager, header_tuples ):
@@ -1988,12 +2225,28 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             # this basically fixes e621 searches for 'male/female', which through some httpconf trickery are embedded in path but end up in a query, so need to be encoded right beforehand
             # we need ToByteString as urllib.quote can't handle unicode hiragana etc...
             
-            search_terms = [ urllib.quote( HydrusData.ToByteString( search_term ), safe = '' ) for search_term in search_terms ]
+            encoded_search_terms = [ urllib.quote( HydrusData.ToByteString( search_term ), safe = '' ) for search_term in search_terms ]
+            
+        else:
+            
+            # when the separator is '+' but the permitted tags might be '6+girls', we run into fun internet land
+            
+            encoded_search_terms = []
+            
+            for search_term in search_terms:
+                
+                if self._search_terms_separator in search_term:
+                    
+                    search_term = urllib.quote( HydrusData.ToByteString( search_term ), safe = '' )
+                    
+                
+                encoded_search_terms.append( search_term )
+                
             
         
         try:
             
-            search_phrase = self._search_terms_separator.join( search_terms )
+            search_phrase = self._search_terms_separator.join( encoded_search_terms )
             
             gallery_url = self._url_template.replace( self._replacement_phrase, search_phrase )
             
@@ -2013,6 +2266,11 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     def GetExampleURL( self ):
         
         return self.GenerateGalleryURL( self._example_search_text )
+        
+    
+    def GetExampleURLs( self ):
+        
+        return ( self.GetExampleURL(), )
         
     
     def GetGUGKey( self ):

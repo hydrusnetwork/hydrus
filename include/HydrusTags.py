@@ -283,7 +283,7 @@ def SplitTag( tag ):
         
     else:
         
-        return ( '', tag )
+        return ( u'', tag )
         
     
 def StripTextOfGumpf( t ):

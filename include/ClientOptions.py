@@ -335,6 +335,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'default_file_import_options' ] = HydrusSerialisable.SerialisableDictionary()
         
         exclude_deleted = True
+        do_not_check_known_urls_before_importing = False
+        do_not_check_hashes_before_importing = False
         allow_decompression_bombs = False
         min_size = None
         max_size = None
@@ -343,6 +345,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         max_resolution = None
         
         automatic_archive = False
+        associate_source_urls = True
         
         present_new_files = True
         present_already_in_inbox_files = False
@@ -352,8 +355,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         quiet_file_import_options = ClientImportOptions.FileImportOptions()
         
-        quiet_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        quiet_file_import_options.SetPostImportOptions( automatic_archive )
+        quiet_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
         quiet_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
@@ -364,8 +367,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         loud_file_import_options = ClientImportOptions.FileImportOptions()
         
-        loud_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        loud_file_import_options.SetPostImportOptions( automatic_archive )
+        loud_file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        loud_file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
         loud_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options

@@ -35,7 +35,7 @@ DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
-def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url ):
+def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_import_options ):
     
     file_seeds = []
     
@@ -49,7 +49,7 @@ def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url ):
             
             file_seed.SetReferralURL( source_url )
             
-            file_seed.AddParseResults( parse_results )
+            file_seed.AddParseResults( parse_results, file_import_options )
             
             file_seeds.append( file_seed )
             

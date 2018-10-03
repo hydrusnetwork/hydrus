@@ -132,6 +132,8 @@ def DAEMONDownloadFiles( controller ):
                                 controller.WaitUntilModelFree()
                                 
                                 exclude_deleted = False # this is the important part here
+                                do_not_check_known_urls_before_importing = False
+                                do_not_check_hashes_before_importing = False
                                 allow_decompression_bombs = True
                                 min_size = None
                                 max_size = None
@@ -139,11 +141,12 @@ def DAEMONDownloadFiles( controller ):
                                 min_resolution = None
                                 max_resolution = None
                                 automatic_archive = False
+                                associate_source_urls = True
                                 
                                 file_import_options = ClientImportOptions.FileImportOptions()
                                 
-                                file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-                                file_import_options.SetPostImportOptions( automatic_archive )
+                                file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                                file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
                                 
                                 file_import_job = ClientImportFileSeeds.FileImportJob( temp_path, file_import_options )
                                 

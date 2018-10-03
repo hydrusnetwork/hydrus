@@ -12,6 +12,7 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUISerialisable
 import ClientGUITopLevelWindows
+import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientNetworkingJobs
 import ClientParsing
@@ -25,6 +26,7 @@ import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import HydrusText
+import itertools
 import json
 import os
 import sys
@@ -178,6 +180,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.AddButton( 'add gug', self._AddGUG )
         listctrl_panel.AddButton( 'add url class', self._AddURLMatch )
         listctrl_panel.AddButton( 'add parser', self._AddParser )
+        listctrl_panel.AddButton( 'add headers/bandwidth rules', self._AddDomainMetadata )
         listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'export to png', self._Export, enabled_check_func = self._CanExport )
@@ -190,6 +193,34 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+    
+    def _AddDomainMetadata( self ):
+        
+        message = 'Enter domain:'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                domain = dlg.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        domain_metadatas = self._GetDomainMetadatasToInclude( { domain } )
+        
+        if len( domain_metadatas ) > 0:
+            
+            self._listctrl.AddDatas( domain_metadatas )
+            
+        else:
+            
+            wx.MessageBox( 'No headers/bandwidth rules found!' )
+            
         
     
     def _AddGUG( self ):
@@ -222,12 +253,17 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        domains = { ClientNetworkingDomain.ConvertURLIntoDomain( example_url ) for example_url in itertools.chain.from_iterable( ( gug.GetExampleURLs() for gug in gugs_to_include ) ) }
+        
+        domain_metadatas_to_include = self._GetDomainMetadatasToInclude( domains )
+        
         url_matches_to_include = self._GetURLMatchesToInclude( gugs_to_include )
         
         url_matches_to_include = self._FlushOutURLMatchesWithAPILinks( url_matches_to_include )
         
         parsers_to_include = self._GetParsersToInclude( url_matches_to_include )
         
+        self._listctrl.AddDatas( domain_metadatas_to_include )
         self._listctrl.AddDatas( gugs_to_include )
         self._listctrl.AddDatas( url_matches_to_include )
         self._listctrl.AddDatas( parsers_to_include )
@@ -307,7 +343,15 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertContentToListCtrlTuples( self, content ):
         
-        name = content.GetName()
+        if isinstance( content, ClientNetworkingDomain.DomainMetadataPackage ):
+            
+            name = content.GetDomain()
+            
+        else:
+            
+            name = content.GetName()
+            
+        
         t = content.SERIALISABLE_NAME
         
         pretty_name = name
@@ -415,6 +459,58 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         return list( url_matches_to_include )
+        
+    
+    def _GetDomainMetadatasToInclude( self, domains ):
+        
+        domains = { d for d in itertools.chain.from_iterable( ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain ) for domain in domains ) }
+        
+        existing_domains = { obj.GetDomain() for obj in self._listctrl.GetData() if isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ) }
+        
+        domains = domains.difference( existing_domains )
+        
+        domains = list( domains )
+        
+        domains.sort()
+        
+        domain_metadatas = []
+        
+        for domain in domains:
+            
+            network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+            
+            if self._network_engine.domain_manager.HasCustomHeaders( network_context ):
+                
+                headers_list = self._network_engine.domain_manager.GetShareableCustomHeaders( network_context )
+                
+            else:
+                
+                headers_list = None
+                
+            
+            if self._network_engine.bandwidth_manager.HasRules( network_context ):
+                
+                bandwidth_rules = self._network_engine.bandwidth_manager.GetRules( network_context )
+                
+            else:
+                
+                bandwidth_rules = None
+                
+            
+            if headers_list is not None or bandwidth_rules is not None:
+                
+                domain_metadata = ClientNetworkingDomain.DomainMetadataPackage( domain = domain, headers_list = headers_list, bandwidth_rules = bandwidth_rules )
+                
+                domain_metadatas.append( domain_metadata )
+                
+            
+        
+        for domain_metadata in domain_metadatas:
+            
+            wx.MessageBox( domain_metadata.GetDetailedSafeSummary() )
+            
+        
+        return domain_metadatas
         
     
     def _GetParsersToInclude( self, url_matches ):
@@ -2184,11 +2280,22 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         dlg_title = 'edit content node'
         
-        content_parser = ClientParsing.ContentParser( 'new content parser' )
+        test_context = self._test_context_callable()
+        
+        ( example_parsing_context, example_data ) = test_context
+        
+        if len( example_data ) > 0 and HydrusText.LooksLikeJSON( example_data ):
+            
+            formula = ClientParsing.ParseFormulaJSON()
+            
+        else:
+            
+            formula = ClientParsing.ParseFormulaHTML()
+            
+        
+        content_parser = ClientParsing.ContentParser( 'new content parser', formula = formula )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit content parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
-            
-            test_context = self._test_context_callable()
             
             panel = EditContentParserPanel( dlg_edit, content_parser, test_context )
             
@@ -5140,15 +5247,9 @@ class TestPanel( wx.Panel ):
                 
             
             # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
-            try:
-                
-                json.loads( example_data )
+            if HydrusText.LooksLikeJSON( example_data ):
                 
                 parse_phrase = 'looks like JSON'
-                
-            except:
-                
-                pass
                 
             
             description = HydrusData.ConvertIntToBytes( len( example_data ) ) + ' total, ' + parse_phrase
@@ -5303,15 +5404,9 @@ class TestPanelPageParser( TestPanel ):
                     
                 
                 # put this second, so if the JSON contains some HTML, it'll overwrite here. decent compromise
-                try:
-                    
-                    json.loads( post_conversion_example_data )
+                if HydrusText.LooksLikeJSON( example_data ):
                     
                     parse_phrase = 'looks like JSON'
-                    
-                except:
-                    
-                    pass
                     
                 
                 description = HydrusData.ConvertIntToBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase

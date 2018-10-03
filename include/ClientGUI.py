@@ -1974,6 +1974,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
@@ -3321,6 +3322,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'hover_window_report_mode':
             
             HG.hover_window_report_mode = not HG.hover_window_report_mode
+            
+        elif name == 'media_load_report_mode':
+            
+            HG.media_load_report_mode = not HG.media_load_report_mode
             
         elif name == 'menu_profile_mode':
             

@@ -1549,13 +1549,13 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     def ImportFromDragDrop( self, paths ):
         
         gugs = []
-        
         url_matches = []
-        
         parsers = []
+        domain_metadatas = []
         
         num_misc_objects = 0
         
+        bandwidth_manager = self._network_engine.bandwidth_manager
         domain_manager = self._network_engine.domain_manager
         
         for path in paths:
@@ -1584,7 +1584,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
-            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLMatch, ClientParsing.PageParser ) ):
+            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLMatch, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage ) ):
                 
                 obj_list = HydrusSerialisable.SerialisableList( [ obj_list ] )
                 
@@ -1610,6 +1610,10 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     parsers.append( obj )
                     
+                elif isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ):
+                    
+                    domain_metadatas.append( obj )
+                    
                 else:
                     
                     num_misc_objects += 1
@@ -1617,7 +1621,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        if len( gugs ) + len( url_matches ) + len( parsers ) == 0:
+        if len( obj_list ) - num_misc_objects == 0:
             
             if num_misc_objects > 0:
                 
@@ -1663,8 +1667,6 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        #
-        
         # now parsers
         
         num_exact_dupe_parsers = 0
@@ -1682,9 +1684,58 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_matches + num_exact_dupe_parsers
+        # now domain metadata
         
-        if len( new_gugs ) + len( new_url_matches ) + len( new_parsers ) == 0:
+        num_exact_dupe_domain_metadatas = 0
+        new_domain_metadatas = []
+        
+        for domain_metadata in domain_metadatas:
+            
+            # check if the headers or rules are new, discarding any dupe content
+            
+            domain = domain_metadata.GetDomain()
+            headers_list = None
+            bandwidth_rules = None
+            
+            nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+            
+            if domain_metadata.HasHeaders():
+                
+                headers_list = domain_metadata.GetHeaders()
+                
+                if domain_manager.AlreadyHaveExactlyTheseHeaders( nc, headers_list ):
+                    
+                    headers_list = None
+                    
+                
+            
+            if domain_metadata.HasBandwidthRules():
+                
+                bandwidth_rules = domain_metadata.GetBandwidthRules()
+                
+                if bandwidth_manager.AlreadyHaveExactlyTheseBandwidthRules( nc, bandwidth_rules ):
+                    
+                    bandwidth_rules = None
+                    
+                
+            
+            if headers_list is None and bandwidth_rules is None:
+                
+                num_exact_dupe_domain_metadatas += 1
+                
+            else:
+                
+                new_dm = ClientNetworkingDomain.DomainMetadataPackage( domain = domain, headers_list = headers_list, bandwidth_rules = bandwidth_rules )
+                
+                new_domain_metadatas.append( new_dm )
+                
+            
+        
+        #
+        
+        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_matches + num_exact_dupe_parsers + num_exact_dupe_domain_metadatas
+        
+        if len( new_gugs ) + len( new_url_matches ) + len( new_parsers ) + len( new_domain_metadatas ) == 0:
             
             wx.MessageBox( 'All ' + HydrusData.ToHumanInt( total_num_dupes ) + ' downloader objects in that package appeared to already be in the client, so nothing need be added.' )
             
@@ -1699,6 +1750,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             choice_tuples.extend( [ ( 'GUG: ' + gug.GetName(), gug, True ) for gug in new_gugs ] )
             choice_tuples.extend( [ ( 'URL Class: ' + url_match.GetName(), url_match, True ) for url_match in new_url_matches ] )
             choice_tuples.extend( [ ( 'Parser: ' + parser.GetName(), parser, True ) for parser in new_parsers ] )
+            choice_tuples.extend( [ ( 'Domain Metadata: ' + domain_metadata.GetDomain(), domain_metadata, True ) for domain_metadata in new_domain_metadatas ] )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'select objects to add' ) as dlg:
                 
@@ -1713,6 +1765,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     new_gugs = [ obj for obj in new_objects if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ) ]
                     new_url_matches = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.URLMatch ) ]
                     new_parsers = [ obj for obj in new_objects if isinstance( obj, ClientParsing.PageParser ) ]
+                    new_domain_metadatas = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ) ]
                     
                 else:
                     
@@ -1726,10 +1779,32 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         new_gugs.sort( key = lambda o: o.GetName() )
         new_url_matches.sort( key = lambda o: o.GetName() )
         new_parsers.sort( key = lambda o: o.GetName() )
+        new_domain_metadatas.sort( key = lambda o: o.GetDomain() )
+        
+        if len( new_domain_metadatas ) > 0:
+            
+            message = 'Before the final import confirmation, I will now show the domain metadata in detail. Give it a cursory look just to check it seems good. If not, click no on the final dialog!'
+            
+            TOO_MANY_DM = 8
+            
+            if len( new_domain_metadatas ) > TOO_MANY_DM:
+                
+                message += os.linesep * 2
+                message += 'There are more than ' + HydrusData.ToHumanInt( TOO_MANY_DM ) + ' domain metadata objects. So I do not give you dozens of preview windows, I will only show you these first ' + HydrusData.ToHumanInt( TOO_MANY_DM ) + '.'
+                
+            
+            new_domain_metadatas_to_show = new_domain_metadatas[:TOO_MANY_DM]
+            
+            for new_dm in new_domain_metadatas_to_show:
+                
+                wx.MessageBox( new_dm.GetDetailedSafeSummary() )
+                
+            
         
         all_to_add = list( new_gugs )
         all_to_add.extend( new_url_matches )
         all_to_add.extend( new_parsers )
+        all_to_add.extend( new_domain_metadatas )
         
         message = 'The client is about to add and link these objects:'
         message += os.linesep * 2
@@ -1761,10 +1836,13 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         domain_manager.AutoAddURLMatchesAndParsers( new_url_matches, dupe_url_matches, new_parsers )
         
+        bandwidth_manager.AutoAddDomainMetadatas( new_domain_metadatas )
+        domain_manager.AutoAddDomainMetadatas( new_domain_metadatas, approved = True )
+        
         num_new_gugs = len( new_gugs )
         num_aux = len( new_url_matches ) + len( new_parsers )
         
-        final_message = 'Successfully added ' + HydrusData.ToHumanInt( len( new_gugs ) ) + ' new downloaders and ' + HydrusData.ToHumanInt( len( new_url_matches ) + len( new_parsers ) ) + ' auxiliary objects.'
+        final_message = 'Successfully added ' + HydrusData.ToHumanInt( len( new_gugs ) ) + ' new downloaders and ' + HydrusData.ToHumanInt( len( new_url_matches ) + len( new_parsers ) + len( new_domain_metadatas ) ) + ' auxiliary objects.'
         
         if total_num_dupes > 0:
             

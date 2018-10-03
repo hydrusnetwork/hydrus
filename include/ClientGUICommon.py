@@ -2192,7 +2192,7 @@ class NoneableSpinCtrl( wx.Panel ):
     
 class NoneableTextCtrl( wx.Panel ):
     
-    def __init__( self, parent, message = '', none_phrase = 'no limit' ):
+    def __init__( self, parent, message = '', none_phrase = 'none' ):
         
         wx.Panel.__init__( self, parent )
         

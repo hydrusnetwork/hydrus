@@ -2,6 +2,7 @@ import numpy.core.multiarray # important this comes before cv!
 import ClientConstants as CC
 import cv2
 import HydrusConstants as HC
+import HydrusData
 import HydrusImageHandling
 import HydrusGlobals as HG
 
@@ -61,7 +62,17 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
 def GenerateNumpyImage( path, mime ):
     
+    if HG.media_load_report_mode:
+        
+        HydrusData.ShowText( 'Loading media: ' + path )
+        
+    
     if mime == HC.IMAGE_GIF or HG.client_controller.new_options.GetBoolean( 'load_images_with_pil' ):
+        
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading with PIL' )
+            
         
         # a regular cv.imread call, can crash the whole process on random thumbs, hooray, so have this as backup
         # it was just the read that was the problem, so this seems to work fine, even if pil is only about half as fast
@@ -71,6 +82,11 @@ def GenerateNumpyImage( path, mime ):
         numpy_image = GenerateNumPyImageFromPILImage( pil_image )
         
     else:
+        
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading with OpenCV' )
+            
         
         if mime == HC.IMAGE_JPEG:
             
@@ -84,6 +100,11 @@ def GenerateNumpyImage( path, mime ):
         numpy_image = cv2.imread( path, flags = flags )
         
         if numpy_image is None: # doesn't support static gifs and some random other stuff
+            
+            if HG.media_load_report_mode:
+                
+                HydrusData.ShowText( 'OpenCV Failed, loading with PIL' )
+                
             
             pil_image = HydrusImageHandling.GeneratePILImage( path )
             

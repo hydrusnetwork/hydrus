@@ -73,6 +73,7 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         
         ( namespace, subtag ) = HydrusTags.SplitTag( tag )
         
+        comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
         comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
         
         # 'cat' < 'character:rei'
@@ -87,7 +88,7 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
             
         else:
             
-            return ( namespace, comparable_subtag )
+            return ( comparable_namespace, comparable_subtag )
             
         
     
@@ -109,7 +110,7 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         
         if namespace == '':
             
-            namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
+            namespace = u'{' # '{' is above 'z' in ascii, so this works for most situations
             
         
         return namespace

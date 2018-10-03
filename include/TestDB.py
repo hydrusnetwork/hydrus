@@ -748,8 +748,9 @@ class TestClientDB( unittest.TestCase ):
             
             ( written_status, written_note ) = self._write( 'import_file', file_import_job )
             
-            self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
-            self.assertTrue( len( written_note ) > 0 )
+            # would be redundant, but triggers the 'it is missing from db' hook
+            self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_AND_NEW )
+            self.assertIn( 'already in the db', written_note )
             self.assertEqual( file_import_job.GetHash(), hash )
             
             written_hash = file_import_job.GetHash()
@@ -872,9 +873,15 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
+        ( status, written_hash, note ) = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( ( status, hash ), ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash ) )
+        # would be redundant, but sometimes(?) triggers the 'it is missing from db' hook
+        self.assertIn( status, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+        self.assertEqual( written_hash, hash )
+        if status == CC.STATUS_UNKNOWN:
+            
+            self.assertIn( 'already in the db', note )
+            
         
         #
         

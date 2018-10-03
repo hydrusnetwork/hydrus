@@ -249,7 +249,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 title_hook( title )
                 
             
-            file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.url )
+            file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.url, file_import_options )
             
             num_urls_total = len( file_seeds )
             
@@ -270,7 +270,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
             
             # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
-            can_add_more_gallery_urls = num_urls_total > 0 and can_search_for_more_files
+            can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
             
             if self._can_generate_more_pages and can_add_more_gallery_urls:
                 

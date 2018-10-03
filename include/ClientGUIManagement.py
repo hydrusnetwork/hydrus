@@ -627,6 +627,8 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 paths = [ path_info for ( path_type, path_info ) in paths_info if path_type != 'zip' ]
                 
                 exclude_deleted = advanced_import_options[ 'exclude_deleted' ]
+                do_not_check_known_urls_before_importing = False
+                do_not_check_hashes_before_importing = False   
                 allow_decompression_bombs = False
                 min_size = advanced_import_options[ 'min_size' ]
                 max_size = None
@@ -635,11 +637,12 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 max_resolution = None
                 
                 automatic_archive = advanced_import_options[ 'automatic_archive' ]
+                associate_source_urls = True
                 
                 file_import_options = ClientImportOptions.FileImportOptions()
                 
-                file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-                file_import_options.SetPostImportOptions( automatic_archive )
+                file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
                 
                 paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in paths_to_tags.items() }
                 
@@ -1453,8 +1456,9 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
         file_import_options = self._hdd_import.GetFileImportOptions()
+        show_downloader_options = False
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._import_queue_panel, file_import_options, self._hdd_import.SetFileImportOptions )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._import_queue_panel, file_import_options, show_downloader_options, self._hdd_import.SetFileImportOptions )
         
         #
         
@@ -1575,6 +1579,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
         
+        self._gallery_importers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
         self._gallery_importers_listctrl_panel.AddButton( 'remove', self._RemoveGalleryImports, enabled_only_on_selection = True )
         
         self._gallery_importers_listctrl_panel.NewButtonRow()
@@ -1597,8 +1602,10 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         tag_import_options = self._multiple_gallery_import.GetTagImportOptions()
         file_limit = self._multiple_gallery_import.GetFileLimit()
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._multiple_gallery_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, tag_import_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
+        show_downloader_options = True
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, show_downloader_options, self._multiple_gallery_import.SetFileImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, tag_import_options, show_downloader_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
         
         #
         
@@ -1662,6 +1669,19 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         gallery_import = selected[0]
         
         return gallery_import != self._highlighted_gallery_import
+        
+    
+    def _CanRetryFailed( self ):
+        
+        for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
+            
+            if gallery_import.CanRetryFailed():
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _ClearExistingHighlight( self ):
@@ -1800,6 +1820,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         menu = wx.Menu()
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'copy queries', 'Copy all the selected downloaders\' queries to clipboard.', self._CopySelectedQueries )
+        
+        if self._CanRetryFailed():
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -1958,6 +1985,14 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._UpdateImportStatusNow()
         
     
+    def _RetryFailed( self ):
+        
+        for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
+            
+            gallery_import.RetryFailed()
+            
+        
+    
     def _SetGUGKeyAndName( self, gug_key_and_name ):
         
         current_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
@@ -2009,7 +2044,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if HydrusData.TimeHasPassed( self._next_update_time ):
             
-            self._next_update_time = HydrusData.GetNow() + 1
+            num_items = len( self._gallery_importers_listctrl.GetData() )
+            
+            update_period = max( 1, int( ( num_items / 10 ) ** 0.33 ) )
+            
+            self._next_update_time = HydrusData.GetNow() + update_period
             
             #
             
@@ -2152,6 +2191,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.NewButtonRow()
         
+        self._watchers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
         self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
@@ -2162,9 +2202,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
         
+        show_downloader_options = True
+        
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._watchers_panel, checker_options, self._OptionsUpdated )
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, self._OptionsUpdated )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, tag_import_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, show_downloader_options, self._OptionsUpdated )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, tag_import_options, show_downloader_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
         
         # suck up watchers from elsewhere in the program (presents a checklistboxdialog)
         
@@ -2248,6 +2290,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         watcher = selected[0]
         
         return watcher != self._highlighted_watcher
+        
+    
+    def _CanRetryFailed( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            if watcher.CanRetryFailed():
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _CheckNow( self ):
@@ -2391,6 +2446,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected watchers\' urls to clipboard.', self._CopySelectedURLs )
         ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected watchers\' urls in your browser.', self._OpenSelectedURLs )
+        
+        if self._CanRetryFailed():
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry failed', 'Retry all the failed downloads.', self._RetryFailed )
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -2570,6 +2632,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._UpdateImportStatusNow()
         
     
+    def _RetryFailed( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            watcher.RetryFailed()
+            
+        
+    
     def _SetOptionsToWatchers( self ):
         
         watchers = self._watchers_listctrl.GetData( only_selected = True )
@@ -2603,7 +2673,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if HydrusData.TimeHasPassed( self._next_update_time ):
             
-            self._next_update_time = HydrusData.GetNow() + 1
+            num_items = len( self._watchers_listctrl.GetData() )
+            
+            update_period = max( 1, int( ( num_items / 10 ) ** 0.33 ) )
+            
+            self._next_update_time = HydrusData.GetNow() + update_period
             
             #
             
@@ -2779,7 +2853,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         file_import_options = self._simple_downloader_import.GetFileImportOptions()
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._simple_downloader_panel, file_import_options, self._simple_downloader_import.SetFileImportOptions )
+        show_downloader_options = True
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._simple_downloader_panel, file_import_options, show_downloader_options, self._simple_downloader_import.SetFileImportOptions )
         
         #
         
@@ -3179,9 +3255,10 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         ( file_import_options, tag_import_options ) = self._urls_import.GetOptions()
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._url_panel, file_import_options, self._urls_import.SetFileImportOptions )
+        show_downloader_options = True
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._url_panel, tag_import_options, update_callable = self._urls_import.SetTagImportOptions, show_downloader_options = True, allow_default_selection = True )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._url_panel, file_import_options, show_downloader_options, self._urls_import.SetFileImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._url_panel, tag_import_options, show_downloader_options, update_callable = self._urls_import.SetTagImportOptions, allow_default_selection = True )
         
         #
         

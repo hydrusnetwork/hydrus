@@ -115,6 +115,44 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = True
         
     
+    def AlreadyHaveExactlyTheseBandwidthRules( self, network_context, bandwidth_rules ):
+        
+        with self._lock:
+            
+            if network_context in self._network_contexts_to_bandwidth_rules:
+                
+                if self._network_contexts_to_bandwidth_rules[ network_context ].GetSerialisableTuple() == bandwidth_rules.GetSerialisableTuple():
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def AutoAddDomainMetadatas( self, domain_metadatas ):
+        
+        for domain_metadata in domain_metadatas:
+            
+            if not domain_metadata.HasBandwidthRules():
+                
+                return
+                
+            
+            with self._lock:
+                
+                domain = domain_metadata.GetDomain()
+                
+                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+                
+                bandwidth_rules = domain_metadata.GetBandwidthRules()
+                
+                self._network_contexts_to_bandwidth_rules[ network_context ] = bandwidth_rules
+                
+            
+        
+    
     def CanContinueDownload( self, network_contexts ):
         
         with self._lock:
@@ -319,6 +357,14 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 return max( estimates )
                 
+            
+        
+    
+    def HasRules( self, network_context ):
+        
+        with self._lock:
+            
+            return network_context in self._network_contexts_to_bandwidth_rules
             
         
     

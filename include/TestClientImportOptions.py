@@ -199,6 +199,8 @@ class TestFileImportOptions( unittest.TestCase ):
         file_import_options = ClientImportOptions.FileImportOptions()
         
         exclude_deleted = False
+        do_not_check_known_urls_before_importing = False
+        do_not_check_hashes_before_importing = False
         allow_decompression_bombs = False
         min_size = None
         max_size = None
@@ -206,11 +208,12 @@ class TestFileImportOptions( unittest.TestCase ):
         min_resolution = None
         max_resolution = None
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         automatic_archive = False
+        associate_source_urls = False
         
-        file_import_options.SetPostImportOptions( automatic_archive )
+        file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
         
         present_new_files = True
         present_already_in_inbox_files = True
@@ -223,6 +226,7 @@ class TestFileImportOptions( unittest.TestCase ):
         self.assertFalse( file_import_options.ExcludesDeleted() )
         self.assertFalse( file_import_options.AllowsDecompressionBombs() )
         self.assertFalse( file_import_options.AutomaticallyArchives() )
+        self.assertFalse( file_import_options.ShouldAssociateSourceURLs() )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         file_import_options.CheckFileIsValid( 65536, HC.APPLICATION_7Z, None, None )
@@ -238,7 +242,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         exclude_deleted = True
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         self.assertTrue( file_import_options.ExcludesDeleted() )
         self.assertFalse( file_import_options.AllowsDecompressionBombs() )
@@ -248,7 +252,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         allow_decompression_bombs = True
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         self.assertTrue( file_import_options.ExcludesDeleted() )
         self.assertTrue( file_import_options.AllowsDecompressionBombs() )
@@ -257,18 +261,20 @@ class TestFileImportOptions( unittest.TestCase ):
         #
         
         automatic_archive = True
+        associate_source_urls  = True
         
-        file_import_options.SetPostImportOptions( automatic_archive )
+        file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
         
         self.assertTrue( file_import_options.ExcludesDeleted() )
         self.assertTrue( file_import_options.AllowsDecompressionBombs() )
         self.assertTrue( file_import_options.AutomaticallyArchives() )
+        self.assertTrue( file_import_options.ShouldAssociateSourceURLs() )
         
         #
         
         min_size = 4096
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
@@ -282,7 +288,7 @@ class TestFileImportOptions( unittest.TestCase ):
         min_size = None
         max_size = 2000
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         
@@ -296,7 +302,7 @@ class TestFileImportOptions( unittest.TestCase ):
         max_size = None
         max_gif_size = 2000
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
@@ -313,7 +319,7 @@ class TestFileImportOptions( unittest.TestCase ):
         max_gif_size = None
         min_resolution = ( 200, 100 )
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
@@ -334,7 +340,7 @@ class TestFileImportOptions( unittest.TestCase ):
         min_resolution = None
         max_resolution = ( 3000, 4000 )
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         

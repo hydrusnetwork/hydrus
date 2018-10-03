@@ -28,7 +28,7 @@ def ConvertBandwidthRuleToString( rule ):
         
     elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
         
-        s = HydrusData.ToHumanInt( max_allowed )
+        s = HydrusData.ToHumanInt( max_allowed ) + ' rqs'
         
     
     if time_delta is None:

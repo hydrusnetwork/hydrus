@@ -585,15 +585,18 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 hash = file_seed.GetHash()
                 
-                downloaded_tags = []
-                
-                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
-                
-                service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
-                
-                if len( service_keys_to_content_updates ) > 0:
+                if self._tag_import_options.HasAdditionalTags():
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                    
+                    downloaded_tags = []
+                    
+                    service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                    
+                    if len( service_keys_to_content_updates ) > 0:
+                        
+                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                        
                     
                 
                 service_keys_to_tags = {}
@@ -783,16 +786,16 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         error_occured = False
         
+        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
+        
         try:
             
             if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
                 
-                raise Exception( 'Path does not seem to exist, or is not a directory.' )
+                raise Exception( 'Path "' + self._path + '" does not seem to exist, or is not a directory.' )
                 
             
             pubbed_job_key = False
-            
-            job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
             
             job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
             

@@ -1,6 +1,7 @@
 import numpy.core.multiarray # important this comes before cv!
 import cv2
 import ClientImageHandling
+import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusImageHandling
@@ -57,6 +58,11 @@ def GetVideoFrameDuration( path ):
 class GIFRenderer( object ):
     
     def __init__( self, path, num_frames, target_resolution ):
+        
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading GIF: ' + path )
+            
         
         self._path = path
         self._num_frames = num_frames
@@ -136,6 +142,11 @@ class GIFRenderer( object ):
     
     def _InitialiseCV( self ):
         
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading GIF with OpenCV' )
+            
+        
         self._cv_mode = True
         
         self._cv_video = cv2.VideoCapture( self._path )
@@ -147,6 +158,11 @@ class GIFRenderer( object ):
         
     
     def _InitialisePIL( self ):
+        
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading GIF with PIL' )
+            
         
         self._cv_mode = False
         
@@ -186,6 +202,11 @@ class GIFRenderer( object ):
             except HydrusExceptions.CantRenderWithCVException:
                 
                 if self._last_frame is None:
+                    
+                    if HG.media_load_report_mode:
+                        
+                        HydrusData.ShowText( 'OpenCV Failed to render a frame' )
+                        
                     
                     self._InitialisePIL()
                     

@@ -1957,13 +1957,15 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._action_failed = create_choice()
         self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._file_box, file_import_options )
+        show_downloader_options = False
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._file_box, file_import_options, show_downloader_options )
         
         #
         
         self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, tag_import_options, show_downloader_options = False )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, tag_import_options, show_downloader_options )
         
         self._filename_tagging_options_box = ClientGUICommon.StaticBox( self._tag_box, 'filename tagging' )
         

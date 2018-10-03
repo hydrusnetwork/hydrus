@@ -826,8 +826,9 @@ class FrameInputLocalFiles( wx.Frame ):
         self._progress_cancel.Disable()
         
         file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        show_downloader_options = False
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
         
         menu_items = []
         

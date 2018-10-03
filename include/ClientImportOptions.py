@@ -528,13 +528,15 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._exclude_deleted = True
+        self._do_not_check_known_urls_before_importing = False
+        self._do_not_check_hashes_before_importing = False
         self._allow_decompression_bombs = False
         self._min_size = None
         self._max_size = None
@@ -542,6 +544,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._min_resolution = None
         self._max_resolution = None
         self._automatic_archive = False
+        self._associate_source_urls = True
         self._present_new_files = True
         self._present_already_in_inbox_files = True
         self._present_already_in_archive_files = True
@@ -549,8 +552,8 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        pre_import_options = ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
-        post_import_options = self._automatic_archive
+        pre_import_options = ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
+        post_import_options = ( self._automatic_archive, self._associate_source_urls )
         presentation_options = ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files )
         
         return ( pre_import_options, post_import_options, presentation_options )
@@ -560,8 +563,8 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         ( pre_import_options, post_import_options, presentation_options ) = serialisable_info
         
-        ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution ) = pre_import_options
-        self._automatic_archive = post_import_options
+        ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution ) = pre_import_options
+        ( self._automatic_archive, self._associate_source_urls ) = post_import_options
         ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files ) = presentation_options 
         
     
@@ -597,6 +600,27 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( pre_import_options, post_import_options, presentation_options )
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            ( pre_import_options, post_import_options, presentation_options ) = old_serialisable_info
+            
+            ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = pre_import_options
+            
+            automatic_archive = post_import_options
+            
+            do_not_check_known_urls_before_importing = False
+            do_not_check_hashes_before_importing = False
+            associate_source_urls = True
+            
+            pre_import_options = ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+            
+            post_import_options = ( automatic_archive, associate_source_urls )
+            
+            new_serialisable_info = ( pre_import_options, post_import_options, presentation_options )
+            
+            return ( 4, new_serialisable_info )
             
         
     
@@ -696,7 +720,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetPostImportOptions( self ):
         
-        post_import_options = self._automatic_archive
+        post_import_options = ( self._automatic_archive, self._associate_source_urls )
         
         return post_import_options
         
@@ -710,7 +734,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetPreImportOptions( self ):
         
-        pre_import_options = ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
+        pre_import_options = ( self._exclude_deleted, self._do_not_check_known_urls_before_importing, self._do_not_check_hashes_before_importing, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
         
         return pre_import_options
         
@@ -802,9 +826,10 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
-    def SetPostImportOptions( self, automatic_archive ):
+    def SetPostImportOptions( self, automatic_archive, associate_source_urls ):
         
         self._automatic_archive = automatic_archive
+        self._associate_source_urls = associate_source_urls
         
     
     def SetPresentationOptions( self, present_new_files, present_already_in_inbox_files, present_already_in_archive_files ):
@@ -814,15 +839,32 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._present_already_in_archive_files = present_already_in_archive_files
         
     
-    def SetPreImportOptions( self, exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ):
+    def SetPreImportOptions( self, exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ):
         
         self._exclude_deleted = exclude_deleted
+        self._do_not_check_known_urls_before_importing = do_not_check_known_urls_before_importing
+        self._do_not_check_hashes_before_importing = do_not_check_hashes_before_importing
         self._allow_decompression_bombs = allow_decompression_bombs
         self._min_size = min_size
         self._max_size = max_size
         self._max_gif_size = max_gif_size
         self._min_resolution = min_resolution
         self._max_resolution = max_resolution
+        
+    
+    def ShouldAssociateSourceURLs( self ):
+        
+        return self._associate_source_urls
+        
+    
+    def DoNotCheckHashesBeforeImporting( self ):
+        
+        return self._do_not_check_hashes_before_importing
+        
+    
+    def DoNotCheckKnownURLsBeforeImporting( self ):
+        
+        return self._do_not_check_known_urls_before_importing
         
     
     def ShouldNotPresentIgnorantOfInbox( self, status ):
@@ -1148,6 +1190,11 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._tag_blacklist
         
     
+    def HasAdditionalTags( self ):
+        
+        return True in ( service_tag_import_options.HasAdditionalTags() for service_tag_import_options in self._service_keys_to_service_tag_import_options.values() )
+        
+    
     def IsDefault( self ):
         
         return self._is_default
@@ -1328,6 +1375,11 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
         return tags
+        
+    
+    def HasAdditionalTags( self ):
+        
+        return len( self._additional_tags ) > 0
         
     
     def ToTuple( self ):

@@ -238,6 +238,31 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         file_seeds = self._list_ctrl.GetData( only_selected = True )
         
+        if status_to_set == CC.STATUS_UNKNOWN:
+            
+            deleted_file_seeds = [ file_seed for file_seed in file_seeds if file_seed.IsDeleted() and file_seed.HasHash() ]
+            
+            if True in ( file_seed.IsDeleted() and file_seed.HasHash() for file_seed in file_seeds ):
+                
+                message = 'One or more of these files did not import due to being previously deleted. They will likely fail again unless you erase those deletion records. Would you like to do this now?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        deletee_hashes = { file_seed.GetHash() for file_seed in deleted_file_seeds }
+                        
+                        content_update_erase_record = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', deletee_hashes ) )
+                        content_update_undelete_from_trash = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, deletee_hashes )
+                        
+                        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update_erase_record, content_update_undelete_from_trash ] }
+                        
+                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                        
+                    
+                
+            
+        
         for file_seed in file_seeds:
             
             file_seed.SetStatus( status_to_set )

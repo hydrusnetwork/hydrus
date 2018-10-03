@@ -1897,13 +1897,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             import ClientGUIImport
             
+            show_downloader_options = True
+            
             quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( 'quiet' )
             
-            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options )
+            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options, show_downloader_options )
             
             loud_file_import_options = self._new_options.GetDefaultFileImportOptions( 'loud' )
             
-            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options )
+            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options, show_downloader_options )
             
             #
             
@@ -6264,7 +6266,12 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._only_thumbs = True
         
+        self._incorrect_locations = {}
+        self._correct_locations = {}
+        
         for ( incorrect_location, prefix ) in missing_locations:
+            
+            self._incorrect_locations[ prefix ] = incorrect_location
             
             if prefix.startswith( 'f' ):
                 
@@ -6274,7 +6281,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
         text += os.linesep * 2
-        text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will likely be a simple ctrl+a->correct, but if you have a more complicated system or store your thumbnails different to your files, make sure you skim the whole list. Check everything reports _ok!_'
+        text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will be clicking _add a possibly correct location_ and then select the new folder where the subdirectories all went. You can repeat this if your folders are missing in multiple locations. Check everything reports _ok!_'
         text += os.linesep * 2
         text += 'Although it is best if you can find everything, you only _have_ to fix the subdirectories starting with \'f\', which store your original files. Those starting \'t\' and \'r\' are for your thumbnails, which can be regenerated with a bit of work.'
         text += os.linesep * 2
@@ -6292,25 +6299,20 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         st.SetWrapWidth( 640 )
         
-        self._locations = ClientGUIListCtrl.SaneListCtrl( self, 400, [ ( 'missing location', -1 ), ( 'expected subdirectory', 120 ), ( 'correct location', 240 ), ( 'now ok?', 120 ) ], activation_callback = self._SetLocations )
+        columns = [ ( 'missing location', -1 ), ( 'expected subdirectory', 23 ), ( 'correct location', 36 ), ( 'now ok?', 9 ) ]
+        
+        self._locations = ClientGUIListCtrl.BetterListCtrl( self, 'repair_locations', 12, 36, columns, self._ConvertPrefixToListCtrlTuples, activation_callback = self._SetLocations )
         
         self._set_button = ClientGUICommon.BetterButton( self, 'set correct location', self._SetLocations )
+        self._add_button = ClientGUICommon.BetterButton( self, 'add a possibly correct location (let the client figure out what it contains)', self._AddLocation )
         
         # add a button here for 'try to fill them in for me'. you give it a dir, and it tries to figure out and fill in the prefixes for you
         
         #
         
-        for ( incorrect_location, prefix ) in missing_locations:
-            
-            t = ( incorrect_location, prefix, '', '' )
-            
-            self._locations.Append( t, t )
-            
+        self._locations.AddDatas( [ prefix for ( incorrect_location, prefix ) in missing_locations ] )
         
-        # sort by prefix
-        
-        #self._locations.SortListItems( 1 ) # subdirs secondary
-        #self._locations.SortListItems( 0 ) # missing location primary
+        self._locations.Sort( 0 )
         
         #
         
@@ -6319,39 +6321,88 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._locations, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._set_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._add_button, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
     
+    def _AddLocation( self ):
+        
+        with wx.DirDialog( self, 'Select the potential correct location.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                for prefix in self._locations.GetData():
+                    
+                    ok = os.path.exists( os.path.join( path, prefix ) )
+                    
+                    if ok:
+                        
+                        self._correct_locations[ prefix ] = ( path, ok )
+                        
+                    
+                
+                self._locations.UpdateDatas()
+                
+            
+        
+    
+    def _ConvertPrefixToListCtrlTuples( self, prefix ):
+        
+        incorrect_location = self._incorrect_locations[ prefix ]
+        
+        if prefix in self._correct_locations:
+            
+            ( correct_location, ok ) = self._correct_locations[ prefix ]
+            
+            if ok:
+                
+                pretty_ok = 'ok!'
+                
+            else:
+                
+                pretty_ok = 'not found'
+                
+            
+        else:
+            
+            correct_location = ''
+            ok = None
+            pretty_ok = ''
+            
+        
+        pretty_incorrect_location = incorrect_location
+        pretty_prefix = prefix
+        pretty_correct_location = correct_location
+        
+        display_tuple = ( pretty_incorrect_location, pretty_prefix, pretty_correct_location, pretty_ok )
+        sort_tuple = ( incorrect_location, prefix, correct_location, ok )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
     def _SetLocations( self ):
         
-        selected_indices = self._locations.GetAllSelected()
+        prefixes = self._locations.GetData( only_selected = True )
         
-        if len( selected_indices ) > 0:
+        if len( prefixes ) > 0:
             
             with wx.DirDialog( self, 'Select correct location.' ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    correct_location = HydrusData.ToUnicode( dlg.GetPath() )
+                    path = HydrusData.ToUnicode( dlg.GetPath() )
                     
-                    for index in selected_indices:
+                    for prefix in prefixes:
                         
-                        ( incorrect_location, prefix, gumpf, gumpf_ok ) = self._locations.GetClientData( index )
+                        ok = os.path.exists( os.path.join( path, prefix ) )
                         
-                        if os.path.exists( os.path.join( correct_location, prefix ) ):
-                            
-                            ok = 'ok!'
-                            
-                        else:
-                            
-                            ok = 'not found'
-                            
+                        self._correct_locations[ prefix ] = ( path, ok )
                         
-                        t = ( incorrect_location, prefix, correct_location, ok )
-                        
-                        self._locations.UpdateRow( index, t, t )
-                        
+                    
+                    self._locations.UpdateDatas()
                     
                 
             
@@ -6363,9 +6414,11 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         thumb_problems = False
         
-        for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
+        for prefix in self._locations.GetData():
             
-            if correct_location == '':
+            incorrect_location = self._incorrect_locations[ prefix ]
+            
+            if prefix not in self._correct_locations:
                 
                 if prefix.startswith( 'f' ):
                     
@@ -6378,15 +6431,20 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     correct_location = incorrect_location
                     
                 
-            elif ok != 'ok!':
+            else:
                 
-                if prefix.startswith( 'f' ):
+                ( correct_location, ok ) = self._correct_locations[ prefix ]
+                
+                if not ok:
                     
-                    raise HydrusExceptions.VetoException( 'You did not find all the correct file locations!' )
-                    
-                else:
-                    
-                    thumb_problems = True
+                    if prefix.startswith( 'f' ):
+                        
+                        raise HydrusExceptions.VetoException( 'You did not find all the correct file locations!' )
+                        
+                    else:
+                        
+                        thumb_problems = True
+                        
                     
                 
             

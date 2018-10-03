@@ -5377,6 +5377,24 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
+            result = self._c.execute( 'SELECT mime FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            
+            if result is not None:
+                
+                ( mime, ) = result
+                
+                try:
+                    
+                    self._controller.client_files_manager.LocklessGetFilePath( hash, mime )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    note = 'The client believed this file was already in the db, but it was truly missing! Import will go ahead, in an attempt to fix the situation.'
+                    
+                    return ( CC.STATUS_UNKNOWN, hash, prefix + ': ' + note )
+                    
+                
+            
             note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) + ' (before this check).'
             
             return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + ': ' + note )
@@ -11004,6 +11022,36 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Pixiv should be fixed this week with a new downloader. Your pixiv subscriptions may be able to move to it automatically, or you may need to edit and manually correct them.'
                 
                 self.pub_initial_message( message )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 324:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'twitter tweet parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
                 
             except Exception as e:
                 

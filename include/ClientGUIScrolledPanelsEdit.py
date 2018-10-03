@@ -325,8 +325,10 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, file_post_default_tag_import_options )
-        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, watchable_default_tag_import_options )
+        show_downloader_options = True
+        
+        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, file_post_default_tag_import_options, show_downloader_options )
+        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, watchable_default_tag_import_options, show_downloader_options )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -445,8 +447,9 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
                 
                 tag_import_options = self._GetDefaultTagImportOptions( url_match )
+                show_downloader_options = True
                 
-                panel = EditTagImportOptionsPanel( dlg, tag_import_options )
+                panel = EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options )
                 
                 dlg.SetPanel( panel )
                 
@@ -1297,7 +1300,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, file_import_options ):
+    def __init__( self, parent, file_import_options, show_downloader_options ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1310,6 +1313,16 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         pre_import_panel = ClientGUICommon.StaticBox( self, 'pre-import checks' )
         
         self._exclude_deleted = wx.CheckBox( pre_import_panel )
+        
+        self._do_not_check_known_urls_before_importing = wx.CheckBox( pre_import_panel )
+        self._do_not_check_hashes_before_importing = wx.CheckBox( pre_import_panel )
+        
+        tt = 'If hydrus recognises a file\'s URL or hash, it can decide to skip downloading it if it believes it already has it or previously deleted it.'
+        tt += os.linesep * 2
+        tt += 'This is usually a great way to reduce bandwidth, but if you believe the clientside url mappings or serverside hashes are inaccurate and the file is being wrongly skipped, turn these on to force a download.'
+        
+        self._do_not_check_known_urls_before_importing.SetToolTip( tt )
+        self._do_not_check_hashes_before_importing.SetToolTip( tt )
         
         self._allow_decompression_bombs = wx.CheckBox( pre_import_panel )
         
@@ -1333,6 +1346,13 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         post_import_panel = ClientGUICommon.StaticBox( self, 'post-import actions' )
         
         self._auto_archive = wx.CheckBox( post_import_panel )
+        self._associate_source_urls = wx.CheckBox( post_import_panel )
+        
+        tt = 'If the parser discovers and additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
+        tt += os.linesep * 2
+        tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
+        
+        self._associate_source_urls.SetToolTip( tt )
         
         #
         
@@ -1344,9 +1364,11 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
+        ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
         
         self._exclude_deleted.SetValue( exclude_deleted )
+        self._do_not_check_known_urls_before_importing.SetValue( do_not_check_known_urls_before_importing )
+        self._do_not_check_hashes_before_importing.SetValue( do_not_check_hashes_before_importing )
         self._allow_decompression_bombs.SetValue( allow_decompression_bombs )
         self._min_size.SetValue( min_size )
         self._max_size.SetValue( max_size )
@@ -1356,9 +1378,10 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        automatic_archive = file_import_options.GetPostImportOptions()
+        ( automatic_archive, associate_source_urls ) = file_import_options.GetPostImportOptions()
         
         self._auto_archive.SetValue( automatic_archive )
+        self._associate_source_urls.SetValue( associate_source_urls )
         
         #
         
@@ -1373,6 +1396,18 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
+        
+        if show_downloader_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            rows.append( ( 'do not skip downloading because of known urls: ', self._do_not_check_known_urls_before_importing ) )
+            rows.append( ( 'do not skip downloading because of hashes: ', self._do_not_check_hashes_before_importing ) )
+            
+        else:
+            
+            self._do_not_check_known_urls_before_importing.Hide()
+            self._do_not_check_hashes_before_importing.Hide()
+            
+        
         rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
         rows.append( ( 'minimum filesize: ', self._min_size ) )
         rows.append( ( 'maximum filesize: ', self._max_size ) )
@@ -1389,6 +1424,15 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'archive all imports: ', self._auto_archive ) )
+        
+        if show_downloader_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            rows.append( ( 'associate (and trust) additional source urls: ', self._associate_source_urls ) )
+            
+        else:
+            
+            self._associate_source_urls.Hide()
+            
         
         gridbox = ClientGUICommon.WrapInGrid( post_import_panel, rows )
         
@@ -1448,6 +1492,8 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
     def GetValue( self ):
         
         exclude_deleted = self._exclude_deleted.GetValue()
+        do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.GetValue()
+        do_not_check_hashes_before_importing = self._do_not_check_hashes_before_importing.GetValue()
         allow_decompression_bombs = self._allow_decompression_bombs.GetValue()
         min_size = self._min_size.GetValue()
         max_size = self._max_size.GetValue()
@@ -1456,6 +1502,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         max_resolution = self._max_resolution.GetValue()
         
         automatic_archive = self._auto_archive.GetValue()
+        associate_source_urls = self._associate_source_urls.GetValue()
         
         present_new_files = self._present_new_files.GetValue()
         present_already_in_inbox_files = self._present_already_in_inbox_files.GetValue()
@@ -1463,8 +1510,8 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         
         file_import_options = ClientImportOptions.FileImportOptions()
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        file_import_options.SetPostImportOptions( automatic_archive )
+        file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
         file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         return file_import_options
@@ -3133,7 +3180,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        columns = [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ]
+        columns = [ ( 'name/query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ]
         
         self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, columns, self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
         
@@ -3150,6 +3197,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._ListCtrlCanRetryIgnored )
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset cache', self._ResetCache, enabled_check_func = self._ListCtrlCanResetCache )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            queries_panel.AddSeparator()
+            queries_panel.AddButton( 'show \'quality\' info', self._GetQualityInfo, enabled_only_on_selection = True )
+            
         
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._query_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
         
@@ -3208,6 +3261,9 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         self._periodic_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = limits_max )
         self._periodic_file_limit.SetToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
         
+        self._show_a_popup_while_working = wx.CheckBox( self._options_panel )
+        self._show_a_popup_while_working.SetToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' )
+        
         self._publish_files_to_popup_button = wx.CheckBox( self._options_panel )
         self._publish_files_to_page = wx.CheckBox( self._options_panel )
         self._merge_query_publish_events = wx.CheckBox( self._options_panel )
@@ -3224,9 +3280,10 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         #
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
+        show_downloader_options = True
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, allow_default_selection = True )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options, allow_default_selection = True )
         
         #
         
@@ -3239,8 +3296,9 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         self._initial_file_limit.SetValue( initial_file_limit )
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
-        ( publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = subscription.GetPresentationOptions()
+        ( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = subscription.GetPresentationOptions()
         
+        self._show_a_popup_while_working.SetValue( show_a_popup_while_working )
         self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
         self._publish_files_to_page.SetValue( publish_files_to_page )
         self._merge_query_publish_events.SetValue( merge_query_publish_events )
@@ -3259,6 +3317,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
         rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
+        rows.append( ( 'show a popup while working: ', self._show_a_popup_while_working ) )
         rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
         rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
         rows.append( ( 'publish all queries to the same page/popup button: ', self._merge_query_publish_events ) )
@@ -3360,7 +3419,8 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         ( query_text, check_now, last_check_time, next_check_time, paused, status ) = query.ToTuple()
         
-        pretty_query_text = query_text
+        name = query.GetHumanName()
+        pretty_name = name
         
         if paused:
             
@@ -3437,8 +3497,8 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         pretty_items = simple_status
         
-        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_items )
-        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, items )
+        display_tuple = ( pretty_name, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_items )
+        sort_tuple = ( name, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, items )
         
         return ( display_tuple, sort_tuple )
         
@@ -3520,6 +3580,58 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         
         return query_strings
+        
+    
+    def _GetQualityInfo( self ):
+        
+        data_strings = []
+        
+        for query in self._queries.GetData():
+            
+            fsc = query.GetFileSeedCache()
+            
+            hashes = fsc.GetHashes()
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes )
+            
+            num_inbox = 0
+            num_archived = 0
+            num_deleted = 0
+            
+            for media_result in media_results:
+                
+                lm = media_result.GetLocationsManager()
+                
+                if lm.IsLocal() and not lm.IsTrashed():
+                    
+                    if media_result.GetInbox():
+                        
+                        num_inbox += 1
+                        
+                    else:
+                        
+                        num_archived += 1
+                        
+                    
+                else:
+                    
+                    num_deleted += 1
+                    
+                
+            
+            data_string = query.GetHumanName() + ': inbox ' + HydrusData.ToHumanInt( num_inbox ) + ' | archive ' + HydrusData.ToHumanInt( num_archived ) + ' | deleted ' + HydrusData.ToHumanInt( num_deleted )
+            
+            if num_archived + num_deleted > 0:
+                
+                data_string += ' | good ' + HydrusData.ConvertFloatToPercentage( float( num_archived ) / ( num_archived + num_deleted ) )
+                
+            
+            data_strings.append( data_string )
+            
+        
+        message = os.linesep.join( data_strings )
+        
+        wx.MessageBox( message )
         
     
     def _ListCtrlCanCheckNow( self ):
@@ -3726,11 +3838,12 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         subscription.SetTuple( gug_key_and_name, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
+        show_a_popup_while_working = self._show_a_popup_while_working.GetValue()
         publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
         publish_files_to_page = self._publish_files_to_page.GetValue()
         merge_query_publish_events = self._merge_query_publish_events.GetValue()
         
-        subscription.SetPresentationOptions( publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
+        subscription.SetPresentationOptions( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
         
         return subscription
         
@@ -3749,6 +3862,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._status_st.SetMinSize( ( st_width, -1 ) )
         
+        self._display_name = ClientGUICommon.NoneableTextCtrl( self, none_phrase = 'show query text' )
         self._query_text = wx.TextCtrl( self )
         self._check_now = wx.CheckBox( self )
         self._paused = wx.CheckBox( self )
@@ -3757,9 +3871,18 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, HG.client_controller, True, True )
         
+        tag_import_options = self._original_query.GetTagImportOptions()
+        show_downloader_options = False # just for additional tags, no parsing gubbins needed
+        
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, tag_import_options, show_downloader_options )
+        
         #
         
         ( query_text, check_now, self._last_check_time, self._next_check_time, paused, self._status ) = self._original_query.ToTuple()
+        
+        display_name = self._original_query.GetDisplayName()
+        
+        self._display_name.SetValue( display_name )
         
         self._query_text.SetValue( query_text )
         
@@ -3779,6 +3902,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
+        rows.append( ( 'optional display name: ', self._display_name ) )
         rows.append( ( 'query text: ', self._query_text ) )
         rows.append( ( 'check now: ', self._check_now ) )
         rows.append( ( 'paused: ', self._paused ) )
@@ -3791,6 +3915,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -3814,6 +3939,10 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         query.SetPaused( self._paused.GetValue() )
         
         query.SetCheckNow( self._check_now.GetValue() )
+        
+        query.SetDisplayName( self._display_name.GetValue() )
+        
+        query.SetTagImportOptions( self._tag_import_options.GetValue() )
         
         return query
         
@@ -4537,7 +4666,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             queries = subscription.GetQueries()
             
-            choice_tuples = [ ( query.GetQueryText(), query, False ) for query in queries ]
+            choice_tuples = [ ( query.GetHumanName(), query, False ) for query in queries ]
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'select the queries to extract' ) as dlg:
                 
@@ -4683,10 +4812,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForPosts()
+        show_downloader_options = True
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options = True, allow_default_selection = True )
+            panel = EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection = True )
             
             dlg.SetPanel( panel )
             
@@ -4706,7 +4836,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_import_options, show_downloader_options = True, allow_default_selection = False ):
+    def __init__( self, parent, tag_import_options, show_downloader_options, allow_default_selection = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         

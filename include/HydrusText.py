@@ -1,3 +1,4 @@
+import json
 import re
 
 re_newlines = re.compile( '[\r\n]+', re.UNICODE )
@@ -21,8 +22,22 @@ def DeserialiseNewlinedTexts( text ):
     return texts
     
 def LooksLikeHTML( file_data ):
+    # this will false-positive if it is json that contains html, ha ha
     
     return '<html' in file_data or '<HTML' in file_data
+    
+def LooksLikeJSON( file_data ):
+    
+    try:
+        
+        json.loads( file_data )
+        
+        return True
+        
+    except:
+        
+        return False
+        
     
 def RemoveNewlines( text ):
     

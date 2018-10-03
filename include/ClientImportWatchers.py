@@ -896,6 +896,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def CanRetryFailed( self ):
+        
+        with self._lock:
+            
+            return self._file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR ) > 0
+            
+        
+    
     def CheckingPaused( self ):
         
         with self._lock:
@@ -1173,6 +1181,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._page_key = page_key
+            
+        
+    
+    def RetryFailed( self ):
+        
+        with self._lock:
+            
+            self._file_seed_cache.RetryFailures()
             
         
     

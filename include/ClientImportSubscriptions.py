@@ -22,7 +22,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION
     SERIALISABLE_NAME = 'Subscription'
-    SERIALISABLE_VERSION = 8
+    SERIALISABLE_VERSION = 9
     
     def __init__( self, name, gug_key_and_name = None ):
         
@@ -62,6 +62,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._no_work_until = 0
         self._no_work_until_reason = ''
         
+        self._show_a_popup_while_working = True
         self._publish_files_to_popup_button = True
         self._publish_files_to_page = False
         self._merge_query_publish_events = True
@@ -94,9 +95,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetNetworkJobSubscriptionKey( self, query ):
         
-        query_text = query.GetQueryText()
+        query_name = query.GetHumanName()
         
-        return self._name + ': ' + query_text
+        return self._name + ': ' + query_name
         
     
     def _GetQueriesForProcessing( self ):
@@ -111,7 +112,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             def key( q ):
                 
-                return q.GetQueryText()
+                return q.GetHumanName()
                 
             
             queries.sort( key = key )
@@ -130,12 +131,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
+        return ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events ) = serialisable_info
+        ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events ) = serialisable_info
         
         ( serialisable_gug_key, gug_name ) = serialisable_gug_key_and_name
         
@@ -177,7 +178,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + query.GetQueryText() + '" pre-work bandwidth test. Bandwidth ok: ' + str( result ) + '.' )
+            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" pre-work bandwidth test. Bandwidth ok: ' + str( result ) + '.' )
             
         
         return result
@@ -296,6 +297,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 8, new_serialisable_info )
             
         
+        if version == 8:
+            
+            ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = old_serialisable_info
+            
+            show_a_popup_while_working = True
+            
+            new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
+            
+            return ( 9, new_serialisable_info )
+            
+        
     
     def _WorkOnFiles( self, job_key ):
         
@@ -310,16 +322,16 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             this_query_has_done_work = False
             
-            query_text = query.GetQueryText()
+            query_name = query.GetHumanName()
             file_seed_cache = query.GetFileSeedCache()
             
             text_1 = 'downloading files'
             query_summary_name = self._name
             
-            if query_text != self._name:
+            if query_name != self._name:
                 
-                text_1 += ' for "' + query_text + '"'
-                query_summary_name += ': ' + query_text
+                text_1 += ' for "' + query_name + '"'
+                query_summary_name += ': ' + query_name
                 
             
             job_key.SetVariable( 'popup_text_1', text_1 )
@@ -339,7 +351,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if HG.subscription_report_mode:
                         
-                        HydrusData.ShowText( 'Query "' + query_text + '" can do no more file work due to running out of unknown urls.' )
+                        HydrusData.ShowText( 'Query "' + query_name + '" can do no more file work due to running out of unknown urls.' )
                         
                     
                     break
@@ -380,6 +392,24 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                     file_seed.WorkOnURL( file_seed_cache, status_hook, self._GenerateNetworkJobFactory( query ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ), self._file_import_options, self._tag_import_options )
+                    
+                    query_tag_import_options = query.GetTagImportOptions()
+                    
+                    if query_tag_import_options.HasAdditionalTags() and file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
+                        
+                        hash = file_seed.GetHash()
+                        
+                        in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                        
+                        downloaded_tags = []
+                        
+                        service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                        
+                        if len( service_keys_to_content_updates ) > 0:
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            
+                        
                     
                     if file_seed.ShouldPresent( self._file_import_options ):
                         
@@ -529,7 +559,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if HG.subscription_report_mode:
                 
-                HydrusData.ShowText( 'Query "' + query.GetQueryText() + '" started. Current can_sync is ' + str( can_sync ) + '.' )
+                HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" started. Current can_sync is ' + str( can_sync ) + '.' )
                 
             
             if not can_sync:
@@ -538,6 +568,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             query_text = query.GetQueryText()
+            query_name = query.GetHumanName()
             file_seed_cache = query.GetFileSeedCache()
             gallery_seed_log = query.GetGallerySeedLog()
             
@@ -562,9 +593,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             prefix = 'synchronising'
             
-            if query_text != self._name:
+            if query_name != self._name:
                 
-                prefix += ' "' + query_text + '"'
+                prefix += ' "' + query_name + '"'
                 
             
             job_key.SetVariable( 'popup_text_1', prefix )
@@ -676,7 +707,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                     
                                 else:
                                     
-                                    self._ShowHitPeriodicFileLimitMessage( query_text )
+                                    self._ShowHitPeriodicFileLimitMessage( query_name )
                                     
                                     stop_reason = 'hit periodic file limit'
                                     
@@ -769,11 +800,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if this_is_initial_sync:
                     
-                    HydrusData.ShowText( 'The query "' + query_text + '" for subscription "' + self._name + '" did not find any files on its first sync! Could the query text have a typo, like a missing underscore?' )
+                    HydrusData.ShowText( 'The query "' + query_name + '" for subscription "' + self._name + '" did not find any files on its first sync! Could the query text have a typo, like a missing underscore?' )
                     
                 else:
                     
-                    HydrusData.ShowText( 'The query "' + query_text + '" for subscription "' + self._name + '" appears to be dead!' )
+                    HydrusData.ShowText( 'The query "' + query_name + '" for subscription "' + self._name + '" appears to be dead!' )
                     
                 
             else:
@@ -782,7 +813,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if not self._QueryBandwidthIsOK( query ) and not have_made_an_initial_sync_bandwidth_notification:
                         
-                        HydrusData.ShowText( 'FYI: The query "' + query_text + '" for subscription "' + self._name + '" performed its initial sync ok, but that domain is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.' )
+                        HydrusData.ShowText( 'FYI: The query "' + query_name + '" for subscription "' + self._name + '" performed its initial sync ok, but that domain is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.' )
                         
                         have_made_an_initial_sync_bandwidth_notification = True
                         
@@ -889,7 +920,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetPresentationOptions( self ):
         
-        return ( self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
+        return ( self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
         
     
     def GetTagImportOptions( self ):
@@ -999,7 +1030,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             subscription._queries = [ query.Duplicate() ]
             
-            subscription.SetName( base_name + ': ' + query.GetQueryText() )
+            subscription.SetName( base_name + ': ' + query.GetHumanName() )
             
             subscriptions.append( subscription )
             
@@ -1019,8 +1050,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def SetPresentationOptions( self, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ):
+    def SetPresentationOptions( self, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ):
         
+        self._show_a_popup_while_working = show_a_popup_while_working
         self._publish_files_to_popup_button = publish_files_to_popup_button
         self._publish_files_to_page = publish_files_to_page
         self._merge_query_publish_events = merge_query_publish_events
@@ -1083,7 +1115,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 job_key.SetVariable( 'popup_title', 'subscriptions - ' + self._name )
                 
-                HG.client_controller.pub( 'message', job_key )
+                if self._show_a_popup_while_working:
+                    
+                    HG.client_controller.pub( 'message', job_key )
+                    
                 
                 self._SyncQuery( job_key )
                 
@@ -1145,13 +1180,14 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY
     SERIALISABLE_NAME = 'Subscription Query'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, query = 'query text' ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._query = query
+        self._display_name = None
         self._check_now = False
         self._last_check_time = 0
         self._next_check_time = 0
@@ -1159,22 +1195,25 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._status = ClientImporting.CHECKER_STATUS_OK
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
+        self._tag_import_options = ClientImportOptions.TagImportOptions()
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_gallery_seed_log = self._gallery_seed_log.GetSerialisableTuple()
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
+        serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( self._query, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status, serialisable_gallery_seed_log, serialisable_file_seed_cache )
+        return ( self._query, self._display_name, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_tag_import_options )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._query, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status, serialisable_gallery_seed_log, serialisable_file_seed_cache ) = serialisable_info
+        ( self._query, self._display_name, self._check_now, self._last_check_time, self._next_check_time, self._paused, self._status, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_tag_import_options ) = serialisable_info
         
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -1190,6 +1229,20 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( query, check_now, last_check_time, next_check_time, paused, status, serialisable_gallery_seed_log, serialisable_file_seed_cache )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( query, check_now, last_check_time, next_check_time, paused, status, serialisable_gallery_seed_log, serialisable_file_seed_cache ) = old_serialisable_info
+            
+            display_name = None
+            tag_import_options = ClientImportOptions.TagImportOptions()
+            
+            serialisable_tag_import_options = tag_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( query, display_name, check_now, last_check_time, next_check_time, paused, status, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_tag_import_options )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -1263,6 +1316,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._gallery_seed_log.Compact( compact_before_this_time )
         
     
+    def GetDisplayName( self ):
+        
+        return self._display_name
+        
+    
     def GetFileSeedCache( self ):
         
         return self._file_seed_cache
@@ -1271,6 +1329,18 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     def GetGallerySeedLog( self ):
         
         return self._gallery_seed_log
+        
+    
+    def GetHumanName( self ):
+        
+        if self._display_name is None:
+            
+            return self._query
+            
+        else:
+            
+            return self._display_name
+            
         
     
     def GetLastChecked( self ):
@@ -1321,6 +1391,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     def GetQueryText( self ):
         
         return self._query
+        
+    
+    def GetTagImportOptions( self ):
+        
+        return self._tag_import_options
         
     
     def IsDead( self ):
@@ -1375,6 +1450,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._check_now = check_now
         
     
+    def SetDisplayName( self, display_name ):
+        
+        self._display_name = display_name
+        
+    
     def SetPaused( self, paused ):
         
         self._paused = paused
@@ -1385,6 +1465,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._query = query
         self._file_seed_cache = file_seed_cache
         self._gallery_seed_log = gallery_seed_log
+        
+    
+    def SetTagImportOptions( self, tag_import_options ):
+        
+        self._tag_import_options = tag_import_options
         
     
     def UpdateNextCheckTime( self, checker_options ):
