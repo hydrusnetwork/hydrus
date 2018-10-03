@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 325</h3></li>
+				<ul>
+					<li>added a 'show a popup while working' checkbox to edit subscription panel--be careful with it, I think maybe only turn it off after you are happy everything is set up right and the sub has run once</li>
+					<li>advanced mode users will see a new 'get quality info' button on the edit subscription panel. this will some ugly+hacky inbox/archived/deleted info on the selected queries to help you figure out if you are only archiving, say, 2% of one query. this is a quickly made but cpu-expensive way of calculating this info. I can obviously expand it in future, so I would appreciate your thoughts</li>
+					<li>subscription queries now have an optional display name, which has no bearing on their function but if set will appear instead of query text in various presentation contexts (this is useful, for instance, if the downloader query text deals in something unhelpful like integer artist_id)</li>
+					<li>subscription queries now each have a simple tag import options! this only allows 'additional tags', in case you want to add some simple per-query tags</li>
+					<li>selecting 'try again' on file imports that previously failed due to 'deleted' will now pop up a little yes/no asking if you would like to first erase these files' previously deleted file record!</li>
+					<li>the watcher and gallery import panels now have 'retry failed' buttons and right-click menu entries when appropriate</li>
+					<li>the watcher and gallery import panels will now do some ui update less frequently when they contain a lot of data</li>
+					<li>fixed the new human-friendly tag sorting code for ungrouped lexicographic sort orders, where it was accidentally grouping by namespace</li>
+					<li>downloader easy-import pngs can now hold custom header and bandwidth rules metadata! this info, if explicitly present for the appropriate domain, will be added automatically on the export side as you add gugs. it can also be bundled separately after manually typing a domain to add. on the import side, it is now listed as a new type. longer human-friendly descriptions of all bandwidth and header information being bundled will be displayed during the export and import processes, just as an additional check</li>
+					<li>for advanced users, added 'do not skip downloading because of known urls/hashes' options to downloader file import options. these checkboxes work like the tag import options ones--ignoring known urls and hashes to force downloads. they are advanced and should not be used unless you have a particular problem to fix</li>
+					<li>improved how the pre-import url/hash checking code is compared for the tag and file import options, particularly on the hash side</li>
+					<li>for advanced users, added 'associate additional source urls' to downloader file import options, which governs whether a site's given 'source urls' should be added and trusted for downloaded files. turn this off if the site is giving bad source urls</li>
+					<li>fixed an unusual problem where gallery searches with search terms that included the search separator (like '6+girls skirt', with a separator of '+') were being overzealously de/encoded (to '6+girls+skirt' rather than '6%2bgirls+skirt')</li>
+					<li>improved how unicode quoted characters in URLs' query parameters, like %E5%B0%BB%E7%A5%9E%E6%A7%98 are auto-converted to something prettier when the user sees them</li>
+					<li>the client now tests if 'already in db' results are actually backed by the file structure--now, if a the actual file is missing despite the db record, the import will be force-attempted and the file structure hopefully healed</li>
+					<li>gallery url jobs will no longer spawn new 'next page' urls if the job yielded 0 _new_ (rather than _total_) file urls (so we should have fixed loops fetching the same x 'already in file import cache' results due to the gallery just passing the same results for n+1 page fetches)</li>
+					<li>in the edit parsing panels, if the example data currently looks like json, new content parsers will spawn with json formulae, otherwise they will get html formulae</li>
+					<li>fixed an issue with the default twitter tweet parser pulling the wrong month for source time</li>
+					<li>added a simple 'media load report mode' to the help debug menu to help figure out some PIL/OpenCV load order stuff</li>
+					<li>the 'missing locations recovery' dialog that spawns on boot if file locations are missing now uses the new listctrl, so is thankfully sortable! it also works better behind the scenes</li>
+					<li>this dialog now also has an 'add a possibly correct location' button, which will scan the given directory for the correct prefixes and automatically fill in the list for you</li>
+					<li>fixed some of the new import folder error reporting</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 324</h3></li>
 				<ul>
 					<li>downloaders:</li>
