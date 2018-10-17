@@ -20,3 +20,4 @@ tr { text-align: center; }
 .lololol { text-decoration: line-through; }
 .right { text-align: right; }
 .screenshot { float: right; clear: both; margin: 10px; }
+.spoiler:not(:hover) { color: #000; background-color: #000 }

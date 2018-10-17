@@ -2,10 +2,13 @@ a { color: #222; text-decoration: none; font-weight: bold; }
 a:hover { color: #555 }
 body { font-family: "Calibri", Arial, sans-serif; color: #555; line-height: 1.5; }
 h3 { color: #222; }
-li { list-style: none; margin: 1.0em 0em; }
+ul li { list-style: none; margin: 1.0em 0em; }
+ul.bulletpoint li { list-style: disc; margin: 1.0em 0em; }
 th { text-align: center; }
 tr { text-align: center; }
 
+.de { color: #d00 }
+.su { color: #0d0 }
 .dealwithit { color: #ff0000; text-shadow:
 1px 1px 0 #ff7f00,
 2px 2px 0 #ffff00,
@@ -17,3 +20,4 @@ tr { text-align: center; }
 .lololol { text-decoration: line-through; }
 .right { text-align: right; }
 .screenshot { float: right; clear: both; margin: 10px; }
+.spoiler:not(:hover) { color: #000; background-color: #000 }
