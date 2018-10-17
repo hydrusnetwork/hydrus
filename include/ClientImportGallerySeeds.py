@@ -93,6 +93,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         self._referral_url = None
         
+        self._force_next_page_url_generation = False
+        
     
     def __eq__( self, other ):
         
@@ -124,9 +126,19 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         self.modified = HydrusData.GetNow()
         
     
+    def ForceNextPageURLGeneration( self ):
+        
+        self._force_next_page_url_generation = True
+        
+    
     def GenerateRestartedDuplicate( self, can_generate_more_pages ):
         
         gallery_seed = GallerySeed( url = self.url, can_generate_more_pages = can_generate_more_pages )
+        
+        if can_generate_more_pages:
+            
+            gallery_seed.ForceNextPageURLGeneration()
+            
         
         return gallery_seed
         
@@ -269,8 +281,15 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 note += ' - ' + stop_reason
                 
             
-            # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
-            can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
+            if parser.CanOnlyGenerateGalleryURLs() or self._force_next_page_url_generation:
+                
+                can_add_more_gallery_urls = True
+                
+            else:
+                
+                # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
+                can_add_more_gallery_urls = num_urls_added > 0 and can_search_for_more_files
+                
             
             if self._can_generate_more_pages and can_add_more_gallery_urls:
                 
@@ -593,6 +612,24 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         return False
         
     
+    def CanRestartFailedSearch( self ):
+        
+        with self._lock:
+            
+            if len( self._gallery_seeds ) == 0:
+                
+                return False
+                
+            
+            last_gallery_seed = self._gallery_seeds[-1]
+            
+            if last_gallery_seed.status == CC.STATUS_ERROR:
+                
+                return True
+                
+            
+        
+    
     def Compact( self, compact_before_this_source_time ):
         
         with self._lock:
@@ -803,6 +840,31 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
         
         self.RemoveGallerySeeds( gallery_seeds_to_delete )
+        
+    
+    def RestartFailedSearch( self ):
+        
+        with self._lock:
+            
+            if len( self._gallery_seeds ) == 0:
+                
+                return
+                
+            
+            last_gallery_seed = self._gallery_seeds[-1]
+            
+            if last_gallery_seed.status != CC.STATUS_ERROR:
+                
+                return
+                
+            
+            can_generate_more_pages = True
+            
+            new_gallery_seeds = ( last_gallery_seed.GenerateRestartedDuplicate( can_generate_more_pages ), )
+            
+        
+        self.AddGallerySeeds( new_gallery_seeds )
+        self.NotifyGallerySeedsUpdated( new_gallery_seeds )
         
     
     def RetryFailures( self ):

@@ -40,7 +40,6 @@ import HydrusTagArchive
 import HydrusTags
 import HydrusText
 import itertools
-import multipart
 import os
 import random
 import re
@@ -56,14 +55,6 @@ ID_NULL = wx.NewId()
 
 ID_TIMER_UPDATE = wx.NewId()
 
-def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
-    
-    m = multipart.Multipart()
-    
-    for ( name, value ) in fields.items(): m.field( name, HydrusData.ToByteString( value ) )
-    
-    return m.get()
-    
 '''class DialogManageContacts( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -611,7 +602,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ]
         
-        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
         
         export_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
@@ -723,17 +714,6 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         existing_names = { export_folder.GetName() for export_folder in self._export_folders.GetData() }
         
         return existing_names
-        
-    
-    def Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._export_folders.DeleteSelected()
-                
-            
         
     
     def Edit( self ):
@@ -1713,13 +1693,13 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         columns = [ ( 'name', 24 ), ( 'path', -1 ), ( 'paused', 8 ), ( 'check period', 24 ) ]
         
-        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, columns, self._ConvertImportFolderToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, columns, self._ConvertImportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         import_folders_panel.SetListCtrl( self._import_folders )
         
         import_folders_panel.AddButton( 'add', self._Add )
         import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        import_folders_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        import_folders_panel.AddDeleteButton()
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -1818,19 +1798,6 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         display_tuple = ( name, path, pretty_paused, pretty_check_period )
         
         return ( display_tuple, sort_tuple )
-        
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                import_folders = self._import_folders.GetData( only_selected = True )
-                
-                self._import_folders.DeleteDatas( import_folders )
-                
-            
         
     
     def _Edit( self ):
@@ -1973,13 +1940,13 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         columns = [ ( 'filename tagging options services', -1 ) ]
         
-        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, columns, self._ConvertFilenameTaggingOptionsToListctrlTuple, delete_key_callback = self._DeleteFilenameTaggingOptions, activation_callback = self._EditFilenameTaggingOptions )
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, columns, self._ConvertFilenameTaggingOptionsToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
         
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         
         filename_tagging_options_panel.AddButton( 'add', self._AddFilenameTaggingOptions )
         filename_tagging_options_panel.AddButton( 'edit', self._EditFilenameTaggingOptions, enabled_only_on_selection = True )
-        filename_tagging_options_panel.AddButton( 'delete', self._DeleteFilenameTaggingOptions, enabled_only_on_selection = True )
+        filename_tagging_options_panel.AddDeleteButton()
         
         services_manager = HG.client_controller.services_manager
         
@@ -2214,7 +2181,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
     
-    def _ConvertFilenameTaggingOptionsToListctrlTuple( self, data ):
+    def _ConvertFilenameTaggingOptionsToListCtrlTuples( self, data ):
         
         ( service_key, filename_tagging_options ) = data
         
@@ -2224,17 +2191,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         sort_tuple = ( name, )
         
         return ( display_tuple, sort_tuple )
-        
-    
-    def _DeleteFilenameTaggingOptions( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._filename_tagging_options.DeleteSelected()
-                
-            
         
     
     def _EditFilenameTaggingOptions( self ):
@@ -3151,16 +3107,16 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._pairs_to_reasons = {}
             
-            self._original_statuses_to_pairs = {}
-            self._current_statuses_to_pairs = {}
+            self._original_statuses_to_pairs = collections.defaultdict( set )
+            self._current_statuses_to_pairs = collections.defaultdict( set )
             
             self._show_all = wx.CheckBox( self )
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( '', 4 ), ( 'child', 25 ), ( 'parent', -1 ) ]
+            columns = [ ( '', 6 ), ( 'child', 25 ), ( 'parent', -1 ) ]
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 30, 25, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 15, 25, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             
             listctrl_panel.SetListCtrl( self._tag_parents )
             
@@ -3184,6 +3140,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            
+            ( gumpf, preview_height ) = ClientGUICommon.ConvertTextToPixels( self._children, ( 12, 4 ) )
+            
+            self._children.SetInitialSize( ( -1, preview_height ) )
+            self._parents.SetInitialSize( ( -1, preview_height ) )
             
             expand_parents = True
             
@@ -3998,8 +3959,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._service = HG.client_controller.services_manager.GetService( service_key )
                 
             
-            self._original_statuses_to_pairs = {}
-            self._current_statuses_to_pairs = {}
+            self._original_statuses_to_pairs = collections.defaultdict( set )
+            self._current_statuses_to_pairs = collections.defaultdict( set )
             
             self._pairs_to_reasons = {}
             
@@ -4009,9 +3970,9 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( '', 4 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ]
+            columns = [ ( '', 6 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ]
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 30, 40, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 15, 40, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             
             listctrl_panel.SetListCtrl( self._tag_siblings )
             
@@ -4035,6 +3996,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
+            
+            ( gumpf, preview_height ) = ClientGUICommon.ConvertTextToPixels( self._old_siblings, ( 12, 4 ) )
+            
+            self._old_siblings.SetInitialSize( ( -1, preview_height ) )
             
             expand_parents = False
             

@@ -707,19 +707,6 @@ class TestTagSiblings( unittest.TestCase ):
         cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HG.client_controller )
         
     
-    def test_autocomplete( self ):
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'ishy*' ) ), set( [ 'ishygddt', 'i sure hope you guys don\'t do that' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'i su*' ) ), set( [ 'ishygddt', 'i sure hope you guys don\'t do that' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'ayan*' ) ), set( [ 'character:rei ayanami', 'character:ayanami rei' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'rei*' ) ), set( [ 'character:rei ayanami', 'character:ayanami rei' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'character:ayan*' ) ), set( [ 'character:rei ayanami', 'character:ayanami rei' ] ) )
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'character:rei*' ) ), set( [ 'character:rei ayanami', 'character:ayanami rei' ] ) )
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._second_key, 'ishy*' ) ), set() )
-        
-    
     def test_collapse_predicates( self ):
         
         predicates = []
@@ -746,8 +733,6 @@ class TestTagSiblings( unittest.TestCase ):
     
     def test_chain( self ):
         
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'chai*' ) ), set( [ 'chain_a', 'chain_b', 'chain_c' ] ) )
-        
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'chain_a' ), 'chain_c' )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'chain_b' ), 'chain_c' )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'chain_c' ), None )
@@ -761,8 +746,6 @@ class TestTagSiblings( unittest.TestCase ):
         
     
     def test_current( self ):
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._second_key, 'curr*' ) ), set( [ 'current_a', 'current_b' ] ) )
         
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'current_a' ), 'current_b' )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'current_b' ), None )
@@ -779,8 +762,6 @@ class TestTagSiblings( unittest.TestCase ):
     
     def test_deleted( self ):
         
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'dele*' ) ), set() )
-        
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'deleted_a' ), None )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'deleted_b' ), None )
         
@@ -794,8 +775,6 @@ class TestTagSiblings( unittest.TestCase ):
     
     def test_no_loop( self ):
         
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'loop*' ) ), set( [ 'loop_a', 'loop_b', 'loop_c' ] ) )
-        
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'closed_loop' ), None )
         
         self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._first_key, 'closed_loop' ) ), set( [ 'closed_loop' ] ) )
@@ -807,8 +786,6 @@ class TestTagSiblings( unittest.TestCase ):
     
     def test_not_exist( self ):
         
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._second_key, 'not_*' ) ), set() )
-        
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'not_exist' ), None )
         
         self.assertEqual( set( self._tag_siblings_manager.GetAllSiblings( self._second_key, 'not_exist' ) ), set( [ 'not_exist' ] ) )
@@ -819,8 +796,6 @@ class TestTagSiblings( unittest.TestCase ):
         
     
     def test_pending_overwrite( self ):
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._second_key, 'pend*' ) ), set( [ 'pending_a', 'pending_b' ] ) )
         
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'pending_a' ), 'pending_b' )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'pending_b' ), None )
@@ -837,8 +812,6 @@ class TestTagSiblings( unittest.TestCase ):
     
     def test_petitioned_no_overwrite( self ):
         
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._second_key, 'petitioned_a*' ) ), set( [ 'petitioned_a', 'petitioned_b' ] ) )
-        
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'petitioned_a' ), 'petitioned_b' )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._second_key, 'petitioned_b' ), None )
         
@@ -853,8 +826,6 @@ class TestTagSiblings( unittest.TestCase ):
         
     
     def test_tree( self ):
-        
-        self.assertEqual( set( self._tag_siblings_manager.GetAutocompleteSiblings( self._first_key, 'tree*' ) ), set( [ 'tree_1', 'tree_2', 'tree_3', 'tree_4', 'tree_5', 'tree_6' ] ) )
         
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_1' ), 'tree_6' )
         self.assertEqual( self._tag_siblings_manager.GetSibling( self._first_key, 'tree_2' ), 'tree_6' )

@@ -22,7 +22,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION
     SERIALISABLE_NAME = 'Subscription'
-    SERIALISABLE_VERSION = 9
+    SERIALISABLE_VERSION = 10
     
     def __init__( self, name, gug_key_and_name = None ):
         
@@ -65,6 +65,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._show_a_popup_while_working = True
         self._publish_files_to_popup_button = True
         self._publish_files_to_page = False
+        self._publish_label_override = None
         self._merge_query_publish_events = True
         
     
@@ -95,9 +96,26 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetNetworkJobSubscriptionKey( self, query ):
         
-        query_name = query.GetHumanName()
+        return self._name + ': ' + query.GetHumanName()
         
-        return self._name + ': ' + query_name
+    
+    def _GetPublishingLabel( self, query ):
+        
+        if self._publish_label_override is None:
+            
+            label = self._name
+            
+        else:
+            
+            label = self._publish_label_override
+            
+        
+        if not self._merge_query_publish_events:
+            
+            label += ': ' + query.GetHumanName()
+            
+        
+        return label
         
     
     def _GetQueriesForProcessing( self ):
@@ -131,12 +149,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
+        return ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._publish_label_override, self._merge_query_publish_events )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events ) = serialisable_info
+        ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._publish_label_override, self._merge_query_publish_events ) = serialisable_info
         
         ( serialisable_gug_key, gug_name ) = serialisable_gug_key_and_name
         
@@ -306,6 +324,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
             
             return ( 9, new_serialisable_info )
+            
+        
+        if version == 9:
+            
+            ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = old_serialisable_info
+            
+            publish_label_override = None
+            
+            new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events )
+            
+            return ( 10, new_serialisable_info )
             
         
     
@@ -494,13 +523,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if not self._merge_query_publish_events and len( presentation_hashes ) > 0:
                 
-                ClientImporting.PublishPresentationHashes( query_summary_name, presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
+                publishing_label = self._GetPublishingLabel( query )
+                
+                ClientImporting.PublishPresentationHashes( publishing_label, presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
                 
             
         
         if self._merge_query_publish_events and len( all_presentation_hashes ) > 0:
             
-            ClientImporting.PublishPresentationHashes( self._name, all_presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
+            publishing_label = self._GetPublishingLabel( query )
+            
+            ClientImporting.PublishPresentationHashes( publishing_label, all_presentation_hashes, self._publish_files_to_popup_button, self._publish_files_to_page )
             
         
         job_key.DeleteVariable( 'popup_files' )
@@ -661,6 +694,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         num_urls_already_in_file_seed_cache = 0
                         can_search_for_more_files = True
                         stop_reason = 'unknown stop reason'
+                        current_contiguous_num_urls_already_in_file_seed_cache = 0
                         
                         for file_seed in file_seeds:
                             
@@ -672,26 +706,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 continue
                                 
                             
+                            # When are we caught up? This is not a trivial problem. Tags are not always added when files are uploaded, so the order we find files is not completely reliable.
+                            # Ideally, we want to search a _bit_ deeper than the first already-seen.
+                            # And since we have a page of urls here and now, there is no point breaking early if there might be some new ones at the end.
+                            # Current rule is "We are caught up if the final X contiguous files are 'already in'". X is 5 for now.
+                            
                             if file_seed_cache.HasFileSeed( file_seed ):
                                 
                                 num_urls_already_in_file_seed_cache += 1
-                                
-                                WE_HIT_OLD_GROUND_THRESHOLD = 5
-                                
-                                if num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
-                                    
-                                    # this gallery page has caught up to before, so it should not spawn any more gallery pages
-                                    
-                                    can_search_for_more_files = False
-                                    
-                                    stop_reason = 'saw ' + HydrusData.ToHumanInt( WE_HIT_OLD_GROUND_THRESHOLD ) + ' previously seen urls, so assuming we caught up'
-                                    
-                                    break
-                                    
+                                current_contiguous_num_urls_already_in_file_seed_cache += 1
                                 
                             else:
                                 
                                 num_urls_added += 1
+                                current_contiguous_num_urls_already_in_file_seed_cache = 0
                                 
                                 file_seeds_to_add.add( file_seed )
                                 file_seeds_to_add_ordered.append( file_seed )
@@ -716,6 +744,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                                 break
                                 
+                            
+                        
+                        WE_HIT_OLD_GROUND_THRESHOLD = 5
+                        
+                        if current_contiguous_num_urls_already_in_file_seed_cache >= WE_HIT_OLD_GROUND_THRESHOLD:
+                            
+                            # this gallery page has caught up to before, so it should not spawn any more gallery pages
+                            
+                            can_search_for_more_files = False
+                            
+                            stop_reason = 'saw ' + HydrusData.ToHumanInt( WE_HIT_OLD_GROUND_THRESHOLD ) + ' previously seen urls, so assuming we caught up'
                             
                         
                         if num_urls_added == 0:
@@ -832,11 +871,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return True in ( query.CanCheckNow() for query in self._queries )
         
     
-    def CanCompact( self ):
-        
-        return True in ( query.CanCompact( self._checker_options ) for query in self._queries )
-        
-    
     def CanReset( self ):
         
         return True in ( not query.IsInitialSync() for query in self._queries )
@@ -865,14 +899,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self.ScrubDelay()
-        
-    
-    def Compact( self ):
-        
-        for query in self._queries:
-            
-            query.Compact( self._checker_options )
-            
         
     
     def GetBandwidthWaitingEstimate( self, query ):
@@ -920,7 +946,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetPresentationOptions( self ):
         
-        return ( self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
+        return ( self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._publish_label_override, self._merge_query_publish_events )
         
     
     def GetTagImportOptions( self ):
@@ -1050,11 +1076,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def SetPresentationOptions( self, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ):
+    def SetPresentationOptions( self, show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ):
         
         self._show_a_popup_while_working = show_a_popup_while_working
         self._publish_files_to_popup_button = publish_files_to_popup_button
         self._publish_files_to_page = publish_files_to_page
+        self._publish_label_override = publish_label_override
         self._merge_query_publish_events = merge_query_publish_events
         
     

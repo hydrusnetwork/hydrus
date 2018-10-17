@@ -70,12 +70,16 @@ class AddEditDeleteListBox( wx.Panel ):
     
     def _Add( self ):
         
-        ( result, data ) = self._add_callable()
+        try:
+            
+            data = self._add_callable()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
         
-        if result:
-            
-            self._AddData( data )
-            
+        self._AddData( data )
         
     
     def _AddAllDefaults( self, defaults_callable ):
@@ -164,22 +168,22 @@ class AddEditDeleteListBox( wx.Panel ):
             
             data = self._listbox.GetClientData( i )
             
-            ( result, new_data ) = self._edit_callable( data )
-            
-            if result:
+            try:
                 
-                self._listbox.Delete( i )
+                new_data = self._edit_callable( data )
                 
-                self._SetNoneDupeName( new_data )
-                
-                pretty_new_data = self._data_to_pretty_callable( new_data )
-                
-                self._listbox.Insert( pretty_new_data, i, new_data )
-                
-            else:
+            except HydrusExceptions.VetoException:
                 
                 break
                 
+            
+            self._listbox.Delete( i )
+            
+            self._SetNoneDupeName( new_data )
+            
+            pretty_new_data = self._data_to_pretty_callable( new_data )
+            
+            self._listbox.Insert( pretty_new_data, i, new_data )
             
         
         wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
@@ -592,12 +596,16 @@ class QueueListBox( wx.Panel ):
     
     def _Add( self ):
         
-        ( result, data ) = self._add_callable()
+        try:
+            
+            data = self._add_callable()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
         
-        if result:
-            
-            self._AddData( data )
-            
+        self._AddData( data )
         
     
     def _AddData( self, data ):
@@ -665,20 +673,20 @@ class QueueListBox( wx.Panel ):
             
             data = self._listbox.GetClientData( i )
             
-            ( result, new_data ) = self._edit_callable( data )
-            
-            if result:
+            try:
                 
-                self._listbox.Delete( i )
+                new_data = self._edit_callable( data )
                 
-                pretty_new_data = self._data_to_pretty_callable( new_data )
-                
-                self._listbox.Insert( pretty_new_data, i, new_data )
-                
-            else:
+            except HydrusExceptions.VetoException:
                 
                 break
                 
+            
+            self._listbox.Delete( i )
+            
+            pretty_new_data = self._data_to_pretty_callable( new_data )
+            
+            self._listbox.Insert( pretty_new_data, i, new_data )
             
         
         wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
@@ -1519,7 +1527,7 @@ class ListBoxTags( ListBox ):
                 
             
         
-        predicates = HG.client_controller.GetGUI().FlushOutPredicates( predicates )
+        predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
         
         if len( predicates ) > 0:
             
@@ -1530,6 +1538,32 @@ class ListBoxTags( ListBox ):
             page_name = ', '.join( s )
             
             HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates, page_name = page_name )
+            
+        
+    
+    def _NewSearchPageForEach( self ):
+        
+        predicates = []
+        
+        for term in self._selected_terms:
+            
+            if isinstance( term, ClientSearch.Predicate ):
+                
+                predicates.append( term )
+                
+            else:
+                
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, term ) )
+                
+            
+        
+        predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
+        
+        for predicate in predicates:
+            
+            page_name = predicate.GetUnicode()
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = ( predicate, ), page_name = page_name )
             
         
     
@@ -1697,6 +1731,11 @@ class ListBoxTags( ListBox ):
                 if self.can_spawn_new_windows:
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPage )
+                    
+                    if len( self._selected_terms ) > 1:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPageForEach )
+                        
                     
                 
                 ClientGUIMenus.AppendSeparator( menu )
@@ -2054,7 +2093,7 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
         
         predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
         
-        predicates = HG.client_controller.GetGUI().FlushOutPredicates( predicates )
+        predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
         
         if len( predicates ) > 0:
             

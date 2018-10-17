@@ -10,7 +10,6 @@ import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIMenus
-import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIFileSeedCache
 import ClientGUIGallerySeedLog
@@ -1779,14 +1778,14 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'gug name', 24 ), ( 'available?', 20 ) ]
         
-        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, 'ngug_gugs', 30, 74, columns, self._ConvertGUGDataToListCtrlTuples, delete_key_callback = self._DeleteGUG )
+        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, 'ngug_gugs', 30, 74, columns, self._ConvertGUGDataToListCtrlTuples, use_simple_delete = True )
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
         self._add_button = ClientGUICommon.BetterButton( self._gug_list_ctrl_panel, 'add', self._AddGUGButtonClick )
         
         self._gug_list_ctrl_panel.AddWindow( self._add_button )
-        self._gug_list_ctrl_panel.AddButton( 'delete', self._DeleteGUG, enabled_only_on_selection = True )
+        self._gug_list_ctrl_panel.AddDeleteButton()
         
         #
         
@@ -1832,22 +1831,31 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         existing_gug_keys = { gug_key for ( gug_key, gug_name ) in self._gug_list_ctrl.GetData() }
         existing_gug_names = { gug_name for ( gug_key, gug_name ) in self._gug_list_ctrl.GetData() }
         
-        menu = wx.Menu()
+        choice_tuples = [ ( gug.GetName(), gug, False ) for gug in self._available_gugs if gug.GetName() not in existing_gug_names and gug.GetGUGKey() not in existing_gug_keys ]
         
-        for gug in self._available_gugs:
+        if len( choice_tuples ) == 0:
             
-            if gug.GetGUGKey() in existing_gug_keys or gug.GetName() in existing_gug_names:
-                
-                continue
-                
+            wx.MessageBox( 'No remaining gugs available!' )
             
-            label = gug.GetName()
-            description = 'Add this GUG to the NGUG.'
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, label, description, self._AddGUG, gug )
+            return
             
         
-        HG.client_controller.PopupMenu( self._add_button, menu )
+        with ClientGUITopLevelWindows.DialogEdit( self, 'choose gugs' ) as dlg:
+            
+            panel = EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                chosen_gugs = panel.GetValue()
+                
+                for gug in chosen_gugs:
+                    
+                    self._AddGUG( gug )
+                    
+                
+            
         
     
     def _ConvertGUGDataToListCtrlTuples( self, gug_key_and_name ):
@@ -1872,17 +1880,6 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         sort_tuple = ( name, available )
         
         return ( display_tuple, sort_tuple )
-        
-    
-    def _DeleteGUG( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._gug_list_ctrl.DeleteSelected()
-                
-            
         
     
     def GetValue( self ):
@@ -1932,7 +1929,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel.AddButton( 'add', self._AddNewGUG )
         self._gug_list_ctrl_panel.AddButton( 'edit', self._EditGUG, enabled_only_on_selection = True )
-        self._gug_list_ctrl_panel.AddButton( 'delete', self._DeleteGUG, enabled_only_on_selection = True )
+        self._gug_list_ctrl_panel.AddDeleteButton()
         self._gug_list_ctrl_panel.AddSeparator()
         self._gug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.GalleryURLGenerator, ), self._AddGUG )
         self._gug_list_ctrl_panel.AddSeparator()
@@ -1944,13 +1941,13 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'name', 24 ), ( 'gugs', -1 ), ( 'missing gugs', 14 ) ]
         
-        self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._ngug_list_ctrl_panel, 'ngugs', 20, 64, columns, self._ConvertNGUGToListCtrlTuples, delete_key_callback = self._DeleteNGUG, activation_callback = self._EditNGUG )
+        self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._ngug_list_ctrl_panel, 'ngugs', 20, 64, columns, self._ConvertNGUGToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditNGUG )
         
         self._ngug_list_ctrl_panel.SetListCtrl( self._ngug_list_ctrl )
         
         self._ngug_list_ctrl_panel.AddButton( 'add', self._AddNewNGUG )
         self._ngug_list_ctrl_panel.AddButton( 'edit', self._EditNGUG, enabled_only_on_selection = True )
-        self._ngug_list_ctrl_panel.AddButton( 'delete', self._DeleteNGUG, enabled_only_on_selection = True )
+        self._ngug_list_ctrl_panel.AddDeleteButton()
         self._ngug_list_ctrl_panel.AddSeparator()
         self._ngug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.NestedGalleryURLGenerator, ), self._AddNGUG )
         self._ngug_list_ctrl_panel.AddSeparator()
@@ -2155,17 +2152,6 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._gug_list_ctrl.DeleteDatas( ( deletee, ) )
                     
-                
-            
-        
-    
-    def _DeleteNGUG( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._ngug_list_ctrl.DeleteSelected()
                 
             
         
@@ -2605,13 +2591,13 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'context', 24 ), ( 'header', 30 ), ( 'approved?', 12 ), ( 'reason', -1 ) ]
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network_contexts_custom_headers', 15, 40, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network_contexts_custom_headers', 15, 40, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
         self._list_ctrl_panel.AddButton( 'add', self._Add )
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        self._list_ctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddDeleteButton()
         
         self._list_ctrl.Sort( 0 )
         
@@ -2678,17 +2664,6 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         sort_tuple = ( pretty_network_context, ( key, value ), pretty_approved, reason )
         
         return ( display_tuple, sort_tuple )
-        
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._list_ctrl.DeleteSelected()
-                
-            
         
     
     def _Edit( self ):
@@ -3182,7 +3157,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'name/query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ]
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, columns, self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, columns, self._ConvertQueryToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -3190,7 +3165,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddButton( 'copy queries', self._CopyQueries, enabled_only_on_selection = True )
         queries_panel.AddButton( 'paste queries', self._PasteQueries )
         queries_panel.AddButton( 'edit', self._EditQuery, enabled_only_on_selection = True )
-        queries_panel.AddButton( 'delete', self._DeleteQuery, enabled_only_on_selection = True )
+        queries_panel.AddDeleteButton()
         queries_panel.AddSeparator()
         queries_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
         queries_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._ListCtrlCanRetryFailed )
@@ -3208,7 +3183,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
+        self._file_limits_panel = ClientGUICommon.StaticBox( self, 'file limits' )
         
         message = '''****Subscriptions are not for large one-time syncs****
 
@@ -3226,9 +3201,9 @@ If you are not experienced with subscriptions, I strongly suggest you set these 
 
 If you want to get all of an artist's files from a site, use the manual gallery download page first. A good routine is to check that you have the right search text and it all works correctly and that you know what tags you want, and then once that big queue is fully downloaded synced, start a new sub with the same settings to continue checking for anything posted in future.'''
         
-        help_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
+        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
         
-        help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
         
         message = '''****Hitting the normal/periodic limit may or may not be a big deal****
 
@@ -3242,9 +3217,9 @@ If 1 is true, you might want to increase its periodic limit a little, or speed u
 
 But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--the maintainer for the site's download parser (hydrus dev or whoever), would be interested in knowing what has happened so they can roll out a fix.'.'''
         
-        help_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
+        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
         
-        help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about hitting the normal file limit -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about hitting the normal file limit -->', wx.Colour( 0, 0, 255 ) )
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -3255,18 +3230,25 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             limits_max = 1000
             
         
-        self._initial_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = limits_max )
+        self._initial_file_limit = wx.SpinCtrl( self._file_limits_panel, min = 1, max = limits_max )
         self._initial_file_limit.SetToolTip( 'The first sync will add no more than this many URLs.' )
         
-        self._periodic_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = limits_max )
+        self._periodic_file_limit = wx.SpinCtrl( self._file_limits_panel, min = 1, max = limits_max )
         self._periodic_file_limit.SetToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
         
-        self._show_a_popup_while_working = wx.CheckBox( self._options_panel )
+        self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'presentation' )
+        
+        self._show_a_popup_while_working = wx.CheckBox( self._file_presentation_panel )
         self._show_a_popup_while_working.SetToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' )
         
-        self._publish_files_to_popup_button = wx.CheckBox( self._options_panel )
-        self._publish_files_to_page = wx.CheckBox( self._options_panel )
-        self._merge_query_publish_events = wx.CheckBox( self._options_panel )
+        self._publish_files_to_popup_button = wx.CheckBox( self._file_presentation_panel )
+        self._publish_files_to_page = wx.CheckBox( self._file_presentation_panel )
+        self._publish_label_override = ClientGUICommon.NoneableTextCtrl( self._file_presentation_panel, none_phrase = 'no, use subscription name' )
+        self._merge_query_publish_events = wx.CheckBox( self._file_presentation_panel )
+        
+        tt = 'This is great to merge multiple subs to a combined location!'
+        
+        self._publish_label_override.SetToolTip( tt )
         
         tt = 'If unchecked, each query will produce its own \'subscription_name: query\' button or page.'
         
@@ -3296,11 +3278,12 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         self._initial_file_limit.SetValue( initial_file_limit )
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
-        ( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = subscription.GetPresentationOptions()
+        ( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ) = subscription.GetPresentationOptions()
         
         self._show_a_popup_while_working.SetValue( show_a_popup_while_working )
         self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
         self._publish_files_to_page.SetValue( publish_files_to_page )
+        self._publish_label_override.SetValue( publish_label_override )
         self._merge_query_publish_events.SetValue( merge_query_publish_events )
         
         self._paused.SetValue( paused )
@@ -3317,16 +3300,26 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
         rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._file_limits_panel, rows )
+        
+        self._file_limits_panel.Add( help_hbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._file_limits_panel.Add( help_hbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._file_limits_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
         rows.append( ( 'show a popup while working: ', self._show_a_popup_while_working ) )
         rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
         rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'publish to a specific label: ', self._publish_label_override ) )
         rows.append( ( 'publish all queries to the same page/popup button: ', self._merge_query_publish_events ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( self._file_presentation_panel, rows )
         
-        self._options_panel.Add( help_hbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._options_panel.Add( help_hbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_presentation_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -3346,7 +3339,8 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         vbox.Add( self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3520,17 +3514,6 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         
     
-    def _DeleteQuery( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete all selected queries?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._queries.DeleteSelected()
-                
-            
-        
-    
     def _EditQuery( self ):
         
         selected_queries = self._queries.GetData( only_selected = True )
@@ -3586,7 +3569,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         data_strings = []
         
-        for query in self._queries.GetData():
+        for query in self._queries.GetData( only_selected = True ):
             
             fsc = query.GetFileSeedCache()
             
@@ -3841,9 +3824,10 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         show_a_popup_while_working = self._show_a_popup_while_working.GetValue()
         publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
         publish_files_to_page = self._publish_files_to_page.GetValue()
+        publish_label_override = self._publish_label_override.GetValue()
         merge_query_publish_events = self._merge_query_publish_events.GetValue()
         
-        subscription.SetPresentationOptions( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
+        subscription.SetPresentationOptions( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events )
         
         return subscription
         
@@ -3988,13 +3972,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'name', -1 ), ( 'source', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'items', 13 ), ( 'paused', 8 ) ]
         
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
         
         subscriptions_panel.SetListCtrl( self._subscriptions )
         
         subscriptions_panel.AddButton( 'add', self.Add )
         subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
-        subscriptions_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
+        subscriptions_panel.AddDeleteButton()
         
         subscriptions_panel.AddSeparator()
         
@@ -4012,11 +3996,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions_panel.AddButton( 'retry ignored', self.RetryIgnored, enabled_check_func = self._CanRetryIgnored )
         subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
         subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
-        
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            subscriptions_panel.AddButton( 'compact', self.Compact, enabled_check_func = self._CanCompact )
-            
         
         subscriptions_panel.AddButton( 'reset', self.Reset, enabled_check_func = self._CanReset )
         
@@ -4065,13 +4044,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
         return True in ( subscription.CanCheckNow() for subscription in subscriptions )
-        
-    
-    def _CanCompact( self ):
-        
-        subscriptions = self._subscriptions.GetData( only_selected = True )
-        
-        return True in ( subscription.CanCompact() for subscription in subscriptions )
         
     
     def _CanMerge( self ):
@@ -4379,37 +4351,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._subscriptions.UpdateDatas( subscriptions )
-        
-    
-    def Compact( self ):
-        
-        message = 'WARNING! EXPERIMENTAL! This will tell all the select subscriptions to remove any processed urls old urls that it is no longer worth keeping around. It helps to keep subs clean and snappy on load/save.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                subscriptions = self._subscriptions.GetData( only_selected = True )
-                
-                for subscription in subscriptions:
-                    
-                    subscription.Compact()
-                    
-                
-                self._subscriptions.UpdateDatas( subscriptions )
-                
-            
-        
-    
-    def Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._subscriptions.DeleteSelected()
-                
-            
         
     
     def Edit( self ):
@@ -5331,7 +5272,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                return ( False, '' )
+                raise HydrusExceptions.VetoException()
                 
             
         
@@ -5345,7 +5286,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                return ( False, '' )
+                raise HydrusExceptions.VetoException()
                 
             
         
@@ -5359,11 +5300,11 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 namespace_info = ( namespace, prefix, separator )
                 
-                return ( True, namespace_info )
+                return namespace_info
                 
             else:
                 
-                return ( False, '' )
+                raise HydrusExceptions.VetoException()
                 
             
         
@@ -5508,7 +5449,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_listctrl_panel.AddButton( 'add', self._AddParameters )
         parameters_listctrl_panel.AddButton( 'edit', self._EditParameters, enabled_only_on_selection = True )
-        parameters_listctrl_panel.AddButton( 'delete', self._DeleteParameters, enabled_only_on_selection = True )
+        parameters_listctrl_panel.AddDeleteButton()
         
         #
         
@@ -5534,7 +5475,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = url_match.ToTuple()
         
-        self._api_lookup_converter = ClientGUIParsing.StringConverterButton( self, api_lookup_converter )
+        self._api_lookup_converter = ClientGUIControls.StringConverterButton( self, api_lookup_converter )
         
         self._api_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
@@ -5643,7 +5584,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
         self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
         self._url_type.Bind( wx.EVT_CHOICE, self.EventURLTypeUpdate )
-        self._api_lookup_converter.Bind( ClientGUIParsing.EVT_STRING_CONVERTER, self.EventUpdate )
+        self._api_lookup_converter.Bind( ClientGUIControls.EVT_STRING_CONVERTER, self.EventUpdate )
         self._should_be_associated_with_files.Bind( wx.EVT_CHECKBOX, self.EventAssociationUpdate )
         
     
@@ -5674,7 +5615,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
             
-            panel = ClientGUIParsing.EditStringMatchPanel( dlg, string_match )
+            panel = ClientGUIControls.EditStringMatchPanel( dlg, string_match )
             
             dlg.SetPanel( panel )
             
@@ -5765,13 +5706,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _DeleteParameters( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._parameters.DeleteSelected()
-                
-            
+        self._parameters.ShowDeleteSelectedDialog()
         
         self._UpdateControls()
         
@@ -5810,7 +5745,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
                 
-                panel = ClientGUIParsing.EditStringMatchPanel( dlg, original_string_match )
+                panel = ClientGUIControls.EditStringMatchPanel( dlg, original_string_match )
                 
                 dlg.SetPanel( panel )
                 
@@ -5870,7 +5805,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit path component' ) as dlg:
             
-            panel = ClientGUIParsing.EditStringMatchPanel( dlg, string_match )
+            panel = ClientGUIControls.EditStringMatchPanel( dlg, string_match )
             
             dlg.SetPanel( panel )
             
@@ -5904,12 +5839,12 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         wx.CallAfter( self._UpdateControls ) # seems sometimes this doesn't kick in naturally
                         
-                        return ( True, new_row )
+                        return new_row
                         
                     
                 
             
-            return ( False, None )
+            raise HydrusExceptions.VetoException()
             
         
     
@@ -6189,13 +6124,13 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'name', 36 ), ( 'type', 20 ), ( 'example (normalised) url', -1 ) ]
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
         self._list_ctrl_panel.AddButton( 'add', self._Add )
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        self._list_ctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.URLMatch, ), self._AddURLMatch )
         self._list_ctrl_panel.AddSeparator()
@@ -6271,17 +6206,6 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         sort_tuple = ( name, url_type, example_url )
         
         return ( display_tuple, sort_tuple )
-        
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._list_ctrl.DeleteSelected()
-                
-            
         
     
     def _Edit( self ):

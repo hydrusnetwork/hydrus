@@ -526,6 +526,13 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         if len( gallery_seed_log ) > 0:
             
+            if not self._read_only and gallery_seed_log.CanRestartFailedSearch():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+            
             submenu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )

@@ -22,13 +22,8 @@ def AlphabetiseQueryText( query_text ):
     
 def ConvertDomainIntoAllApplicableDomains( domain ):
     
-    # is an ip address, possibly with a port
-    if re.search( r'^[\d\.):]+$', domain ) is not None:
-        
-        return [ domain ]
-        
-    
-    if domain == 'localhost':
+    # is an ip address or localhost, possibly with a port
+    if '.' not in domain or re.search( r'^[\d\.:]+$', domain ) is not None:
         
         return [ domain ]
         
@@ -1387,7 +1382,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._GetURLToFetchAndParser( url )
+            result = self._GetURLToFetchAndParser( url )
+            
+            if HG.network_report_mode:
+                
+                ( url_to_fetch, parser ) = result
+                
+                HydrusData.ShowText( 'URL to fetch and parser request: ' + url + ' -> ' + url_to_fetch + ': ' + parser.GetName() )
+                
+            
+            return result
             
         
     

@@ -227,7 +227,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             columns = [ ( 'namespace', 12 ), ( 'regex', -1 ) ]
             
-            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( self._quick_namespaces_panel, 'quick_namespaces', 4, 20, columns, self._ConvertQuickRegexDataToListCtrlTuples, delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
+            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( self._quick_namespaces_panel, 'quick_namespaces', 4, 20, columns, self._ConvertQuickRegexDataToListCtrlTuples, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
             
             self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
             self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
@@ -346,21 +346,6 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             sort_tuple = ( namespace, regex )
             
             return ( display_tuple, sort_tuple )
-            
-        
-        def DeleteQuickNamespaces( self ):
-            
-            import ClientGUIDialogs
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._quick_namespaces_list.DeleteSelected()
-                    
-                    self._refresh_callable()
-                    
-                
             
         
         def EditQuickNamespaces( self ):

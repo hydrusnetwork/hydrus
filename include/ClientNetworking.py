@@ -11,6 +11,7 @@ import HydrusNetworking
 import HydrusPaths
 import HydrusSerialisable
 import itertools
+import multipart
 import os
 import random
 import requests
@@ -39,6 +40,17 @@ job_status_str_lookup[ JOB_STATUS_AWAITING_LOGIN ] = 'waiting for login'
 job_status_str_lookup[ JOB_STATUS_AWAITING_SLOT ] = 'waiting for slot'
 job_status_str_lookup[ JOB_STATUS_RUNNING ] = 'running'
 
+def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
+    
+    m = multipart.Multipart()
+    
+    for ( name, value ) in fields.items():
+        
+        m.field( name, HydrusData.ToByteString( value ) )
+        
+    
+    return m.get()
+    
 class NetworkEngine( object ):
     
     def __init__( self, controller, bandwidth_manager, session_manager, domain_manager, login_manager ):
@@ -240,14 +252,29 @@ class NetworkEngine( object ):
                     
                 except Exception as e:
                     
-                    job.SetError( e, HydrusData.ToUnicode( e ) )
+                    job.SetStatus( HydrusData.ToUnicode( e ) )
                     
-                    return False
+                    job.Sleep( 60 )
+                    
+                    return True
                     
                 
                 if self._current_login_process is None:
                     
-                    login_process = job.GenerateLoginProcess()
+                    try:
+                        
+                        login_process = job.GenerateLoginProcess()
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
+                        
+                        job.SetStatus( HydrusData.ToUnicode( e ) )
+                        
+                        job.Sleep( 60 )
+                        
+                        return True
+                        
                     
                     self.controller.CallToThread( login_process.Start )
                     

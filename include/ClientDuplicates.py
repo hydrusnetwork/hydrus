@@ -316,14 +316,24 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 first_needs = second_urls.difference( first_urls )
                 second_needs = first_urls.difference( second_urls )
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
+                if len( first_needs ) > 0:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    
+                
+                if len( second_needs ) > 0:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
+                    
                 
             elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
                 
                 first_needs = second_urls.difference( first_urls )
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                if len( first_needs ) > 0:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    
                 
             
             if len( content_updates ) > 0:

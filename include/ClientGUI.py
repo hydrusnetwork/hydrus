@@ -8,6 +8,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIFrames
+import ClientGUILogin
 import ClientGUIManagement
 import ClientGUIMenus
 import ClientGUIPages
@@ -43,6 +44,7 @@ import HydrusTagArchive
 import HydrusVideoHandling
 import os
 import PIL
+import re
 import shlex
 import sqlite3
 import ssl
@@ -1750,6 +1752,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'UNDER CONSTRUCTION: manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
             ClientGUIMenus.AppendMenuItem( self, submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
@@ -2245,11 +2251,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if load_a_blank_page:
             
-            self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True )
+            self._controller.CallLaterWXSafe( self, 0.25, self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True )
             
         else:
             
-            self._notebook.LoadGUISession( default_gui_session )
+            self._controller.CallLaterWXSafe( self, 0.25, self._notebook.LoadGUISession, default_gui_session )
             
         
         last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
@@ -2480,6 +2486,29 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.CallToThread( THREAD_do_it, self._controller )
+        
+    
+    def _ManageLoginScripts( self ):
+        
+        title = 'manage login scripts'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            login_manager = self._controller.network_engine.login_manager
+            
+            login_scripts = login_manager.GetLoginScripts()
+            
+            panel = ClientGUILogin.EditLoginScriptsPanel( dlg, login_scripts )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                login_scripts = panel.GetValue()
+                
+                login_manager.SetLoginScripts( login_scripts )
+                
+            
         
     
     def _ManageNetworkHeaders( self ):
@@ -3672,6 +3701,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         except Exception as e:
             
+            r = re.search( '[a-fA-F0-9]{64}', HydrusData.ToUnicode( e ), flags = re.UNICODE )
+            
+            if r is not None:
+                
+                possible_hash = r.group().decode( 'hex' )
+                
+                HydrusData.ShowText( 'Found a possible hash in that error message--trying to show it in a new page.' )
+                
+                HG.client_controller.pub( 'imported_files_to_page', [ possible_hash ], 'files that did not upload right' )
+                
+            
             job_key.SetVariable( 'popup_text_1', service.GetName() + ' error' )
             
             job_key.Cancel()
@@ -4020,7 +4060,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         HG.client_controller.pub( 'notify_new_colourset' )
         
     
-    def FlushOutPredicates( self, predicates ):
+    def FleshOutPredicates( self, predicates ):
         
         good_predicates = []
         

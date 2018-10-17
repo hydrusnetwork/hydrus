@@ -26,7 +26,7 @@ def GenerateDefaultServiceDictionary( service_type ):
     
     if service_type in HC.REMOTE_SERVICES:
         
-        dictionary[ 'credentials' ] = HydrusNetwork.Credentials( 'hostname', 80 )
+        dictionary[ 'credentials' ] = HydrusNetwork.Credentials( 'hostname', 45871 )
         dictionary[ 'no_requests_reason' ] = ''
         dictionary[ 'no_requests_until' ] = 0
         
@@ -822,6 +822,8 @@ class ServiceRestricted( ServiceRemote ):
                 network_job.AddAdditionalHeader( 'Content-Type', HC.mime_string_lookup[ content_type ] )
                 
             
+            network_job.SetDeathTime( HydrusData.GetNow() + 10 ) # we don't want to wait on logins during shutdown and so on
+            
             HG.client_controller.network_engine.AddJob( network_job )
             
             network_job.WaitUntilDone()
@@ -1260,23 +1262,6 @@ class ServiceRepository( ServiceRestricted ):
                             
                             self._DelayFutureRequests( 'had an unusual update response' )
                             
-                        
-                        filename = 'should be ' + update_network_string_hash.encode( 'hex' ) + '.wew'
-                        
-                        path = os.path.join( HG.client_controller.db_dir, filename )
-                        
-                        with open( path, 'wb' ) as f:
-                            
-                            f.write( update_network_string )
-                            
-                        
-                        message = 'Update ' + update_hash.encode( 'hex' ) + ' downloaded from the ' + self._name + ' repository had hash ' + update_network_string_hash.encode( 'hex' ) + '!'
-                        message += os.linesep * 2
-                        message += 'This is an unusual network error that hydrus dev is trying to pin down. The bad file has been written to ' + path + '--please inform hydrus dev of what has happened and send him that file!'
-                        message += os.linesep * 2
-                        message += 'Your repository will try again later, which usually fixes this problem.'
-                        
-                        HydrusData.ShowText( message )
                         
                         return
                         

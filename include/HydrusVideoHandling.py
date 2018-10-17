@@ -460,35 +460,49 @@ def ParseFFMPEGFPS( lines ):
         
         # get the frame rate
         
+        possible_results = []
+        
         match = re.search("( [0-9]*.| )[0-9]* tbr", line)
+        
+        if match is not None:
+            
+            tbr = line[match.start():match.end()].split(' ')[1]
+            
+            tbr_fps_is_likely_garbage = match is None or tbr.endswith( 'k' ) or float( tbr ) > 60
+            
+            if not tbr_fps_is_likely_garbage:
+                
+                possible_results.append( float( tbr ) )
+                
+            
+        
+        #
+        
+        match = re.search("( [0-9]*.| )[0-9]* fps", line)
         
         if match is not None:
             
             fps = line[match.start():match.end()].split(' ')[1]
             
-        
-        tbr_fps_is_likely_garbage = match is None or fps.endswith( 'k' ) or float( fps ) > 60
-        
-        if tbr_fps_is_likely_garbage:
-            
-            match = re.search("( [0-9]*.| )[0-9]* fps", line)
-            
-            if match is not None:
-                
-                fps = line[match.start():match.end()].split(' ')[1]
-                
-            
             fps_is_likely_garbage = match is None or fps.endswith( 'k' ) or float( fps ) > 60
             
-            if fps_is_likely_garbage:
+            if not fps_is_likely_garbage:
                 
-                return None
+                possible_results.append( float( fps ) )
                 
             
         
-        fps = float( fps )
-        
-        return fps
+        if len( possible_results ) == 0:
+            
+            return None
+            
+        else:
+            
+            # in some cases, fps is 0.77 and tbr is incorrectly 20. extreme values cause bad results. let's try erroring on the side of slow
+            # tbh in these cases, the frame are prob going to get counted manually anyway due to no neat ints at the end, so nbd
+            
+            return min( possible_results )
+            
         
     except:
         

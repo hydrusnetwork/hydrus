@@ -1033,6 +1033,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 return 'DEAD'
                 
+            elif not HydrusData.TimeHasPassed( self._no_work_until ):
+                
+                return self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
+                
             else:
                 
                 return ''
@@ -1044,6 +1048,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            current_action = self._current_action
+            
             if self._checking_status == ClientImporting.CHECKER_STATUS_404:
                 
                 watcher_status = 'URL 404'
@@ -1054,14 +1060,17 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
+                no_work_text = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
+                
+                current_action = no_work_text
+                watcher_status = no_work_text
                 
             else:
                 
                 watcher_status = self._watcher_status
                 
             
-            return ( self._current_action, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._subject, self._checking_status, self._check_now, self._checking_paused )
+            return ( current_action, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._subject, self._checking_status, self._check_now, self._checking_paused )
             
         
     

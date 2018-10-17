@@ -103,21 +103,21 @@ def PageImporterShouldStopWorking( page_key ):
     
     return HG.view_shutdown or not HG.client_controller.PageAlive( page_key )
     
-def PublishPresentationHashes( name, hashes, publish_to_popup_button, publish_files_to_page ):
+def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button, publish_files_to_page ):
     
     if publish_to_popup_button:
         
         files_job_key = ClientThreading.JobKey()
         
         files_job_key.SetVariable( 'popup_files_mergable', True )
-        files_job_key.SetVariable( 'popup_files', ( list( hashes ), name ) )
+        files_job_key.SetVariable( 'popup_files', ( list( hashes ), publishing_label ) )
         
         HG.client_controller.pub( 'message', files_job_key )
         
     
     if publish_files_to_page:
         
-        HG.client_controller.pub( 'imported_files_to_page', list( hashes ), name )
+        HG.client_controller.pub( 'imported_files_to_page', list( hashes ), publishing_label )
         
     
 def THREADDownloadURL( job_key, url, url_string ):

@@ -1,6 +1,6 @@
 import ClientConstants as CC
 import ClientGUIManagement
-import ClientGUIDialogsManage
+import ClientNetworking
 import ClientCaches
 import ClientServices
 import collections
@@ -43,7 +43,7 @@ class TestFunctions( unittest.TestCase ):
         fields[ 'long_login' ] = 'yes'
         fields[ 'random_unicode' ] = u'\u269C'
         
-        result = ClientGUIDialogsManage.GenerateMultipartFormDataCTAndBodyFromDict( fields )
+        result = ClientNetworking.GenerateMultipartFormDataCTAndBodyFromDict( fields )
         
         expected_result = ('multipart/form-data; boundary=----------AaB03x', '------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="long_login"\r\n\r\nyes\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="random_unicode"\r\n\r\n\xe2\x9a\x9c\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="id"\r\n\r\ntoken\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="pin"\r\n\r\npin\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="act"\r\n\r\ndo_login\r\n------------AaB03x--\r\n')
         

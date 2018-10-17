@@ -1174,12 +1174,12 @@ class ReviewServicePanel( wx.Panel ):
             
             columns = [ ( 'name', -1 ), ( 'info', 36 ), ( 'expires', 12 ), ( 'files', 12 ) ]
             
-            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_search_panel, 'local_booru_shares', 10, 36, columns, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_search_panel, 'local_booru_shares', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
             
             booru_search_panel.SetListCtrl( self._booru_shares )
             
             booru_search_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-            booru_search_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+            booru_search_panel.AddDeleteButton()
             booru_search_panel.AddSeparator()
             booru_search_panel.AddButton( 'open in new page', self._OpenSearch, enabled_only_on_selection = True )
             booru_search_panel.AddButton( 'copy internal share url', self._CopyInternalShareURL, enabled_check_func = self._CanCopyURL )
@@ -1207,7 +1207,7 @@ class ReviewServicePanel( wx.Panel ):
             return has_selected and service_is_running
             
         
-        def _ConvertDataToListCtrlTuple( self, share_key ):
+        def _ConvertDataToListCtrlTuples( self, share_key ):
             
             info = self._share_key_info[ share_key ]
             

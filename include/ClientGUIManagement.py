@@ -1,14 +1,8 @@
 import HydrusConstants as HC
-import ClientDownloading
 import HydrusExceptions
-import HydrusPaths
 import HydrusSerialisable
-import HydrusThreading
 import ClientConstants as CC
-import ClientData
 import ClientDefaults
-import ClientCaches
-import ClientFiles
 import ClientGUIACDropdown
 import ClientGUICanvas
 import ClientGUICommon
@@ -21,13 +15,9 @@ import ClientGUIMedia
 import ClientGUIMenus
 import ClientGUIParsing
 import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
 import ClientGUIFileSeedCache
 import ClientGUIGallerySeedLog
-import ClientGUIShortcuts
-import ClientGUITime
 import ClientGUITopLevelWindows
-import ClientImporting
 import ClientImportGallery
 import ClientImportLocal
 import ClientImportOptions
@@ -36,20 +26,14 @@ import ClientImportWatchers
 import ClientMedia
 import ClientParsing
 import ClientPaths
-import ClientRendering
-import ClientSearch
 import ClientThreading
 import HydrusData
 import HydrusGlobals as HG
-import HydrusText
 import HydrusThreading
-import json
 import multipart
 import os
-import threading
 import time
 import traceback
-import urlparse
 import wx
 import wx.lib.scrolledpanel
 
@@ -1073,7 +1057,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
         hbox.Add( self._help_button, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.Add( self._preparing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1462,7 +1446,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1626,7 +1610,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1820,6 +1804,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         menu = wx.Menu()
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'copy queries', 'Copy all the selected downloaders\' queries to clipboard.', self._CopySelectedQueries )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all importers\' files in a new page', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectionInNewPage )
         
         if self._CanRetryFailed():
             
@@ -2040,6 +2025,40 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         
     
+    def _ShowSelectionInNewPage( self ):
+        
+        gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( gallery_imports ) == 0:
+            
+            return
+            
+        
+        hashes = list()
+        seen_hashes = set()
+        
+        for gallery_import in gallery_imports:
+            
+            gallery_hashes = gallery_import.GetPresentedHashes()
+            
+            new_hashes = [ hash for hash in gallery_hashes if hash not in seen_hashes ]
+            
+            hashes.extend( new_hashes )
+            seen_hashes.update( new_hashes )
+            
+        
+        hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+        
+        if len( hashes ) > 0:
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            
+        else:
+            
+            wx.MessageBox( 'No presented hashes for that selection!' )
+            
+        
+    
     def _UpdateImportStatus( self ):
         
         if HydrusData.TimeHasPassed( self._next_update_time ):
@@ -2228,7 +2247,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -2446,6 +2465,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected watchers\' urls to clipboard.', self._CopySelectedURLs )
         ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected watchers\' urls in your browser.', self._OpenSelectedURLs )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all watchers\' files in a new page', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectionInNewPage )
         
         if self._CanRetryFailed():
             
@@ -2666,6 +2686,40 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     watcher.SetTagImportOptions( tag_import_options )
                     
                 
+            
+        
+    
+    def _ShowSelectionInNewPage( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) == 0:
+            
+            return
+            
+        
+        hashes = list()
+        seen_hashes = set()
+        
+        for watcher in watchers:
+            
+            watcher_hashes = watcher.GetPresentedHashes()
+            
+            new_hashes = [ hash for hash in watcher_hashes if hash not in seen_hashes ]
+            
+            hashes.extend( new_hashes )
+            seen_hashes.update( new_hashes )
+            
+        
+        hashes = HG.client_controller.Read( 'filter_hashes', hashes, CC.LOCAL_FILE_SERVICE_KEY )
+        
+        if len( hashes ) > 0:
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            
+        else:
+            
+            wx.MessageBox( 'No presented hashes for that selection!' )
             
         
     
@@ -2904,7 +2958,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -2954,7 +3008,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                     
                 else:
                     
-                    return ( False, None )
+                    raise HydrusExceptions.VetoException()
                     
                 
             
@@ -2976,11 +3030,11 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                     
                     simple_downloader_formula = ClientParsing.SimpleDownloaderParsingFormula( name = name, formula = formula )
                     
-                    return ( True, simple_downloader_formula )
+                    return simple_downloader_formula
                     
                 else:
                     
-                    return ( False, None )
+                    raise HydrusExceptions.VetoException()
                     
                 
             
@@ -3273,7 +3327,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -3473,7 +3527,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3962,7 +4016,7 @@ class ManagementPanelQuery( ManagementPanel ):
             self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )

@@ -3657,7 +3657,6 @@ class DB( HydrusDB.HydrusDB ):
             ids_to_count[ tag_id ] = ( current_min, current_max, pending_min, pending_max )
             
         
-        
         return ids_to_count
         
     
@@ -3768,16 +3767,18 @@ class DB( HydrusDB.HydrusDB ):
         
         # now fetch siblings, add to set
         
-        siblings_manager = self._controller.GetManager( 'tag_siblings' )
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+            
+            sibling_service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        else:
+            
+            sibling_service_key = service_key
+            
         
-        all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( service_key, search_text, exact_match )
+        sibling_tag_ids = self._GetTagSiblingIds( sibling_service_key, tag_ids )
         
-        for sibling_tag in all_associated_sibling_tags:
-            
-            tag_id = self._GetTagId( sibling_tag )
-            
-            tag_ids.add( tag_id )
-            
+        tag_ids.update( sibling_tag_ids )
         
         return tag_ids
         
@@ -6798,6 +6799,44 @@ class DB( HydrusDB.HydrusDB ):
             
             return statuses_to_pairs
             
+        
+    
+    def _GetTagSiblingIds( self, service_key, tag_ids ):
+        
+        search_tag_ids = set( tag_ids )
+        searched_tag_ids = set()
+        sibling_tag_ids = set()
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            service_predicate = ''
+            
+        else:
+            
+            service_id = self._GetServiceId( service_key )
+            
+            service_predicate = ' AND service_id = ' + str( service_id )
+            
+        
+        good_select = 'SELECT good_tag_id FROM tag_siblings WHERE bad_tag_id IN %s' + service_predicate + ';'
+        bad_select = 'SELECT bad_tag_id FROM tag_siblings WHERE good_tag_id IN %s' + service_predicate + ';'
+        
+        while len( search_tag_ids ) > 0:
+            
+            goods = self._STS( self._SelectFromList( good_select, search_tag_ids ) )
+            bads = self._STS( self._SelectFromList( bad_select, search_tag_ids ) )
+            
+            searched_tag_ids.update( search_tag_ids )
+            
+            # ids are new if we have not seen them before
+            new_sibling_tag_ids = goods.union( bads ).difference( searched_tag_ids )
+            
+            search_tag_ids = new_sibling_tag_ids
+            
+            sibling_tag_ids.update( new_sibling_tag_ids )
+            
+        
+        return sibling_tag_ids
         
     
     def _GetText( self, text_id ):
@@ -11044,6 +11083,44 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( [ 'twitter tweet parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 325:
+            
+            try:
+            
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'pixiv tag search' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ 'pixiv file page', 'pixiv file page api', 'pixiv tag search gallery page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'pixiv file page api parser', 'pixiv tag search gallery page parser' ] )
                 
                 #
                 

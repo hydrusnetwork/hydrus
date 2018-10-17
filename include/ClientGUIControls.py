@@ -9,8 +9,10 @@ import ClientGUIScrolledPanels
 import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
+import ClientParsing
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNetworking
 import HydrusText
@@ -27,13 +29,13 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         columns = [ ( 'max allowed', 14 ), ( 'every', 16 ) ]
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, columns, self._ConvertRuleToListctrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, columns, self._ConvertRuleToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'add', self._Add )
         listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        listctrl_panel.AddDeleteButton()
         
         #
         
@@ -67,7 +69,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
         
     
-    def _ConvertRuleToListctrlTuples( self, rule ):
+    def _ConvertRuleToListCtrlTuples( self, rule ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
@@ -86,17 +88,6 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         display_tuple = ( pretty_max_allowed, pretty_time_delta )
         
         return ( display_tuple, sort_tuple )
-        
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._listctrl.DeleteSelected()
-                
-            
         
     
     def _Edit( self ):
@@ -319,6 +310,741 @@ class BytesControl( wx.Panel ):
         self._unit.SelectClientData( unit )
         
     
+class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, string_converter, example_string_override = None ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        transformations_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( '#', 3 ), ( 'transformation', 30 ), ( 'result', -1 ) ]
+        
+        self._transformations = ClientGUIListCtrl.BetterListCtrl( transformations_panel, 'string_converter_transformations', 7, 35, columns, self._ConvertTransformationToListCtrlTuples, delete_key_callback = self._DeleteTransformation, activation_callback = self._EditTransformation )
+        
+        transformations_panel.SetListCtrl( self._transformations )
+        
+        transformations_panel.AddButton( 'add', self._AddTransformation )
+        transformations_panel.AddButton( 'edit', self._EditTransformation, enabled_only_on_selection = True )
+        transformations_panel.AddDeleteButton()
+        
+        transformations_panel.AddSeparator()
+        
+        transformations_panel.AddButton( 'move up', self._MoveUp, enabled_check_func = self._CanMoveUp )
+        transformations_panel.AddButton( 'move down', self._MoveDown, enabled_check_func = self._CanMoveDown )
+        
+        self._example_string = wx.TextCtrl( self )
+        
+        #
+        
+        self._transformations.AddDatas( [ ( i + 1, transformation_type, data ) for ( i, ( transformation_type, data ) ) in enumerate( string_converter.transformations ) ] )
+        
+        if example_string_override is None:
+            
+            self._example_string.SetValue( string_converter.example_string )
+            
+        else:
+            
+            self._example_string.SetValue( example_string_override )
+            
+        
+        self._transformations.UpdateDatas() # to refresh, now they are all in the list
+        
+        self._transformations.Sort( 0 )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'example string: ', self._example_string ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _AddTransformation( self ):
+        
+        transformation_type = ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT
+        data = ' extra text'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = self._TransformationPanel( dlg, transformation_type, data )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                number = self._transformations.GetItemCount() + 1
+                
+                ( transformation_type, data ) = panel.GetValue()
+                
+                enumerated_transformation = ( number, transformation_type, data )
+                
+                self._transformations.AddDatas( ( enumerated_transformation, ) )
+                
+            
+        
+        self._transformations.UpdateDatas() # need to refresh string after the insertion, so the new row can be included in the parsing calcs
+        
+        self._transformations.Sort()
+        
+    
+    def _CanMoveDown( self ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        if len( selected_data ) == 1:
+            
+            ( number, transformation_type, data ) = selected_data[0]
+            
+            if number < self._transformations.GetItemCount():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _CanMoveUp( self ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        if len( selected_data ) == 1:
+            
+            ( number, transformation_type, data ) = selected_data[0]
+            
+            if number > 1:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _ConvertTransformationToListCtrlTuples( self, transformation ):
+        
+        ( number, transformation_type, data ) = transformation
+        
+        pretty_number = HydrusData.ToHumanInt( number )
+        pretty_transformation = ClientParsing.StringConverter.TransformationToUnicode( ( transformation_type, data ) )
+        
+        string_converter = self._GetValue()
+        
+        try:
+            
+            pretty_result = ClientParsing.MakeParsedTextPretty( string_converter.Convert( self._example_string.GetValue(), number ) )
+            
+        except HydrusExceptions.StringConvertException as e:
+            
+            pretty_result = str( e )
+            
+        
+        display_tuple = ( pretty_number, pretty_transformation, pretty_result )
+        sort_tuple = ( number, number, number )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DeleteTransformation( self ):
+        
+        if len( self._transformations.GetData( only_selected = True ) ) > 0:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._transformations.DeleteSelected()
+                    
+                
+            
+        
+        # now we need to shuffle up any missing numbers
+        
+        num_rows = self._transformations.GetItemCount()
+        
+        i = 1
+        search_i = i
+        
+        while i <= num_rows:
+            
+            try:
+                
+                transformation = self._GetTransformation( search_i )
+                
+                if search_i != i:
+                    
+                    self._transformations.DeleteDatas( ( transformation, ) )
+                    
+                    ( search_i, transformation_type, data ) = transformation
+                    
+                    transformation = ( i, transformation_type, data )
+                    
+                    self._transformations.AddDatas( ( transformation, ) )
+                    
+                
+                i += 1
+                search_i = i
+                
+            except HydrusExceptions.DataMissing:
+                
+                search_i += 1
+                
+            
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _EditTransformation( self ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        for enumerated_transformation in selected_data:
+            
+            ( number, transformation_type, data ) = enumerated_transformation
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation', frame_key = 'deeply_nested_dialog' ) as dlg:
+                
+                panel = self._TransformationPanel( dlg, transformation_type, data )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._transformations.DeleteDatas( ( enumerated_transformation, ) )
+                    
+                    ( transformation_type, data ) = panel.GetValue()
+                    
+                    enumerated_transformation = ( number, transformation_type, data )
+                    
+                    self._transformations.AddDatas( ( enumerated_transformation, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _GetTransformation( self, desired_number ):
+        
+        for transformation in self._transformations.GetData():
+            
+            ( number, transformation_type, data ) = transformation
+            
+            if number == desired_number:
+                
+                return transformation
+                
+            
+        
+        raise HydrusExceptions.DataMissing()
+        
+    
+    def _GetValue( self ):
+        
+        enumerated_transformations = list( self._transformations.GetData() )
+        
+        enumerated_transformations.sort()
+        
+        transformations = [ ( transformation_type, data ) for ( number, transformation_type, data ) in enumerated_transformations ]
+        
+        example_string = self._example_string.GetValue()
+        
+        string_converter = ClientParsing.StringConverter( transformations, example_string )
+        
+        return string_converter
+        
+    
+    def _MoveDown( self ):
+        
+        selected_transformation = self._transformations.GetData( only_selected = True )[0]
+        
+        ( number, transformation_type, data ) = selected_transformation
+        
+        swap_transformation = self._GetTransformation( number + 1 )
+        
+        self._SwapTransformations( selected_transformation, swap_transformation )
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _MoveUp( self ):
+        
+        selected_transformation = self._transformations.GetData( only_selected = True )[0]
+        
+        ( number, transformation_type, data ) = selected_transformation
+        
+        swap_transformation = self._GetTransformation( number - 1 )
+        
+        self._SwapTransformations( selected_transformation, swap_transformation )
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _SwapTransformations( self, one, two ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        one_selected = one in selected_data
+        two_selected = two in selected_data
+        
+        self._transformations.DeleteDatas( ( one, two ) )
+        
+        ( number_1, transformation_type_1, data_1 ) = one
+        ( number_2, transformation_type_2, data_2 ) = two
+        
+        one = ( number_2, transformation_type_1, data_1 )
+        two = ( number_1, transformation_type_2, data_2 )
+        
+        self._transformations.AddDatas( ( one, two ) )
+        
+        if one_selected:
+            
+            self._transformations.SelectDatas( ( one, ) )
+            
+        
+        if two_selected:
+            
+            self._transformations.SelectDatas( ( two, ) )
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._transformations.UpdateDatas()
+        
+    
+    def GetValue( self ):
+        
+        string_converter = self._GetValue()
+        
+        try:
+            
+            string_converter.Convert( self._example_string.GetValue() )
+            
+        except HydrusExceptions.StringConvertException:
+            
+            raise HydrusExceptions.VetoException( 'Please enter an example text that can be converted!' )
+            
+        
+        return string_converter
+        
+    
+    class _TransformationPanel( ClientGUIScrolledPanels.EditPanel ):
+        
+        def __init__( self, parent, transformation_type, data ):
+            
+            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            
+            self._transformation_type = ClientGUICommon.BetterChoice( self )
+            
+            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+                
+                self._transformation_type.Append( ClientParsing.transformation_type_str_lookup[ t_type ], t_type )
+                
+            
+            self._data_text = wx.TextCtrl( self )
+            self._data_number = wx.SpinCtrl( self, min = 0, max = 65535 )
+            self._data_encoding = ClientGUICommon.BetterChoice( self )
+            self._data_regex_pattern = wx.TextCtrl( self )
+            self._data_regex_repl = wx.TextCtrl( self )
+            self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior' )
+            self._data_timezone = ClientGUICommon.BetterChoice( self )
+            self._data_timezone_offset = wx.SpinCtrl( self, min = -86400, max = 86400 )
+            
+            for e in ( 'hex', 'base64' ):
+                
+                self._data_encoding.Append( e, e )
+                
+            
+            self._data_timezone.Append( 'GMT', HC.TIMEZONE_GMT )
+            self._data_timezone.Append( 'Local', HC.TIMEZONE_LOCAL )
+            self._data_timezone.Append( 'Offset', HC.TIMEZONE_OFFSET )
+            
+            #
+            
+            self._transformation_type.SelectClientData( transformation_type )
+            
+            self._UpdateDataControls()
+            
+            #
+            
+            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_ENCODE ):
+                
+                self._data_encoding.SelectClientData( data )
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                
+                ( pattern, repl ) = data
+                
+                self._data_regex_pattern.SetValue( pattern )
+                self._data_regex_repl.SetValue( repl )
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+                
+                ( phrase, timezone_type, timezone_offset ) = data
+                
+                self._data_text.SetValue( phrase )
+                self._data_timezone.SelectClientData( timezone_type )
+                self._data_timezone_offset.SetValue( timezone_offset )
+                
+            elif data is not None:
+                
+                if isinstance( data, int ):
+                    
+                    self._data_number.SetValue( data )
+                    
+                else:
+                    
+                    self._data_text.SetValue( data )
+                    
+                
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'string data: ', self._data_text ) )
+            rows.append( ( 'number data: ', self._data_number ) )
+            rows.append( ( 'encoding data: ', self._data_encoding ) )
+            rows.append( ( 'regex pattern: ', self._data_regex_pattern ) )
+            rows.append( ( 'regex replacement: ', self._data_regex_repl ) )
+            rows.append( ( 'date info: ', self._data_date_link ) )
+            rows.append( ( 'date timezone: ', self._data_timezone ) )
+            rows.append( ( 'timezone offset: ', self._data_timezone_offset ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+            #
+            
+            self._transformation_type.Bind( wx.EVT_CHOICE, self.EventChoice )
+            self._data_timezone.Bind( wx.EVT_CHOICE, self.EventChoice )
+            
+        
+        def _UpdateDataControls( self ):
+            
+            self._data_text.Disable()
+            self._data_number.Disable()
+            self._data_encoding.Disable()
+            self._data_regex_pattern.Disable()
+            self._data_regex_repl.Disable()
+            self._data_timezone.Disable()
+            self._data_timezone_offset.Disable()
+            
+            transformation_type = self._transformation_type.GetChoice()
+            
+            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
+                
+                self._data_encoding.Enable()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE ):
+                
+                self._data_text.Enable()
+                
+                if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+                    
+                    self._data_timezone.Enable()
+                    
+                    if self._data_timezone.GetChoice() == HC.TIMEZONE_OFFSET:
+                        
+                        self._data_timezone_offset.Enable()
+                        
+                    
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+                
+                self._data_number.Enable()
+                
+                if transformation_type == ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION:
+                    
+                    self._data_number.SetMin( -65535 )
+                    
+                else:
+                    
+                    self._data_number.SetMin( 0 )
+                    
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                
+                self._data_regex_pattern.Enable()
+                self._data_regex_repl.Enable()
+                
+            
+        
+        def EventChoice( self, event ):
+            
+            self._UpdateDataControls()
+            
+        
+        def GetValue( self ):
+            
+            transformation_type = self._transformation_type.GetChoice()
+            
+            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
+                
+                data = self._data_encoding.GetChoice()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT ):
+                
+                data = self._data_text.GetValue()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+                
+                data = self._data_number.GetValue()
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                
+                pattern = self._data_regex_pattern.GetValue()
+                repl = self._data_regex_repl.GetValue()
+                
+                data = ( pattern, repl )
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+                
+                phrase = self._data_text.GetValue()
+                timezone_time = self._data_timezone.GetChoice()
+                timezone_offset = self._data_timezone_offset.GetValue()
+                
+                data = ( phrase, timezone_time, timezone_offset )
+                
+            else:
+                
+                data = None
+                
+            
+            return ( transformation_type, data )
+            
+        
+    
+class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, string_match = None ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        if string_match is None:
+            
+            string_match = ClientParsing.StringMatch()
+            
+        
+        self._match_type = ClientGUICommon.BetterChoice( self )
+        
+        self._match_type.Append( 'any characters', ClientParsing.STRING_MATCH_ANY )
+        self._match_type.Append( 'fixed characters', ClientParsing.STRING_MATCH_FIXED )
+        self._match_type.Append( 'character set', ClientParsing.STRING_MATCH_FLEXIBLE )
+        self._match_type.Append( 'regex', ClientParsing.STRING_MATCH_REGEX )
+        
+        self._match_value_text_input = wx.TextCtrl( self )
+        
+        self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
+        
+        self._match_value_flexible_input.Append( 'alphabetic characters (a-zA-Z)', ClientParsing.ALPHA )
+        self._match_value_flexible_input.Append( 'alphanumeric characters (a-zA-Z0-9)', ClientParsing.ALPHANUMERIC )
+        self._match_value_flexible_input.Append( 'numeric characters (0-9)', ClientParsing.NUMERIC )
+        
+        self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        
+        self._example_string = wx.TextCtrl( self )
+        
+        self._example_string_matches = ClientGUICommon.BetterStaticText( self )
+        
+        #
+        
+        self.SetValue( string_match )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'match type: ', self._match_type ) )
+        rows.append( ( 'match text: ', self._match_value_text_input ) )
+        rows.append( ( 'match value (character set): ', self._match_value_flexible_input ) )
+        rows.append( ( 'minumum allowed number of characters: ', self._min_chars ) )
+        rows.append( ( 'maximum allowed number of characters: ', self._max_chars ) )
+        rows.append( ( 'example string: ', self._example_string ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._match_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._match_value_text_input.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._match_value_flexible_input.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._min_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
+        self._max_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
+        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _GetValue( self ):
+        
+        match_type = self._match_type.GetChoice()
+        
+        if match_type == ClientParsing.STRING_MATCH_ANY:
+            
+            match_value = ''
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            match_value = self._match_value_flexible_input.GetChoice()
+            
+        else:
+            
+            match_value = self._match_value_text_input.GetValue()
+            
+        
+        min_chars = self._min_chars.GetValue()
+        max_chars = self._max_chars.GetValue()
+        
+        example_string = self._example_string.GetValue()
+        
+        string_match = ClientParsing.StringMatch( match_type = match_type, match_value = match_value, min_chars = min_chars, max_chars = max_chars, example_string = example_string )
+        
+        return string_match
+        
+    
+    def _UpdateControls( self ):
+        
+        match_type = self._match_type.GetChoice()
+        
+        if match_type == ClientParsing.STRING_MATCH_ANY:
+            
+            self._match_value_text_input.Disable()
+            self._match_value_flexible_input.Disable()
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_text_input.Disable()
+            self._match_value_flexible_input.Enable()
+            
+        else:
+            
+            self._match_value_text_input.Enable()
+            self._match_value_flexible_input.Disable()
+            
+        
+        if match_type == ClientParsing.STRING_MATCH_FIXED:
+            
+            self._min_chars.SetValue( None )
+            self._max_chars.SetValue( None )
+            
+            self._min_chars.Disable()
+            self._max_chars.Disable()
+            
+            self._example_string.SetValue( self._match_value_text_input.GetValue() )
+            
+            self._example_string_matches.SetLabelText( '' )
+            
+        else:
+            
+            self._min_chars.Enable()
+            self._max_chars.Enable()
+            
+            string_match = self._GetValue()
+            
+            try:
+                
+                string_match.Test( self._example_string.GetValue() )
+                
+                self._example_string_matches.SetLabelText( 'Example matches ok!' )
+                self._example_string_matches.SetForegroundColour( ( 0, 128, 0 ) )
+                
+            except HydrusExceptions.StringMatchException as e:
+                
+                reason = HydrusData.ToUnicode( e )
+                
+                self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
+                self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
+                
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._UpdateControls()
+        
+        event.Skip()
+        
+    
+    def GetValue( self ):
+        
+        string_match = self._GetValue()
+        
+        try:
+            
+            string_match.Test( self._example_string.GetValue() )
+            
+        except HydrusExceptions.StringMatchException:
+            
+            raise HydrusExceptions.VetoException( 'Please enter an example text that matches the given rules!' )
+            
+        
+        return string_match
+        
+    
+    def SetValue( self, string_match ):
+        
+        ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
+        
+        self._match_type.SelectClientData( match_type )
+        
+        if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_flexible_input.SelectClientData( match_value )
+            
+        else:
+            
+            self._match_value_flexible_input.SelectClientData( ClientParsing.ALPHA )
+            
+            self._match_value_text_input.SetValue( match_value )
+            
+        
+        self._min_chars.SetValue( min_chars )
+        self._max_chars.SetValue( max_chars )
+        
+        self._example_string.SetValue( example_string )
+        
+        self._UpdateControls()
+        
+    
 class NoneableBytesControl( wx.Panel ):
     
     def __init__( self, parent, initial_value = 65536, none_label = 'no limit' ):
@@ -407,130 +1133,6 @@ class NoneableBytesControl( wx.Panel ):
             
         
         self._UpdateEnabled()
-        
-    
-class EditStringToStringDictControl( wx.Panel ):
-    
-    def __init__( self, parent, initial_dict ):
-        
-        wx.Panel.__init__( self, parent )
-        
-        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
-        
-        columns = [ ( 'key', 20 ), ( 'value', -1 ) ]
-        
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
-        
-        listctrl_panel.SetListCtrl( self._listctrl )
-        
-        listctrl_panel.AddButton( 'add', self._Add )
-        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
-        
-        #
-        
-        self._listctrl.AddDatas( initial_dict.items() )
-        
-        self._listctrl.Sort()
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-    
-    def _ConvertDataToListCtrlTuples( self, data ):
-        
-        ( key, value ) = data
-        
-        display_tuple = ( key, value )
-        sort_tuple = ( key, value )
-        
-        return ( display_tuple, sort_tuple )
-        
-    
-    def _Add( self ):
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'enter the key', allow_blank = False ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                key = dlg.GetValue()
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'enter the value', allow_blank = True ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        value = dlg.GetValue()
-                        
-                        data = ( key, value )
-                        
-                        self._listctrl.AddDatas( ( data, ) )
-                        
-                    
-                
-            
-        
-    
-    def _Delete( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._listctrl.DeleteSelected()
-                
-            
-        
-    
-    def _Edit( self ):
-        
-        for data in self._listctrl.GetData( only_selected = True ):
-            
-            ( key, value ) = data
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = key, allow_blank = False ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    key = dlg.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the value', default = value, allow_blank = True ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    value = dlg.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            self._listctrl.DeleteDatas( ( data, ) )
-            
-            new_data = ( key, value )
-            
-            self._listctrl.AddDatas( ( new_data, ) )
-            
-        
-        self._listctrl.Sort()
-        
-    
-    def GetValue( self ):
-        
-        value_dict = dict( self._listctrl.GetData() )
-        
-        return value_dict
         
     
 class NetworkJobControl( wx.Panel ):
@@ -759,6 +1361,120 @@ class NetworkJobControl( wx.Panel ):
             
         
     
+( StringConverterEvent, EVT_STRING_CONVERTER ) = wx.lib.newevent.NewCommandEvent()
+
+class StringConverterButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, string_converter ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string converter', self._Edit )
+        
+        self._string_converter = string_converter
+        
+        self._example_string_override = None
+        
+        self._UpdateLabel()
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string converter', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditStringConverterPanel( dlg, self._string_converter, example_string_override = self._example_string_override )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._string_converter = panel.GetValue()
+                
+                self._UpdateLabel()
+                
+            
+        
+        wx.QueueEvent( self.GetEventHandler(), StringConverterEvent( -1 ) )
+        
+    
+    def _UpdateLabel( self ):
+        
+        num_rules = len( self._string_converter.transformations )
+        
+        if num_rules == 0:
+            
+            label = 'no string transformations'
+            
+        else:
+            
+            label = HydrusData.ToHumanInt( num_rules ) + ' string transformations'
+            
+        
+        self.SetLabelText( label )
+        
+    
+    def GetValue( self ):
+        
+        return self._string_converter
+        
+    
+    def SetExampleString( self, example_string ):
+        
+        self._example_string_override = example_string
+        
+    
+    def SetValue( self, string_converter ):
+        
+        self._string_converter = string_converter
+        
+        self._UpdateLabel()
+        
+    
+class StringMatchButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, string_match ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string match', self._Edit )
+        
+        self._string_match = string_match
+        
+        self._UpdateLabel()
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string match', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditStringMatchPanel( dlg, self._string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._string_match = panel.GetValue()
+                
+                self._UpdateLabel()
+                
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        label = self._string_match.ToUnicode()
+        
+        self.SetLabelText( label )
+        
+    
+    def GetValue( self ):
+        
+        return self._string_match
+        
+    
+    def SetValue( self, string_match ):
+        
+        self._string_match = string_match
+        
+        self._UpdateLabel()
+        
+    
 class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, label ):
@@ -774,7 +1490,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            control = EditStringToStringDictControl( panel, self._value )
+            control = StringToStringDictControl( panel, self._value )
             
             panel.SetControl( control )
             
@@ -795,6 +1511,289 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     def SetValue( self, value ):
         
         self._value = value
+        
+    
+class StringToStringDictControl( wx.Panel ):
+    
+    def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key', value_name = 'value' ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._key_name = key_name
+        self._value_name = value_name
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( self._key_name, 20 ), ( self._value_name, -1 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddDeleteButton()
+        
+        #
+        
+        self._listctrl.AddDatas( initial_dict.items() )
+        
+        self._listctrl.Sort()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, data ):
+        
+        ( key, value ) = data
+        
+        display_tuple = ( key, value )
+        sort_tuple = ( key, value )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Add( self ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._key_name, allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                key = dlg.GetValue()
+                
+                if key in self._GetExistingKeys():
+                    
+                    wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                    
+                    return
+                    
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._value_name, allow_blank = True ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        value = dlg.GetValue()
+                        
+                        data = ( key, value )
+                        
+                        self._listctrl.AddDatas( ( data, ) )
+                        
+                    
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for data in self._listctrl.GetData( only_selected = True ):
+            
+            ( key, value ) = data
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_key = dlg.GetValue()
+                    
+                    if edited_key != key and edited_key in self._GetExistingKeys():
+                        
+                        wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                        
+                        break
+                        
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._value_name, default = value, allow_blank = True ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_value = dlg.GetValue()
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            self._listctrl.DeleteDatas( ( data, ) )
+            
+            edited_data = ( edited_key, edited_value )
+            
+            self._listctrl.AddDatas( ( edited_data, ) )
+            
+        
+        self._listctrl.Sort()
+        
+    
+    def _GetExistingKeys( self ):
+        
+        return { key for ( key, value ) in self._listctrl.GetData() }
+        
+    
+    def GetValue( self ):
+        
+        value_dict = dict( self._listctrl.GetData() )
+        
+        return value_dict
+        
+    
+class StringToStringMatchDictControl( wx.Panel ):
+    
+    def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key' ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._key_name = key_name
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( self._key_name, 20 ), ( 'matching', -1 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_string_match', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddDeleteButton()
+        
+        #
+        
+        self._listctrl.AddDatas( initial_dict.items() )
+        
+        self._listctrl.Sort()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, data ):
+        
+        ( key, string_match ) = data
+        
+        pretty_string_match = string_match.ToUnicode()
+        
+        display_tuple = ( key, pretty_string_match )
+        sort_tuple = ( key, pretty_string_match )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Add( self ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._key_name, allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                key = dlg.GetValue()
+                
+                if key in self._GetExistingKeys():
+                    
+                    wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                    
+                    return
+                    
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+                    
+                    string_match = ClientParsing.StringMatch()
+                    
+                    panel = EditStringMatchPanel( dlg, string_match )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        string_match = panel.GetValue()
+                        
+                        data = ( key, string_match )
+                        
+                        self._listctrl.AddDatas( ( data, ) )
+                        
+                    
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for data in self._listctrl.GetData( only_selected = True ):
+            
+            ( key, string_match ) = data
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_key = dlg.GetValue()
+                    
+                    if edited_key != key and edited_key in self._GetExistingKeys():
+                        
+                        wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                        
+                        break
+                        
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+                
+                string_match = ClientParsing.StringMatch()
+                
+                panel = EditStringMatchPanel( dlg, string_match )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_string_match = panel.GetValue()
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            self._listctrl.DeleteDatas( ( data, ) )
+            
+            edited_data = ( edited_key, edited_string_match )
+            
+            self._listctrl.AddDatas( ( edited_data, ) )
+            
+        
+        self._listctrl.Sort()
+        
+    
+    def _GetExistingKeys( self ):
+        
+        return { key for ( key, value ) in self._listctrl.GetData() }
+        
+    
+    def GetValue( self ):
+        
+        value_dict = dict( self._listctrl.GetData() )
+        
+        return value_dict
         
     
 class TextAndPasteCtrl( wx.Panel ):

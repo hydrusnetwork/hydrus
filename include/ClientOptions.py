@@ -101,6 +101,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
         
+        self._dictionary[ 'booleans' ][ 'show_new_on_file_seed_short_summary' ] = False
         self._dictionary[ 'booleans' ][ 'show_deleted_on_file_seed_short_summary' ] = False
         
         self._dictionary[ 'booleans' ][ 'only_save_last_session_during_idle' ] = False

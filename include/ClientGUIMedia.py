@@ -716,7 +716,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         
     
-    def _ExportFiles( self ):
+    def _ExportFiles( self, do_export_and_then_quit = False ):
         
         if len( self._selected_media ) > 0:
             
@@ -739,7 +739,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
             frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'export files' )
             
-            panel = ClientGUIScrolledPanelsReview.ReviewExportFilesPanel( frame, flat_media )
+            panel = ClientGUIScrolledPanelsReview.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
             
             frame.SetPanel( panel )
             
@@ -2049,6 +2049,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             elif action == 'export_files':
                 
                 self._ExportFiles()
+                
+            elif action == 'export_files_quick_auto_export':
+                
+                self._ExportFiles( do_export_and_then_quit = True )
                 
             elif action == 'manage_file_ratings':
                 

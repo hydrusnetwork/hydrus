@@ -283,6 +283,14 @@ def GetDefaultImageboards():
     
     return imageboards
     
+def GetDefaultLoginScripts():
+    
+    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'login_scripts' )
+    
+    import ClientNetworkingLogin
+    
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingLogin.LoginScriptDomain, ) )
+    
 def GetDefaultParsers():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )

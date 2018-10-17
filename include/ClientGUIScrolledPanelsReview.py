@@ -897,7 +897,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                                 # the confused event loops lead to problems at a C++ level in ShowModal not being able to do the Destroy because parent stuff had already died
                                 # this works, so leave it alone if you can
                                 
-                                wx.CallAfter( self.GetParent().DoOK )
+                                wx.CallAfter( self.GetParent().Close )
                                 
                                 prefixes_to_locations = self._controller.Read( 'client_files_locations' )
                                 
@@ -1854,7 +1854,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
 class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, flat_media ):
+    def __init__( self, parent, flat_media, do_export_and_then_quit = False ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
@@ -1879,7 +1879,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         columns = [ ( 'number', 8 ), ( 'mime', 20 ), ( 'expected path', -1 ) ]
         
-        self._paths = ClientGUIListCtrl.BetterListCtrl( self, 'export_files', 24, 64, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self.DeletePaths )
+        self._paths = ClientGUIListCtrl.BetterListCtrl( self, 'export_files', 24, 64, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True )
         
         self._paths.Sort( 0 )
         
@@ -1965,6 +1965,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
         self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
         
+        if do_export_and_then_quit:
+            
+            wx.CallAfter( self._DoExport, True )
+            
+        
     
     def _ConvertDataToListCtrlTuples( self, data ):
         
@@ -1984,85 +1989,20 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _GetPath( self, media ):
+    def _DoExport( self, quit_afterwards = False ):
         
-        if media in self._media_to_paths:
+        if quit_afterwards:
             
-            return self._media_to_paths[ media ]
-            
-        
-        directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
-        
-        pattern = self._pattern.GetValue()
-        
-        terms = ClientExporting.ParseExportPhrase( pattern )
-        
-        filename = ClientExporting.GenerateExportFilename( directory, media, terms )
-        
-        i = 1
-        
-        while filename in self._existing_filenames:
-            
-            filename = ClientExporting.GenerateExportFilename( directory, media, terms + [ ( 'string', ' (' + str( i ) + ')' ) ] )
-            
-            i += 1
-            
-        
-        path = os.path.join( directory, filename )
-        
-        self._existing_filenames.add( filename )
-        self._media_to_paths[ media ] = path
-        
-        return path
-        
-    
-    def _RefreshPaths( self ):
-        
-        pattern = self._pattern.GetValue()
-        dir_path = self._directory_picker.GetPath()
-        
-        if pattern == self._last_phrase_used and dir_path == self._last_dir_used:
-            
-            return
-            
-        
-        self._last_phrase_used = pattern
-        self._last_dir_used = dir_path
-        
-        HG.client_controller.new_options.SetString( 'export_phrase', pattern )
-        
-        self._existing_filenames = set()
-        self._media_to_paths = {}
-        
-        self._paths.UpdateDatas()
-        
-    
-    def _RefreshTags( self ):
-        
-        data = self._paths.GetData( only_selected = True )
-        
-        if len( data ) == 0:
-            
-            data = self._paths.GetData()
-            
-        
-        all_media = [ media for ( ordering_index, media ) in data ]
-        
-        self._tags_box.SetTagsByMedia( all_media )
-        
-    
-    def DeletePaths( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
+            with ClientGUIDialogs.DialogYesNo( self, 'Export as shown?' ) as dlg:
                 
-                self._paths.DeleteSelected()
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    self.GetParent().Close()
+                    
+                    return
+                    
                 
             
-        
-    
-    def EventExport( self, event ):
         
         self._RefreshPaths()
         
@@ -2100,7 +2040,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._export.SetLabel( text )
             
         
-        def wx_done():
+        def wx_done( quit_afterwards ):
             
             if not self or not self._export:
                 
@@ -2109,8 +2049,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._export.Enable()
             
+            if quit_afterwards:
+                
+                wx.CallAfter( self.GetParent().Close )
+                
+            
         
-        def do_it( neighbouring_txt_tag_service_keys ):
+        def do_it( neighbouring_txt_tag_service_keys, quit_afterwards ):
             
             for ( index, ( ordering_index, media ) ) in enumerate( to_do ):
                 
@@ -2181,10 +2126,82 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             wx.CallAfter( wx_update_label, 'export' )
             
-            wx.CallAfter( wx_done )
+            wx.CallAfter( wx_done, quit_afterwards )
             
         
-        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys )
+        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, quit_afterwards )
+        
+    
+    def _GetPath( self, media ):
+        
+        if media in self._media_to_paths:
+            
+            return self._media_to_paths[ media ]
+            
+        
+        directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
+        
+        pattern = self._pattern.GetValue()
+        
+        terms = ClientExporting.ParseExportPhrase( pattern )
+        
+        filename = ClientExporting.GenerateExportFilename( directory, media, terms )
+        
+        i = 1
+        
+        while filename in self._existing_filenames:
+            
+            filename = ClientExporting.GenerateExportFilename( directory, media, terms + [ ( 'string', ' (' + str( i ) + ')' ) ] )
+            
+            i += 1
+            
+        
+        path = os.path.join( directory, filename )
+        
+        self._existing_filenames.add( filename )
+        self._media_to_paths[ media ] = path
+        
+        return path
+        
+    
+    def _RefreshPaths( self ):
+        
+        pattern = self._pattern.GetValue()
+        dir_path = self._directory_picker.GetPath()
+        
+        if pattern == self._last_phrase_used and dir_path == self._last_dir_used:
+            
+            return
+            
+        
+        self._last_phrase_used = pattern
+        self._last_dir_used = dir_path
+        
+        HG.client_controller.new_options.SetString( 'export_phrase', pattern )
+        
+        self._existing_filenames = set()
+        self._media_to_paths = {}
+        
+        self._paths.UpdateDatas()
+        
+    
+    def _RefreshTags( self ):
+        
+        data = self._paths.GetData( only_selected = True )
+        
+        if len( data ) == 0:
+            
+            data = self._paths.GetData()
+            
+        
+        all_media = [ media for ( ordering_index, media ) in data ]
+        
+        self._tags_box.SetTagsByMedia( all_media )
+        
+    
+    def EventExport( self, event ):
+        
+        self._DoExport()
         
     
     def EventExportTagTxtsChanged( self, event ):
@@ -2649,7 +2666,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         columns = [ ( 'network context', -1 ), ( 'cookies', 9 ), ( 'expires', 28 ) ]
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_sessions', 32, 34, columns, self._ConvertNetworkContextToListCtrlTuple, delete_key_callback = self._Clear, activation_callback = self._Review )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_sessions', 32, 34, columns, self._ConvertNetworkContextToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Review )
         
         self._listctrl.Sort()
         
@@ -2715,7 +2732,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _ConvertNetworkContextToListCtrlTuple( self, network_context ):
+    def _ConvertNetworkContextToListCtrlTuples( self, network_context ):
         
         session = self._session_manager.GetSession( network_context )
         
@@ -2825,7 +2842,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         columns = [ ( 'name', -1 ), ( 'value', 32 ), ( 'domain', 20 ), ( 'path', 8 ), ( 'expires', 28 ) ]
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_session', 8, 18, columns, self._ConvertCookieToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_session', 8, 18, columns, self._ConvertCookieToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._listctrl.Sort()
         
@@ -2834,7 +2851,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.AddButton( 'add', self._Add )
         listctrl_panel.AddButton( 'import cookies.txt', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        listctrl_panel.AddDeleteButton()
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
         
@@ -2886,7 +2903,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _ConvertCookieToListCtrlTuple( self, cookie ):
+    def _ConvertCookieToListCtrlTuples( self, cookie ):
         
         name = cookie.name
         pretty_name = name

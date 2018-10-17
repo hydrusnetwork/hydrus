@@ -220,7 +220,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
         
     except Exception as e:
         
-        raise HydrusExceptions.ForbiddenException( HydrusData.ToUnicode( e ) )
+        raise HydrusExceptions.ForbiddenException( 'File ' + hash.encode( 'hex' ) + ' could not parse: ' + HydrusData.ToUnicode( e ) )
         
     
     args = {}

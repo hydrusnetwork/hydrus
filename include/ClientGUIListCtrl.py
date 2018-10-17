@@ -496,7 +496,7 @@ class SaneListCtrlPanel( wx.Panel ):
     
 class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
-    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, delete_key_callback = None, activation_callback = None, style = None ):
+    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, activation_callback = None, style = None ):
         
         if style is None:
             
@@ -511,6 +511,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         ListCtrlAutoWidthMixin.__init__( self )
         
         self._data_to_tuples_func = data_to_tuples_func
+        
+        self._use_simple_delete = use_simple_delete
         
         self._menu_callable = None
         
@@ -832,10 +834,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         if key in CC.DELETE_KEYS:
             
-            if self._delete_key_callback is not None:
-                
-                self._delete_key_callback()
-                
+            self.ProcessDeleteAction()
             
         elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
             
@@ -883,6 +882,17 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         return result
         
     
+    def GrowShrinkColumnsHeight( self, ideal_rows ):
+        
+        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
+        
+        existing_min_width = self.GetMinClientSize()[0]
+        
+        ( width_gumpf, ideal_client_height ) = ClientGUICommon.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
+        
+        self.SetMinClientSize( ( existing_min_width, ideal_client_height ) )
+        
+    
     def HasData( self, data ):
         
         return data in self._data_to_indices
@@ -891,6 +901,18 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     def HasSelected( self ):
         
         return self.GetSelectedItemCount() > 0
+        
+    
+    def ProcessDeleteAction( self ):
+        
+        if self._use_simple_delete:
+            
+            self.ShowDeleteSelectedDialog()
+            
+        elif self._delete_key_callback is not None:
+            
+            self._delete_key_callback()
+            
         
     
     def SelectAll( self ):
@@ -957,15 +979,17 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
         
     
-    def GrowShrinkColumnsHeight( self, ideal_rows ):
+    def ShowDeleteSelectedDialog( self ):
         
-        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
+        import ClientGUIDialogs
         
-        existing_min_width = self.GetMinClientSize()[0]
-        
-        ( width_gumpf, ideal_client_height ) = ClientGUICommon.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
-        
-        self.SetMinClientSize( ( existing_min_width, ideal_client_height ) )
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self.DeleteSelected()
+                
+            
         
     
     def Sort( self, col = None, asc = None ):
@@ -1350,6 +1374,11 @@ class BetterListCtrlPanel( wx.Panel ):
         import_menu_items.append( ( 'normal', 'select from a list', 'Load some of the defaults.', some_call ) )
         
         self.AddMenuButton( 'add defaults', import_menu_items )
+        
+    
+    def AddDeleteButton( self ):
+        
+        self.AddButton( 'delete', self._listctrl.ProcessDeleteAction, enabled_only_on_selection = True )
         
     
     def AddImportExportButtons( self, permitted_object_types, import_add_callable ):

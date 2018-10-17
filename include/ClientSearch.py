@@ -28,12 +28,17 @@ def ConvertTagToSearchable( tag ):
         tag = HydrusData.ToUnicode( tag )
         
     
-    tag = tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
-    
     while '**' in tag:
         
         tag = tag.replace( '**', '*' )
         
+    
+    if IsComplexWildcard( tag ):
+        
+        return tag
+        
+    
+    tag = tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
     
     return tag
 
@@ -122,7 +127,10 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
             possible_tags = [ tag ]
             
         
-        possible_tags = map( ConvertTagToSearchable, possible_tags )
+        if not IsComplexWildcard( search_text ):
+            
+            possible_tags = map( ConvertTagToSearchable, possible_tags )
+            
         
         for possible_tag in possible_tags:
             

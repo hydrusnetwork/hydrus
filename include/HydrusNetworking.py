@@ -335,6 +335,12 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         counters = [ collections.Counter( dict( flat_dict ) ) for flat_dict in serialisable_info ]
         
+        # unusual error someone reported by email--it came back an empty list, fugg
+        if len( counters ) != 10:
+            
+            return
+            
+        
         self._months_bytes = counters[ 0 ]
         self._days_bytes = counters[ 1 ]
         self._hours_bytes = counters[ 2 ]

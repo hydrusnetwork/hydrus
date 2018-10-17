@@ -9,35 +9,42 @@ import HydrusGlobals as HG
 import HydrusData
 import HydrusExceptions
 import HydrusSerialisable
+import itertools
 import os
 import json
 import requests
-
+import re
 import threading
 import time
 import urllib
+import urlparse
 
 VALIDITY_VALID = 0
 VALIDITY_UNTESTED = 1
 VALIDITY_INVALID = 2
 
-# make this serialisable
-class LoginCredentials( object ):
-    
-    def __init__( self ):
-        
-        self._credentials = {} # user-facing name (unique) : string
-        
-        self._validity = VALIDITY_UNTESTED
-        
-    
-    def GetCredential( self, name ):
-        
-        return self._credentials[ name ]
-        
-    
+LOGIN_ACCESS_TYPE_EVERYTHING = 0
+LOGIN_ACCESS_TYPE_NSFW = 1
+LOGIN_ACCESS_TYPE_SPECIAL = 2
+LOGIN_ACCESS_TYPE_USER_PREFS_ONLY = 3
+
+login_access_type_str_lookup = {}
+
+login_access_type_str_lookup[ LOGIN_ACCESS_TYPE_EVERYTHING ] = 'Everything'
+login_access_type_str_lookup[ LOGIN_ACCESS_TYPE_NSFW ] = 'NSFW'
+login_access_type_str_lookup[ LOGIN_ACCESS_TYPE_SPECIAL ] = 'Special'
+login_access_type_str_lookup[ LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ] = 'User prefs'
+
+login_access_type_default_description_lookup = {}
+
+login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_EVERYTHING ] = 'Login required to access any content.'
+login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_NSFW ] = 'Login required to access NSFW content.'
+login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_SPECIAL ] = 'Login required to access special content.'
+login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ] = 'Login only required to access user preferences.'
+
 PIXIV_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
 HENTAI_FOUNDRY_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
+
 class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
@@ -56,7 +63,10 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
-        self._domains_to_login_scripts_and_credentials = {}
+        self._login_scripts = HydrusSerialisable.SerialisableList()
+        self._domains_to_login_info = {}
+        
+        self._login_script_keys_to_login_scripts = {}
         
         self._hydrus_login_script = LoginScriptHydrus()
         
@@ -75,22 +85,75 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         # should this be handled in the session manager? yeah, prob
         self._network_contexts_to_session_timeouts = {}
         
+        self._RecalcCache()
+        
     
-    def _GetLoginNetworkContext( self, network_context ):
+    def _GetLoginDomainStatus( self, network_context ):
         
-        nc_domain = network_context.context_data
+        login_domain = None
+        login_expected = False
+        login_possible = True
+        login_error_text = ''
         
-        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( nc_domain )
+        domain = network_context.context_data
         
-        for domain in domains:
+        potential_login_domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain )
+        
+        for potential_login_domain in potential_login_domains:
             
-            if domain in self._domains_to_login_scripts_and_credentials:
+            if potential_login_domain in self._domains_to_login_info:
                 
-                return domain
+                login_domain = potential_login_domain
+                
+                ( login_script_key, credentials, login_access_type, login_access_text, active, validity, validity_error_text, delay, delay_reason ) = self._domains_to_login_info[ login_domain ]
+                
+                if active or login_access_type == LOGIN_ACCESS_TYPE_EVERYTHING:
+                    
+                    login_expected = True
+                    
+                
+                if validity == VALIDITY_INVALID:
+                    
+                    login_possible = False
+                    login_error_text = validity_error_text
+                    
+                elif not HydrusData.TimeHasPassed( delay ):
+                    
+                    login_possible = False
+                    login_error_text = delay_reason
+                    
+                
+                break
                 
             
         
-        return None
+        return ( login_domain, login_expected, login_possible, login_error_text )
+        
+    
+    def _GetLoginScriptAndCredentials( self, login_domain ):
+        
+        if login_domain in self._domains_to_login_info:
+            
+            ( login_script_key, credentials, login_access_type, login_access_text, active, validity, validity_error_text, delay, delay_reason ) = self._domains_to_login_info[ login_domain ]
+            
+            if login_script_key in self._login_script_keys_to_login_scripts:
+                
+                return ( self._login_script_keys_to_login_scripts[ login_script_key ], credentials )
+                
+            else:
+                
+                validity = VALIDITY_INVALID
+                validity_error_text = 'Could not find the login script for "' + login_domain + '"!'
+                
+                self._domains_to_login_info[ login_domain ] = ( login_script_key, credentials, login_access_type, login_access_text, active, validity, validity_error_text, delay, delay_reason )
+                
+                raise HydrusExceptions.ValidationException( validity_error_text )
+                
+            
+        else:
+            
+            raise HydrusExceptions.ValidationException( 'Could not find any login script for "' + login_domain + '"!' )
+            
         
     
     def _GetSerialisableInfo( self ):
@@ -101,6 +164,11 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         self._network_contexts_to_logins = {}
+        
+    
+    def _RecalcCache( self ):
+        
+        self._login_script_keys_to_login_scripts = { login_script.GetLoginScriptKey() : login_script for login_script in self._login_scripts }
         
     
     def CheckCanLogin( self, network_context ):
@@ -137,16 +205,22 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                login_network_context = self._GetLoginNetworkContext( network_context )
+                ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
                 
-                if login_network_context is None:
+                if login_domain is None or not login_expected:
                     
-                    raise HydrusExceptions.LoginException( 'Could not find a network context to login with!' )
+                    raise HydrusExceptions.ValidationException( 'This domain has no active login script--has it just been turned off?' )
                     
-                
-                ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
-                
-                login_script.CheckCanLogin( credentials )
+                elif not login_possible:
+                    
+                    raise HydrusExceptions.ValidationException( login_error_text )
+                    
+                else:
+                    
+                    ( login_script, credentials ) = self._GetLoginScriptAndCredentials( login_domain )
+                    
+                    login_script.CheckCanLogin( credentials )
+                    
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -196,16 +270,28 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     return LoginProcessLegacy( self.engine, HENTAI_FOUNDRY_NETWORK_CONTEXT, 'hentai foundry' )
                     
                 
-                login_network_context = self._GetLoginNetworkContext( network_context )
+                ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
                 
-                if login_network_context is None:
+                if login_domain is None or not login_expected:
                     
-                    raise HydrusExceptions.DataMissing()
+                    raise HydrusExceptions.ValidationException( 'This domain has no active login script--has it just been turned off?' )
                     
-                
-                ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
-                
-                login_process = LoginProcessDomain( self.engine, login_network_context, login_script, credentials )
+                elif not login_possible:
+                    
+                    raise HydrusExceptions.ValidationException( login_error_text )
+                    
+                else:
+                    
+                    login_network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+                    
+                    ( login_script, credentials ) = self._GetLoginScriptAndCredentials( login_domain )
+                    
+                    login_script.CheckCanLogin( credentials )
+                    
+                    login_process = LoginProcessDomain( self.engine, login_network_context, login_script, credentials )
+                    
+                    return login_process
+                    
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -213,6 +299,14 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 return login_process
                 
+            
+        
+    
+    def GetLoginScripts( self ):
+        
+        with self._lock:
+            
+            return list( self._login_scripts )
             
         
     
@@ -237,21 +331,42 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     return not self._IsLoggedIn( HENTAI_FOUNDRY_NETWORK_CONTEXT, required_cookies )
                     
                 
-                login_network_context = self._GetLoginNetworkContext( network_context )
+                ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
                 
-                if login_network_context is None:
+                if login_domain is None or not login_expected:
                     
-                    return False
+                    return False # no login required, no problem
                     
-                
-                ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
-                
-                return not login_script.IsLoggedIn( self.engine, login_network_context )
+                else:
+                    
+                    try:
+                        
+                        ( login_script, credentials ) = self._GetLoginScriptAndCredentials( login_domain )
+                        
+                    except:
+                        
+                        # couldn't find the script or something. assume we need a login to move errors forward to canlogin trigger phase
+                        
+                        return True
+                        
+                    
+                    login_network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+                    
+                    return not login_script.IsLoggedIn( self.engine, login_network_context )
+                    
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
                 return not self._hydrus_login_script.IsLoggedIn( self.engine, network_context )
                 
+            
+        
+    
+    def SetLoginScripts( self, login_scripts ):
+        
+        with self._lock:
+            
+            self._login_scripts = HydrusSerialisable.SerialisableList( login_scripts )
             
         
     
@@ -581,6 +696,91 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         return ( False, 'Pixiv login failed to establish session! Info printed to log.' )
         
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER ] = NetworkLoginManager
+
+CREDENTIAL_TYPE_TEXT = 0
+CREDENTIAL_TYPE_PASS = 1
+
+credential_type_str_lookup = {}
+
+credential_type_str_lookup[ CREDENTIAL_TYPE_TEXT ] = 'normal'
+credential_type_str_lookup[ CREDENTIAL_TYPE_PASS ] = 'hidden (password)'
+
+class LoginCredentialDefinition( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_CREDENTIAL_DEFINITION
+    SERIALISABLE_NAME = 'Login Credential Definition'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name = 'username', credential_type = CREDENTIAL_TYPE_TEXT, string_match = None ):
+        
+        if string_match is None:
+            
+            string_match = ClientParsing.StringMatch()
+            
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._credential_type = credential_type
+        self._string_match = string_match
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_string_match = self._string_match.GetSerialisableTuple()
+        
+        return ( self._credential_type, serialisable_string_match )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._credential_type, serialisable_string_match ) = serialisable_info
+        
+        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+        
+    
+    def GetStringMatch( self ):
+        
+        return self._string_match
+        
+    
+    def GetType( self ):
+        
+        return self._credential_type
+        
+    
+    def SetStringMatch( self, string_match ):
+        
+        self._string_match = string_match
+        
+    
+    def SetType( self, credential_type ):
+        
+        self._credential_type = credential_type
+        
+    
+    def ShouldHide( self ):
+        
+        return self._credential_type == CREDENTIAL_TYPE_PASS
+        
+    
+    def Test( self, text ):
+        
+        if self._string_match is not None:
+            
+            try:
+                
+                self._string_match.Test( text )
+                
+            except HydrusExceptions.StringMatchException as e:
+                
+                raise HydrusExceptions.ValidationException( 'Could not validate "' + self._name + '" credential: ' + HydrusData.ToUnicode( e ) )
+                
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_CREDENTIAL_DEFINITION ] = LoginCredentialDefinition
 
 class LoginProcess( object ):
     
@@ -794,7 +994,9 @@ class LoginProcessLegacy( LoginProcess ):
     
 class LoginScriptHydrus( object ):
     
-    def _IsLoggedIn( self, session ):
+    def _IsLoggedIn( self, engine, network_context ):
+        
+        session = engine.session_manager.GetSession( network_context )
         
         cookies = session.cookies
         
@@ -805,9 +1007,7 @@ class LoginScriptHydrus( object ):
     
     def IsLoggedIn( self, engine, network_context ):
         
-        session = engine.session_manager.GetSession( network_context )
-        
-        return self._IsLoggedIn( session )
+        return self._IsLoggedIn( engine, network_context )
         
     
     def Start( self, engine, network_context ):
@@ -834,9 +1034,7 @@ class LoginScriptHydrus( object ):
             
             network_job.WaitUntilDone()
             
-            session = engine.session_manager.GetSession( network_context )
-            
-            if self._IsLoggedIn( session ):
+            if self._IsLoggedIn( engine, network_context ):
                 
                 HydrusData.Print( 'Successfully logged into ' + service.GetName() + '.' )
                 
@@ -853,28 +1051,75 @@ class LoginScriptHydrus( object ):
             
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER ] = NetworkLoginManager
-
-# make this serialisable
-class LoginScriptDomain( object ):
+class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
     
-    def __init__( self ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN
+    SERIALISABLE_NAME = 'Login Script - Domain'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name = 'login script', login_script_key = None, required_cookies_info = None, credential_definitions = None, login_steps = None, example_domains_info = None ):
         
-        self._name = 'gelbooru v2.0 login script'
-        self._login_steps = []
-        self._validity = VALIDITY_UNTESTED
-        self._error_reason = ''
+        if required_cookies_info is None:
+            
+            required_cookies_info = {}
+            
         
-        self._expected_cookies_for_login = [] # [ name, stringmatch, minimum_expiry ]
+        required_cookies_info = HydrusSerialisable.SerialisableDictionary( required_cookies_info )
+        
+        if credential_definitions is None:
+            
+            credential_definitions = []
+            
+        
+        credential_definitions = HydrusSerialisable.SerialisableList( credential_definitions )
+        
+        if login_steps is None:
+            
+            login_steps = []
+            
+        
+        login_steps = HydrusSerialisable.SerialisableList( login_steps )
+        
+        if example_domains_info is None:
+            
+            example_domains_info = []
+            
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._login_script_key = HydrusData.GenerateKey()
+        self._required_cookies_info = required_cookies_info # name : stringmatch
+        self._credential_definitions = credential_definitions
+        self._login_steps = login_steps
+        self._example_domains_info = example_domains_info # domain | login_access_type | login_access_text
         
     
-    def _IsLoggedIn( self, network_context, session ):
+    def _GetSerialisableInfo( self ):
         
-        # this is more complicated for sadpanda, right?
-        # I may need some way to have an override of some kind that is like 'this login script specifically logs in to one domain, although it applies to others'
-        # need to research sadpanda exact mechanism--is it IP based?
+        serialisable_login_script_key = self._login_script_key.encode( 'hex' )
+        serialisable_required_cookies = self._required_cookies_info.GetSerialisableTuple()
+        serialisable_credential_definitions = self._credential_definitions.GetSerialisableTuple()
+        serialisable_login_steps = self._login_steps.GetSerialisableTuple()
         
-        # this should also return ( result, reason ) for testing and other purposes
+        return ( serialisable_login_script_key, serialisable_required_cookies, serialisable_credential_definitions, serialisable_login_steps, self._example_domains_info )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_login_script_key, serialisable_required_cookies, serialisable_credential_definitions, serialisable_login_steps, self._example_domains_info ) = serialisable_info
+        
+        self._login_script_key = serialisable_login_script_key.decode( 'hex' )
+        self._required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies )
+        self._credential_definitions = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_credential_definitions )
+        self._login_steps = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_login_steps )
+        
+        # convert lists to tups for listctrl data hashing
+        self._example_domains_info = [ tuple( l ) for l in self._example_domains_info ]
+        
+    
+    def _IsLoggedIn( self, engine, network_context ):
+        
+        session = engine.session_manager.GetSession( network_context )
         
         cookies = session.cookies
         
@@ -882,7 +1127,7 @@ class LoginScriptDomain( object ):
         
         search_domain = network_context.context_data
         
-        for ( name, string_match ) in self._expected_cookies_for_login:
+        for ( name, string_match ) in self._required_cookies_info.items():
             
             try:
                 
@@ -906,46 +1151,115 @@ class LoginScriptDomain( object ):
         return True
         
     
-    def CheckCanLogin( self, credentials ):
+    def CheckCanLogin( self, given_credentials ):
         
-        if self._validity == VALIDITY_INVALID:
+        self.CheckIsValid()
+        
+        given_cred_names = set( given_credentials.keys() )
+        defined_cred_names = { credential_definition.GetName() for credential_definition in self._credential_definitions }
+        required_cred_names = { name for name in itertools.chain.from_iterable( ( step.GetRequiredCredentials() for step in self._login_steps ) ) }
+        
+        if len( given_cred_names ) != len( defined_cred_names ):
             
-            raise HydrusExceptions.LoginException( 'Login script is not valid: ' + self._error_reason )
+            raise HydrusExceptions.ValidationException( 'The number of user-set credentials does not match the number of definitions! Please re-check what you have set.' )
             
         
-        for step in self._login_steps:
+        missing_givens = required_cred_names.difference( given_cred_names )
+        
+        if len( missing_givens ) > 0:
             
-            try:
-                
-                step.TestCredentials( credentials )
-                
-            except HydrusExceptions.ValidationException as e:
-                
-                raise HydrusExceptions.LoginException( str( e ) )
-                
+            missing_givens = list( missing_givens )
+            missing_givens.sort()
+            
+            raise HydrusExceptions.ValidationException( 'Missing required credentials: ' + ', '.join( missing_givens ) )
+            
+        
+        #
+        
+        cred_names_to_definitions = { credential_definition.GetName() : credential_definition for credential_definition in self._credential_definitions }
+        
+        for ( pretty_name, text ) in given_credentials.items():
+            
+            credential_definition = cred_names_to_definitions[ pretty_name ]
+            
+            credential_definition.Test( text )
             
         
     
-    def GetExpectedCredentialDestinations( self, domain ):
+    def CheckIsValid( self ):
         
-        # for step in steps, say where each named credential is going
-        # return a dict like:
+        defined_cred_names = { credential_definition.GetName() for credential_definition in self._credential_definitions }
+        required_cred_names = { name for name in itertools.chain.from_iterable( ( step.GetRequiredCredentials() for step in self._login_steps ) ) }
         
-        # login.pixiv.net : username, password
-        # evilsite.bg.cx : username, password
+        missing_definitions = required_cred_names.difference( defined_cred_names )
         
-        # This'll be presented on the cred entering form so it can't be missed
+        if len( missing_definitions ) > 0:
+            
+            missing_definitions = list( missing_definitions )
+            missing_definitions.sort()
+            
+            raise HydrusExceptions.ValidationException( 'Missing required credential definitions: ' + ', '.join( missing_definitions ) )
+            
         
-        pass
+        #
+        
+        temp_vars = set()
+        
+        for login_step in self._login_steps:
+            
+            ( required_vars, set_vars ) = login_step.GetRequiredAndSetTempVariables()
+            
+            missing_vars = required_vars.difference( temp_vars )
+            
+            if len( missing_vars ) > 0:
+                
+                missing_vars = list( missing_vars )
+                missing_vars.sort()
+                
+                raise HydrusExceptions.ValidationException( 'Missing temp variables for login step "' + login_step.GetName() + '": ' + ', '.join( missing_vars ) )
+                
+            
+            temp_vars.update( set_vars )
+            
+        
+    
+    def GetCredentialDefinitions( self ):
+        
+        return self._credential_definitions
+        
+    
+    def GetExampleDomains( self ):
+        
+        return [ domain for ( domain, login_access_type, login_access_text ) in self._example_domains_info ]
+        
+    
+    def GetExampleDomainsInfo( self ):
+        
+        return self._example_domains_info
+        
+    
+    def GetRequiredCookiesInfo( self ):
+        
+        return self._required_cookies_info
+        
+    
+    def GetLoginScriptKey( self ):
+        
+        return self._login_script_key
+        
+    
+    def GetLoginSteps( self ):
+        
+        return self._login_steps
         
     
     def GetRequiredCredentials( self ):
         
         required_creds = []
         
-        for step in self._login_steps:
+        for login_step in self._login_steps:
             
-            required_creds.extend( step.GetRequiredCredentials() ) # [ ( credential_type, name, arg_name, string_match ) ] with an order
+            required_creds.extend( login_step.GetRequiredCredentials() ) # name with an order
             
         
         return required_creds
@@ -953,12 +1267,20 @@ class LoginScriptDomain( object ):
     
     def IsLoggedIn( self, engine, network_context ):
         
-        session = engine.session_manager.GetSession( network_context )
-        
-        return self._IsLoggedIn( network_context, session )
+        return self._IsLoggedIn( engine, network_context )
         
     
-    def Start( self, engine, domain, network_context, credentials ):
+    def RegenerateLoginScriptKey( self ):
+        
+        self._login_script_key = HydrusData.GenerateKey()
+        
+    
+    def SetLoginScriptKey( self, login_script_key ):
+        
+        self._login_script_key = login_script_key
+        
+    
+    def Start( self, engine, network_context, given_credentials ):
         
         # don't mess with the domain--assume that we are given precisely the right domain
         
@@ -966,13 +1288,17 @@ class LoginScriptDomain( object ):
         # this will be needed in the dialog where we test this. we need good feedback on how it is going
         # irl, this could be a 'login popup' message as well, just to inform the user on the progress of any delay
         
+        login_domain = network_context.context_data
+        
         temp_variables = {}
         
-        for step in self._login_steps:
+        last_url_used = None
+        
+        for login_step in self._login_steps:
             
             try:
                 
-                step.Start( engine, credentials, temp_variables )
+                last_url_used = login_step.Start( engine, login_domain, given_credentials, temp_variables, referral_url = last_url_used )
                 
             except HydrusExceptions.ValidationException as e:
                 
@@ -994,110 +1320,205 @@ class LoginScriptDomain( object ):
                 
             
         
-        # test session logged in status here, erroring gracefully
+        if not self._IsLoggedIn( engine, network_context ):
+            
+            raise HydrusExceptions.LoginException( 'Could not log in!' )
+            
         
         return True
         
     
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN ] = LoginScriptDomain
+
 LOGIN_PARAMETER_TYPE_PARAMETER = 0
 LOGIN_PARAMETER_TYPE_COOKIE = 1
 LOGIN_PARAMETER_TYPE_HEADER = 2
 
-# make this serialisable
-class LoginStep( object ):
+class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
     
-    def __init__( self ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_STEP
+    SERIALISABLE_NAME = 'Login Step'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name = 'hit home page to establish session', scheme = 'https', method = 'GET', subdomain = None, path = '/' ):
         
-        self._name = 'hit home page to establish session'
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._method = None # get/post
-        self._domain_string_converter = None
-        self._query = 'login.php'
+        self._scheme = scheme
+        self._method = method
+        self._subdomain = subdomain
+        self._path = path
         
-        self._statics = [] # arg name | string
+        self._CleanseSubdomainAndPath()
         
-        self._required_credentials = [] # type | user-facing name (unique) | arg name | string match
+        self._required_credentials = {} # pretty_name : arg name
         
-        self._required_temps = [] # arg name
+        self._static_args = {} # arg name : string
         
-        self._expected_cookies = [] # name | string match
+        self._temp_args = {} # temp arg name : arg name
         
-        self._content_parsing_nodes = []
+        self._required_cookies_info = HydrusSerialisable.SerialisableDictionary() # name : string match
+        
+        self._content_parsers = HydrusSerialisable.SerialisableList()
         
     
-    def _TestCredentials( self, credentials ):
+    def _CleanseSubdomainAndPath( self ):
         
-        for ( credential_type, pretty_name, arg_name, string_match ) in self._required_credentials:
+        if self._subdomain is not None:
+            
+            self._subdomain = re.sub( '[^a-z\.]+', '', self._subdomain, flags = re.UNICODE )
+            
         
-            if arg_name not in credentials:
-                
-                raise HydrusExceptions.ValidationException( 'The credential \'' + pretty_name + '\' was missing!' )
-                
+        if not self._path.startswith( '/' ):
             
-            arg_value = credentials.GetCredential( arg_name )
+            self._path = '/' + self._path
             
-            try:
-                
-                string_match.Test( arg_name )
-                
-            except HydrusExceptions.StringMatchException as e:
-                
-                reason = HydrusData.ToUnicode( e )
-                
-                raise HydrusExceptions.ValidationException( 'The credential \'' + pretty_name + '\' did not match requirements:' + os.linesep + reason )
-                
-            
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_required_cookies = self._required_cookies_info.GetSerialisableTuple()
+        serialisable_content_parsers = self._content_parsers.GetSerialisableTuple()
+        
+        return ( self._scheme, self._method, self._subdomain, self._path, self._required_credentials, self._static_args, self._temp_args, serialisable_required_cookies, serialisable_content_parsers )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._scheme, self._method, self._subdomain, self._path, self._required_credentials, self._static_args, self._temp_args, serialisable_required_cookies, serialisable_content_parsers ) = serialisable_info
+        
+        self._CleanseSubdomainAndPath()
+        
+        self._required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies )
+        self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content_parsers )
         
     
     def GetRequiredCredentials( self ):
         
-        return list( self._required_credentials )
+        return [ pretty_name for ( pretty_name, arg_name ) in self._required_credentials.items() ]
         
     
-    def Start( self, engine, domain, credentials, temp_variables ):
+    def GetRequiredAndSetTempVariables( self ):
         
-        # e.g. converting 'website.com' to 'login.website.com'
-        url_base = self._domain_string_converter.Convert( domain )
+        required_temp_variables = set( self._temp_args.keys() )
         
-        arguments = {}
+        set_temp_variables = { additional_info for [ ( name, content_type, additional_info ) ] in [ content_parser.GetParsableContent() for content_parser in self._content_parsers ] }
         
-        arguments.update( self._statics )
+        return ( required_temp_variables, set_temp_variables )
         
-        self._TestCredentials( credentials )
+    
+    def SetComplicatedVariables( self, required_credentials, static_args, temp_args, required_cookies_info, content_parsers ):
         
-        for ( credential_type, pretty_name, arg_name, string_match ) in self._required_credentials:
+        self._required_credentials = required_credentials
+        
+        self._static_args = static_args
+        
+        self._temp_args = temp_args
+        
+        self._required_cookies_info = HydrusSerialisable.SerialisableDictionary( required_cookies_info )
+        
+        self._content_parsers = HydrusSerialisable.SerialisableList( content_parsers )
+        
+    
+    def Start( self, engine, domain, given_credentials, temp_variables, referral_url = None ):
+        
+        domain_to_hit = domain
+        
+        if self._subdomain is not None:
             
-            arguments[ arg_name ] = credentials.GetCredential( arg_name )
-            
-        
-        for name in self._required_temps:
-            
-            if name not in temp_variables:
+            if domain.startswith( 'www.' ):
                 
-                raise HydrusExceptions.ValidationException( 'The temporary variable \'' + name + '\' was not found!' )
+                domain = domain[4:]
                 
             
-            arguments[ name ] = temp_variables[ name ]
+            domain_to_hit = self._subdomain + '.' + domain
             
         
-        if self._method == 'POST':
+        query_dict = {}
+        
+        query_dict.update( self._static_args )
+        
+        for ( pretty_name, arg_name ) in self._required_credentials.items():
             
-            pass # make it into body
-            
-        elif self._method == 'GET':
-            
-            pass # make it into query
+            query_dict[ arg_name ] = given_credentials[ pretty_name ]
             
         
-        # construct the url, failing if creds or temps missing
+        for ( temp_name, arg_name ) in self._temp_args.items():
+            
+            if temp_name not in temp_variables:
+                
+                raise HydrusExceptions.ValidationException( 'The temporary variable \'' + temp_name + '\' was not found!' )
+                
+            
+            query_dict[ arg_name ] = temp_variables[ temp_name ]
+            
+        
+        scheme = self._scheme
+        netloc = domain_to_hit
+        path = self._path
+        params = ''
+        fragment = ''
+        
+        if self._method == 'GET':
+            
+            query = ClientNetworkingDomain.ConvertQueryDictToText( query_dict )
+            body = None
+            
+        elif self._method == 'POST':
+            
+            query = ''
+            body = query_dict
+            
+        
+        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+        
+        url = r.geturl()
+        
+        network_job = ClientNetworkingJobs.NetworkJob( self._method, url, body = body, referral_url = referral_url )
+        
+        if self._method == 'POST' and referral_url is not None:
+            
+            p = urlparse.urlparse( referral_url )
+            
+            r = urlparse.ParseResult( p.scheme, p.netloc, '', '', '', '' )
+            
+            origin = r.geturl() # https://accounts.pixiv.net
+            
+            network_job.AddAdditionalHeader( 'origin', origin ) # GET/POST forms are supposed to have this for CSRF. we'll try it just with POST for now
+            
         
         # hit the url, failing on connection fault or whatever
         
-        for parsing_node in self._content_parsing_nodes:
+        session = network_job.GetSession()
+        
+        cookies = session.cookies
+        
+        for ( cookie_name, string_match ) in self._required_cookies_info:
             
             try:
                 
-                parsing_node.Vetoes()
+                cookie_text = ClientNetworkingDomain.GetCookie( cookies, domain, cookie_name )
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                return False
+                
+            
+            try:
+                
+                string_match.Test( cookie_text )
+                
+            except HydrusExceptions.StringMatchException:
+                
+                return False
+                
+            
+        
+        for content_parser in self._content_parsers:
+            
+            try:
+                
+                content_parser.Vetoes()
                 
             except HydrusExceptions.VetoException as e:
                 
@@ -1111,9 +1532,13 @@ class LoginStep( object ):
             pass
             
         
+        return url
+        
     
-    def TestCredentials( self, credentials ):
+    def ToTuple( self ):
         
-        self._TestCredentials( credentials )
+        return ( self._scheme, self._method, self._subdomain, self._path, self._required_credentials, self._static_args, self._temp_args, self._required_cookies_info, self._content_parsers )
         
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_STEP ] = LoginStep
 

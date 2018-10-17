@@ -106,6 +106,12 @@ def ConvertParseResultToPrettyString( result ):
         
         return 'veto: ' + name
         
+    elif content_type == HC.CONTENT_TYPE_VARIABLE:
+        
+        temp_variable_name = additional_info
+        
+        return 'temp variable "' + temp_variable_name + '": ' + parsed_text
+        
     
     raise NotImplementedError()
     
@@ -187,6 +193,10 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
                 pretty_strings.append( 'veto: ' + name )
                 
+            
+        elif content_type == HC.CONTENT_TYPE_VARIABLE:
+            
+            pretty_strings.append( 'temp variables: ' + ', '.join( additional_infos ) )
             
         
     
@@ -1992,6 +2002,33 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             return ( 2, new_serialisable_info )
             
+        
+    
+    def CanOnlyGenerateGalleryURLs( self ):
+        
+        can_generate_gallery_urls = False
+        can_generate_other_urls = False
+        
+        parsable_content = self.GetParsableContent()
+        
+        for ( name, content_type, additional_info ) in parsable_content:
+            
+            if content_type == HC.CONTENT_TYPE_URLS:
+                
+                ( url_type, priority ) = additional_info
+                
+                if url_type == HC.URL_TYPE_GALLERY:
+                    
+                    can_generate_gallery_urls = True
+                    
+                else:
+                    
+                    can_generate_other_urls = True
+                    
+                
+            
+        
+        return can_generate_gallery_urls and not can_generate_other_urls
         
     
     def GetContentParsers( self ):

@@ -1693,6 +1693,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._pause_character = wx.TextCtrl( misc )
             self._stop_character = wx.TextCtrl( misc )
+            self._show_new_on_file_seed_short_summary = wx.CheckBox( misc )
             self._show_deleted_on_file_seed_short_summary = wx.CheckBox( misc )
             
             #
@@ -1722,6 +1723,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._pause_character.SetValue( self._new_options.GetString( 'pause_character' ) )
             self._stop_character.SetValue( self._new_options.GetString( 'stop_character' ) )
+            self._show_new_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_new_on_file_seed_short_summary' ) )
             self._show_deleted_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
             
             self._watcher_page_wait_period.SetValue( self._new_options.GetInteger( 'watcher_page_wait_period' ) )
@@ -1772,7 +1774,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Pause character:', self._pause_character ) )
             rows.append( ( 'Stop character:', self._stop_character ) )
-            rows.append( ( 'Show the \'D\' (for \'deleted\') count on short file import summaries:', self._show_deleted_on_file_seed_short_summary ) )
+            rows.append( ( 'Show a \'N\' (for \'new\') count on short file import summaries:', self._show_new_on_file_seed_short_summary ) )
+            rows.append( ( 'Show a \'D\' (for \'deleted\') count on short file import summaries:', self._show_deleted_on_file_seed_short_summary ) )
             
             gridbox = ClientGUICommon.WrapInGrid( misc, rows )
             
@@ -1810,6 +1813,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetString( 'pause_character', self._pause_character.GetValue() )
             self._new_options.SetString( 'stop_character', self._stop_character.GetValue() )
+            self._new_options.SetBoolean( 'show_new_on_file_seed_short_summary', self._show_new_on_file_seed_short_summary.GetValue() )
             self._new_options.SetBoolean( 'show_deleted_on_file_seed_short_summary', self._show_deleted_on_file_seed_short_summary.GetValue() )
             
         
@@ -4318,6 +4322,12 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
         vbox.Add( reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            vbox.Add( ClientGUICommon.BetterStaticText( self, 'Careful--custom sets are advanced!' ), CC.FLAGS_CENTER )
+            
+        
         vbox.Add( custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )

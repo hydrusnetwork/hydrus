@@ -539,6 +539,150 @@ class BetterBitmapButton( wx.BitmapButton ):
         self._func( *self._args,  **self._kwargs )
         
     
+# this hands out additional space according to proportion, but only on the pixels beyond min size
+# so two items with weight 1 that have min size 100 & 200 will have min size of 300, not 400
+# given a size of 400, they will size 150 & 250, sharing the 'additional' pixels
+# I may be stupid, but I cannot see a vanilla wx flag or layout method that does this
+class BetterBoxSizer( wx.BoxSizer ):
+    
+    def CalcMin( self ):
+        
+        horizontal_total_width = 0
+        horizontal_max_height = 0
+        vertical_max_width = 0
+        vertical_total_height = 0
+        
+        for sizer_item in self.GetChildren():
+            
+            if not sizer_item.IsShown():
+                
+                continue
+                
+            
+            ( width, height ) = sizer_item.CalcMin()
+            
+            horizontal_total_width += width
+            horizontal_max_height = max( horizontal_max_height, height )
+            vertical_max_width = max( vertical_max_width, width )
+            vertical_total_height += height
+            
+        
+        if self.GetOrientation() == wx.HORIZONTAL:
+            
+            return wx.Size( horizontal_total_width, horizontal_max_height )
+            
+        else:
+            
+            return wx.Size( vertical_max_width, vertical_total_height )
+            
+        
+    
+    def RecalcSizes( self ):
+        
+        my_orientation = self.GetOrientation()
+        
+        ( x, y ) = self.GetPosition()
+        ( my_width, my_height ) = self.GetSize()
+        
+        ( min_my_height, min_my_height ) = self.CalcMin()
+        
+        extra_height = my_height - min_my_height
+        extra_width = my_width - my_width
+        
+        i_am_too_small = ( my_orientation == wx.HORIZONTAL and extra_width < 0 ) or ( my_orientation == wx.VERTICAL and extra_height < 0 )
+        
+        total_proportion = float( sum( ( sizer_item.GetProportion() for sizer_item in self.GetChildren() if sizer_item.IsShown() ) ) )
+        
+        for sizer_item in self.GetChildren():
+            
+            if not sizer_item.IsShown():
+                
+                continue
+                
+            
+            ( sizer_min_width, sizer_min_height ) = sizer_item.CalcMin()
+            
+            flag = sizer_item.GetFlag()
+            
+            #
+            
+            if wx.EXPAND & flag:
+                
+                horizontal_height = my_height
+                vertical_width = my_width
+                
+            else:
+                
+                horizontal_height = sizer_min_height
+                vertical_width = sizer_min_width
+                
+            
+            #
+            
+            proportion = sizer_item.GetProportion()
+            
+            if proportion == 0 or i_am_too_small:
+                
+                horizontal_width = sizer_min_width
+                vertical_height = sizer_min_height
+                
+            else:
+                
+                share_of_extra_pixels = proportion / total_proportion
+                
+                horizontal_width = sizer_min_width + int( share_of_extra_pixels * extra_width )
+                vertical_height = sizer_min_height + int( share_of_extra_pixels * extra_height )
+                
+            
+            #
+            
+            x_offset = 0
+            y_offset = 0
+            
+            if my_orientation == wx.HORIZONTAL:
+                
+                if wx.ALIGN_BOTTOM & flag:
+                    
+                    y_offset = my_height - horizontal_height
+                    
+                elif wx.ALIGN_CENTER_VERTICAL & flag:
+                    
+                    y_offset = ( my_height - horizontal_height ) // 2
+                    
+                
+            else:
+                
+                if wx.ALIGN_RIGHT & flag:
+                    
+                    x_offset = my_width - vertical_width
+                    
+                elif wx.ALIGN_CENTER_HORIZONTAL & flag:
+                    
+                    x_offset = ( my_width - vertical_width ) // 2
+                    
+                
+            
+            #
+            
+            pos = wx.Point( x + x_offset, y + y_offset )
+            
+            if my_orientation == wx.HORIZONTAL:
+                
+                size = wx.Size( horizontal_width, horizontal_height )
+                
+                x += horizontal_width
+                
+            else:
+                
+                size = wx.Size( vertical_width, vertical_height )
+                
+                y += vertical_height
+                
+            
+            sizer_item.SetDimension( pos, size )
+            
+        
+    
 class BetterButton( wx.Button ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
@@ -2209,7 +2353,7 @@ class NoneableTextCtrl( wx.Panel ):
             hbox.Add( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
             
         
-        hbox.Add( self._text, CC.FLAGS_VCENTER )
+        hbox.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
         hbox.Add( self._checkbox, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
@@ -2968,7 +3112,7 @@ class StaticBox( wx.Panel ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
-        self._sizer = wx.BoxSizer( wx.VERTICAL )
+        self._sizer = BetterBoxSizer( wx.VERTICAL )
         
         normal_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
         
@@ -2977,10 +3121,10 @@ class StaticBox( wx.Panel ):
         
         title_font = wx.Font( int( normal_font_size ), normal_font_family, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD )
         
-        title_text = wx.StaticText( self, label = title, style = wx.ALIGN_CENTER )
+        title_text = wx.StaticText( self, label = title )
         title_text.SetFont( title_font )
         
-        self._sizer.Add( title_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._sizer.Add( title_text, CC.FLAGS_CENTER )
         
         self.SetSizer( self._sizer )
         

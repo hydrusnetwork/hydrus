@@ -491,7 +491,18 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._gallery_status
+            if HydrusData.TimeHasPassed( self._no_work_until ):
+                
+                gallery_status = self._gallery_status
+                
+            else:
+                
+                no_work_text = HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ) + ': ' + self._no_work_until_reason
+                
+                gallery_status = no_work_text
+                
+            
+            return gallery_status
             
         
     
@@ -539,7 +550,20 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._gallery_status, self._current_action, self._files_paused, self._gallery_paused )
+            if HydrusData.TimeHasPassed( self._no_work_until ):
+                
+                gallery_status = self._gallery_status
+                current_action = self._current_action
+                
+            else:
+                
+                no_work_text = HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ) + ': ' + self._no_work_until_reason
+                
+                gallery_status = no_work_text
+                current_action = no_work_text
+                
+            
+            return ( gallery_status, current_action, self._files_paused, self._gallery_paused )
             
         
     

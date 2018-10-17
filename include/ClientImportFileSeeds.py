@@ -113,6 +113,13 @@ def GenerateStatusesToCountsStatus( statuses_to_counts ):
             simple_status += HydrusData.ToHumanInt( total_processed )
             
         
+        show_new_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_new_on_file_seed_short_summary' )
+        
+        if show_new_on_file_seed_short_summary and num_successful_and_new:
+            
+            simple_status += ' - ' + HydrusData.ToHumanInt( num_successful_and_new ) + 'N'
+            
+        
         simple_status_strings = []
         
         if num_ignored > 0:

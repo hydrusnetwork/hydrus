@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 326</h3></li>
+				<ul>
+					<li>login:</li>
+					<li>finished the new login objects. they can deal with multi-step single second-level domain login problems, can pass variables from step to step, and use cookies as success verification</li>
+					<li>wrote an ton of ui for the new login objects, now under network->downloader definitions and network->logins. it is not 'active' yet, but advanced users are invited to check it out. there is no good test ui yet, which I think I'll have to figure out in the coming weeks</li>
+					<li>wrote a first attempt at HF and pixiv replacement login scripts--please try importing from defaults on the manage login scripts dialog and look through them to see what I am going for. once the system is flipped on and we are happy these work, I'll remove the old hardcoded legacy login stuff</li>
+					<li>when a network job that needs a login cannot login, it now waits (rather than bombing out completely), presenting the related error, and checks again every 60 seconds</li>
+					<li>if a network job thinks it can login but fails to generate a login process, the network engine now catches the error safely and recovers. the job is put on hold as above</li>
+					<li>.</li>
+					<li>subs:</li>
+					<li>the subscription 'have we caught up to where we were before' test is now more complicated--rather than just stopping after five 'already seen' urls are found, it now only stops if at least the _last_ five contiguous urls of the page are already seen. this will catch more late-tagged files that get inserted out of order</li>
+					<li>fixed the 'get quality info' button on edit sub panel to only get the current selection, not all queries wew</li>
+					<li>subscriptions can now optionally publish/present their files to a specific label! this is a great way to merge multiple subs to the same final landing page</li>
+					<li>.</li>
+					<li>layout:</li>
+					<li>after a long time thinking about it, wrote a new custom boxsizer that handles resizing multiple expanding items of different reasonable min size by expanding them _beyond minimum size_ by their proportion, rather than forcing them all to have total proportional width/height. I expect to polish this and apply it in multiple locations around the program where tall things were being too tall because something else was forcing it to be (the management panel on the left of most pages was terrible at this, causing a giganto taglist just because the upper panel was tall as well).</li>
+					<li>changed my custom boxsizer (the box with a bold header) to the new custom boxsizer, so it is all over now--please report any bad layouts you see</li>
+					<li>in an effort to improve layout, the manage tag parents and siblings panels' preview boxes have shorter minimum height--it will get a bigger layout overhaul soon</li>
+					<li>.</li>
+					<li>bigger misc:</li>
+					<li>watchers and gallery imports now have a list right-click menu entry to show all selected importers' files in a new page! use this to clear out a bunch of finished queues all at once!</li>
+					<li>the tag right-click menu now offers 'open new search pages for each in selection' if multiple tags are selected--this will open three search pages each with one tag, as opposed to the original entry, which would only open one page with all three</li>
+					<li>the edit nested gug panel now uses a checklistbox rather than the menu to select gugs to add, which is more reliable and allows for multiple selections</li>
+					<li>sped up autocomplete tag fetches' tag sibling integration--irl this may be a reduction in total a/c search time of approx 33%</li>
+					<li>page parsers will now generate next gallery urls absent any file/post urls if the only type of url they can generate is gallery urls (so a meta-gallery-search like board->threads that only generates subsidiary gallery pages will now work, whereas before it never could because it was missing post urls)</li>
+					<li>the gallery log now provides a shorthand way to restart and resume failed searches from its right-click menu (if the most recent log entry failed)</li>
+					<li>'try again (and allow search to continue)' reattempt jobs will now generate next page urls even if no new urls are found (which can happen if a search stopped due to the file limit exactly lining up with the number of files found, for instance, so a reattempt finds nothing new)</li>
+					<li>gallery downloaders will now specify their 'delay work for a bit' error states in the ui. this usually means 'could not connect', which has a 4-hour timer (I'll prob add a scrub delays button here at some point)</li>
+					<li>the watcher will now show its 'delay work for a bit' error state in more places in the ui</li>
+					<li>added a 'media' shortcut 'export_files_quick_auto_export', which will open the export files frame and give you a quick yes/no to confirm you want to export as set. if yes, it will export. then it will close the frame</li>
+					<li>added a 'show a "N" to short import summaries' option to options->downloading, which will extend the typical 'x/y' status string to 'x/y - zN' for z 'new files' (as opposed to already in db)</li>
+					<li>improved how the video parser estimates frame rate--it _should_ fix some of those low-framerate, low-framecount slideshow-vids where at current they render everything in a rush and then sit on the last frame for ten secs</li>
+					<li>.</li>
+					<li>smaller misc:</li>
+					<li>network report mode now reports url_to_fetch and parser-to-parse-with info</li>
+					<li>when the server fails to accept a file upload due to a file parsing issue, it now prints the hash of the file in the error</li>
+					<li>if the client sees a possible file hash in a server error message from a file upload, ~it will try to show that file in a new page~</li>
+					<li>fixed an issue where wildcard searches were not finding results if the search text included the normally discarded characters [](){}"'</li>
+					<li>fixed some domain handling for localhost and other undotted network names</li>
+					<li>content parsers will now only launch with permissable content types, which for the legacy 'lookup scripts' scripts system means only tags and vetoes, and for the new login system means only temp variables and vetoes</li>
+					<li>as compaction now happens automatically on sync, removed the 'compact' button from edit subs panel</li>
+					<li>an unusual network error related to hydrus update files sometimes being cut off mid-stream is now glossed over silently, with the download reattempted after a delay</li>
+					<li>the initial gui session load now occurs after a 0.25s delay--let's see if it cleans up some initial layout issues some users have had</li>
+					<li>maybe fixed an odd dictionary-initialisation error related to tag siblings/parents dialog boot</li>
+					<li>ruggedised against an unusual bandwidth load bug</li>
+					<li>gave some of the index help a pass</li>
+					<li>did most of a 'getting started with downloaders' page in the help--I'll finish it next week</li>
+					<li>updated discord share link to https://discord.gg/3H8UTpb , which should not expire</li>
+					<li>some listbox add/edit code cleanup</li>
+					<li>some listctrl delete code cleanup</li>
+					<li>misc help work</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 325</h3></li>
 				<ul>
 					<li>added a 'show a popup while working' checkbox to edit subscription panel--be careful with it, I think maybe only turn it off after you are happy everything is set up right and the sub has run once</li>

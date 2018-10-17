@@ -121,6 +121,7 @@ class NetworkJob( object ):
         
         self._is_done_event = threading.Event()
         
+        self._is_started = False
         self._is_done = False
         self._is_cancelled = False
         
@@ -134,6 +135,8 @@ class NetworkJob( object ):
         self._status_text = u'initialising\u2026'
         self._num_bytes_read = 0
         self._num_bytes_to_read = 1
+        
+        self._death_time = None
         
         self._file_import_options = None
         
@@ -633,6 +636,18 @@ class NetworkJob( object ):
             
         
     
+    def GetSession( self ):
+        
+        with self._lock:
+            
+            snc = self._session_network_context
+            
+        
+        session = self.engine.session_manager.GetSession( snc )
+        
+        return session
+        
+    
     def GetStatus( self ):
         
         with self._lock:
@@ -751,6 +766,11 @@ class NetworkJob( object ):
             
         
     
+    def SetDeathTime( self, death_time ):
+        
+        self._death_time = death_time
+        
+    
     def SetError( self, e, error ):
         
         with self._lock:
@@ -813,6 +833,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
+                self._is_started = True
                 self._status_text = u'job started'
                 
             
@@ -1013,6 +1034,14 @@ class NetworkJob( object ):
         while True:
             
             self._is_done_event.wait( 5 )
+            
+            with self._lock:
+                
+                if not self._is_started and self._death_time is not None and HydrusData.TimeHasPassed( self._death_time ):
+                    
+                    raise Exception( 'Network job death time reached--not sure what the error was. Maybe a paused service?' )
+                    
+                
             
             if self.IsDone():
                 
