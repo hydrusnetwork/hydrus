@@ -38,7 +38,6 @@ class ServerBusyException( NetworkInfrastructureException ): pass
 
 class BandwidthException( NetworkException ): pass
 class ForbiddenException( NetworkException ): pass
-class LoginException( NetworkException ): pass
 class NetworkVersionException( NetworkException ): pass
 class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass

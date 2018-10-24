@@ -325,7 +325,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 max_new_urls_allowed = self._file_limit - self._num_new_urls_found
                 
             
-            return ClientImporting.UpdateFileSeedCacheWithFileSeeds( self._file_seed_cache, file_seeds, max_new_urls_allowed )
+            return ClientImporting.UpdateFileSeedCacheWithFileSeeds( self._file_seed_cache, file_seeds, max_new_urls_allowed = max_new_urls_allowed )
             
         
         def status_hook( text ):

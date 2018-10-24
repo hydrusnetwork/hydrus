@@ -126,15 +126,18 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
-            hash = file_seed.GetHash()
-            
-            service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-            
-            if len( service_keys_to_content_updates ) > 0:
+            if file_seed.HasHash():
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                hash = file_seed.GetHash()
                 
-                did_substantial_work = True
+                service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                
+                if len( service_keys_to_content_updates ) > 0:
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                    did_substantial_work = True
+                    
                 
             
             if file_seed.ShouldPresent( self._file_import_options ):
@@ -583,53 +586,56 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                 
-                hash = file_seed.GetHash()
-                
-                if self._tag_import_options.HasAdditionalTags():
+                if file_seed.HasHash():
                     
-                    in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                    hash = file_seed.GetHash()
                     
-                    downloaded_tags = []
+                    if self._tag_import_options.HasAdditionalTags():
+                        
+                        in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                        
+                        downloaded_tags = []
+                        
+                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                        
+                        if len( service_keys_to_content_updates ) > 0:
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            
+                        
                     
-                    service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                    service_keys_to_tags = {}
                     
-                    if len( service_keys_to_content_updates ) > 0:
+                    for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
+                        
+                        if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+                            
+                            continue
+                            
+                        
+                        try:
+                            
+                            tags = filename_tagging_options.GetTags( tag_service_key, path )
+                            
+                            if len( tags ) > 0:
+                                
+                                service_keys_to_tags[ tag_service_key ] = tags
+                                
+                            
+                        except Exception as e:
+                            
+                            HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
+                            
+                            HydrusData.ShowException( e )
+                            
+                        
+                    
+                    if len( service_keys_to_tags ) > 0:
+                        
+                        service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
                         
                         HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                         
-                    
-                
-                service_keys_to_tags = {}
-                
-                for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
-                    
-                    if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
-                        
-                        continue
-                        
-                    
-                    try:
-                        
-                        tags = filename_tagging_options.GetTags( tag_service_key, path )
-                        
-                        if len( tags ) > 0:
-                            
-                            service_keys_to_tags[ tag_service_key ] = tags
-                            
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
-                        
-                        HydrusData.ShowException( e )
-                        
-                    
-                
-                if len( service_keys_to_tags ) > 0:
-                    
-                    service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-                    
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
                 num_files_imported += 1

@@ -12,7 +12,7 @@ try:
     
 except: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
     
-    print( 'Could not import lz4.' )
+    print( 'Could not import lz4--nbd.' )
     
 SERIALISABLE_TYPE_BASE = 0
 SERIALISABLE_TYPE_BASE_NAMED = 1

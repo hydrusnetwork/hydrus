@@ -37,22 +37,28 @@ REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
 def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_import_options ):
     
-    file_seeds = []
+    all_parsed_urls = []
     
     for parse_results in all_parse_results:
         
         parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
         
-        for url in parsed_urls:
-            
-            file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
-            
-            file_seed.SetReferralURL( source_url )
-            
-            file_seed.AddParseResults( parse_results, file_import_options )
-            
-            file_seeds.append( file_seed )
-            
+        all_parsed_urls.extend( parsed_urls )
+        
+    
+    all_parsed_urls = HydrusData.DedupeList( all_parsed_urls )
+    
+    file_seeds = []
+    
+    for url in all_parsed_urls:
+        
+        file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
+        
+        file_seed.SetReferralURL( source_url )
+        
+        file_seed.AddParseResults( parse_results, file_import_options )
+        
+        file_seeds.append( file_seed )
         
     
     return file_seeds
@@ -161,9 +167,12 @@ def THREADDownloadURL( job_key, url, url_string ):
                 job_key.SetVariable( 'popup_text_1', 'was already in the database!' )
                 
             
-            hash = file_seed.GetHash()
-            
-            job_key.SetVariable( 'popup_files', ( [ hash ], 'download' ) )
+            if file_seed.HasHash():
+                
+                hash = file_seed.GetHash()
+                
+                job_key.SetVariable( 'popup_files', ( [ hash ], 'download' ) )
+                
             
         elif status == CC.STATUS_DELETED:
             
@@ -232,14 +241,17 @@ def THREADDownloadURLs( job_key, urls, title ):
                     num_redundant += 1
                     
                 
-                hash = file_seed.GetHash()
-                
-                if hash not in presentation_hashes_fast:
+                if file_seed.HasHash():
                     
-                    presentation_hashes.append( hash )
+                    hash = file_seed.GetHash()
                     
-                
-                presentation_hashes_fast.add( hash )
+                    if hash not in presentation_hashes_fast:
+                        
+                        presentation_hashes.append( hash )
+                        
+                    
+                    presentation_hashes_fast.add( hash )
+                    
                 
             elif status == CC.STATUS_DELETED:
                 

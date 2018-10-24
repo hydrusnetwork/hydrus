@@ -249,7 +249,7 @@ def GetCookie( cookies, search_domain, name ):
         matches_dot = existing_domain == '.' + search_domain
         
         # .blah.com applies to subdomain.blah.com, blah.com does not
-        valid_subdomain = existing_domain.startwith( '.' ) and search_domain.endswith( existing_domain )
+        valid_subdomain = existing_domain.startswith( '.' ) and search_domain.endswith( existing_domain )
         
         if matches_exactly or matches_dot or valid_subdomain:
             

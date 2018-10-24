@@ -426,23 +426,25 @@ def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority =
             
         
     
-    urls_seen = set()
-    
-    possible_dupe_urls = url_list
-    
-    url_list = []
-    
-    for url in possible_dupe_urls:
-        
-        if url not in urls_seen:
-            
-            urls_seen.add( url )
-            
-            url_list.append( url )
-            
-        
+    url_list = HydrusData.DedupeList( url_list )
     
     return url_list
+    
+def GetVariableFromParseResults( results ):
+    
+    timestamp_results = []
+    
+    for ( ( name, content_type, additional_info ), parsed_text ) in results:
+        
+        if content_type == HC.CONTENT_TYPE_VARIABLE:
+            
+            variable_name = additional_info
+            
+            return ( variable_name, parsed_text )
+            
+        
+    
+    return None
     
 def MakeParsedTextPretty( parsed_text ):
     

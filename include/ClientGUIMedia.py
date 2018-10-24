@@ -1232,7 +1232,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
             with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsManagement.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
+                panel = ClientGUITags.ManageTagsPanel( dlg, self._file_service_key, self._selected_media )
                 
                 dlg.SetPanel( panel )
                 

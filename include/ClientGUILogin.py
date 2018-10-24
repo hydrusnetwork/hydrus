@@ -37,7 +37,143 @@ import wx
 
 class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    pass
+    def __init__( self, parent, credential_definitions, credentials ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        #
+        
+        self._control_data = []
+        
+        rows = []
+        
+        credential_definitions = list( credential_definitions )
+        
+        credential_definitions.sort( key = lambda cd: cd.ShouldHide() )
+        
+        for credential_definition in credential_definitions:
+            
+            if credential_definition.ShouldHide():
+                
+                style = wx.TE_PASSWORD
+                
+            else:
+                
+                style = 0
+                
+            
+            control = wx.TextCtrl( self, style = style )
+            
+            name = credential_definition.GetName()
+            
+            if name in credentials:
+                
+                control.SetValue( credentials[ name ] )
+                
+            
+            control.Bind( wx.EVT_TEXT, self.EventKey )
+            
+            control_st = ClientGUICommon.BetterStaticText( self )
+            
+            self._control_data.append( ( credential_definition, control, control_st ) )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( control_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            rows.append( ( credential_definition.GetName() + ': ', hbox ) )
+            
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self.SetSizer( gridbox )
+        
+        self._UpdateSts()
+        
+    
+    def _UpdateSts( self ):
+        
+        for ( credential_definition, control, control_st ) in self._control_data:
+            
+            value = control.GetValue()
+            
+            colour = ( 127, 0, 0 )
+            
+            if value == '':
+                
+                string_match = credential_definition.GetStringMatch()
+                
+                if string_match is None:
+                    
+                    st_label = ''
+                    
+                else:
+                    
+                    st_label = string_match.ToUnicode()
+                    
+                
+            else:
+                
+                try:
+                    
+                    credential_definition.Test( value )
+                    
+                    st_label = u'looks good \u2713'
+                    
+                    colour = ( 0, 127, 0 )
+                    
+                except Exception as e:
+                    
+                    st_label = HydrusData.ToUnicode( e )
+                    
+                
+            
+            control_st.SetLabelText( st_label )
+            control_st.SetForegroundColour( colour )
+            
+        
+    
+    def EventKey( self, event ):
+        
+        self._UpdateSts()
+        
+        event.Skip()
+        
+    
+    def GetValue( self ):
+        
+        # error on invalid
+        
+        credentials = {}
+        
+        for ( credential_definition, control, control_st ) in self._control_data:
+            
+            name = credential_definition.GetName()
+            
+            value = control.GetValue()
+            
+            if value == '':
+                
+                raise HydrusExceptions.VetoException( 'Please enter a value for ' + name + '!' )
+                
+            else:
+                
+                try:
+                    
+                    credential_definition.Test( value )
+                    
+                except Exception as e:
+                    
+                    raise HydrusExceptions.VetoException( 'For ' + name + ': ' + HydrusData.ToUnicode( e ) )
+                    
+                
+            
+            credentials[ name ] = value
+            
+        
+        return credentials
+        
     
 class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -91,7 +227,585 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    pass
+    def __init__( self, parent, engine, login_scripts, domains_to_login_info ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._engine = engine
+        self._login_scripts = login_scripts
+        
+        domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( 'domain', 20 ), ( 'login script', -1 ), ( 'access given', 48 ), ( 'active?', 8 ), ( 'logged in now?', 16 ), ( 'validity', 24 ), ( 'recent error/delay?', 24 ) ]
+        
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( domains_and_login_info_panel, 'domains_to_login_info', 8, 36, columns, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
+        
+        domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
+        
+        domains_and_login_info_panel.AddButton( 'add', self._Add )
+        domains_and_login_info_panel.AddDeleteButton()
+        domains_and_login_info_panel.AddSeparator()
+        domains_and_login_info_panel.AddButton( 'change login script', self._EditLoginScript, enabled_only_on_selection = True )
+        domains_and_login_info_panel.AddButton( 'edit credentials', self._EditCredentials, enabled_check_func = self._CanEditCreds )
+        domains_and_login_info_panel.AddButton( 'flip active', self._FlipActive, enabled_only_on_selection = True )
+        domains_and_login_info_panel.AddSeparator()
+        domains_and_login_info_panel.AddButton( 'scrub delays', self._ScrubDelays, enabled_only_on_selection = True )
+        domains_and_login_info_panel.NewButtonRow()
+        domains_and_login_info_panel.AddButton( 'reset login (delete cookies)', self._ClearSessions, enabled_only_on_selection = True )
+        
+        #
+        
+        listctrl_data = []
+        
+        for ( login_domain, ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) ) in domains_to_login_info.items():
+            
+            credentials_tuple = tuple( credentials.items() )
+            
+            domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+            listctrl_data.append( domain_and_login_info )
+            
+        
+        self._domains_and_login_info.AddDatas( listctrl_data )
+        
+        self._domains_and_login_info.Sort( 0 )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
+        
+        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        
+        warning_st.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        vbox.Add( warning_st, CC.FLAGS_CENTER )
+        vbox.Add( domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        if len( self._login_scripts ) == 0:
+            
+            wx.MessageBox( 'You have no login scripts, so you cannot add a new login!' )
+            
+            return
+            
+        
+        choice_tuples = [ ( login_script.GetName(), login_script ) for login_script in self._login_scripts ]
+        
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select the login script to use', choice_tuples ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                login_script = dlg.GetChoice()
+                
+            else:
+                
+                return
+                
+            
+        
+        example_domains = set( login_script.GetExampleDomains() )
+        
+        domains_in_use = { login_domain for ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) in self._domains_and_login_info.GetData() }
+        
+        available_examples = list( example_domains.difference( domains_in_use ) )
+        
+        available_examples.sort()
+        
+        if len( available_examples ) > 0:
+            
+            choice_tuples = [ ( login_domain, login_domain ) for login_domain in available_examples ]
+            
+            choice_tuples.append( ( 'use other domain', None ) )
+            
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select the domain to use', choice_tuples, sort_tuples = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    login_domain = dlg.GetChoice()
+                    
+                    if login_domain is not None:
+                        
+                        ( login_access_type, login_access_text ) = login_script.GetExampleDomainInfo( login_domain )
+                        
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            login_domain = None
+            
+        
+        if login_domain is None:
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'enter the domain', default = 'example.com', allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    login_domain = dlg.GetValue()
+                    
+                    if login_domain in domains_in_use:
+                        
+                        wx.MessageBox( 'That domain is already in use!' )
+                        
+                        return
+                        
+                    
+                    a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
+                    
+                    choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
+                    
+                    with ClientGUIDialogs.DialogSelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, sort_tuples = False ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            login_access_type = dlg.GetChoice()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                    login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            login_access_text = dlg.GetValue()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        
+        credential_definitions = login_script.GetCredentialDefinitions()
+        
+        credentials = {}
+        
+        if len( credential_definitions ) > 0:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit login' ) as dlg:
+                
+                panel = EditLoginCredentialsPanel( dlg, credential_definitions, credentials )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    credentials = panel.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        
+        message = 'Activate this login script for this domain?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, title = message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                active = True
+                
+            else:
+                
+                active = False
+                
+            
+        
+        login_script_key_and_name = login_script.GetLoginScriptKeyAndName()
+        credentials_tuple = tuple( credentials.items() )
+        active = True
+        validity = ClientNetworkingLogin.VALIDITY_UNTESTED
+        validity_error_text = ''
+        no_work_until = 0
+        no_work_until_reason = ''
+        
+        domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+        
+        self._domains_and_login_info.AddDatas( ( domain_and_login_info, ) )
+        
+        self._domains_and_login_info.Sort()
+        
+    
+    def _CanEditCreds( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            try:
+                
+                login_script = self._GetLoginScript( login_script_key_and_name )
+                
+                if len( login_script.GetCredentialDefinitions() ) > 0:
+                    
+                    return True
+                    
+                
+            except HydrusExceptions.DataMissing:
+                
+                continue
+                
+            
+        
+        return False
+        
+    
+    def _ClearSessions( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        if len( domain_and_login_infos ) > 0:
+            
+            message = 'Are you sure you want to clear these domains\' sessions? This will delete all their existing cookies and cannot be undone.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
+            for domain_and_login_info in domain_and_login_infos:
+                
+                ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+                
+                network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+                
+                self._engine.session_manager.ClearSession( network_context )
+                
+            
+            self._domains_and_login_info.UpdateDatas()
+            
+        
+    
+    def _ConvertDomainAndLoginInfoListCtrlTuples( self, domain_and_login_info ):
+        
+        ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+        
+        try:
+            
+            login_script = self._GetLoginScript( login_script_key_and_name )
+            
+            sort_login_script = login_script.GetName()
+            
+        except HydrusExceptions.DataMissing:
+            
+            sort_login_script = 'login script not found'
+            
+        
+        access = ClientNetworkingLogin.login_access_type_str_lookup[ login_access_type ] + ' - ' + login_access_text
+        
+        if active:
+            
+            sort_active = 'yes'
+            
+        else:
+            
+            sort_active = 'no'
+            
+        
+        sort_validity = ClientNetworkingLogin.validity_str_lookup[ validity ]
+        
+        if len( validity_error_text ) > 0:
+            
+            sort_validity += ' - ' + validity_error_text
+            
+        
+        network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+        
+        logged_in = login_script.IsLoggedIn( self._engine, network_context )
+        
+        if logged_in:
+            
+            sort_logged_in = 'yes'
+            
+        else:
+            
+            sort_logged_in = 'no'
+            
+        
+        if HydrusData.TimeHasPassed( no_work_until ):
+            
+            pretty_no_work_until = ''
+            
+        else:
+            
+            pretty_no_work_until = HydrusData.ConvertTimestampToPrettyExpires( no_work_until ) + ' - ' + no_work_until_reason
+            
+        
+        pretty_login_domain = login_domain
+        pretty_login_script = sort_login_script
+        pretty_access = access
+        pretty_active = sort_active
+        pretty_validity = sort_validity
+        pretty_logged_in = sort_logged_in
+        
+        display_tuple = ( pretty_login_domain, pretty_login_script, pretty_access, pretty_active, pretty_logged_in, pretty_validity, pretty_no_work_until )
+        sort_tuple = ( login_domain, sort_login_script, access, sort_active, sort_logged_in, sort_validity, no_work_until )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _EditCredentials( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            try:
+                
+                login_script = self._GetLoginScript( login_script_key_and_name )
+                
+            except HydrusExceptions.DataMissing:
+                
+                wx.MessageBox( 'Could not find a login script for "' + login_domain + '"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
+                
+                return
+                
+            
+            credential_definitions = login_script.GetCredentialDefinitions()
+            
+            if len( credential_definitions ) > 0:
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit login' ) as dlg:
+                    
+                    credentials = dict( credentials_tuple )
+                    
+                    panel = EditLoginCredentialsPanel( dlg, credential_definitions, credentials )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        credentials = panel.GetValue()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            else:
+                
+                continue
+                
+            
+            credentials_tuple = tuple( credentials.items() )
+            
+            if not active:
+                
+                message = 'Activate this login script for this domain?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message, title = message ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        active = True
+                        
+                    
+                
+            
+            validity = ClientNetworkingLogin.VALIDITY_UNTESTED
+            validity_error_text = ''
+            no_work_until = 0
+            no_work_until_reason = ''
+            
+            edited_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
+            self._domains_and_login_info.AddDatas( ( edited_domain_and_login_info, ) )
+            
+        
+        self._domains_and_login_info.Sort()
+        
+    
+    def _EditLoginScript( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            try:
+                
+                login_script = self._GetLoginScript( login_script_key_and_name )
+                
+            except HydrusExceptions.DataMissing:
+                
+                login_script = None
+                
+            
+            choice_tuples = [ ( login_script.GetName(), login_script ) for login_script in self._login_scripts ]
+            
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select the login script to use', choice_tuples, value_to_select = login_script ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    login_script = dlg.GetChoice()
+                    
+                    login_script_key_and_name = login_script.GetLoginScriptKeyAndName()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            try:
+                
+                ( login_access_type, login_access_text ) = login_script.GetExampleDomainInfo( login_domain )
+                
+            except HydrusExceptions.DataMissing:
+                
+                a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
+                
+                choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
+                
+                with ClientGUIDialogs.DialogSelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, sort_tuples = False ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        login_access_type = dlg.GetChoice()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+                login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        login_access_text = dlg.GetValue()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            
+            validity = ClientNetworkingLogin.VALIDITY_UNTESTED
+            validity_error_text = 'unknown: restart dialog to refresh validity'
+            no_work_until = 0
+            no_work_until_reason = ''
+            
+            edited_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
+            self._domains_and_login_info.AddDatas( ( edited_domain_and_login_info, ) )
+            
+        
+        self._domains_and_login_info.Sort()
+        
+    
+    def _FlipActive( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            active = not active
+            
+            flipped_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
+            self._domains_and_login_info.AddDatas( ( flipped_domain_and_login_info, ) )
+            
+        
+        self._domains_and_login_info.Sort()
+        
+    
+    def _GetLoginScript( self, login_script_key_and_name ):
+        
+        ( login_script_key, login_script_name ) = login_script_key_and_name
+        
+        for login_script in self._login_scripts:
+            
+            if login_script.GetLoginScriptKey() == login_script_key:
+                
+                return login_script
+                
+            
+        
+        for login_script in self._login_scripts:
+            
+            if login_script.GetName() == login_script_name:
+                
+                return login_script
+                
+            
+        
+        raise HydrusExceptions.DataMissing( 'No login script found!' )
+        
+    
+    def _ScrubDelays( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            no_work_until = 0
+            no_work_until_reason = ''
+            
+            scrubbed_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
+            self._domains_and_login_info.AddDatas( ( scrubbed_domain_and_login_info, ) )
+            
+        
+        self._domains_and_login_info.Sort()
+        
+    
+    def GetValue( self ):
+        
+        domains_to_login_info = dict()
+        
+        for ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) in self._domains_and_login_info.GetData():
+            
+            credentials = dict( credentials_tuple )
+            
+            domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+        
+        return domains_to_login_info
+        
     
 class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     

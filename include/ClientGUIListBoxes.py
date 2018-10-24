@@ -4,6 +4,7 @@ import ClientData
 import ClientGUICommon
 import ClientGUIMenus
 import ClientGUIShortcuts
+import ClientGUITopLevelWindows
 import ClientSearch
 import ClientSerialisable
 import ClientTags
@@ -1615,30 +1616,28 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuTagEvent( self, command ):
         
-        import ClientGUIDialogsManage
+        import ClientGUITags
         
-        if command == 'censorship':
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
             
-            ( tag, ) = self._selected_terms
+            if command == 'censorship':
+                
+                ( tag, ) = self._selected_terms
+                
+                panel = ClientGUITags.ManageTagCensorshipPanel( dlg, tag )
+                
+            elif command == 'parent':
+                
+                panel = ClientGUITags.ManageTagParents( dlg, self._selected_terms )
+                
+            elif command == 'sibling':
+                
+                panel = ClientGUITags.ManageTagSiblings( dlg, self._selected_terms )
+                
             
-            with ClientGUIDialogsManage.DialogManageTagCensorship( self, tag ) as dlg:
-                
-                dlg.ShowModal()
-                
+            dlg.SetPanel( panel )
             
-        elif command == 'parent':
-            
-            with ClientGUIDialogsManage.DialogManageTagParents( self, self._selected_terms ) as dlg:
-                
-                dlg.ShowModal()
-                
-            
-        elif command == 'sibling':
-            
-            with ClientGUIDialogsManage.DialogManageTagSiblings( self, self._selected_terms ) as dlg:
-                
-                dlg.ShowModal()
-                
+            dlg.ShowModal()
             
         
     

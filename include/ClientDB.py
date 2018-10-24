@@ -6,6 +6,7 @@ import ClientMedia
 import ClientNetworkingBandwidth
 import ClientNetworkingContexts
 import ClientNetworkingDomain
+import ClientNetworkingLogin
 import ClientNetworkingSessions
 import ClientOptions
 import ClientRatings
@@ -2970,6 +2971,12 @@ class DB( HydrusDB.HydrusDB ):
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         
         self._SetJSONDump( session_manager )
+        
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
+        
+        ClientDefaults.SetDefaultLoginManagerScripts( login_manager )
+        
+        self._SetJSONDump( login_manager )
         
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
         
@@ -11138,6 +11145,40 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 326:
+            
+            login_manager = ClientNetworkingLogin.NetworkLoginManager()
+            
+            ClientDefaults.SetDefaultLoginManagerScripts( login_manager )
+            
+            try:
+                
+                result = self._GetJSONSimple( 'pixiv_account' )
+                
+                if result is not None:
+                    
+                    ( pixiv_id, password ) = result
+                    
+                    credentials = {}
+                    
+                    credentials[ 'pixiv_id' ] = pixiv_id
+                    credentials[ 'password' ] = password
+                    
+                    login_manager.SetCredentialsAndActivate( 'www.pixiv.net', credentials )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update pixiv login info failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            self._SetJSONDump( login_manager )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

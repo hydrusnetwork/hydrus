@@ -4052,13 +4052,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # only subs with queries can be merged
         
-        subscriptions = [ subscription for subscription in subscriptions if len( subscription.GetQueries() ) > 0 ]
+        mergeable_subscriptions = [ subscription for subscription in subscriptions if len( subscription.GetQueries() ) > 0 ]
         
-        gug_names = { subscription.GetGUGKeyAndName()[1] for subscription in subscriptions }
+        unique_gug_names = { subscription.GetGUGKeyAndName()[1] for subscription in mergeable_subscriptions }
         
         # if there are fewer, there must be dupes, so we must be able to merge
         
-        return len( gug_names ) < len( subscriptions )
+        return len( unique_gug_names ) < len( subscriptions )
         
     
     def _CanReset( self ):
@@ -4408,47 +4408,90 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                to_be_merged_subs = self._subscriptions.GetData( only_selected = True )
+                original_subs = self._subscriptions.GetData( only_selected = True )
                 
-                self._subscriptions.DeleteDatas( to_be_merged_subs )
+                potential_mergees = [ sub.Duplicate() for sub in original_subs ]
                 
-                to_be_merged_subs = list( to_be_merged_subs )
-                
+                mergeable_groups = []
                 merged_subs = []
+                unmergeable_subs = []
                 
-                while len( to_be_merged_subs ) > 1:
+                while len( potential_mergees ) > 0:
                     
-                    primary_sub = to_be_merged_subs.pop()
+                    potential_primary = potential_mergees.pop()
                     
-                    unmerged_subs = primary_sub.Merge( to_be_merged_subs )
+                    ( mergeables_with_our_primary, not_mergeable_with_our_primary ) = potential_primary.GetMergeable( potential_mergees )
                     
-                    num_merged = len( to_be_merged_subs ) - len( unmerged_subs )
-                    
-                    if num_merged > 0:
+                    if len( mergeables_with_our_primary ) > 0:
                         
-                        primary_sub_name = primary_sub.GetName()
+                        mergeable_group = []
                         
-                        message = primary_sub_name + ' was able to merge ' + HydrusData.ToHumanInt( num_merged ) + ' other subscriptions. Would you like to give the merged subscription a new name?'
+                        mergeable_group.append( potential_primary )
+                        mergeable_group.extend( mergeables_with_our_primary )
                         
-                        with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
+                        mergeable_groups.append( mergeable_group )
+                        
+                    else:
+                        
+                        unmergeable_subs.append( potential_primary )
+                        
+                    
+                    potential_mergees = not_mergeable_with_our_primary
+                    
+                
+                if len( mergeable_groups ) == 0:
+                    
+                    wx.MessageBox( 'Unfortunately, none of those subscriptions appear to be mergeable!' )
+                    
+                    return
+                    
+                
+                for mergeable_group in mergeable_groups:
+                    
+                    mergeable_group.sort( key = lambda sub: sub.GetName() )
+                    
+                    choice_tuples = [ ( sub.GetName(), sub ) for sub in mergeable_group ]
+                    
+                    with ClientGUIDialogs.DialogSelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
                             
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                name = dlg.GetValue()
-                                
-                                primary_sub.SetName( name )
-                                
+                            primary_sub = dlg.GetChoice()
                             
-                            # we cannot break safely here, so just do a 'don't rename' on cancel
+                        else:
                             
+                            return
+                            
+                        
+                    
+                    mergeable_group.remove( primary_sub )
+                    
+                    primary_sub.Merge( mergeable_group )
+                    
+                    primary_sub_name = primary_sub.GetName()
+                    
+                    message = primary_sub_name + ' was able to merge ' + HydrusData.ToHumanInt( len( mergeable_group ) ) + ' other subscriptions. If you wish to change its name, do so here.'
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            name = dlg.GetValue()
+                            
+                            primary_sub.SetName( name )
+                            
+                        
+                        # don't care about a cancel here--we'll take that as 'I didn't want to change its name', not 'abort'
                         
                     
                     merged_subs.append( primary_sub )
                     
-                    to_be_merged_subs = unmerged_subs
-                    
                 
-                self._subscriptions.AddDatas( to_be_merged_subs )
+                # we are ready to do it
+                
+                self._subscriptions.DeleteDatas( original_subs )
+                
+                self._subscriptions.AddDatas( unmergeable_subs )
                 
                 for merged_sub in merged_subs:
                     
@@ -4685,6 +4728,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             extracted_subscriptions = list( subscription.Separate( name, queries_to_extract ) )
             
             if want_post_merge:
+                
+                # it is ok to do a blind merge here since they all share the same settings and will get a new name
                 
                 primary_sub = extracted_subscriptions.pop()
                 

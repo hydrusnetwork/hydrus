@@ -538,7 +538,7 @@ class NetworkJob( object ):
             
             if self._for_login:
                 
-                raise HydrusExceptions.LoginException( 'Login jobs should not be asked if they can login!' )
+                raise HydrusExceptions.ValidationException( 'Login jobs should not be asked if they can login!' )
                 
             else:
                 

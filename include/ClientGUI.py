@@ -19,6 +19,7 @@ import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
+import ClientGUITags
 import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
@@ -1735,6 +1736,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
             
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'UNDER CONSTRUCTION: manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+            
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
             
             #
@@ -2488,6 +2493,30 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.CallToThread( THREAD_do_it, self._controller )
         
     
+    def _ManageLogins( self ):
+        
+        title = 'manage logins'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            login_manager = self._controller.network_engine.login_manager
+            
+            login_scripts = login_manager.GetLoginScripts()
+            domains_to_login_info = login_manager.GetDomainsToLoginInfo()
+            
+            panel = ClientGUILogin.EditLoginsPanel( dlg, self._controller.network_engine, login_scripts, domains_to_login_info )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                domains_to_login_info = panel.GetValue()
+                
+                login_manager.SetDomainsToLoginInfo( domains_to_login_info )
+                
+            
+        
+    
     def _ManageLoginScripts( self ):
         
         title = 'manage login scripts'
@@ -2758,17 +2787,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageTagCensorship( self ):
         
-        with ClientGUIDialogsManage.DialogManageTagCensorship( self ) as dlg: dlg.ShowModal()
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+            
+            panel = ClientGUITags.ManageTagCensorshipPanel( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ManageTagParents( self ):
         
-        with ClientGUIDialogsManage.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+            
+            panel = ClientGUITags.ManageTagParents( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ManageTagSiblings( self ):
         
-        with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+            
+            panel = ClientGUITags.ManageTagSiblings( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ManageURLMatches( self ):

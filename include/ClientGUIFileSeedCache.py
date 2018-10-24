@@ -240,9 +240,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if status_to_set == CC.STATUS_UNKNOWN:
             
-            deleted_file_seeds = [ file_seed for file_seed in file_seeds if file_seed.IsDeleted() and file_seed.HasHash() ]
+            deleted_and_clearable_file_seeds = [ file_seed for file_seed in file_seeds if file_seed.IsDeleted() and file_seed.HasHash() ]
             
-            if True in ( file_seed.IsDeleted() and file_seed.HasHash() for file_seed in file_seeds ):
+            if len( deleted_and_clearable_file_seeds ) > 0:
                 
                 message = 'One or more of these files did not import due to being previously deleted. They will likely fail again unless you erase those deletion records. Would you like to do this now?'
                 
@@ -250,7 +250,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        deletee_hashes = { file_seed.GetHash() for file_seed in deleted_file_seeds }
+                        deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
                         
                         content_update_erase_record = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', deletee_hashes ) )
                         content_update_undelete_from_trash = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, deletee_hashes )

@@ -201,11 +201,22 @@ class RasterContainerVideo( RasterContainer ):
         duration = self._media.GetDuration()
         num_frames_in_video = self._media.GetNumFrames()
         
+        if duration is None or duration == 0:
+            
+            message = 'The file with hash ' + media.GetHash().encode( 'hex' ) + ', had an invalid duration.'
+            message += os.linesep * 2
+            message += 'You may wish to try regenerating its metadata through the advanced mode right-click menu.'
+            
+            HydrusData.ShowText( message )
+            
+            duration = 1.0
+            
+        
         if num_frames_in_video is None or num_frames_in_video == 0:
             
             message = 'The file with hash ' + media.GetHash().encode( 'hex' ) + ', had an invalid number of frames.'
             message += os.linesep * 2
-            message += 'You may wish to try exporting, deleting, and the reimporting it.'
+            message += 'You may wish to try regenerating its metadata through the advanced mode right-click menu.'
             
             HydrusData.ShowText( message )
             

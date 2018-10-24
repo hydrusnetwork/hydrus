@@ -1,6 +1,5 @@
 import ClientConstants as CC
 import collections
-import cPickle
 import cStringIO
 import HydrusConstants as HC
 import HydrusData

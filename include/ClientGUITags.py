@@ -1,20 +1,31 @@
+import ClientCaches
 import ClientConstants as CC
+import ClientData
+import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIListBoxes
+import ClientGUIListCtrl
 import ClientGUITopLevelWindows
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
+import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
+import ClientGUITagSuggestions
+import ClientMedia
 import ClientTags
 import collections
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
+import HydrusNetwork
 import HydrusSerialisable
 import HydrusTags
 import HydrusTagArchive
+import HydrusText
+import itertools
 import os
 import wx
 
@@ -962,6 +973,2737 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
                     HG.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
                     
                 
+            
+        
+    
+class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, file_service_key, media, immediate_commit = False, canvas_key = None ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._file_service_key = file_service_key
+        
+        self._immediate_commit = immediate_commit
+        self._canvas_key = canvas_key
+        
+        media = ClientMedia.FlattenMedia( media )
+        
+        self._current_media = [ m.Duplicate() for m in media ]
+        
+        self._hashes = set()
+        
+        for m in self._current_media:
+            
+            self._hashes.update( m.GetHashes() )
+            
+        
+        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        
+        #
+        
+        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
+            
+            select = service_key == default_tag_repository_key
+            
+            self._tag_repositories.AddPage( page, name, select = select )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self.Bind( ClientGUIACDropdown.EVT_SELECT_UP, self.EventSelectUp )
+        self.Bind( ClientGUIACDropdown.EVT_SELECT_DOWN, self.EventSelectDown )
+        
+        self.Bind( ClientGUIACDropdown.EVT_SHOW_PREVIOUS, self.EventShowPrevious )
+        self.Bind( ClientGUIACDropdown.EVT_SHOW_NEXT, self.EventShowNext )
+        
+        if self._canvas_key is not None:
+            
+            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
+        
+        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+        
+        self._SetSearchFocus()
+        
+    
+    def _GetGroupsOfServiceKeysToContentUpdates( self ):
+        
+        groups_of_service_keys_to_content_updates = []
+        
+        for page in self._tag_repositories.GetPages():
+            
+            ( service_key, groups_of_content_updates ) = page.GetGroupsOfContentUpdates()
+            
+            for content_updates in groups_of_content_updates:
+                
+                if len( content_updates ) > 0:
+                    
+                    service_keys_to_content_updates = { service_key : content_updates }
+                    
+                    groups_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+                    
+                
+            
+        
+        return groups_of_service_keys_to_content_updates
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.SetTagBoxFocus()
+            
+        
+    
+    def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
+        
+        if canvas_key == self._canvas_key:
+            
+            if new_media_singleton is not None:
+                
+                self._current_media = ( new_media_singleton.Duplicate(), )
+                
+                for page in self._tag_repositories.GetPages():
+                    
+                    page.SetMedia( self._current_media )
+                    
+                
+            
+        
+    
+    def CanCancel( self ):
+        
+        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
+        
+        if len( groups_of_service_keys_to_content_updates ) > 0:
+            
+            message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return False
+                    
+                
+            
+        
+        return True
+        
+    
+    def CommitChanges( self ):
+        
+        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
+        
+        for service_keys_to_content_updates in groups_of_service_keys_to_content_updates:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+    def EventSelectDown( self, event ):
+        
+        self._tag_repositories.SelectRight()
+        
+        self._SetSearchFocus()
+        
+    
+    def EventSelectUp( self, event ):
+        
+        self._tag_repositories.SelectLeft()
+        
+        self._SetSearchFocus()
+        
+    
+    def EventShowNext( self, event ):
+        
+        if self._canvas_key is not None:
+            
+            HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
+            
+        
+    
+    def EventShowPrevious( self, event ):
+        
+        if self._canvas_key is not None:
+            
+            HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
+            
+        
+    
+    def EventServiceChanged( self, event ):
+        
+        if not self: # actually did get a runtime error here, on some Linux WM dialog shutdown
+            
+            return
+            
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        if page is not None:
+            
+            wx.CallAfter( page.SetTagBoxFocus )
+            
+        
+        event.Skip()
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_tags':
+                
+                self._OKParent()
+                
+            elif action == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, file_service_key, tag_service_key, media, immediate_commit, canvas_key = None ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._file_service_key = file_service_key
+            self._tag_service_key = tag_service_key
+            self._immediate_commit = immediate_commit
+            self._canvas_key = canvas_key
+            
+            self._groups_of_content_updates = []
+            
+            self._i_am_local_tag_service = self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY
+            
+            if not self._i_am_local_tag_service:
+                
+                self._service = HG.client_controller.services_manager.GetService( tag_service_key )
+                
+            
+            self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
+            
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags, self.RemoveTags )
+            
+            self._tags_box_sorter.SetTagsBox( self._tags_box )
+            
+            self._new_options = HG.client_controller.new_options
+            
+            self._add_parents_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-add entered tags\' parents' )
+            self._add_parents_checkbox.SetValue( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
+            self._add_parents_checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckAddParents )
+            
+            self._collapse_siblings_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-replace entered siblings' )
+            self._collapse_siblings_checkbox.SetValue( self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ) )
+            self._collapse_siblings_checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckCollapseSiblings )
+            
+            self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
+            self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
+            
+            self._tags_box_sorter.Add( self._add_parents_checkbox, CC.FLAGS_LONE_BUTTON )
+            self._tags_box_sorter.Add( self._collapse_siblings_checkbox, CC.FLAGS_LONE_BUTTON )
+            self._tags_box_sorter.Add( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
+            
+            expand_parents = True
+            
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
+            
+            self._advanced_content_update_button = wx.Button( self, label = 'advanced operation' )
+            self._advanced_content_update_button.Bind( wx.EVT_BUTTON, self.EventAdvancedContentUpdate )
+            
+            self._modify_mappers = wx.Button( self, label = 'modify mappers' )
+            self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
+            
+            self._copy_tags = wx.Button( self, id = wx.ID_COPY, label = 'copy tags' )
+            self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
+            
+            self._paste_tags = wx.Button( self, id = wx.ID_PASTE, label = 'paste tags' )
+            self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
+            
+            if self._i_am_local_tag_service:
+                
+                text = 'remove all tags'
+                
+            else:
+                
+                text = 'petition all tags'
+                
+            
+            self._remove_tags = wx.Button( self, label = text )
+            self._remove_tags.Bind( wx.EVT_BUTTON, self.EventRemoveTags )
+            
+            self._tags_box.ChangeTagService( self._tag_service_key )
+            
+            self.SetMedia( media )
+            
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags, canvas_key = self._canvas_key )
+            
+            if self._i_am_local_tag_service:
+                
+                self._modify_mappers.Hide()
+                
+            else:
+                
+                if not self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
+                    
+                    self._modify_mappers.Hide()
+                    
+                
+            
+            if not self._new_options.GetBoolean( 'advanced_mode' ):
+                
+                self._advanced_content_update_button.Hide()
+                
+            
+            copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            copy_paste_hbox.Add( self._copy_tags, CC.FLAGS_VCENTER )
+            copy_paste_hbox.Add( self._paste_tags, CC.FLAGS_VCENTER )
+            
+            advanced_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            advanced_hbox.Add( self._remove_tags, CC.FLAGS_VCENTER )
+            advanced_hbox.Add( self._advanced_content_update_button, CC.FLAGS_VCENTER )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( advanced_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( self._modify_mappers, CC.FLAGS_LONE_BUTTON )
+            
+            #
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( self._suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            #
+            
+            self.SetSizer( hbox )
+            
+            if self._immediate_commit:
+                
+                HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+                
+            
+        
+        def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
+            
+            tags = HydrusTags.CleanTags( tags )
+            
+            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                
+                forced_reason = 'admin'
+                
+            
+            tag_managers = [ m.GetTagsManager() for m in self._media ]
+            currents = [ tag_manager.GetCurrent( self._tag_service_key ) for tag_manager in tag_managers ]
+            pendings = [ tag_manager.GetPending( self._tag_service_key ) for tag_manager in tag_managers ]
+            petitioneds = [ tag_manager.GetPetitioned( self._tag_service_key ) for tag_manager in tag_managers ]
+            
+            num_files = len( self._media )
+            
+            # let's figure out what these tags can mean for the media--add, remove, or what?
+            
+            choices = collections.defaultdict( list )
+            
+            for tag in tags:
+                
+                num_current = sum( ( 1 for current in currents if tag in current ) )
+                
+                if self._i_am_local_tag_service:
+                    
+                    if not only_remove:
+                        
+                        if num_current < num_files:
+                            
+                            num_non_current = num_files - num_current
+                            
+                            choices[ HC.CONTENT_UPDATE_ADD ].append( ( tag, num_non_current ) )
+                            
+                        
+                    
+                    if not only_add:
+                        
+                        if num_current > 0:
+                            
+                            choices[ HC.CONTENT_UPDATE_DELETE ].append( ( tag, num_current ) )
+                            
+                        
+                    
+                else:
+                    
+                    num_pending = sum( ( 1 for pending in pendings if tag in pending ) )
+                    num_petitioned = sum( ( 1 for petitioned in petitioneds if tag in petitioned ) )
+                    
+                    if not only_remove:
+                        
+                        if num_current + num_pending < num_files:
+                            
+                            num_pendable = num_files - ( num_current + num_pending )
+                            
+                            choices[ HC.CONTENT_UPDATE_PEND ].append( ( tag, num_pendable ) )
+                            
+                        
+                    
+                    if not only_add:
+                        
+                        if num_current > num_petitioned and not only_add:
+                            
+                            num_petitionable = num_current - num_petitioned
+                            
+                            choices[ HC.CONTENT_UPDATE_PETITION ].append( ( tag, num_petitionable ) )
+                            
+                        
+                        if num_pending > 0 and not only_add:
+                            
+                            choices[ HC.CONTENT_UPDATE_RESCIND_PEND ].append( ( tag, num_pending ) )
+                            
+                        
+                    
+                    if not only_remove:
+                        
+                        if num_petitioned > 0:
+                            
+                            choices[ HC.CONTENT_UPDATE_RESCIND_PETITION ].append( ( tag, num_petitioned ) )
+                            
+                        
+                    
+                
+            
+            if len( choices ) == 0:
+                
+                return
+                
+            
+            # now we have options, let's ask the user what they want to do
+            
+            if len( choices ) == 1:
+                
+                [ ( choice_action, tag_counts ) ] = choices.items()
+                
+                tags = { tag for ( tag, count ) in tag_counts }
+                
+            else:
+                
+                bdc_choices = []
+                
+                preferred_order = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PETITION ]
+                
+                choice_text_lookup = {}
+                
+                choice_text_lookup[ HC.CONTENT_UPDATE_ADD ] = 'add'
+                choice_text_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'delete'
+                choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend'
+                choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition'
+                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'rescind pend'
+                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'rescind petition'
+                
+                for choice_action in preferred_order:
+                    
+                    if choice_action not in choices:
+                        
+                        continue
+                        
+                    
+                    choice_text_prefix = choice_text_lookup[ choice_action ]
+                    
+                    tag_counts = choices[ choice_action ]
+                    
+                    tags = { tag for ( tag, count ) in tag_counts }
+                    
+                    if len( tags ) == 1:
+                        
+                        [ ( tag, count ) ] = tag_counts
+                        
+                        text = choice_text_prefix + ' "' + tag + '" for ' + HydrusData.ToHumanInt( count ) + ' files'
+                        
+                    else:
+                        
+                        text = choice_text_prefix + ' ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags'
+                        
+                    
+                    data = ( choice_action, tags )
+                    
+                    if len( tag_counts ) > 25:
+                        
+                        t_c = tag_counts[:25]
+                        
+                        t_c_lines = [ tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in t_c ]
+                        
+                        t_c_lines.append( 'and ' + HydrusData.ToHumanInt( len( tag_counts ) - 25 ) + ' others' )
+                        
+                        tooltip = os.linesep.join( t_c_lines )
+                        
+                    else:
+                        
+                        tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in tag_counts ) )
+                        
+                    
+                    bdc_choices.append( ( text, data, tooltip ) )
+                    
+                
+                intro = 'What would you like to do?'
+                
+                with ClientGUIDialogs.DialogButtonChoice( self, intro, bdc_choices ) as dlg:
+                    
+                    result = dlg.ShowModal()
+                    
+                    if result == wx.ID_OK:
+                        
+                        ( always_do, ( choice_action, tags ) ) = dlg.GetData()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+                
+            
+            if choice_action == HC.CONTENT_UPDATE_PETITION:
+                
+                if forced_reason is None:
+                    
+                    # add the easy reason buttons here
+                    
+                    if len( tags ) == 1:
+                        
+                        ( tag, ) = tags
+                        
+                        tag_text = '"' + tag + '"'
+                        
+                    else:
+                        
+                        tag_text = 'the ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags'
+                        
+                    
+                    message = 'Enter a reason for ' + tag_text + ' to be removed. A janitor will review your petition.'
+                    
+                    suggestions = []
+                    
+                    suggestions.append( 'mangled parse/typo' )
+                    suggestions.append( 'not applicable' )
+                    suggestions.append( 'should be namespaced' )
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            reason = dlg.GetValue()
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                    # if this above sub-dialog occurs, the 'default focus' reverts to the main gui when the manage tags frame closes, wew lad
+                    
+                    ClientGUICommon.GetTLP( self ).GetParent().SetFocus()
+                    self.SetFocus()
+                    
+                else:
+                    
+                    reason = forced_reason
+                    
+                
+            
+            # we have an action and tags, so let's effect the content updates
+            
+            content_updates_group = []
+            
+            recent_tags = set()
+            
+            for tag in tags:
+                
+                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) ]
+                
+                hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
+                
+                if len( hashes ) > 0:
+                    
+                    content_updates = []
+                    
+                    if choice_action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes, reason ) ) ]
+                        
+                    else:
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ) ) ]
+                        
+                    
+                    if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
+                        
+                        recent_tags.add( tag )
+                        
+                        if self._add_parents_checkbox.GetValue():
+                            
+                            tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+                            
+                            parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
+                            
+                            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
+                            
+                        
+                    
+                    if len( content_updates ) > 0:
+                        
+                        if not self._immediate_commit:
+                            
+                            for m in media_to_affect:
+                                
+                                mt = m.GetTagsManager()
+                                
+                                for content_update in content_updates:
+                                    
+                                    mt.ProcessContentUpdate( self._tag_service_key, content_update )
+                                    
+                                
+                            
+                        
+                        content_updates_group.extend( content_updates )
+                        
+                    
+                
+            
+            if len( recent_tags ) > 0 and HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
+                
+                HG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
+                
+            
+            if len( content_updates_group ) > 0:
+                
+                if self._immediate_commit:
+                    
+                    service_keys_to_content_updates = { self._tag_service_key : content_updates_group }
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                else:
+                    
+                    self._groups_of_content_updates.append( content_updates_group )
+                    
+                
+            
+            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+            
+        
+        def AddTags( self, tags, only_add = False ):
+            
+            if len( tags ) > 0:
+                
+                HydrusData.Profile( 'w', 'self._AddTags( tags, only_add = only_add )', globals(), locals() )
+                
+                #self._AddTags( tags, only_add = only_add )
+                
+            
+        
+        def EnterTags( self, tags, only_add = False ):
+            
+            if self._collapse_siblings_checkbox.GetValue():
+                
+                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+                
+                tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
+                
+            
+            if len( tags ) > 0:
+                
+                self._AddTags( tags, only_add = only_add )
+                
+            
+        
+        def EventAdvancedContentUpdate( self, event ):
+            
+            hashes = set()
+            
+            for m in self._media:
+                
+                hashes.update( m.GetHashes() )
+                
+            
+            parent = self.GetTopLevelParent().GetParent()
+            
+            self.OK()
+            
+            # do this because of the OK() call, which doesn't want to happen in the dialog event loop
+            def do_it():
+                
+                with ClientGUITopLevelWindows.DialogNullipotent( parent, 'advanced content update' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._tag_service_key, hashes )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    dlg.ShowModal()
+                    
+                
+            
+            HG.client_controller.CallLaterWXSafe( HG.client_controller.gui, 0.5, do_it )
+            
+        
+        def EventCheckAddParents( self, event ):
+            
+            self._new_options.SetBoolean( 'add_parents_on_manage_tags', self._add_parents_checkbox.GetValue() )
+            
+        
+        def EventCheckCollapseSiblings( self, event ):
+            
+            self._new_options.SetBoolean( 'replace_siblings_on_manage_tags', self._collapse_siblings_checkbox.GetValue() )
+            
+        
+        def EventCopyTags( self, event ):
+        
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._tag_service_key, collapse_siblings = False )
+            
+            tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
+            
+            text = os.linesep.join( tags )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+        def EventModify( self, event ):
+            
+            wx.MessageBox( 'this does not work yet!' )
+            
+            return
+            
+            contents = []
+            
+            tags = self._tags_box.GetSelectedTags()
+            
+            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in self._media ) ) )
+            
+            for tag in tags:
+                
+                contents.extend( [ HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in hashes ] )
+                
+            
+            if len( contents ) > 0:
+                
+                subject_accounts = 'blah' # fetch subjects from the server using the contents
+                
+                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_accounts ) as dlg: dlg.ShowModal()
+                
+            
+        
+        def EventPasteTags( self, event ):
+            
+            text = HG.client_controller.GetClipboardText()
+            
+            try:
+                
+                tags = HydrusText.DeserialiseNewlinedTexts( text )
+                
+                tags = HydrusTags.CleanTags( tags )
+                
+                self.EnterTags( tags, only_add = True )
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        
+        def EventRemoveTags( self, event ):
+            
+            tag_managers = [ m.GetTagsManager() for m in self._media ]
+            
+            removable_tags = set()
+            
+            for tag_manager in tag_managers:
+                
+                removable_tags.update( tag_manager.GetCurrent( self._tag_service_key ) )
+                removable_tags.update( tag_manager.GetPending( self._tag_service_key ) )
+                
+            
+            self._AddTags( removable_tags, only_remove = True )
+            
+        
+        def EventShowDeleted( self, event ):
+            
+            self._tags_box.SetShow( 'deleted', self._show_deleted_checkbox.GetValue() )
+            
+        
+        def GetGroupsOfContentUpdates( self ):
+            
+            return ( self._tag_service_key, self._groups_of_content_updates )
+            
+        
+        def HasChanges( self ):
+            
+            return len( self._groups_of_content_updates ) > 0
+            
+        
+        def OK( self ):
+            
+            # nice to have this happen immediately so the 'advanced content update' stuff can occur in a neat event order afterwards
+            self.GetEventHandler().ProcessEvent( ClientGUITopLevelWindows.OKEvent( -1 ) )
+            
+            # old call:
+            # wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+            
+        
+        def ProcessContentUpdates( self, service_keys_to_content_updates ):
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    for m in self._media:
+                        
+                        if len( m.GetHashes().intersection( content_update.GetHashes() ) ) > 0:
+                            
+                            m.GetMediaResult().ProcessContentUpdate( service_key, content_update )
+                            
+                        
+                    
+                
+            
+            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+            
+        
+        def RemoveTags( self, tags ):
+            
+            if len( tags ) > 0:
+                
+                self._AddTags( tags, only_remove = True )
+                
+            
+        
+        def SetMedia( self, media ):
+            
+            if media is None:
+                
+                media = []
+                
+            
+            self._media = media
+            
+            self._tags_box.SetTagsByMedia( self._media )
+            
+        
+        def SetTagBoxFocus( self ):
+            
+            self._add_tag_box.SetFocus()
+            
+        
+
+class ManageTagCensorshipPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, initial_value = None ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        
+        min_width = ClientGUICommon.ConvertTextToPixelWidth( self._tag_services, 100 )
+        
+        self._tag_services.SetMinSize( ( min_width, -1 ) )
+        
+        #
+        
+        services = HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_services, service_key, initial_value )
+            
+            select = name == 'all known tags'
+            
+            self._tag_services.AddPage( page, name, select = select )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and the empty string (just hit enter with no text added) for all unnamespaced tags. You will have to refresh your current queries to see any changes."
+        
+        st = ClientGUICommon.BetterStaticText( self, intro )
+        
+        st.SetWrapWidth( min_width - 50 )
+        
+        
+        
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_services.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.SetTagBoxFocus()
+            
+        
+    
+    def CommitChanges( self ):
+        
+        info = [ page.GetInfo() for page in self._tag_services.GetPages() if page.HasInfo() ]
+        
+        HG.client_controller.Write( 'tag_censorship', info )
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_key, initial_value = None ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_key = service_key
+            
+            choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
+            
+            self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
+            
+            self._tags = ClientGUIListBoxes.ListBoxTagsCensorship( self )
+            
+            self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+            self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
+            
+            #
+            
+            ( blacklist, tags ) = HG.client_controller.Read( 'tag_censorship', service_key )
+            
+            if blacklist: self._blacklist.SetSelection( 0 )
+            else: self._blacklist.SetSelection( 1 )
+            
+            self._tags.AddTags( tags )
+            
+            if initial_value is not None:
+                
+                self._tag_input.SetValue( initial_value )
+                
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( self._blacklist, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._tag_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def EventKeyDownTag( self, event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                tag = self._tag_input.GetValue()
+                
+                self._tags.EnterTags( { tag } )
+                
+                self._tag_input.SetValue( '' )
+                
+            else: event.Skip()
+            
+        
+        def GetInfo( self ):
+            
+            blacklist = self._blacklist.GetSelectedClientData()
+            
+            tags = self._tags.GetClientData()
+            
+            return ( self._service_key, blacklist, tags )
+            
+        
+        def HasInfo( self ):
+            
+            ( service_key, blacklist, tags ) = self.GetInfo()
+            
+            return len( tags ) > 0
+            
+        
+        def SetTagBoxFocus( self ):
+            
+            self._tag_input.SetFocus()
+            
+        
+    
+class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, tags = None ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        
+        #
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        services = [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ) ]
+        
+        services.extend( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        
+        for service in services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            page = self._Panel( self._tag_repositories, service_key, tags )
+            
+            select = service_key == default_tag_repository_key
+            
+            self._tag_repositories.AddPage( page, name, select = select )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.SetTagBoxFocus()
+            
+        
+    
+    def CommitChanges( self ):
+        
+        if self._tag_repositories.GetCurrentPage().HasUncommittedPair():
+            
+            message = 'Are you sure you want to OK? You have an uncommitted pair.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
+                    
+                
+            
+        
+        service_keys_to_content_updates = {}
+        
+        for page in self._tag_repositories.GetPages():
+            
+            ( service_key, content_updates ) = page.GetContentUpdates()
+            
+            if len( content_updates ) > 0:
+                
+                service_keys_to_content_updates[ service_key ] = content_updates
+                
+            
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_key, tags = None ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_key = service_key
+            
+            if service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                
+                self._service = HG.client_controller.services_manager.GetService( service_key )
+                
+            
+            self._pairs_to_reasons = {}
+            
+            self._original_statuses_to_pairs = collections.defaultdict( set )
+            self._current_statuses_to_pairs = collections.defaultdict( set )
+            
+            self._show_all = wx.CheckBox( self )
+            
+            listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            
+            columns = [ ( '', 6 ), ( 'child', 25 ), ( 'parent', -1 ) ]
+            
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 8, 25, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            
+            listctrl_panel.SetListCtrl( self._tag_parents )
+            
+            self._tag_parents.Sort( 2 )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'from clipboard', 'Load parents from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
+            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load parents from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file', 'Load parents from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
+            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load parents from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            
+            listctrl_panel.AddMenuButton( 'import', menu_items )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'to clipboard', 'Save selected parents to your clipboard.', self._ExportToClipboard ) )
+            menu_items.append( ( 'normal', 'to .txt file', 'Save selected parents to a .txt file.', self._ExportToTXT ) )
+            
+            listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
+            
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            
+            ( gumpf, preview_height ) = ClientGUICommon.ConvertTextToPixels( self._children, ( 12, 6 ) )
+            
+            self._children.SetInitialSize( ( -1, preview_height ) )
+            self._parents.SetInitialSize( ( -1, preview_height ) )
+            
+            expand_parents = True
+            
+            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._child_input.Disable()
+            
+            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._parent_input.Disable()
+            
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
+            self._add.Disable()
+            
+            #
+            
+            #
+            
+            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' + os.linesep + '.' )
+            self._count_st = ClientGUICommon.BetterStaticText( self, '' )
+            
+            tags_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            tags_box.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+            tags_box.Add( self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            input_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            input_box.Add( self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.Add( self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+            
+            vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
+            vbox.Add( tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
+            
+            #
+            
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            
+            self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
+            self._show_all.Bind( wx.EVT_CHECKBOX, self.EventShowAll )
+            
+            HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            
+        
+        def _AddFlatPairs( self, pairs, add_only = False ):
+            
+            parents_to_children = HydrusData.BuildKeyToSetDict( ( ( parent, child ) for ( child, parent ) in pairs ) )
+            
+            for ( parent, children ) in parents_to_children.items():
+                
+                self._AddPairs( children, parent, add_only = add_only )
+                
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def _AddPairs( self, children, parent, add_only = False ):
+            
+            new_pairs = []
+            current_pairs = []
+            petitioned_pairs = []
+            pending_pairs = []
+            
+            for child in children:
+                
+                pair = ( child, parent )
+                
+                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                    
+                    if not add_only:
+                        
+                        pending_pairs.append( pair )
+                        
+                    
+                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                    
+                    petitioned_pairs.append( pair )
+                    
+                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+                    
+                    if not add_only:
+                        
+                        current_pairs.append( pair )
+                        
+                    
+                elif self._CanAdd( pair ):
+                    
+                    new_pairs.append( pair )
+                    
+                
+            
+            affected_pairs = []
+            
+            if len( new_pairs ) > 0:
+            
+                do_it = True
+                
+                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                    
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+                        
+                        reason = 'admin'
+                        
+                    else:
+                        
+                        if len( new_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
+                            
+                        
+                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                reason = dlg.GetValue()
+                                
+                            else: do_it = False
+                            
+                        
+                    
+                    if do_it:
+                        
+                        for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
+                        
+                    
+                
+                if do_it:
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
+                    
+                    affected_pairs.extend( new_pairs )
+                    
+                
+            else:
+                
+                if len( current_pairs ) > 0:
+                    
+                    do_it = True
+                    
+                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                        
+                        
+                        if len( current_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                            
+                        
+                        if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                        else: message = 'The pair ' + pair_strings + ' already exists.'
+                        
+                        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_YES:
+                                
+                                if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+                                    
+                                    reason = 'admin'
+                                    
+                                else:
+                                    
+                                    message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                                    
+                                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                                        
+                                        if dlg.ShowModal() == wx.ID_OK:
+                                            
+                                            reason = dlg.GetValue()
+                                            
+                                        else: do_it = False
+                                        
+                                    
+                                
+                                if do_it:
+                                    
+                                    for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
+                                    
+                                
+                                
+                            else:
+                                
+                                do_it = False
+                                
+                            
+                        
+                    
+                    if do_it:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
+                        
+                        affected_pairs.extend( current_pairs )
+                        
+                    
+                
+                if len( pending_pairs ) > 0:
+                
+                    if len( pending_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                        
+                    
+                    if len( pending_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                    else: message = 'The pair ' + pair_strings + ' is pending.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                            
+                            affected_pairs.extend( pending_pairs )
+                            
+                        
+                    
+                
+                if len( petitioned_pairs ) > 0:
+                
+                    if len( petitioned_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                        
+                    
+                    if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                    else: message = 'The pair ' + pair_strings + ' is petitioned.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
+                            
+                            affected_pairs.extend( petitioned_pairs )
+                            
+                        
+                    
+                
+            
+            if len( affected_pairs ) > 0:
+                
+                def in_current( pair ):
+                    
+                    for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
+                        
+                        if pair in self._current_statuses_to_pairs[ status ]:
+                            
+                            return True
+                            
+                        
+                        return False
+                        
+                    
+                
+                affected_pairs = [ ( self._tag_parents.HasData( pair ), in_current( pair ), pair ) for pair in affected_pairs ]
+                
+                to_add = [ pair for ( exists, current, pair ) in affected_pairs if not exists ]
+                to_update = [ pair for ( exists, current, pair ) in affected_pairs if exists and current ]
+                to_delete = [ pair for ( exists, current, pair ) in affected_pairs if exists and not current ]
+                
+                self._tag_parents.AddDatas( to_add )
+                self._tag_parents.UpdateDatas( to_update )
+                self._tag_parents.DeleteDatas( to_delete )
+                
+                self._tag_parents.Sort()
+                
+            
+        
+        def _CanAdd( self, potential_pair ):
+            
+            ( potential_child, potential_parent ) = potential_pair
+            
+            if potential_child == potential_parent: return False
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
+            current_children = { child for ( child, parent ) in current_pairs }
+            
+            # test for loops
+            
+            if potential_parent in current_children:
+                
+                simple_children_to_parents = ClientCaches.BuildSimpleChildrenToParents( current_pairs )
+                
+                if ClientCaches.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
+                    
+                    wx.MessageBox( 'Adding ' + potential_child + '->' + potential_parent + ' would create a loop!' )
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+        def _ConvertPairToListCtrlTuples( self, pair ):
+            
+            ( child, parent ) = pair
+            
+            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                
+                status = HC.CONTENT_STATUS_PENDING
+                
+            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                
+                status = HC.CONTENT_STATUS_PETITIONED
+                
+            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+                
+                status = HC.CONTENT_STATUS_CURRENT
+                
+            
+            sign = HydrusData.ConvertStatusToPrefix( status )
+            
+            pretty_status = sign
+            
+            display_tuple = ( pretty_status, child, parent )
+            sort_tuple = ( status, child, parent )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _DeserialiseImportString( self, import_string ):
+            
+            tags = HydrusText.DeserialiseNewlinedTexts( import_string )
+            
+            if len( tags ) % 2 == 1:
+                
+                raise Exception( 'Uneven number of tags found!' )
+                
+            
+            pairs = []
+            
+            for i in range( len( tags ) / 2 ):
+                
+                pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
+                
+                pairs.append( pair )
+                
+            
+            return pairs
+            
+        
+        def _ExportToClipboard( self ):
+            
+            export_string = self._GetExportString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', export_string )
+            
+        
+        def _ExportToTXT( self ):
+            
+            export_string = self._GetExportString()
+            
+            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', style = wx.FD_SAVE ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    path = dlg.GetPath()
+                    
+                    with open( path, 'wb' ) as f:
+                        
+                        f.write( HydrusData.ToByteString( export_string ) )
+                        
+                    
+                
+            
+        
+        def _GetExportString( self ):
+            
+            tags = []
+            
+            for ( a, b ) in self._tag_parents.GetData( only_selected = True ):
+                
+                tags.append( a )
+                tags.append( b )
+                
+            
+            export_string = os.linesep.join( tags )
+            
+            return export_string
+            
+        
+        def _ImportFromClipboard( self, add_only = False ):
+            
+            import_string = HG.client_controller.GetClipboardText()
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ImportFromTXT( self, add_only = False ):
+            
+            with wx.FileDialog( self, 'Select the file to import.', style = wx.FD_OPEN ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_OK:
+                    
+                    return
+                    
+                else:
+                    
+                    path = dlg.GetPath()
+                    
+                
+            
+            with open( path, 'rb' ) as f:
+                
+                import_string = f.read()
+                
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ListCtrlActivated( self ):
+            
+            parents_to_children = collections.defaultdict( set )
+            
+            pairs = self._tag_parents.GetData( only_selected = True )
+            
+            for ( child, parent ) in pairs:
+                
+                parents_to_children[ parent ].add( child )
+                
+            
+            if len( parents_to_children ) > 0:
+                
+                for ( parent, children ) in parents_to_children.items():
+                    
+                    self._AddPairs( children, parent )
+                    
+                
+            
+        
+        def _SetButtonStatus( self ):
+            
+            if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0:
+                
+                self._add.Disable()
+                
+            else:
+                
+                self._add.Enable()
+                
+            
+        
+        def _UpdateListCtrlData( self ):
+            
+            children = self._children.GetTags()
+            parents = self._parents.GetTags()
+            
+            pertinent_tags = children.union( parents )
+            
+            self._tag_parents.DeleteDatas( self._tag_parents.GetData() )
+            
+            all_pairs = set()
+            
+            show_all = self._show_all.GetValue()
+            
+            for ( status, pairs ) in self._current_statuses_to_pairs.items():
+                
+                if status == HC.CONTENT_STATUS_DELETED:
+                    
+                    continue
+                    
+                
+                if len( pertinent_tags ) == 0:
+                    
+                    if status == HC.CONTENT_STATUS_CURRENT and not show_all:
+                        
+                        continue
+                        
+                    
+                    # show all pending/petitioned
+                    
+                    all_pairs.update( pairs )
+                    
+                else:
+                    
+                    # show all appropriate
+                    
+                    for pair in pairs:
+                        
+                        ( a, b ) = pair
+                        
+                        if a in pertinent_tags or b in pertinent_tags or show_all:
+                            
+                            all_pairs.add( pair )
+                            
+                        
+                    
+                
+            
+            self._tag_parents.AddDatas( all_pairs )
+            
+            self._tag_parents.Sort()
+            
+        
+        def EnterChildren( self, tags ):
+            
+            if len( tags ) > 0:
+                
+                self._parents.RemoveTags( tags )
+                
+                self._children.EnterTags( tags )
+                
+                self._UpdateListCtrlData()
+                
+                self._SetButtonStatus()
+                
+            
+        
+        def EnterParents( self, tags ):
+            
+            if len( tags ) > 0:
+                
+                self._children.RemoveTags( tags )
+                
+                self._parents.EnterTags( tags )
+                
+                self._UpdateListCtrlData()
+                
+                self._SetButtonStatus()
+                
+            
+        
+        def EventAddButton( self, event ):
+            
+            children = self._children.GetTags()
+            parents = self._parents.GetTags()
+            
+            for parent in parents:
+                
+                self._AddPairs( children, parent )
+                
+            
+            self._children.SetTags( [] )
+            self._parents.SetTags( [] )
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def EventItemSelected( self, event ):
+            
+            self._SetButtonStatus()
+            
+            event.Skip()
+            
+        
+        def EventListBoxChanged( self, event ):
+            
+            self._UpdateListCtrlData()
+            
+        
+        def EventShowAll( self, event ):
+            
+            self._UpdateListCtrlData()
+            
+        
+        def GetContentUpdates( self ):
+            
+            # we make it manually here because of the mass pending tags done (but not undone on a rescind) on a pending pair!
+            # we don't want to send a pend and then rescind it, cause that will spam a thousand bad tags and not undo it
+            
+            content_updates = []
+            
+            if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                
+            else:
+                
+                current_pending = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                original_pending = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                
+                current_petitioned = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                original_petitioned = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                
+                new_pends = current_pending.difference( original_pending )
+                rescinded_pends = original_pending.difference( current_pending )
+                
+                new_petitions = current_petitioned.difference( original_petitioned )
+                rescinded_petitions = original_petitioned.difference( current_petitioned )
+                
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_petitions ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
+                
+            
+            return ( self._service_key, content_updates )
+            
+        
+        def HasUncommittedPair( self ):
+            
+            return len( self._children.GetTags() ) > 0 and len( self._parents.GetTags() ) > 0
+            
+        
+        def SetTagBoxFocus( self ):
+            
+            if len( self._children.GetTags() ) == 0: self._child_input.SetFocus()
+            else: self._parent_input.SetFocus()
+            
+        
+        def THREADInitialise( self, tags, service_key ):
+            
+            def wx_code( original_statuses_to_pairs, current_statuses_to_pairs ):
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._original_statuses_to_pairs = original_statuses_to_pairs
+                self._current_statuses_to_pairs = current_statuses_to_pairs
+                
+                self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
+                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ToHumanInt( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
+                
+                self._child_input.Enable()
+                self._parent_input.Enable()
+                
+                if tags is None:
+                    
+                    self._UpdateListCtrlData()
+                    
+                else:
+                    
+                    self.EnterChildren( tags )
+                    
+                
+            
+            original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
+            
+            current_statuses_to_pairs = collections.defaultdict( set )
+            
+            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
+            
+            wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
+            
+        
+    
+class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, tags = None ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
+        
+        #
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+        
+        services = [ service for service in HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) if service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ) ]
+        
+        services.extend( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        
+        for service in services:
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            page = self._Panel( self._tag_repositories, service_key, tags )
+            
+            select = service_key == default_tag_repository_key
+            
+            self._tag_repositories.AddPage( page, name, select = select )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.SetTagBoxFocus()
+            
+        
+    
+    def CommitChanges( self ):
+        
+        if self._tag_repositories.GetCurrentPage().HasUncommittedPair():
+            
+            message = 'Are you sure you want to OK? You have an uncommitted pair.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
+                    
+                
+            
+        
+        service_keys_to_content_updates = {}
+        
+        for page in self._tag_repositories.GetPages():
+            
+            ( service_key, content_updates ) = page.GetContentUpdates()
+            
+            if len( content_updates ) > 0:
+                
+                service_keys_to_content_updates[ service_key ] = content_updates
+                
+            
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+    
+    def EventServiceChanged( self, event ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        if page is not None:
+            
+            wx.CallAfter( page.SetTagBoxFocus )
+            
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_key, tags = None ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_key = service_key
+            
+            if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                
+                self._service = HG.client_controller.services_manager.GetService( service_key )
+                
+            
+            self._original_statuses_to_pairs = collections.defaultdict( set )
+            self._current_statuses_to_pairs = collections.defaultdict( set )
+            
+            self._pairs_to_reasons = {}
+            
+            self._current_new = None
+            
+            self._show_all = wx.CheckBox( self )
+            
+            listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            
+            columns = [ ( '', 6 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ]
+            
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 8, 40, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            
+            listctrl_panel.SetListCtrl( self._tag_siblings )
+            
+            self._tag_siblings.Sort( 2 )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'from clipboard', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
+            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
+            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            
+            listctrl_panel.AddMenuButton( 'import', menu_items )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'to clipboard', 'Save selected siblings to your clipboard.', self._ExportToClipboard ) )
+            menu_items.append( ( 'normal', 'to .txt file', 'Save selected siblings to a .txt file.', self._ExportToTXT ) )
+            
+            listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
+            
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._new_sibling = ClientGUICommon.BetterStaticText( self )
+            
+            ( gumpf, preview_height ) = ClientGUICommon.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
+            
+            self._old_siblings.SetInitialSize( ( -1, preview_height ) )
+            
+            expand_parents = False
+            
+            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._old_input.Disable()
+            
+            self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input.Disable()
+            
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
+            self._add.Disable()
+            
+            #
+            
+            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' )
+            self._count_st = ClientGUICommon.BetterStaticText( self, '' )
+            
+            new_sibling_box = wx.BoxSizer( wx.VERTICAL )
+            
+            new_sibling_box.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            new_sibling_box.Add( self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
+            new_sibling_box.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            text_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            text_box.Add( self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            text_box.Add( new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            input_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            input_box.Add( self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.Add( self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+            
+            vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
+            vbox.Add( text_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
+            
+            #
+            
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            
+            self._show_all.Bind( wx.EVT_CHECKBOX, self.EventShowAll )
+            self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
+            
+            HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            
+        
+        def _AddFlatPairs( self, pairs, add_only = False ):
+            
+            news_to_olds = HydrusData.BuildKeyToSetDict( ( ( new, old ) for ( old, new ) in pairs ) )
+            
+            for ( new, olds ) in news_to_olds.items():
+                
+                self._AutoPetitionConflicts( olds, new )
+                
+                self._AddPairs( olds, new, add_only = add_only )
+                
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def _AddPairs( self, olds, new, add_only = False, remove_only = False, default_reason = None ):
+            
+            new_pairs = []
+            current_pairs = []
+            petitioned_pairs = []
+            pending_pairs = []
+            
+            for old in olds:
+                
+                pair = ( old, new )
+                
+                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                    
+                    if not add_only:
+                        
+                        pending_pairs.append( pair )
+                        
+                    
+                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                    
+                    if not remove_only:
+                        
+                        petitioned_pairs.append( pair )
+                        
+                    
+                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+                    
+                    if not add_only:
+                        
+                        current_pairs.append( pair )
+                        
+                    
+                elif not remove_only and self._CanAdd( pair ):
+                    
+                    new_pairs.append( pair )
+                    
+                
+            
+            if len( new_pairs ) > 0:
+                
+                do_it = True
+                
+                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                    
+                    if default_reason is not None:
+                        
+                        reason = default_reason
+                        
+                    elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                        
+                        reason = 'admin'
+                        
+                    else:
+                        
+                        if len( new_pairs ) > 10:
+                            
+                            pair_strings = 'The many pairs you entered.'
+                            
+                        else:
+                            
+                            pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
+                            
+                        
+                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                reason = dlg.GetValue()
+                                
+                            else:
+                                
+                                do_it = False
+                                
+                            
+                        
+                    
+                    if do_it:
+                        
+                        for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
+                        
+                    
+                
+                if do_it:
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
+                    
+                
+            else:
+                
+                if len( current_pairs ) > 0:
+                    
+                    do_it = True
+                    
+                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                        
+                        if default_reason is not None:
+                            
+                            reason = default_reason
+                            
+                        elif self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                            
+                            reason = 'admin'
+                            
+                        else:
+                            
+                            if len( pending_pairs ) > 10:
+                                
+                                pair_strings = 'The many pairs you entered.'
+                                
+                            else:
+                                
+                                pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                                
+                            
+                            message = 'Enter a reason for:'
+                            message += os.linesep * 2
+                            message += pair_strings
+                            message += os.linesep * 2
+                            message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
+                            
+                            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                                
+                                if dlg.ShowModal() == wx.ID_OK:
+                                    
+                                    reason = dlg.GetValue()
+                                    
+                                else:
+                                    
+                                    do_it = False
+                                    
+                                
+                            
+                        
+                        if do_it:
+                            
+                            for pair in current_pairs:
+                                
+                                self._pairs_to_reasons[ pair ] = reason
+                                
+                            
+                        
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
+                    
+                
+                if len( pending_pairs ) > 0:
+                    
+                    if len( pending_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                        
+                    
+                    if len( pending_pairs ) > 1:
+                        
+                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                        
+                    else:
+                        
+                        message = 'The pair ' + pair_strings + ' is pending.'
+                        
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                            
+                        
+                    
+                
+                if len( petitioned_pairs ) > 0:
+                
+                    if len( petitioned_pairs ) > 10:
+                        
+                        pair_strings = 'The many pairs you entered.'
+                        
+                    else:
+                        
+                        pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
+                        
+                    
+                    if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                    else: message = 'The pair ' + pair_strings + ' is petitioned.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
+                            
+                        
+                    
+                
+            
+        
+        def _AutoPetitionConflicts( self, olds, new ):
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
+            olds_to_news = dict( current_pairs )
+            
+            current_olds = { current_old for ( current_old, current_new ) in current_pairs }
+            
+            for old in olds:
+                
+                if old in current_olds:
+                    
+                    conflicting_new = olds_to_news[ old ]
+                    
+                    if conflicting_new != new:
+                        
+                        self._AddPairs( [ old ], conflicting_new, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + new )
+                        
+                    
+                
+            
+        
+        def _CanAdd( self, potential_pair ):
+            
+            ( potential_old, potential_new ) = potential_pair
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
+            current_olds = { old for ( old, new ) in current_pairs }
+            
+            # test for ambiguity
+            
+            if potential_old in current_olds:
+                
+                wx.MessageBox( 'There already is a relationship set for the tag ' + potential_old + '.' )
+                
+                return False
+                
+            
+            # test for loops
+            
+            if potential_new in current_olds:
+                
+                d = dict( current_pairs )
+                
+                next_new = potential_new
+                
+                while next_new in d:
+                    
+                    next_new = d[ next_new ]
+                    
+                    if next_new == potential_old:
+                        
+                        wx.MessageBox( 'Adding ' + potential_old + '->' + potential_new + ' would create a loop!' )
+                        
+                        return False
+                        
+                    
+                
+            
+            return True
+            
+        
+        def _ConvertPairToListCtrlTuples( self, pair ):
+            
+            ( old, new ) = pair
+            
+            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                
+                status = HC.CONTENT_STATUS_PENDING
+                
+            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                
+                status = HC.CONTENT_STATUS_PETITIONED
+                
+            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+                
+                status = HC.CONTENT_STATUS_CURRENT
+                
+            
+            sign = HydrusData.ConvertStatusToPrefix( status )
+            
+            pretty_status = sign
+            
+            existing_olds = self._old_siblings.GetTags()
+            
+            note = ''
+            
+            if old in existing_olds:
+                
+                if status == HC.CONTENT_STATUS_PENDING:
+                    
+                    note = 'CONFLICT: Will be rescinded on add.'
+                    
+                elif status == HC.CONTENT_STATUS_CURRENT:
+                    
+                    note = 'CONFLICT: Will be petitioned/deleted on add.'
+                    
+                
+            
+            display_tuple = ( pretty_status, old, new, note )
+            sort_tuple = ( status, old, new, note )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _DeserialiseImportString( self, import_string ):
+            
+            tags = HydrusText.DeserialiseNewlinedTexts( import_string )
+            
+            if len( tags ) % 2 == 1:
+                
+                raise Exception( 'Uneven number of tags found!' )
+                
+            
+            pairs = []
+            
+            for i in range( len( tags ) / 2 ):
+                
+                pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
+                
+                pairs.append( pair )
+                
+            
+            return pairs
+            
+        
+        def _ExportToClipboard( self ):
+            
+            export_string = self._GetExportString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', export_string )
+            
+        
+        def _ExportToTXT( self ):
+            
+            export_string = self._GetExportString()
+            
+            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'siblings.txt', style = wx.FD_SAVE ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    path = dlg.GetPath()
+                    
+                    with open( path, 'wb' ) as f:
+                        
+                        f.write( HydrusData.ToByteString( export_string ) )
+                        
+                    
+                
+            
+        
+        def _GetExportString( self ):
+            
+            tags = []
+            
+            for ( a, b ) in self._tag_siblings.GetData( only_selected = True ):
+                
+                tags.append( a )
+                tags.append( b )
+                
+            
+            export_string = os.linesep.join( tags )
+            
+            return export_string
+            
+        
+        def _ImportFromClipboard( self, add_only = False ):
+            
+            import_string = HG.client_controller.GetClipboardText()
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ImportFromTXT( self, add_only = False ):
+            
+            with wx.FileDialog( self, 'Select the file to import.', style = wx.FD_OPEN ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_OK:
+                    
+                    return
+                    
+                else:
+                    
+                    path = dlg.GetPath()
+                    
+                
+            
+            with open( path, 'rb' ) as f:
+                
+                import_string = f.read()
+                
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ListCtrlActivated( self ):
+            
+            news_to_olds = collections.defaultdict( set )
+            
+            pairs = self._tag_siblings.GetData( only_selected = True )
+            
+            for ( old, new ) in pairs:
+                
+                news_to_olds[ new ].add( old )
+                
+            
+            if len( news_to_olds ) > 0:
+                
+                for ( new, olds ) in news_to_olds.items():
+                    
+                    self._AddPairs( olds, new )
+                    
+                
+            
+            self._UpdateListCtrlData()
+            
+        
+        def _SetButtonStatus( self ):
+            
+            if self._current_new is None or len( self._old_siblings.GetTags() ) == 0:
+                
+                self._add.Disable()
+                
+            else:
+                
+                self._add.Enable()
+                
+            
+        
+        def _UpdateListCtrlData( self ):
+            
+            olds = self._old_siblings.GetTags()
+            
+            pertinent_tags = set( olds )
+            
+            if self._current_new is not None:
+                
+                pertinent_tags.add( self._current_new )
+                
+            
+            self._tag_siblings.DeleteDatas( self._tag_siblings.GetData() )
+            
+            all_pairs = set()
+            
+            show_all = self._show_all.GetValue()
+            
+            for ( status, pairs ) in self._current_statuses_to_pairs.items():
+                
+                if status == HC.CONTENT_STATUS_DELETED:
+                    
+                    continue
+                    
+                
+                if len( pertinent_tags ) == 0:
+                    
+                    if status == HC.CONTENT_STATUS_CURRENT and not show_all:
+                        
+                        continue
+                        
+                    
+                    # show all pending/petitioned
+                    
+                    all_pairs.update( pairs )
+                    
+                else:
+                    
+                    # show all appropriate
+                    
+                    for pair in pairs:
+                        
+                        ( a, b ) = pair
+                        
+                        if a in pertinent_tags or b in pertinent_tags or show_all:
+                            
+                            all_pairs.add( pair )
+                            
+                        
+                    
+                
+            
+            self._tag_siblings.AddDatas( all_pairs )
+            
+            self._tag_siblings.Sort()
+            
+        
+        def EnterOlds( self, olds ):
+            
+            if self._current_new in olds:
+                
+                self.SetNew( set() )
+                
+            
+            self._old_siblings.EnterTags( olds )
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def EventAddButton( self, event ):
+            
+            if self._current_new is not None and len( self._old_siblings.GetTags() ) > 0:
+                
+                olds = self._old_siblings.GetTags()
+                
+                self._AutoPetitionConflicts( olds, self._current_new )
+                
+                self._AddPairs( olds, self._current_new )
+                
+                self._old_siblings.SetTags( set() )
+                self.SetNew( set() )
+                
+                self._UpdateListCtrlData()
+                
+                self._SetButtonStatus()
+                
+            
+        
+        def EventItemSelected( self, event ):
+            
+            self._SetButtonStatus()
+            
+            event.Skip()
+            
+        
+        def EventListBoxChanged( self, event ):
+            
+            self._UpdateListCtrlData()
+            
+        
+        def EventShowAll( self, event ):
+            
+            self._UpdateListCtrlData()
+            
+        
+        def GetContentUpdates( self ):
+            
+            # we make it manually here because of the mass pending tags done (but not undone on a rescind) on a pending pair!
+            # we don't want to send a pend and then rescind it, cause that will spam a thousand bad tags and not undo it
+            
+            # actually, we don't do this for siblings, but we do for parents, and let's have them be the same
+            
+            content_updates = []
+            
+            if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+                    
+                
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                    
+                
+            else:
+                
+                current_pending = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                original_pending = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                
+                current_petitioned = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                original_petitioned = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                
+                new_pends = current_pending.difference( original_pending )
+                rescinded_pends = original_pending.difference( current_pending )
+                
+                new_petitions = current_petitioned.difference( original_petitioned )
+                rescinded_petitions = original_petitioned.difference( current_petitioned )
+                
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_petitions ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
+                
+            
+            return ( self._service_key, content_updates )
+            
+        
+        def HasUncommittedPair( self ):
+            
+            return len( self._old_siblings.GetTags() ) > 0 and self._current_new is not None
+            
+        
+        def SetNew( self, new_tags ):
+            
+            if len( new_tags ) == 0:
+                
+                self._new_sibling.SetLabelText( '' )
+                
+                self._current_new = None
+                
+            else:
+                
+                new = list( new_tags )[0]
+                
+                self._old_siblings.RemoveTags( { new } )
+                
+                self._new_sibling.SetLabelText( new )
+                
+                self._current_new = new
+                
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def SetTagBoxFocus( self ):
+            
+            if len( self._old_siblings.GetTags() ) == 0:
+                
+                self._old_input.SetFocus()
+                
+            else:
+                
+                self._new_input.SetFocus()
+                
+            
+        
+        def THREADInitialise( self, tags, service_key ):
+            
+            def wx_code( original_statuses_to_pairs, current_statuses_to_pairs ):
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._original_statuses_to_pairs = original_statuses_to_pairs
+                self._current_statuses_to_pairs = current_statuses_to_pairs
+                
+                self._status_st.SetLabelText( 'Tags on the left will be replaced by those on the right.' )
+                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ToHumanInt( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
+                
+                self._old_input.Enable()
+                self._new_input.Enable()
+                
+                if tags is None:
+                    
+                    self._UpdateListCtrlData()
+                    
+                else:
+                    
+                    self.EnterOlds( tags )
+                    
+                
+            
+            original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
+            
+            current_statuses_to_pairs = collections.defaultdict( set )
+            
+            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
+            
+            wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
             
         
     

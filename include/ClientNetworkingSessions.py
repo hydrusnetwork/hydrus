@@ -66,6 +66,19 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_network_contexts_to_sessions
         
     
+    def _GetSessionNetworkContext( self, network_context ):
+        
+        # just in case one of these slips through somehow
+        if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+            
+            second_level_domain = ClientNetworkingDomain.ConvertDomainIntoSecondLevelDomain( network_context.context_data )
+            
+            network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, second_level_domain )
+            
+        
+        return network_context
+        
+    
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         serialisable_network_contexts_to_sessions = serialisable_info
@@ -73,7 +86,17 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         for ( serialisable_network_context, pickled_session ) in serialisable_network_contexts_to_sessions:
             
             network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
-            session = cPickle.loads( str( pickled_session ) )
+            
+            try:
+                
+                session = cPickle.loads( str( pickled_session ) )
+                
+            except:
+                
+                # new version of requests uses a diff format, wew
+                
+                continue
+                
             
             session.cookies.clear_session_cookies()
             
@@ -89,6 +112,8 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     def ClearSession( self, network_context ):
         
         with self._lock:
+            
+            network_context = self._GetSessionNetworkContext( network_context )
             
             if network_context in self._network_contexts_to_sessions:
                 
@@ -111,13 +136,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            # just in case one of these slips through somehow
-            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
-                
-                second_level_domain = ClientNetworkingDomain.ConvertDomainIntoSecondLevelDomain( network_context.context_data )
-                
-                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, second_level_domain )
-                
+            network_context = self._GetSessionNetworkContext( network_context )
             
             if network_context not in self._network_contexts_to_sessions:
                 

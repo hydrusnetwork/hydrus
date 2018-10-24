@@ -204,7 +204,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ShowHitPeriodicFileLimitMessage( self, query_text ):
         
-        message = 'The query "' + query_text + '" for subscription "' + self._name + '" hit its periodic file limit.'
+        message = 'The query "' + query_text + '" for subscription "' + self._name + '" hit its periodic file limit without seeing any already-seen files.'
         
         HydrusData.ShowText( message )
         
@@ -426,17 +426,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if query_tag_import_options.HasAdditionalTags() and file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                         
-                        hash = file_seed.GetHash()
-                        
-                        in_inbox = HG.client_controller.Read( 'in_inbox', hash )
-                        
-                        downloaded_tags = []
-                        
-                        service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
-                        
-                        if len( service_keys_to_content_updates ) > 0:
+                        if file_seed.HasHash():
                             
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            hash = file_seed.GetHash()
+                            
+                            in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                            
+                            downloaded_tags = []
+                            
+                            service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                            
+                            if len( service_keys_to_content_updates ) > 0:
+                                
+                                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                
                             
                         
                     
@@ -607,6 +610,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             this_is_initial_sync = query.IsInitialSync()
             total_new_urls_for_this_sync = 0
+            total_already_in_urls_for_this_sync = 0
             
             gallery_urls_seen_this_sync = set()
             
@@ -735,9 +739,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                     
                                 else:
                                     
-                                    self._ShowHitPeriodicFileLimitMessage( query_name )
-                                    
-                                    stop_reason = 'hit periodic file limit'
+                                    if total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache > 0:
+                                        
+                                        # this sync produced some knowns, so it is likely we have stepped through a mix of old and tagged-late new files
+                                        # we might also be on the second sync with a periodic limit greater than the initial limit
+                                        # either way, this is no reason to go crying to the user
+                                        
+                                        stop_reason = 'hit periodic file limit after seeing several already-seen files'
+                                        
+                                    else:
+                                        
+                                        # this page had all entirely new files
+                                        
+                                        self._ShowHitPeriodicFileLimitMessage( query_name )
+                                        
+                                        stop_reason = 'hit periodic file limit without seeing any already-seen files!'
+                                        
                                     
                                 
                                 can_search_for_more_files = False
@@ -788,6 +805,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                     total_new_urls_for_this_sync += num_urls_added
+                    total_already_in_urls_for_this_sync += num_urls_already_in_file_seed_cache
                     
                     if file_limit_for_this_sync is not None and total_new_urls_for_this_sync >= file_limit_for_this_sync:
                         
@@ -944,6 +962,26 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return self._queries
         
     
+    def GetMergeable( self, potential_mergees ):
+        
+        mergeable = []
+        unmergeable = []
+        
+        for subscription in potential_mergees:
+            
+            if subscription._gug_key_and_name[1] == self._gug_key_and_name[1]:
+                
+                mergeable.append( subscription )
+                
+            else:
+                
+                unmergeable.append( subscription )
+                
+            
+        
+        return ( mergeable, unmergeable )
+        
+    
     def GetPresentationOptions( self ):
         
         return ( self._show_a_popup_while_working, self._publish_files_to_popup_button, self._publish_files_to_page, self._publish_label_override, self._merge_query_publish_events )
@@ -969,11 +1007,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return False
         
     
-    def Merge( self, potential_mergee_subscriptions ):
+    def Merge( self, mergees ):
         
-        unmergable_subscriptions = []
-        
-        for subscription in potential_mergee_subscriptions:
+        for subscription in mergees:
             
             if subscription._gug_key_and_name[1] == self._gug_key_and_name[1]:
                 
@@ -983,11 +1019,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             else:
                 
-                unmergable_subscriptions.append( subscription )
+                raise Exception( self._name + ' was told to merge an unmergeable subscription, ' + subscription.GetName() + '!' )
                 
             
-        
-        return unmergable_subscriptions
         
     
     def PauseResume( self ):

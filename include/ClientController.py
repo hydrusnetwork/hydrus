@@ -662,7 +662,20 @@ class Controller( HydrusController.HydrusController ):
         
         domain_manager.Initialise()
         
-        login_manager = ClientNetworkingLogin.NetworkLoginManager()
+        login_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+        
+        if login_manager is None:
+            
+            login_manager = ClientNetworkingLogin.NetworkLoginManager()
+            
+            ClientDefaults.SetDefaultLoginManagerScripts( login_manager )
+            
+            login_manager._dirty = True
+            
+            wx.MessageBox( 'Your login manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
+        login_manager.Initialise()
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, domain_manager, login_manager )
         
@@ -1153,6 +1166,13 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'serialisable', self.network_engine.domain_manager )
                 
                 self.network_engine.domain_manager.SetClean()
+                
+            
+            if self.network_engine.login_manager.IsDirty():
+                
+                self.WriteSynchronous( 'serialisable', self.network_engine.login_manager )
+                
+                self.network_engine.login_manager.SetClean()
                 
             
             if self.network_engine.session_manager.IsDirty():

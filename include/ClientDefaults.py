@@ -626,3 +626,9 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     domain_manager.TryToLinkURLMatchesAndParsers()
     
+def SetDefaultLoginManagerScripts( login_manager ):
+    
+    default_login_scripts = GetDefaultLoginScripts()
+    
+    login_manager.SetLoginScripts( default_login_scripts )
+    

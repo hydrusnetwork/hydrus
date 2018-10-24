@@ -15,6 +15,7 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIShortcuts
+import ClientGUITags
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientPaths
@@ -1618,7 +1619,7 @@ class Canvas( wx.Window ):
             
             manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = ClientGUIScrolledPanelsManagement.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+            panel = ClientGUITags.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
             
             manage_tags.SetPanel( panel )
             

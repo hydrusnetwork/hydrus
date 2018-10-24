@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 327</h3></li>
+				<ul>
+					<li>login stuff:</li>
+					<li>finished off some login script data stuff</li>
+					<li>fleshed out how login credentials and other linked data is stored in the login manager, including script link recovery when the script changes but name does not</li>
+					<li>improved some initialisation login validation error handling</li>
+					<li>improved login failure validation error handling</li>
+					<li>wrote a dialog panel for managing login credentials and reviewing validity and so on</li>
+					<li>a heap of related session and login tie-in/fix-up work</li>
+					<li>the login manager will now save changes to the db. it will get the HF and pixiv scripts on db creation/update, and if you have a pixiv login, the login system will pre-fill that info and 'activate' the script (although the login manager will not fire any login scripts yet--if so configured, it'll just delay on a polite error message)</li>
+					<li>.</li>
+					<li>other stuff:</li>
+					<li>with the subscriptions' new more liberal syncing logic, the periodic file limit will now only pop up if the sub does not see any already-seen files</li>
+					<li>to give more buffer for the new syncing logic, file import caches will now store 250 entries minimum on compaction (was 100 previously)</li>
+					<li>subscription merging now lets you choose the primary subscription into which the other subs will be merged</li>
+					<li>cancelling a subscription merge action mid-merge is now safely nullipotent</li>
+					<li>post urls that use subsidiary page parsers (such as the new pixiv manga parser) will now correctly insert (rather than append) their manga urls into the file import cache</li>
+					<li>removed a couple of places where urls could accidentally be duplicated in a file import cache</li>
+					<li>cleaned up some areas where successful file import objects were presumed to have file hashes when they might not (this was causing errors when importing urls that split into multiple url children, like pixiv manga, while also having 'additional tags' set)</li>
+					<li>updated tag censorship, parents, and siblings dialogs to the new panel system</li>
+					<li>tag censorship, parents, and siblings panels now use a notebook instead of the layout-borked listbook</li>
+					<li>tag parents and siblings panels now use the new small-resolution-friendly sizer, are more tight by default, and expand more neatly</li>
+					<li>refactored a bunch of tag ui code to clientguitags</li>
+					<li>the client video renderer will now deal with videos with (invalid) duration of 0 more gracefully</li>
+					<li>finished the 'getting started with downloading' help page, sans the login stuff</li>
+					<li>bit of other help work</li>
+				</ul>
 				<li><h3>version 326</h3></li>
 				<ul>
 					<li>login:</li>
@@ -28,6 +55,7 @@
 					<li>in an effort to improve layout, the manage tag parents and siblings panels' preview boxes have shorter minimum height--it will get a bigger layout overhaul soon</li>
 					<li>.</li>
 					<li>bigger misc:</li>
+					<li>thanks to work of user kourraxspam on the discord, fixed the pixiv downloader to use a more stable api and added pixiv tag search</li>
 					<li>watchers and gallery imports now have a list right-click menu entry to show all selected importers' files in a new page! use this to clear out a bunch of finished queues all at once!</li>
 					<li>the tag right-click menu now offers 'open new search pages for each in selection' if multiple tags are selected--this will open three search pages each with one tag, as opposed to the original entry, which would only open one page with all three</li>
 					<li>the edit nested gug panel now uses a checklistbox rather than the menu to select gugs to add, which is more reliable and allows for multiple selections</li>
