@@ -167,6 +167,13 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetSessionForDomain( self, domain ):
+        
+        network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = domain )
+        
+        return self.GetSession( network_context )
+        
+    
     def IsDirty( self ):
         
         with self._lock:

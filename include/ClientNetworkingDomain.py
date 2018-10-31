@@ -20,7 +20,7 @@ def AlphabetiseQueryText( query_text ):
     
     return ConvertQueryDictToText( ConvertQueryTextToDict( query_text ) )
     
-def ConvertDomainIntoAllApplicableDomains( domain ):
+def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
     
     # is an ip address or localhost, possibly with a port
     if '.' not in domain or re.search( r'^[\d\.:]+$', domain ) is not None:
@@ -35,7 +35,9 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
         # let's discard www.blah.com and www2.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
         startswith_www = domain.count( '.' ) > 1 and domain.startswith( 'www' )
         
-        if not startswith_www:
+        should_be_discarded = startswith_www and discard_www
+        
+        if not should_be_discarded:
             
             domains.append( domain )
             

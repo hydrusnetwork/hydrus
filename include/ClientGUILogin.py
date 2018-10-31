@@ -12,10 +12,14 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUISerialisable
 import ClientGUITopLevelWindows
+import ClientImporting
+import ClientNetworking
+import ClientNetworkingBandwidth
 import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientNetworkingLogin
 import ClientNetworkingJobs
+import ClientNetworkingSessions
 import ClientParsing
 import ClientPaths
 import ClientSerialisable
@@ -807,6 +811,123 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         return domains_to_login_info
         
     
+def GenerateTestNetworkJobPresentationContextFactory( window, network_job_control ):
+    
+    def network_job_presentation_context_factory( network_job ):
+        
+        def wx_set_it( nj ):
+            
+            if not window:
+                
+                return
+                
+            
+            network_job_control.SetNetworkJob( nj )
+            
+        
+        def enter_call():
+            
+            wx.CallAfter( wx_set_it, network_job )
+            
+        
+        def exit_call():
+            
+            wx.CallAfter( wx_set_it, None )
+            
+        
+        return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
+        
+    
+    return network_job_presentation_context_factory
+    
+class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, test_result ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        ( name, url, body, self._downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
+        
+        self._name = ClientGUICommon.BetterStaticText( self, label = name )
+        self._url = wx.TextCtrl( self )
+        
+        self._body = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._body.SetEditable( False )
+        
+        min_size = ClientGUICommon.ConvertTextToPixels( self._body, ( 64, 3 ) )
+        
+        self._body.SetMinClientSize( min_size )
+        
+        self._data_preview = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._data_preview.SetEditable( False )
+        
+        min_size = ClientGUICommon.ConvertTextToPixels( self._data_preview, ( 64, 8 ) )
+        
+        self._data_preview.SetMinClientSize( min_size )
+        
+        self._data_copy_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.copy, self._CopyData )
+        self._data_copy_button.SetToolTip( 'Copy the current example data to the clipboard.' )
+        
+        self._temp_variables = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._temp_variables.SetEditable( False )
+        
+        min_size = ClientGUICommon.ConvertTextToPixels( self._temp_variables, ( 64, 6 ) )
+        
+        self._temp_variables.SetMinClientSize( min_size )
+        
+        self._cookies = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._cookies.SetEditable( False )
+        
+        min_size = ClientGUICommon.ConvertTextToPixels( self._cookies, ( 64, 6 ) )
+        
+        self._cookies.SetMinClientSize( min_size )
+        
+        self._result = ClientGUICommon.BetterStaticText( self, label = result )
+        
+        #
+        
+        self._url.SetValue( url )
+        
+        if body is not None:
+            
+            try:
+                
+                self._body.SetValue( body )
+                
+            except:
+                
+                self._body.SetValue( HydrusData.ToUnicode( body ) )
+                
+            
+        
+        self._data_preview.SetValue( HydrusData.ToUnicode( self._downloaded_data[:1024] ) )
+        
+        self._temp_variables.SetValue( os.linesep.join( new_temp_strings ) )
+        self._cookies.SetValue( os.linesep.join( new_cookie_strings ) )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'url: ', self._url ) )
+        rows.append( ( 'body (if set): ', self._body ) )
+        rows.append( ( 'data: ', self._data_preview ) )
+        rows.append( ( 'copy data: ', self._data_copy_button ) )
+        rows.append( ( 'new temp vars: ', self._temp_variables ) )
+        rows.append( ( 'new cookies: ', self._cookies ) )
+        rows.append( ( 'result: ', self._result ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self.SetSizer( gridbox )
+        
+    
+    def _CopyData( self ):
+        
+        HG.client_controller.pub( 'clipboard', 'text', self._downloaded_data )
+        
+    
 class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_script ):
@@ -814,6 +935,11 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._original_login_script = login_script
+        
+        self._currently_testing = False
+        
+        self._test_domain = ''
+        self._test_credentials = {}
         
         #
         
@@ -879,6 +1005,26 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        test_panel = ClientGUICommon.StaticBox( self, 'testing' )
+        
+        self._test_button = ClientGUICommon.BetterButton( test_panel, 'run test', self._DoTest )
+        
+        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_panel )
+        
+        test_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( test_panel )
+        
+        columns = [ ( 'step', -1 ), ( 'url', 36 ), ( 'result', 14 ) ]
+        
+        self._test_listctrl = ClientGUIListCtrl.BetterListCtrl( test_listctrl_panel, 'test_login_script_results', 6, 20, columns, self._ConvertTestResultToListCtrlTuples, activation_callback = self._ReviewTestResult )
+        
+        test_listctrl_panel.SetListCtrl( self._test_listctrl )
+        
+        test_listctrl_panel.AddButton( 'review', self._ReviewTestResult, enabled_only_on_selection = True )
+        
+        self._final_test_result = ClientGUICommon.BetterStaticText( test_panel )
+        
+        #
+        
         self._name.SetValue( login_script.GetName() )
         
         self._credential_definitions.SetData( login_script.GetCredentialDefinitions() )
@@ -891,6 +1037,11 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         login_steps_box_panel.Add( self._login_steps, CC.FLAGS_EXPAND_BOTH_WAYS )
         required_cookies_info_box_panel.Add( self._required_cookies_info, CC.FLAGS_EXPAND_BOTH_WAYS )
         example_domains_info_box_panel.Add( example_domains_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        test_panel.Add( self._test_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_panel.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_panel.Add( test_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        test_panel.Add( self._final_test_result, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -909,7 +1060,12 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( required_cookies_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( example_domains_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        hbox = ClientGUICommon.BetterBoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( hbox )
         
     
     def _AddCredentialDefinition( self ):
@@ -1051,6 +1207,22 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return name
         
     
+    def _ConvertTestResultToListCtrlTuples( self, test_result ):
+        
+        ( name, url, body, downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
+        
+        pretty_name = name
+        
+        pretty_url = url
+        
+        pretty_result = result
+        
+        display_tuple = ( pretty_name, pretty_url, pretty_result )
+        sort_tuple = ( name, url, result )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
     def _EditCredentialDefinitions( self ):
         
         credential_definitions = self._credential_definitions.GetData( only_selected = True )
@@ -1083,6 +1255,138 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         self._credential_definitions.Sort()
         
     
+    def _DoTest( self ):
+        
+        if self._currently_testing:
+            
+            wx.MessageBox( 'Currently testing already! Please cancel current job!' )
+            
+            return
+            
+        
+        try:
+            
+            login_script = self.GetValue()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
+        
+        self._test_listctrl.DeleteDatas( self._test_listctrl.GetData() )
+        
+        self._test_button.Disable()
+        
+        def wx_add_result( test_result ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._test_listctrl.AddDatas( ( test_result, ) )
+            
+        
+        def receive_result( test_result ):
+            
+            wx.CallAfter( wx_add_result, test_result )
+            
+        
+        def clean_up( final_result ):
+            
+            if not self:
+                
+                return
+                
+            
+            wx.MessageBox( final_result )
+            
+            self._final_test_result.SetLabelText( final_result )
+            
+            self._test_button.Enable()
+            
+            self._currently_testing = False
+            
+        
+        def do_it( login_script, domain, credentials, network_job_presentation_context_factory ):
+            
+            try:
+                
+                login_result = 'login did not finish'
+                
+                # a potential here is to properly inform the login manager of the domain map and hence read back the invalidation text
+                # but I am catching the info in the raised exception, so nbd really, I think
+                
+                bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+                session_manager = ClientNetworkingSessions.NetworkSessionManager()
+                domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+                login_manager = ClientNetworkingLogin.NetworkLoginManager()
+                
+                network_engine = ClientNetworking.NetworkEngine( HG.client_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
+                
+                HG.client_controller.CallToThreadLongRunning( network_engine.MainLoop )
+                
+                network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( domain )
+                
+                login_result = login_script.Start( network_engine, network_context, credentials, network_job_presentation_context_factory = network_job_presentation_context_factory, test_result_callable = wx_add_result )
+                
+            except Exception as e:
+                
+                login_result = HydrusData.ToUnicode( e )
+                
+                HydrusData.ShowException( e )
+                
+            finally:
+                
+                network_engine.Shutdown()
+                
+                wx.CallAfter( clean_up, login_result )
+                
+            
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = self._test_domain, allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._test_domain = dlg.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        credential_definitions = login_script.GetCredentialDefinitions()
+        
+        if len( credential_definitions ) > 0:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit login' ) as dlg:
+                
+                panel = EditLoginCredentialsPanel( dlg, credential_definitions, self._test_credentials )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._test_credentials = panel.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            self._test_credentials = {}
+            
+        
+        network_job_presentation_context_factory = GenerateTestNetworkJobPresentationContextFactory( self, self._test_network_job_control )
+        
+        self._currently_testing = True
+        
+        HG.client_controller.CallToThread( do_it, login_script, self._test_domain, self._test_credentials, network_job_presentation_context_factory )
+        
     
     def _EditExampleDomainsInfo( self ):
         
@@ -1189,7 +1493,24 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return { domain for ( domain, access_type, access_text ) in self._example_domains_info.GetData() }
         
     
+    def _ReviewTestResult( self ):
+        
+        for test_result in self._test_listctrl.GetData( only_selected = True ):
+            
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'login test result' )
+            
+            panel = ReviewTestResultPanel( frame, test_result )
+            
+            frame.SetPanel( panel )
+            
+        
+    
     def GetValue( self ):
+        
+        if self._currently_testing:
+            
+            raise HydrusExceptions.VetoException( 'Currently testing! Please cancel it first!' )
+            
         
         name = self._name.GetValue()
         
@@ -1216,7 +1537,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             message += os.linesep * 2
             message += HydrusData.ToUnicode( e )
             message += os.linesep * 2
-            message += 'Do you want to ok the dialog on this invalid script, or go back and fix it?'
+            message += 'Do you want to proceed with this invalid script, or go back and fix it?'
             
             with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'ok as invalid', no_label = 'go back' ) as dlg:
                 

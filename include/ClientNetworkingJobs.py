@@ -80,6 +80,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     
 class NetworkJob( object ):
     
+    WILLING_TO_WAIT_ON_INVALID_LOGIN = True
     IS_HYDRUS_SERVICE = False
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
@@ -514,13 +515,32 @@ class NetworkJob( object ):
             
         
     
-    def Cancel( self ):
+    def Cancel( self, status_text = None ):
         
         with self._lock:
             
-            self._status_text = 'cancelled!'
+            if status_text is None:
+                
+                status_text = 'cancelled!'
+                
+            
+            self._status_text = status_text
             
             self._SetCancelled()
+            
+        
+    
+    def CanLogin( self ):
+        
+        try:
+            
+            self.CheckCanLogin()
+            
+            return True
+            
+        except:
+            
+            return False
             
         
     
@@ -1005,7 +1025,7 @@ class NetworkJob( object ):
         
         if need_token:
             
-            ( consumed, next_timestamp ) = HG.client_controller.network_engine.bandwidth_manager.TryToConsumeAGalleryToken( sld, gtn )
+            ( consumed, next_timestamp ) = self.engine.bandwidth_manager.TryToConsumeAGalleryToken( sld, gtn )
             
             with self._lock:
                 
@@ -1070,16 +1090,21 @@ class NetworkJob( object ):
                 
                 if self._method == 'POST':
                     
-                    message = 'Upload cancelled!'
+                    message = 'Upload cancelled: ' + self._status_text
                     
                 else:
                     
-                    message = 'Download cancelled!'
+                    message = 'Download cancelled: ' + self._status_text
                     
                 
                 raise HydrusExceptions.CancelledException( message )
                 
             
+        
+    
+    def WillingToWaitOnInvalidLogin( self ):
+        
+        return self.WILLING_TO_WAIT_ON_INVALID_LOGIN
         
     
 class NetworkJobDownloader( NetworkJob ):
@@ -1102,6 +1127,8 @@ class NetworkJobDownloader( NetworkJob ):
     
 class NetworkJobSubscription( NetworkJob ):
     
+    WILLING_TO_WAIT_ON_INVALID_LOGIN = False
+    
     def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._subscription_key = subscription_key
@@ -1120,6 +1147,7 @@ class NetworkJobSubscription( NetworkJob ):
     
 class NetworkJobHydrus( NetworkJob ):
     
+    WILLING_TO_WAIT_ON_INVALID_LOGIN = False
     IS_HYDRUS_SERVICE = True
     
     def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None ):

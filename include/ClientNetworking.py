@@ -251,11 +251,20 @@ class NetworkEngine( object ):
                     
                 except Exception as e:
                     
-                    job.SetStatus( HydrusData.ToUnicode( e ) )
-                    
-                    job.Sleep( 60 )
-                    
-                    return True
+                    if job.WillingToWaitOnInvalidLogin():
+                        
+                        job.SetStatus( HydrusData.ToUnicode( e ) )
+                        
+                        job.Sleep( 60 )
+                        
+                        return True
+                        
+                    else:
+                        
+                        job.Cancel( 'Job seems to have an invalid login, and it is not willing to wait!' )
+                        
+                        return False
+                        
                     
                 
                 if self._current_login_process is None:

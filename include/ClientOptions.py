@@ -94,6 +94,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
         
         self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
+        self._dictionary[ 'booleans' ][ 'pause_all_file_queues' ] = False
+        self._dictionary[ 'booleans' ][ 'pause_all_watcher_checkers' ] = False
+        self._dictionary[ 'booleans' ][ 'pause_all_gallery_searches' ] = False
         
         self._dictionary[ 'booleans' ][ 'notebook_tabs_on_left' ] = False
         
@@ -209,6 +212,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'thumbnail_cache_timeout' ] = 86400
         self._dictionary[ 'integers' ][ 'image_cache_timeout' ] = 600
+        
+        self._dictionary[ 'integers' ][ 'thumbnail_border' ] = 1
+        self._dictionary[ 'integers' ][ 'thumbnail_margin' ] = 2
         
         #
         

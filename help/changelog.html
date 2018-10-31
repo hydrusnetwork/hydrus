@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 328</h3></li>
+				<ul>
+					<li>wrote test ui for edit login script panel</li>
+					<li>the login system now works and is turned on, although the legacy hardcoded pixiv and hf logins remain in place. it will not do anything very new this week--it is strictly only for advanced users to experiment with for now</li>
+					<li>cleaned up some messy network code</li>
+					<li>all subscription and hydrus jobs will no longer wait indefinitely on an invalid login--they will cancel immediately</li>
+					<li>network jobs will report a bit more info when they are cancelled</li>
+					<li>subscriptions will now attempt to test login validity before and during file downloads and syncing. if they fail, the sub will pause and stop work and a message will be presented to the user</li>
+					<li>made a 'thumbnails' options page and moved some things to it</li>
+					<li>added thumbnail border and margin to that thumbnails page! you can even set 0 border and/or margin and it works</li>
+					<li>fixed up a heap of bad thumbnail drawing code that didn't work with thicker borders</li>
+					<li>the tag sibling and parent dialogs now have suggestion buttons in their 'give a reason' dialogs! if your petitions are simple and fit into one of these categories (which is most of them), please use these buttons as they will let janitors (e.g. hydrus dev for the PTR) process them in batches, in fewer clicks</li>
+					<li>manage tags dialog's checkboxes and advanced buttons are now wrapped into a cog icon! remove/copy/paste buttons are compacted and put on the same row!</li>
+					<li>manage tags dialog's copy button now only copies selected, not all tags</li>
+					<li>manage tags dialog now uses the new sizer. some components are smaller by default but will eat up spare pixels better</li>
+					<li>misc manage tags code cleanup</li>
+					<li>added 'paged file import queues' to the network->pause menu. this will pause any, hdd, url, simple, gallery, or watcher page from processing its file import queue. it is a bit hacky and will take up to 30s to unpause unless you joggle the respective downloader to wake it up--see how it goes!</li>
+					<li>added a similar 'gallery searching' to that menu, to pause any url, simple, or gallery page from actioning its gallery-side queue</li>
+					<li>and 'watcher checking' for watchers</li>
+					<li>fixed a stupid bug that was causing false-positive and _mostly_ harmless errors for certain pixiv and artstation multi-page downloads</li>
+					<li>fixed an issue where multi-page data was being mis-metadata'd (mostly, this meant thread watchers were giving the last filename tag to all files, and I think similarly getting the latest source time) due to a mistake in some recent de-duping code</li>
+					<li>fixed the new pixiv file page api parser to parse source time, which I must have accidentally deleted previously</li>
+					<li>fixed a no-expand bug in my new sizer when in horizontal orientation</li>
+					<li>fixed a small bug when making an easy-import downloader png and cancelling the add url class dialog</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 327</h3></li>
 				<ul>
 					<li>login stuff:</li>

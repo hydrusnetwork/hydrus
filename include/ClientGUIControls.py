@@ -1312,7 +1312,7 @@ class NetworkJobControl( wx.Panel ):
         
         if self._network_job is not None:
             
-            self._network_job.Cancel()
+            self._network_job.Cancel( 'Cancelled by user.' )
             
         
     

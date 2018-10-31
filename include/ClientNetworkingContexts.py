@@ -145,7 +145,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
                 if services_manager.ServiceExists( service_key ):
                     
-                    name = HG.client_controller.services_manager.GetName( service_key )
+                    name = services_manager.GetName( service_key )
                     
                 else:
                     
@@ -159,6 +159,12 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
             return CC.network_context_type_string_lookup[ self.context_type ] + ': ' + name
             
+        
+    
+    @staticmethod
+    def STATICGenerateForDomain( domain ):
+        
+        return NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = domain )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT ] = NetworkContext

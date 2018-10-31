@@ -554,6 +554,24 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         pass
         
     
+    def GetExampleNetworkJob( self, network_job_factory ):
+        
+        if self.IsAPostURL():
+            
+            post_url = self.file_seed_data
+            
+            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+            
+        else:
+            
+            url_to_check = self.file_seed_data
+            
+        
+        network_job = network_job_factory( 'GET', url_to_check )
+        
+        return network_job
+        
+    
     def GetHash( self ):
         
         if 'sha256' in self._hashes:
@@ -1173,7 +1191,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                             
                             status = CC.STATUS_SUCCESSFUL_AND_NEW
-                            note = 'Found ' + HydrusData.ToHumanInt( len( num_urls_added ) ) + ' new URLs.'
+                            note = 'Found ' + HydrusData.ToHumanInt( num_urls_added ) + ' new URLs.'
                             
                             self.SetStatus( status, note = note )
                             

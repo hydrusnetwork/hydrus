@@ -2783,18 +2783,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 for cookie in cj:
                     
-                    try:
-                        
-                        nc_domain = ClientNetworkingDomain.ConvertDomainIntoSecondLevelDomain( cookie.domain )
-                        
-                    except HydrusExceptions.URLMatchException:
-                        
-                        continue
-                        
-                    
-                    context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, nc_domain )
-                    
-                    session = self._session_manager.GetSession( context )
+                    session = self._session_manager.GetSessionForDomain( cookie.domain )
                     
                     session.cookies.set_cookie( cookie )
                     

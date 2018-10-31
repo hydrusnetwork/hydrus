@@ -1680,8 +1680,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
             
-            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
             ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self._PauseSync, 'subs' )
+            ClientGUIMenus.AppendSeparator( submenu )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
@@ -2787,7 +2791,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageTagCensorship( self ):
         
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage tag censorship' ) as dlg:
             
             panel = ClientGUITags.ManageTagCensorshipPanel( dlg )
             
@@ -2799,7 +2803,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageTagParents( self ):
         
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage tag parents' ) as dlg:
             
             panel = ClientGUITags.ManageTagParents( dlg )
             
@@ -2811,7 +2815,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageTagSiblings( self ):
         
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage tag siblings' ) as dlg:
             
             panel = ClientGUITags.ManageTagSiblings( dlg )
             

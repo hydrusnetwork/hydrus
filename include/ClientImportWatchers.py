@@ -1275,7 +1275,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
+            files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+            work_pending = self._file_seed_cache.WorkToDo() and not files_paused
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
@@ -1305,7 +1306,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
+                files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+                work_pending = self._file_seed_cache.WorkToDo() and not files_paused
                 no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()
@@ -1326,7 +1328,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            able_to_check = self._checking_status == ClientImporting.CHECKER_STATUS_OK and self._HasURL() and not self._checking_paused
+            checking_paused = self._checking_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' )
+            
+            able_to_check = self._checking_status == ClientImporting.CHECKER_STATUS_OK and self._HasURL() and not checking_paused
             check_due = HydrusData.TimeHasPassed( self._next_check_time )
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )

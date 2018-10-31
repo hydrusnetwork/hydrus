@@ -1618,7 +1618,20 @@ class ListBoxTags( ListBox ):
         
         import ClientGUITags
         
-        with ClientGUITopLevelWindows.DialogManage( self, 'manage special tag information' ) as dlg:
+        if command == 'censorship':
+            
+            title = 'manage tag censorship'
+            
+        elif command == 'parent':
+            
+            title = 'manage tag parents'
+            
+        elif command == 'sibling':
+            
+            title = 'manage tag siblings'
+            
+        
+        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
             
             if command == 'censorship':
                 

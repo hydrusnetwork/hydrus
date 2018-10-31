@@ -37,28 +37,32 @@ REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
 def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_import_options ):
     
-    all_parsed_urls = []
+    file_seeds = []
+    
+    seen_urls = set()
     
     for parse_results in all_parse_results:
         
         parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
         
-        all_parsed_urls.extend( parsed_urls )
+        parsed_urls = HydrusData.DedupeList( parsed_urls )
         
-    
-    all_parsed_urls = HydrusData.DedupeList( all_parsed_urls )
-    
-    file_seeds = []
-    
-    for url in all_parsed_urls:
+        parsed_urls = [ url for url in parsed_urls if url not in seen_urls ]
         
-        file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
+        seen_urls.update( parsed_urls )
         
-        file_seed.SetReferralURL( source_url )
+        # note we do this recursively due to parse_results being appropriate only for these urls--don't move this out again, or tags will be messed up
         
-        file_seed.AddParseResults( parse_results, file_import_options )
-        
-        file_seeds.append( file_seed )
+        for url in parsed_urls:
+            
+            file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
+            
+            file_seed.SetReferralURL( source_url )
+            
+            file_seed.AddParseResults( parse_results, file_import_options )
+            
+            file_seeds.append( file_seed )
+            
         
     
     return file_seeds

@@ -4171,7 +4171,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = False ):
         
         if not self._NamespaceExists( namespace ):
             
@@ -4228,6 +4228,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
                 
+            
+        
+        if include_siblings:
+            
+            # fetch all tag_ids where this namespace is a terminator
+            # i.e. fetch all where it is 'better', recursively, and discount any chains where it is the 'worse'
+            
+            # for each of them, union the results of gethashidsfromtagids
+            
+            pass
             
         
         return hash_ids
@@ -4580,7 +4590,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( namespaces_to_include ) > 0:
                 
-                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
+                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) for namespace in namespaces_to_include ) )
                 
                 query_hash_ids = update_qhi( query_hash_ids, namespace_query_hash_ids )
                 
@@ -4660,7 +4670,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for namespace in namespaces_to_exclude:
             
-            exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
+            exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) )
             
         
         for wildcard in wildcards_to_exclude:
@@ -9158,21 +9168,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SaveOptions( self, options ):
         
-        ( old_options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
-        
-        ( old_width, old_height ) = old_options[ 'thumbnail_dimensions' ]
-        
-        ( new_width, new_height ) = options[ 'thumbnail_dimensions' ]
-        
         self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
         
-        resize_thumbs = new_width != old_width or new_height != old_height
-        
-        if resize_thumbs:
-            
-            self.pub_after_job( 'thumbnail_resize' )
-            
-        
+        self.pub_after_job( 'thumbnail_resize' )
         self.pub_after_job( 'notify_new_options' )
         
     
@@ -11179,6 +11177,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             self._SetJSONDump( login_manager )
+            
+        
+        if version == 327:
+            
+            try:
+            
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'pixiv file page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

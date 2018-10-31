@@ -268,7 +268,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_to_do = self._file_seed_cache.WorkToDo() and not ( self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+            paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+            
+            work_to_do = self._file_seed_cache.WorkToDo() and not ( paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
             
         
         while work_to_do:
@@ -293,7 +295,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_to_do = self._file_seed_cache.WorkToDo() and not ( self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+                paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+                
+                work_to_do = self._file_seed_cache.WorkToDo() and not ( paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
                 
             
         

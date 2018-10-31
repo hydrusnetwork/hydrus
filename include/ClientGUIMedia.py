@@ -2408,6 +2408,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
         
+        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        
         for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
             hash = thumbnail.GetDisplayMedia().GetHash()
@@ -2420,9 +2422,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 thumbnail_row = thumbnail_index / self._num_columns
                 
-                x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                x = thumbnail_col * thumbnail_span_width + thumbnail_margin
                 
-                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
                 dc.DrawBitmap( thumbnail.GetBmp(), x, y )
                 
@@ -2514,7 +2516,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        ( x, y ) = ( column * thumbnail_span_width + CC.THUMBNAIL_MARGIN, row * thumbnail_span_height + CC.THUMBNAIL_MARGIN )
+        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        
+        ( x, y ) = ( column * thumbnail_span_width + thumbnail_margin, row * thumbnail_span_height + thumbnail_margin )
         
         return ( x, y )
         
@@ -2530,7 +2534,10 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _GetThumbnailSpanDimensions( self ):
         
-        return ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        thumbnail_border = HG.client_controller.new_options.GetInteger( 'thumbnail_border' )
+        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        
+        return ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( thumbnail_border + thumbnail_margin ) * 2 )
         
     
     def _GetThumbnailUnderMouse( self, mouse_event ):
@@ -2549,7 +2556,12 @@ class MediaPanelThumbnails( MediaPanel ):
         x_mod = x % t_span_x
         y_mod = y % t_span_y
         
-        if x_mod <= CC.THUMBNAIL_MARGIN or y_mod <= CC.THUMBNAIL_MARGIN or x_mod > t_span_x - CC.THUMBNAIL_MARGIN or y_mod > t_span_y - CC.THUMBNAIL_MARGIN: return None
+        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        
+        if x_mod <= thumbnail_margin or y_mod <= thumbnail_margin or x_mod > t_span_x - thumbnail_margin or y_mod > t_span_y - thumbnail_margin:
+            
+            return None
+            
         
         column_index = ( x / t_span_x )
         row_index = ( y / t_span_y )
@@ -4094,6 +4106,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
+        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        
         hashes = list( self._thumbnails_being_faded_in.keys() )
         
         random.shuffle( hashes )
@@ -4167,9 +4181,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 thumbnail_row = thumbnail_index / self._num_columns
                 
-                x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                x = thumbnail_col * thumbnail_span_width + thumbnail_margin
                 
-                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
                 if page_index not in dcs:
                     
@@ -4194,8 +4208,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 page_client_y = page_virtual_y - earliest_y
                 
                 client_y = page_client_y + y
-                d = True
-                self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - CC.THUMBNAIL_MARGIN, thumbnail_span_height - CC.THUMBNAIL_MARGIN ) )
+                
+                self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - thumbnail_margin, thumbnail_span_height - thumbnail_margin ) )
                 
             
             if delete_entry:
@@ -4281,7 +4295,9 @@ class Thumbnail( Selectable ):
         
         thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
-        ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        thumbnail_border = HG.client_controller.new_options.GetInteger( 'thumbnail_border' )
+        
+        ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
         
         bmp = wx.Bitmap( width, height, 24 )
         
@@ -4293,28 +4309,30 @@ class Thumbnail( Selectable ):
             
             if self._selected:
                 
-                colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED
+                background_colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED
                 
             else:
                 
-                colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE
+                background_colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE
                 
             
         else:
             
             if self._selected:
                 
-                colour_type = CC.COLOUR_THUMB_BACKGROUND_SELECTED
+                background_colour_type = CC.COLOUR_THUMB_BACKGROUND_SELECTED
                 
             else:
                 
-                colour_type = CC.COLOUR_THUMB_BACKGROUND
+                background_colour_type = CC.COLOUR_THUMB_BACKGROUND
                 
             
         
-        dc.SetBackground( wx.Brush( new_options.GetColour( colour_type ) ) )
+        dc.SetPen( wx.TRANSPARENT_PEN )
         
-        dc.Clear()
+        dc.SetBrush( wx.Brush( new_options.GetColour( background_colour_type ) ) )
+        
+        dc.DrawRectangle( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ) )
         
         thumbnail_fill = HG.client_controller.new_options.GetBoolean( 'thumbnail_fill' )
         
@@ -4338,8 +4356,8 @@ class Thumbnail( Selectable ):
             
             ( x_offset, y_offset ) = offset_position
             
-            x_offset += CC.THUMBNAIL_BORDER
-            y_offset += CC.THUMBNAIL_BORDER
+            x_offset += thumbnail_border
+            y_offset += thumbnail_border
             
         else:
             
@@ -4396,9 +4414,9 @@ class Thumbnail( Selectable ):
                     ( text_x, text_y ) = gc.GetTextExtent( upper_summary )
                     
                     top_left_x = int( ( width - text_x ) / 2 )
-                    top_left_y = CC.THUMBNAIL_BORDER
+                    top_left_y = thumbnail_border
                     
-                    gc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
+                    gc.DrawRectangle( thumbnail_border, top_left_y, width - ( thumbnail_border * 2 ), text_y + 1 )
                     
                     gc.DrawText( upper_summary, top_left_x, top_left_y )
                     
@@ -4417,10 +4435,10 @@ class Thumbnail( Selectable ):
                     
                     ( text_x, text_y ) = gc.GetTextExtent( lower_summary )
                     
-                    top_left_x = width - text_x - CC.THUMBNAIL_BORDER
-                    top_left_y = height - text_y - CC.THUMBNAIL_BORDER
+                    top_left_x = width - text_x - thumbnail_border
+                    top_left_y = height - text_y - thumbnail_border
                     
-                    gc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
+                    gc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 1, text_y + 1 )
                     
                     gc.DrawText( lower_summary, top_left_x, top_left_y )
                     
@@ -4429,34 +4447,54 @@ class Thumbnail( Selectable ):
                 
             
         
-        dc.SetBrush( wx.TRANSPARENT_BRUSH )
-        
-        if not local:
+        if thumbnail_border > 0:
             
-            if self._selected:
+            if not local:
                 
-                colour_type = CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED
+                if self._selected:
+                    
+                    border_colour_type = CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED
+                    
+                else:
+                    
+                    border_colour_type = CC.COLOUR_THUMB_BORDER_REMOTE
+                    
                 
             else:
                 
-                colour_type = CC.COLOUR_THUMB_BORDER_REMOTE
+                if self._selected:
+                    
+                    border_colour_type = CC.COLOUR_THUMB_BORDER_SELECTED
+                    
+                else:
+                    
+                    border_colour_type = CC.COLOUR_THUMB_BORDER
+                    
                 
             
-        else:
+            # I had a hell of a time getting a transparent box to draw right with a pen border without crazy +1px in the params for reasons I did not understand
+            # so I just decided four rects is neater and fine and actually prob faster in some cases
             
-            if self._selected:
-                
-                colour_type = CC.COLOUR_THUMB_BORDER_SELECTED
-                
-            else:
-                
-                colour_type = CC.COLOUR_THUMB_BORDER
-                
+            #         _____            ______                              _____            ______      ________________
+            # ___________(_)___  _________  /_______   _______ ______      __  /______      ___  /_________  /__  /__  /
+            # ___  __ \_  /__  |/_/  _ \_  /__  ___/   __  __ `/  __ \     _  __/  __ \     __  __ \  _ \_  /__  /__  / 
+            # __  /_/ /  / __>  < /  __/  / _(__  )    _  /_/ // /_/ /     / /_ / /_/ /     _  / / /  __/  / _  /  /_/  
+            # _  .___//_/  /_/|_| \___//_/  /____/     _\__, / \____/      \__/ \____/      /_/ /_/\___//_/  /_/  (_)   
+            # /_/                                      /____/                                                            
             
-        
-        dc.SetPen( wx.Pen( new_options.GetColour( colour_type ), style = wx.PENSTYLE_SOLID ) )
-        
-        dc.DrawRectangle( 0, 0, width, height )
+            dc.SetBrush( wx.Brush( new_options.GetColour( border_colour_type ) ) )
+            
+            rectangles = []
+            
+            side_height = height - ( thumbnail_border * 2 )
+            
+            rectangles.append( ( 0, 0, width, thumbnail_border ) ) # top
+            rectangles.append( ( 0, height - thumbnail_border, width, thumbnail_border ) ) # bottom
+            rectangles.append( ( 0, thumbnail_border, thumbnail_border, side_height ) ) # left
+            rectangles.append( ( width - thumbnail_border, thumbnail_border, thumbnail_border, side_height ) ) # right
+            
+            dc.DrawRectangleList( rectangles )
+            
         
         locations_manager = self.GetLocationsManager()
         

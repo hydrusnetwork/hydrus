@@ -103,7 +103,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._dropdown_window = wx.Panel( self )
             
-            self._list_height_num_chars = 12
+            self._list_height_num_chars = 8
             
         
         self._dropdown_notebook = wx.Notebook( self._dropdown_window )

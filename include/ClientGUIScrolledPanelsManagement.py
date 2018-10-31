@@ -1351,6 +1351,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'tag presentation', 'tag presentation', self._TagPresentationPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'thumbnails', 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
         
         #
         
@@ -2475,13 +2476,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_message_force_min_width = wx.CheckBox( self )
             
-            self._thumbnail_scroll_rate = wx.TextCtrl( self )
-            
-            self._thumbnail_fill = wx.CheckBox( self )
-            
-            self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
-            self._thumbnail_visibility_scroll_percent.SetToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
-            
             self._discord_dnd_fix = wx.CheckBox( self )
             self._discord_dnd_fix.SetToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
@@ -2564,12 +2558,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_message_force_min_width.SetValue( self._new_options.GetBoolean( 'popup_message_force_min_width' ) )
             
-            self._thumbnail_scroll_rate.SetValue( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
-            
-            self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
-            
-            self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
-            
             self._discord_dnd_fix.SetValue( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
             
             self._always_show_hover_windows.SetValue( self._new_options.GetBoolean( 'always_show_hover_windows' ) )
@@ -2597,7 +2585,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
             rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
             rows.append( ( 'By default, put page tabs on the left (requires restart): ', self._default_new_page_goes ) )
-            rows.append( ( 'Put notebook tabs on the left: ', self._notebook_tabs_on_left ) )
+            rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
@@ -2611,9 +2599,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
-            rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
-            rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
-            rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
@@ -2718,23 +2703,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
             HG.client_controller.pub( 'main_gui_title', title )
-            
-            try:
-                
-                thumbnail_scroll_rate = self._thumbnail_scroll_rate.GetValue()
-                
-                float( thumbnail_scroll_rate )
-                
-                self._new_options.SetString( 'thumbnail_scroll_rate', thumbnail_scroll_rate )
-                
-            except:
-                
-                pass
-                
-            
-            self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.GetValue() )
-            
-            self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.GetValue() )
             
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.GetValue() )
             self._new_options.SetBoolean( 'always_show_hover_windows', self._always_show_hover_windows.GetValue() )
@@ -3153,12 +3121,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             media_panel = ClientGUICommon.StaticBox( self, 'thumbnail size and media cache' )
             
-            self._thumbnail_width = wx.SpinCtrl( media_panel, min = 20, max = 200 )
-            self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._thumbnail_height = wx.SpinCtrl( media_panel, min = 20, max = 200 )
-            self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
             self._thumbnail_cache_size = wx.SpinCtrl( media_panel, min = 5, max = 3000 )
             self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
@@ -3226,12 +3188,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._disk_cache_maintenance.SetValue( disk_cache_maintenance )
             
-            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
-            
-            self._thumbnail_width.SetValue( thumbnail_width )
-            
-            self._thumbnail_height.SetValue( thumbnail_height )
-            
             self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
             
             self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
@@ -3290,8 +3246,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Thumbnail width: ', self._thumbnail_width ) )
-            rows.append( ( 'Thumbnail height: ', self._thumbnail_height ) )
             rows.append( ( 'MB memory reserved for thumbnail cache: ', thumbnails_sizer ) )
             rows.append( ( 'MB memory reserved for image cache: ', fullscreens_sizer ) )
             rows.append( ( 'Thumbnail cache timeout: ', self._thumbnail_cache_timeout ) )
@@ -3415,9 +3369,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventThumbnailsUpdate( self, event ):
             
-            estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
+            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
-            self._estimated_number_thumbnails.SetLabelText( '(about ' + HydrusData.ToHumanInt( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
+            res_string = HydrusData.ConvertResolutionToPrettyString( ( thumbnail_width, thumbnail_height ) )
+            
+            estimated_bytes_per_thumb = 3 * thumbnail_width * thumbnail_height
+            
+            estimated_thumbs = ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb
+            
+            self._estimated_number_thumbnails.SetLabelText( '(at ' + res_string + ', about ' + HydrusData.ToHumanInt( estimated_thumbs ) + ' thumbnails)' )
             
         
         def EventVideoBufferUpdate( self, event ):
@@ -3443,10 +3403,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._new_options.SetNoneableInteger( 'disk_cache_maintenance_mb', disk_cache_maintenance_mb )
-            
-            new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
-            
-            HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
             
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
@@ -4004,6 +3960,92 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetChoice() )
             
             self._new_options.SetNoneableInteger( 'num_recent_tags', self._num_recent_tags.GetValue() )
+            
+        
+    
+    class _ThumbnailsPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 200 )
+            
+            self._thumbnail_border = wx.SpinCtrl( self, min = 0, max = 20 )
+            self._thumbnail_margin = wx.SpinCtrl( self, min = 0, max = 20 )
+            
+            self._thumbnail_scroll_rate = wx.TextCtrl( self )
+            
+            self._thumbnail_fill = wx.CheckBox( self )
+            
+            self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
+            self._thumbnail_visibility_scroll_percent.SetToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
+            
+            #
+            
+            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
+            
+            self._thumbnail_width.SetValue( thumbnail_width )
+            self._thumbnail_height.SetValue( thumbnail_height )
+            
+            self._thumbnail_border.SetValue( self._new_options.GetInteger( 'thumbnail_border' ) )
+            self._thumbnail_margin.SetValue( self._new_options.GetInteger( 'thumbnail_margin' ) )
+            
+            self._thumbnail_scroll_rate.SetValue( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
+            
+            self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
+            
+            self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Thumbnail width: ', self._thumbnail_width ) )
+            rows.append( ( 'Thumbnail height: ', self._thumbnail_height ) )
+            rows.append( ( 'Thumbnail border: ', self._thumbnail_border ) )
+            rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
+            rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
+            rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
+            rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
+            
+            HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
+            
+            self._new_options.SetInteger( 'thumbnail_border', self._thumbnail_border.GetValue() )
+            self._new_options.SetInteger( 'thumbnail_margin', self._thumbnail_margin.GetValue() )
+            
+            try:
+                
+                thumbnail_scroll_rate = self._thumbnail_scroll_rate.GetValue()
+                
+                float( thumbnail_scroll_rate )
+                
+                self._new_options.SetString( 'thumbnail_scroll_rate', thumbnail_scroll_rate )
+                
+            except:
+                
+                pass
+                
+            
+            self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.GetValue() )
+            
+            self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.GetValue() )
             
         
     

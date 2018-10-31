@@ -143,6 +143,15 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return gallery_seed
         
     
+    def GetExampleNetworkJob( self, network_job_factory ):
+        
+        ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
+        
+        network_job = network_job_factory( 'GET', url_to_check )
+        
+        return network_job
+        
+    
     def SetReferralURL( self, referral_url ):
         
         self._referral_url = referral_url

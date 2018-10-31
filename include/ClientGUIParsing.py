@@ -212,6 +212,10 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 url_matches_to_include = panel.GetValue()
                 
+            else:
+                
+                return
+                
             
         
         url_matches_to_include = self._FleshOutURLMatchesWithAPILinks( url_matches_to_include )

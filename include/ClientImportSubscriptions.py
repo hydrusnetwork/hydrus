@@ -202,6 +202,88 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return result
         
     
+    def _QueryFileLoginIsOK( self, query ):
+        
+        file_seed_cache = query.GetFileSeedCache()
+        
+        file_seed = file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
+        
+        if file_seed is None:
+            
+            result = True
+            
+        else:
+            
+            nj = file_seed.GetExampleNetworkJob( self._GenerateNetworkJobFactory( query ) )
+            
+            nj.engine = HG.client_controller.network_engine
+            
+            if nj.NeedsLogin() and not nj.CanLogin():
+                
+                result = False
+                
+            else:
+                
+                result = True
+                
+            
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" pre-work file login test. Login ok: ' + str( result ) + '.' )
+            
+        
+        if not result and not self._paused:
+            
+            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its file imports. The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.' )
+            
+            self._paused = True
+            
+        
+        return result
+        
+    
+    def _QuerySyncLoginIsOK( self, query ):
+        
+        gallery_seed_log = query.GetGallerySeedLog()
+        
+        gallery_seed = gallery_seed_log.GetNextGallerySeed( CC.STATUS_UNKNOWN )
+        
+        if gallery_seed is None:
+            
+            result = True
+            
+        else:
+            
+            nj = gallery_seed.GetExampleNetworkJob( self._GenerateNetworkJobFactory( query ) )
+            
+            nj.engine = HG.client_controller.network_engine
+            
+            if nj.NeedsLogin() and not nj.CanLogin():
+                
+                result = False
+                
+            else:
+                
+                result = True
+                
+            
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" pre-work sync login test. Login ok: ' + str( result ) + '.' )
+            
+        
+        if not result and not self._paused:
+            
+            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its sync queries. The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.' )
+            
+            self._paused = True
+            
+        
+        return result
+        
+    
     def _ShowHitPeriodicFileLimitMessage( self, query_text ):
         
         message = 'The query "' + query_text + '" for subscription "' + self._name + '" hit its periodic file limit without seeing any already-seen files.'
@@ -396,8 +478,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 p1 = HC.options[ 'pause_subs_sync' ]
                 p3 = HG.view_shutdown
                 p4 = not self._QueryBandwidthIsOK( query )
+                p5 = not self._QueryFileLoginIsOK( query )
                 
-                if p1 or p3 or p4:
+                if p1 or p3 or p4 or p5:
                     
                     if p4 and this_query_has_done_work:
                         
@@ -551,7 +634,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if query.CanWorkOnFiles():
                 
-                if self._QueryBandwidthIsOK( query ):
+                if self._QueryBandwidthIsOK( query ) and self._QueryFileLoginIsOK( query ):
                     
                     return True
                     
@@ -658,8 +741,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     p1 = HC.options[ 'pause_subs_sync' ]
                     p2 = HG.view_shutdown
+                    p3 = not self._QuerySyncLoginIsOK( query )
                     
-                    if p1 or p2:
+                    if p1 or p2 or p3:
+                        
+                        if p3:
+                            
+                            stop_reason = 'Login was invalid!'
+                            
                         
                         return
                         

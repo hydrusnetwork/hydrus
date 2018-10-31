@@ -703,7 +703,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
+            files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+            work_pending = self._file_seed_cache.WorkToDo() and not files_paused
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
@@ -733,7 +734,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
+                files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+                work_pending = self._file_seed_cache.WorkToDo() and not files_paused
                 no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()
@@ -754,7 +756,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_pending = self._gallery_seed_log.WorkToDo() and not self._gallery_paused
+            gallery_paused = self._gallery_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+            
+            work_pending = self._gallery_seed_log.WorkToDo() and not gallery_paused
             no_delays = HydrusData.TimeHasPassed( self._no_work_until )
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
@@ -786,7 +790,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_pending = self._gallery_seed_log.WorkToDo() and not self._gallery_paused
+                gallery_paused = self._gallery_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+                
+                work_pending = self._gallery_seed_log.WorkToDo() and not gallery_paused
                 no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()

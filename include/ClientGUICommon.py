@@ -584,10 +584,10 @@ class BetterBoxSizer( wx.BoxSizer ):
         ( x, y ) = self.GetPosition()
         ( my_width, my_height ) = self.GetSize()
         
-        ( min_my_height, min_my_height ) = self.CalcMin()
+        ( min_my_width, min_my_height ) = self.CalcMin()
         
         extra_height = my_height - min_my_height
-        extra_width = my_width - my_width
+        extra_width = my_width - min_my_width
         
         i_am_too_small = ( my_orientation == wx.HORIZONTAL and extra_width < 0 ) or ( my_orientation == wx.VERTICAL and extra_height < 0 )
         

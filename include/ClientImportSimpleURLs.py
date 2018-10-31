@@ -535,7 +535,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_to_do = self._file_seed_cache.WorkToDo() and not ( self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+            files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+            
+            work_to_do = self._file_seed_cache.WorkToDo() and not ( files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
             ok_to_work = work_to_do and network_engine_good
@@ -563,7 +565,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_to_do = self._file_seed_cache.WorkToDo() and not ( self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+                files_paused = self._files_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+                
+                work_to_do = self._file_seed_cache.WorkToDo() and not ( files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
                 ok_to_work = work_to_do and network_engine_good
@@ -582,7 +586,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            queue_good = not self._queue_paused
+            queue_paused = self._queue_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+            
+            queue_good = not queue_paused
             page_shown = not HG.client_controller.PageClosedButNotDestroyed( page_key )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
@@ -620,7 +626,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                queue_good = not self._queue_paused
+                queue_paused = self._queue_paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+                
+                queue_good = not queue_paused
                 page_shown = not HG.client_controller.PageClosedButNotDestroyed( page_key )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
@@ -1005,7 +1013,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_to_do = self._file_seed_cache.WorkToDo() and not ( self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+            files_paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+            
+            work_to_do = self._file_seed_cache.WorkToDo() and not ( files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
             ok_to_work = work_to_do and network_engine_good
@@ -1033,7 +1043,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_to_do = self._file_seed_cache.WorkToDo() and not ( self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+                files_paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' )
+                
+                work_to_do = self._file_seed_cache.WorkToDo() and not ( files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
                 ok_to_work = work_to_do and network_engine_good
@@ -1052,7 +1064,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_to_do = self._gallery_seed_log.WorkToDo() and not ( self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+            gallery_paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+            
+            work_to_do = self._gallery_seed_log.WorkToDo() and not ( gallery_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
             network_engine_good = not HG.client_controller.network_engine.IsBusy()
             
             ok_to_work = work_to_do and network_engine_good
@@ -1080,7 +1094,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_to_do = self._gallery_seed_log.WorkToDo() and not ( self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
+                gallery_paused = self._paused or HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' )
+                
+                work_to_do = self._gallery_seed_log.WorkToDo() and not ( gallery_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) )
                 network_engine_good = not HG.client_controller.network_engine.IsBusy()
                 
                 ok_to_work = work_to_do and network_engine_good

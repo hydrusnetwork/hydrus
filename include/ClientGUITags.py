@@ -1227,38 +1227,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
+            #
+            
             self._new_options = HG.client_controller.new_options
-            
-            self._add_parents_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-add entered tags\' parents' )
-            self._add_parents_checkbox.SetValue( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
-            self._add_parents_checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckAddParents )
-            
-            self._collapse_siblings_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-replace entered siblings' )
-            self._collapse_siblings_checkbox.SetValue( self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ) )
-            self._collapse_siblings_checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckCollapseSiblings )
-            
-            self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
-            self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
-            
-            self._tags_box_sorter.Add( self._add_parents_checkbox, CC.FLAGS_LONE_BUTTON )
-            self._tags_box_sorter.Add( self._collapse_siblings_checkbox, CC.FLAGS_LONE_BUTTON )
-            self._tags_box_sorter.Add( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
-            
-            expand_parents = True
-            
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
-            
-            self._advanced_content_update_button = wx.Button( self, label = 'advanced operation' )
-            self._advanced_content_update_button.Bind( wx.EVT_BUTTON, self.EventAdvancedContentUpdate )
-            
-            self._modify_mappers = wx.Button( self, label = 'modify mappers' )
-            self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
-            
-            self._copy_tags = wx.Button( self, id = wx.ID_COPY, label = 'copy tags' )
-            self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
-            
-            self._paste_tags = wx.Button( self, id = wx.ID_PASTE, label = 'paste tags' )
-            self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
             
             if self._i_am_local_tag_service:
                 
@@ -1269,8 +1240,52 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 text = 'petition all tags'
                 
             
-            self._remove_tags = wx.Button( self, label = text )
+            self._remove_tags = wx.Button( self._tags_box_sorter, label = text )
             self._remove_tags.Bind( wx.EVT_BUTTON, self.EventRemoveTags )
+            
+            self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.copy, self._Copy )
+            self._copy_button.SetToolTip( 'Copy the selected tags to the clipboard.' )
+            
+            self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.paste, self._Paste )
+            self._paste_button.SetToolTip( 'Paste newline-separated tags from the clipboard into here.' )
+            
+            self._show_deleted = False
+            
+            menu_items = []
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'add_parents_on_manage_tags' )
+            
+            menu_items.append( ( 'check', 'auto-add entered tags\' parents', 'If checked, adding any tag that has parents will also add those parents.', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'replace_siblings_on_manage_tags' )
+            
+            menu_items.append( ( 'check', 'auto-replace entered siblings', 'If checked, adding any tag that has a sibling will instead add that sibling.', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipShowDeleted, lambda: self._show_deleted )
+            
+            menu_items.append( ( 'check', 'show deleted', 'Show deleted tags, if any.', check_manager ) )
+            
+            if self._new_options.GetBoolean( 'advanced_mode' ):
+                
+                menu_items.append( ( 'separator', 0, 0, 0 ) )
+                
+                menu_items.append( ( 'normal', 'advanced operation', 'Perform an advanced tag operation on the files used to launch this manage tags panel.', self._AdvancedOperation ) )
+                
+            
+            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
+                
+                menu_items.append( ( 'separator', 0, 0, 0 ) )
+                
+                menu_items.append( ( 'normal', 'modify users who added the selected tags', 'Modify the users who added the selected tags.', self._ModifyMappers ) )
+                
+            
+            self._cog_button = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.cog, menu_items )
+            
+            #
+            
+            expand_parents = True
+            
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
             self._tags_box.ChangeTagService( self._tag_service_key )
             
@@ -1278,46 +1293,25 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags, canvas_key = self._canvas_key )
             
-            if self._i_am_local_tag_service:
-                
-                self._modify_mappers.Hide()
-                
-            else:
-                
-                if not self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
-                    
-                    self._modify_mappers.Hide()
-                    
-                
+            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            if not self._new_options.GetBoolean( 'advanced_mode' ):
-                
-                self._advanced_content_update_button.Hide()
-                
+            button_hbox.Add( self._remove_tags, CC.FLAGS_VCENTER )
+            button_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
+            button_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+            button_hbox.Add( self._cog_button, CC.FLAGS_SIZER_CENTER )
             
-            copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            self._tags_box_sorter.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
             
-            copy_paste_hbox.Add( self._copy_tags, CC.FLAGS_VCENTER )
-            copy_paste_hbox.Add( self._paste_tags, CC.FLAGS_VCENTER )
-            
-            advanced_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            advanced_hbox.Add( self._remove_tags, CC.FLAGS_VCENTER )
-            advanced_hbox.Add( self._advanced_content_update_button, CC.FLAGS_VCENTER )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
             
             vbox.Add( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
-            vbox.Add( advanced_hbox, CC.FLAGS_BUTTON_SIZER )
-            vbox.Add( self._modify_mappers, CC.FLAGS_LONE_BUTTON )
+            vbox.Add( self._add_tag_box, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
             
             #
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = ClientGUICommon.BetterBoxSizer( wx.HORIZONTAL )
             
-            hbox.Add( self._suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            hbox.Add( self._suggested_tags, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE )
             hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
@@ -1586,7 +1580,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         recent_tags.add( tag )
                         
-                        if self._add_parents_checkbox.GetValue():
+                        if self._new_options.GetBoolean( 'add_parents_on_manage_tags' ):
                             
                             tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
                             
@@ -1638,32 +1632,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
-        def AddTags( self, tags, only_add = False ):
-            
-            if len( tags ) > 0:
-                
-                HydrusData.Profile( 'w', 'self._AddTags( tags, only_add = only_add )', globals(), locals() )
-                
-                #self._AddTags( tags, only_add = only_add )
-                
-            
-        
-        def EnterTags( self, tags, only_add = False ):
-            
-            if self._collapse_siblings_checkbox.GetValue():
-                
-                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-                
-                tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
-                
-            
-            if len( tags ) > 0:
-                
-                self._AddTags( tags, only_add = only_add )
-                
-            
-        
-        def EventAdvancedContentUpdate( self, event ):
+        def _AdvancedOperation( self ):
             
             hashes = set()
             
@@ -1692,28 +1661,25 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.CallLaterWXSafe( HG.client_controller.gui, 0.5, do_it )
             
         
-        def EventCheckAddParents( self, event ):
+        def _Copy( self ):
             
-            self._new_options.SetBoolean( 'add_parents_on_manage_tags', self._add_parents_checkbox.GetValue() )
+            tags = list( self._tags_box.GetSelectedTags() )
             
-        
-        def EventCheckCollapseSiblings( self, event ):
-            
-            self._new_options.SetBoolean( 'replace_siblings_on_manage_tags', self._collapse_siblings_checkbox.GetValue() )
-            
-        
-        def EventCopyTags( self, event ):
-        
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._tag_service_key, collapse_siblings = False )
-            
-            tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
+            tags = HydrusTags.SortNumericTags( tags )
             
             text = os.linesep.join( tags )
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             
         
-        def EventModify( self, event ):
+        def _FlipShowDeleted( self ):
+            
+            self._show_deleted = not self._show_deleted
+            
+            self._tags_box.SetShow( 'deleted', self._show_deleted )
+            
+        
+        def _ModifyMappers( self ):
             
             wx.MessageBox( 'this does not work yet!' )
             
@@ -1734,11 +1700,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 subject_accounts = 'blah' # fetch subjects from the server using the contents
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_accounts ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_accounts ) as dlg:
+                    
+                    dlg.ShowModal()
+                    
                 
             
         
-        def EventPasteTags( self, event ):
+        def _Paste( self ):
             
             text = HG.client_controller.GetClipboardText()
             
@@ -1750,9 +1719,32 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self.EnterTags( tags, only_add = True )
                 
-            except:
-                
+            except Exception as e:
+                HydrusData.ShowException( e )
                 wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        
+        def AddTags( self, tags, only_add = False ):
+            
+            if len( tags ) > 0:
+                
+                self._AddTags( tags, only_add = only_add )
+                
+            
+        
+        def EnterTags( self, tags, only_add = False ):
+            
+            if self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ):
+                
+                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+                
+                tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
+                
+            
+            if len( tags ) > 0:
+                
+                self._AddTags( tags, only_add = only_add )
                 
             
         
@@ -1769,11 +1761,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._AddTags( removable_tags, only_remove = True )
-            
-        
-        def EventShowDeleted( self, event ):
-            
-            self._tags_box.SetShow( 'deleted', self._show_deleted_checkbox.GetValue() )
             
         
         def GetGroupsOfContentUpdates( self ):
@@ -2236,6 +2223,12 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
+            suggestions = []
+            
+            suggestions.append( 'obvious by definition (a sword is a weapon)' )
+            suggestions.append( 'character/series/studio/etc... belonging (character x belongs to series y)' )
+            suggestions.append( 'character/person/etc... properties (character x is a female)' )
+            
             affected_pairs = []
             
             if len( new_pairs ) > 0:
@@ -2261,7 +2254,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
                         
-                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                        with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
                             if dlg.ShowModal() == wx.ID_OK:
                                 
@@ -2317,7 +2310,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                     
                                     message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
                                     
-                                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                                    with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                         
                                         if dlg.ShowModal() == wx.ID_OK:
                                             
@@ -3081,6 +3074,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
+            suggestions = []
+            
+            suggestions.append( 'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag' )
+            suggestions.append( 'rewording/namespacing based on preference' )
+            
             if len( new_pairs ) > 0:
                 
                 do_it = True
@@ -3108,7 +3106,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
                         
-                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                        with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
                             if dlg.ShowModal() == wx.ID_OK:
                                 
@@ -3165,7 +3163,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             message += os.linesep * 2
                             message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
                             
-                            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                            with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                 
                                 if dlg.ShowModal() == wx.ID_OK:
                                     

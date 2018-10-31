@@ -822,7 +822,7 @@ class ServiceRestricted( ServiceRemote ):
                 network_job.AddAdditionalHeader( 'Content-Type', HC.mime_string_lookup[ content_type ] )
                 
             
-            network_job.SetDeathTime( HydrusData.GetNow() + 10 ) # we don't want to wait on logins during shutdown and so on
+            network_job.SetDeathTime( HydrusData.GetNow() + 30 ) # we don't want to wait on logins during shutdown and so on
             
             HG.client_controller.network_engine.AddJob( network_job )
             

@@ -4,6 +4,7 @@ import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientNetworkingJobs
 import ClientParsing
+import cPickle
 import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusData
@@ -91,7 +92,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         domain = network_context.context_data
         
-        potential_login_domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain )
+        potential_login_domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain, discard_www = False )
         
         for potential_login_domain in potential_login_domains:
             
@@ -285,8 +286,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                raise HydrusExceptions.ValidationException( 'The login manager does not work yet.' )
-                
                 ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
                 
                 if login_domain is None or not login_expected:
@@ -370,8 +369,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     
                     return LoginProcessLegacy( self.engine, HENTAI_FOUNDRY_NETWORK_CONTEXT, 'hentai foundry' )
                     
-                
-                raise HydrusExceptions.ValidationException( 'The login manager does not work yet.' )
                 
                 ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
                 
@@ -1554,7 +1551,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         self._login_script_key = login_script_key
         
     
-    def Start( self, engine, network_context, given_credentials ):
+    def Start( self, engine, network_context, given_credentials, network_job_presentation_context_factory = None, test_result_callable = None ):
         
         # don't mess with the domain--assume that we are given precisely the right domain
         
@@ -1572,26 +1569,49 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                last_url_used = login_step.Start( engine, login_domain, given_credentials, temp_variables, referral_url = last_url_used )
+                last_url_used = login_step.Start( engine, login_domain, given_credentials, temp_variables, referral_url = last_url_used, network_job_presentation_context_factory = network_job_presentation_context_factory, test_result_callable = test_result_callable )
                 
             except HydrusExceptions.ValidationException as e:
                 
-                engine.login_manager.InvalidateLoginScript( login_domain, self._login_script_key, HydrusData.ToUnicode( e ) )
+                if test_result_callable is not None:
+                    
+                    HydrusData.ShowException( e )
+                    
                 
-                return
+                message = HydrusData.ToUnicode( e )
+                
+                engine.login_manager.InvalidateLoginScript( login_domain, self._login_script_key, message )
+                
+                return 'Verification error: ' + message
                 
             except HydrusExceptions.NetworkException as e:
                 
-                engine.login_manager.DelayLoginScript( login_domain, self._login_script_key, HydrusData.ToUnicode( e ) )
+                if test_result_callable is not None:
+                    
+                    HydrusData.ShowException( e )
+                    
                 
-                return
+                message = HydrusData.ToUnicode( e )
+                
+                engine.login_manager.DelayLoginScript( login_domain, self._login_script_key, message )
+                
+                return 'Network error: ' + message
                 
             except Exception as e:
                 
-                engine.login_manager.InvalidateLoginScript( login_domain, self._login_script_key, HydrusData.ToUnicode( e ) )
+                if test_result_callable is not None:
+                    
+                    HydrusData.ShowException( e )
+                    
                 
-                return
+                message = HydrusData.ToUnicode( e )
                 
+                engine.login_manager.InvalidateLoginScript( login_domain, self._login_script_key, message )
+                
+                return 'Unusual error: ' + message
+                
+            
+            time.sleep( 2 )
             
         
         try:
@@ -1600,12 +1620,21 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             
         except Exception as e:
             
-            engine.login_manager.InvalidateLoginScript( login_domain, self._login_script_key, HydrusData.ToUnicode( e ) )
+            if test_result_callable is not None:
+                
+                HydrusData.ShowException( e )
+                
             
-            return
+            message = HydrusData.ToUnicode( e )
+            
+            engine.login_manager.InvalidateLoginScript( login_domain, self._login_script_key, message )
+            
+            return 'Final cookie check failed: ' + message
             
         
         engine.login_manager.ValidateLoginScript( login_domain, self._login_script_key )
+        
+        return 'Login OK!'
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN ] = LoginScriptDomain
@@ -1700,129 +1729,207 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         self._content_parsers = HydrusSerialisable.SerialisableList( content_parsers )
         
     
-    def Start( self, engine, domain, given_credentials, temp_variables, referral_url = None ):
+    def Start( self, engine, domain, given_credentials, temp_variables, referral_url = None, network_job_presentation_context_factory = None, test_result_callable = None ):
         
-        domain_to_hit = domain
-        
-        if self._subdomain is not None:
+        def session_to_cookie_strings( sess ):
             
-            if domain.startswith( 'www.' ):
+            cookie_strings = set()
+            
+            for cookie in sess.cookies:
                 
-                domain = domain[4:]
+                s = cookie.name + ': ' + cookie.value + ' | ' + cookie.domain + ' | '
                 
-            
-            domain_to_hit = self._subdomain + '.' + domain
-            
-        
-        query_dict = {}
-        
-        query_dict.update( self._static_args )
-        
-        for ( pretty_name, arg_name ) in self._required_credentials.items():
-            
-            query_dict[ arg_name ] = given_credentials[ pretty_name ]
-            
-        
-        for ( temp_name, arg_name ) in self._temp_args.items():
-            
-            if temp_name not in temp_variables:
+                expiry = cookie.expires
                 
-                raise HydrusExceptions.ValidationException( 'The temporary variable \'' + temp_name + '\' was not found!' )
+                if expiry is None:
+                    
+                    expiry = -1
+                    pretty_expiry = 'session'
+                    
+                else:
+                    
+                    pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+                    
+                
+                s += pretty_expiry
+                
+                cookie_strings.add( s )
                 
             
-            query_dict[ arg_name ] = temp_variables[ temp_name ]
+            return cookie_strings
             
         
-        scheme = self._scheme
-        netloc = domain_to_hit
-        path = self._path
-        params = ''
-        fragment = ''
+        url = 'Did not make a url.'
+        test_result_body = None
+        downloaded_data = 'Did not download data.'
+        new_temp_variables = {}
+        original_cookie_strings = session_to_cookie_strings( engine.session_manager.GetSessionForDomain( domain ) )
+        test_script_result = 'Did not start.'
         
-        if self._method == 'GET':
+        try:
             
-            query = ClientNetworkingDomain.ConvertQueryDictToText( query_dict )
-            body = None
+            domain_to_hit = domain
             
-        elif self._method == 'POST':
-            
-            query = ''
-            body = query_dict
-            
-        
-        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
-        
-        url = r.geturl()
-        
-        network_job = ClientNetworkingJobs.NetworkJob( self._method, url, body = body, referral_url = referral_url )
-        
-        if self._method == 'POST' and referral_url is not None:
-            
-            p = urlparse.urlparse( referral_url )
-            
-            r = urlparse.ParseResult( p.scheme, p.netloc, '', '', '', '' )
-            
-            origin = r.geturl() # https://accounts.pixiv.net
-            
-            network_job.AddAdditionalHeader( 'origin', origin ) # GET/POST forms are supposed to have this for CSRF. we'll try it just with POST for now
-            
-        
-        network_job.SetForLogin( True )
-        
-        engine.AddJob( network_job )
-        
-        # let exceptions propagate up to script
-        network_job.WaitUntilDone()
-        
-        session = network_job.GetSession()
-        
-        cookies = session.cookies
-        
-        for ( cookie_name, string_match ) in self._required_cookies_info:
-            
-            try:
+            if self._subdomain is not None:
                 
-                cookie_text = ClientNetworkingDomain.GetCookie( cookies, domain, cookie_name )
+                if domain.startswith( 'www.' ):
+                    
+                    domain = domain[4:]
+                    
                 
-            except HydrusExceptions.DataMissing as e:
-                
-                raise HydrusExceptions.ValidationException( 'Missing cookie "' + cookie_name + '" on step "' + self._name + '"!' )
+                domain_to_hit = self._subdomain + '.' + domain
                 
             
-            try:
+            query_dict = {}
+            
+            query_dict.update( self._static_args )
+            
+            for ( pretty_name, arg_name ) in self._required_credentials.items():
                 
-                string_match.Test( cookie_text )
-                
-            except HydrusExceptions.StringMatchException as d:
-                
-                raise HydrusExceptions.ValidationException( 'Cookie "' + cookie_name + '" failed on step "' + self._name + '": ' + HydrusData.ToUnicode( e ) + '!' )
+                query_dict[ arg_name ] = given_credentials[ pretty_name ]
                 
             
-        
-        data = network_job.GetContent()
-        
-        for content_parser in self._content_parsers:
-            
-            try:
+            for ( temp_name, arg_name ) in self._temp_args.items():
                 
-                parse_results = content_parser.Parse( data )
+                if temp_name not in temp_variables:
+                    
+                    raise HydrusExceptions.ValidationException( 'The temporary variable \'' + temp_name + '\' was not found!' )
+                    
                 
-            except HydrusExceptions.VetoException as e:
-                
-                raise HydrusExceptions.ValidationException( HydrusData.ToUnicode( e ) )
+                query_dict[ arg_name ] = temp_variables[ temp_name ]
                 
             
-            result = ClientParsing.GetVariableFromParseResults( parse_results )
+            scheme = self._scheme
+            netloc = domain_to_hit
+            path = self._path
+            params = ''
+            fragment = ''
             
-            if result is not None:
+            if self._method == 'GET':
                 
-                ( temp_name, value ) = result
+                query = ClientNetworkingDomain.ConvertQueryDictToText( query_dict )
+                body = None
+                test_result_body = ''
                 
-                temp_variables[ temp_name ] = value
+            elif self._method == 'POST':
+                
+                query = ''
+                body = query_dict
+                test_result_body = ClientNetworkingDomain.ConvertQueryDictToText( query_dict )
                 
             
-        
-        return url
+            r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+            
+            url = r.geturl()
+            
+            network_job = ClientNetworkingJobs.NetworkJob( self._method, url, body = body, referral_url = referral_url )
+            
+            if self._method == 'POST' and referral_url is not None:
+                
+                p = urlparse.urlparse( referral_url )
+                
+                r = urlparse.ParseResult( p.scheme, p.netloc, '', '', '', '' )
+                
+                origin = r.geturl() # https://accounts.pixiv.net
+                
+                network_job.AddAdditionalHeader( 'origin', origin ) # GET/POST forms are supposed to have this for CSRF. we'll try it just with POST for now
+                
+            
+            network_job.SetForLogin( True )
+            
+            engine.AddJob( network_job )
+            
+            if network_job_presentation_context_factory is not None:
+                
+                with network_job_presentation_context_factory( network_job ) as njpc:
+                    
+                    network_job.WaitUntilDone()
+                    
+                
+            else:
+                
+                network_job.WaitUntilDone()
+                
+            
+            session = network_job.GetSession()
+            
+            cookies = session.cookies
+            
+            for ( cookie_name, string_match ) in self._required_cookies_info.items():
+                
+                try:
+                    
+                    cookie_text = ClientNetworkingDomain.GetCookie( cookies, domain, cookie_name )
+                    
+                except HydrusExceptions.DataMissing as e:
+                    
+                    raise HydrusExceptions.ValidationException( 'Missing cookie "' + cookie_name + '" on step "' + self._name + '"!' )
+                    
+                
+                try:
+                    
+                    string_match.Test( cookie_text )
+                    
+                except HydrusExceptions.StringMatchException as d:
+                    
+                    raise HydrusExceptions.ValidationException( 'Cookie "' + cookie_name + '" failed on step "' + self._name + '": ' + HydrusData.ToUnicode( e ) + '!' )
+                    
+                
+            
+            downloaded_data = network_job.GetContent()
+            
+            parsing_context = {}
+            
+            parsing_context[ 'url' ] = url
+            
+            for content_parser in self._content_parsers:
+                
+                try:
+                    
+                    parse_results = content_parser.Parse( parsing_context, downloaded_data )
+                    
+                except HydrusExceptions.VetoException as e:
+                    
+                    raise HydrusExceptions.ValidationException( HydrusData.ToUnicode( e ) )
+                    
+                
+                result = ClientParsing.GetVariableFromParseResults( parse_results )
+                
+                if result is not None:
+                    
+                    ( temp_name, value ) = result
+                    
+                    new_temp_variables[ temp_name ] = value
+                    
+                
+            
+            temp_variables.update( new_temp_variables )
+            
+            test_script_result = 'OK!'
+            
+            return url
+            
+        except Exception as e:
+            
+            test_script_result = HydrusData.ToUnicode( e )
+            
+            raise
+            
+        finally:
+            
+            if test_result_callable is not None:
+                
+                current_cookie_strings = session_to_cookie_strings( engine.session_manager.GetSessionForDomain( domain ) )
+                
+                new_cookie_strings = tuple( current_cookie_strings.difference( original_cookie_strings ) )
+                
+                new_temp_strings = tuple( ( key + ': ' + value for ( key, value ) in new_temp_variables.items() ) )
+                
+                test_result = ( self._name, url, test_result_body, downloaded_data, new_temp_strings, new_cookie_strings, test_script_result )
+                
+                test_result_callable( test_result )
+                
+            
         
     
     def ToTuple( self ):
