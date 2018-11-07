@@ -547,24 +547,30 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._filename_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'add filename? [namespace]' )
             
-            self._dir_namespace_1 = wx.TextCtrl( self._checkboxes_panel )
-            self._dir_namespace_1.SetMinSize( ( 100, -1 ) )
+            self._directory_namespace_controls = {}
             
-            self._dir_checkbox_1 = wx.CheckBox( self._checkboxes_panel, label = 'add first directory? [namespace]' )
+            directory_items = []
             
-            self._dir_namespace_2 = wx.TextCtrl( self._checkboxes_panel )
-            self._dir_namespace_2.SetMinSize( ( 100, -1 ) )
+            directory_items.append( ( 0, 'first' ) )
+            directory_items.append( ( 1, 'second' ) )
+            directory_items.append( ( 2, 'third' ) )
+            directory_items.append( ( -3, 'third last' ) )
+            directory_items.append( ( -2, 'second last' ) )
+            directory_items.append( ( -1, 'last' ) )
             
-            self._dir_checkbox_2 = wx.CheckBox( self._checkboxes_panel, label = 'add second directory? [namespace]' )
-            
-            self._dir_namespace_3 = wx.TextCtrl( self._checkboxes_panel )
-            self._dir_namespace_3.SetMinSize( ( 100, -1 ) )
-            
-            self._dir_checkbox_3 = wx.CheckBox( self._checkboxes_panel, label = 'add third directory? [namespace]' )
+            for ( index, phrase ) in directory_items:
+                
+                dir_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'add ' + phrase + ' directory? [namespace]' )
+                
+                dir_namespace_textctrl = wx.TextCtrl( self._checkboxes_panel )
+                dir_namespace_textctrl.SetMinSize( ( 100, -1 ) )
+                
+                self._directory_namespace_controls[ index ] = ( dir_checkbox, dir_namespace_textctrl )
+                
             
             #
             
-            ( tags_for_all, load_from_neighbouring_txt_files, add_filename, add_first_directory, add_second_directory, add_third_directory ) = filename_tagging_options.SimpleToTuple()
+            ( tags_for_all, load_from_neighbouring_txt_files, add_filename, directory_dict ) = filename_tagging_options.SimpleToTuple()
             
             self._tags.AddTags( tags_for_all )
             self._load_from_txt_files_checkbox.SetValue( load_from_neighbouring_txt_files )
@@ -574,20 +580,16 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._filename_checkbox.SetValue( add_filename_boolean )
             self._filename_namespace.SetValue( add_filename_namespace )
             
-            ( dir_1_boolean, dir_1_namespace ) = add_first_directory
-            
-            self._dir_checkbox_1.SetValue( dir_1_boolean )
-            self._dir_namespace_1.SetValue( dir_1_namespace )
-            
-            ( dir_2_boolean, dir_2_namespace ) = add_second_directory
-            
-            self._dir_checkbox_2.SetValue( dir_2_boolean )
-            self._dir_namespace_2.SetValue( dir_2_namespace )
-            
-            ( dir_3_boolean, dir_3_namespace ) = add_third_directory
-            
-            self._dir_checkbox_3.SetValue( dir_3_boolean )
-            self._dir_namespace_3.SetValue( dir_3_namespace )
+            for ( index, ( dir_boolean, dir_namespace ) ) in directory_dict.items():
+                
+                ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
+                
+                dir_checkbox.SetValue( dir_boolean )
+                dir_namespace_textctrl.SetValue( dir_namespace )
+                
+                dir_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                dir_namespace_textctrl.Bind( wx.EVT_TEXT, self.EventRefresh )
+                
             
             #
             
@@ -609,26 +611,20 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             filename_hbox.Add( self._filename_checkbox, CC.FLAGS_VCENTER )
             filename_hbox.Add( self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            dir_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
-            
-            dir_hbox_1.Add( self._dir_checkbox_1, CC.FLAGS_VCENTER )
-            dir_hbox_1.Add( self._dir_namespace_1, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            dir_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
-            
-            dir_hbox_2.Add( self._dir_checkbox_2, CC.FLAGS_VCENTER )
-            dir_hbox_2.Add( self._dir_namespace_2, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            dir_hbox_3 = wx.BoxSizer( wx.HORIZONTAL )
-            
-            dir_hbox_3.Add( self._dir_checkbox_3, CC.FLAGS_VCENTER )
-            dir_hbox_3.Add( self._dir_namespace_3, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
             self._checkboxes_panel.Add( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._checkboxes_panel.Add( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.Add( dir_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.Add( dir_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.Add( dir_hbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            for index in ( 0, 1, 2, -3, -2, -1 ):
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
+                
+                hbox.Add( dir_checkbox, CC.FLAGS_VCENTER )
+                hbox.Add( dir_namespace_textctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._checkboxes_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -643,12 +639,6 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._load_from_txt_files_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
             self._filename_namespace.Bind( wx.EVT_TEXT, self.EventRefresh )
             self._filename_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
-            self._dir_namespace_1.Bind( wx.EVT_TEXT, self.EventRefresh )
-            self._dir_checkbox_1.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
-            self._dir_namespace_2.Bind( wx.EVT_TEXT, self.EventRefresh )
-            self._dir_checkbox_2.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
-            self._dir_namespace_3.Bind( wx.EVT_TEXT, self.EventRefresh )
-            self._dir_checkbox_3.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
             
         
         def _GetTagsFromClipboard( self ):
@@ -835,27 +825,16 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             tags_for_all = self._tags.GetTags()
             load_from_neighbouring_txt_files = self._load_from_txt_files_checkbox.GetValue()
             
-            add_filename_boolean = self._filename_checkbox.GetValue()
-            add_filename_namespace = self._filename_namespace.GetValue()
+            add_filename = ( self._filename_checkbox.GetValue(), self._filename_namespace.GetValue() )
             
-            add_filename = ( add_filename_boolean, add_filename_namespace )
+            directories_dict = {}
             
-            dir_1_boolean = self._dir_checkbox_1.GetValue()
-            dir_1_namespace = self._dir_namespace_1.GetValue()
+            for ( index, ( dir_checkbox, dir_namespace_textctrl ) ) in self._directory_namespace_controls.items():
+                
+                directories_dict[ index ] = ( dir_checkbox.GetValue(), dir_namespace_textctrl.GetValue() )
+                
             
-            add_first_directory = ( dir_1_boolean, dir_1_namespace )
-            
-            dir_2_boolean = self._dir_checkbox_2.GetValue()
-            dir_2_namespace = self._dir_namespace_2.GetValue()
-            
-            add_second_directory = ( dir_2_boolean, dir_2_namespace )
-            
-            dir_3_boolean = self._dir_checkbox_3.GetValue()
-            dir_3_namespace = self._dir_namespace_3.GetValue()
-            
-            add_third_directory = ( dir_3_boolean, dir_3_namespace )
-            
-            filename_tagging_options.SimpleSetTuple( tags_for_all, load_from_neighbouring_txt_files, add_filename, add_first_directory, add_second_directory, add_third_directory )
+            filename_tagging_options.SimpleSetTuple( tags_for_all, load_from_neighbouring_txt_files, add_filename, directories_dict )
             
         
     

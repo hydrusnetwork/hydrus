@@ -871,9 +871,16 @@ class BetterRadioBox( wx.RadioBox ):
     
 class BetterStaticText( wx.StaticText ):
     
-    def __init__( self, parent, label = None, **kwargs ):
+    def __init__( self, parent, label = None, tooltip_label = False, **kwargs ):
         
         wx.StaticText.__init__( self, parent, **kwargs )
+        
+        self._tooltip_label = tooltip_label
+        
+        if 'style' in kwargs and kwargs[ 'style' ] & wx.ST_ELLIPSIZE_END:
+            
+            self._tooltip_label = True
+            
         
         self._last_set_text = '' # we want a separate copy since the one we'll send to the st will be wrapped and have additional '\n's
         
@@ -899,6 +906,11 @@ class BetterStaticText( wx.StaticText ):
             if self._wrap_width is not None:
                 
                 self.Wrap( self._wrap_width )
+                
+            
+            if self._tooltip_label:
+                
+                self.SetToolTip( text )
                 
             
         

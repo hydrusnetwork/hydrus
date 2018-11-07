@@ -639,7 +639,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                     next_month_year += 1
                     
                 
-                next_month = ( month + 1 ) % 12
+                next_month = ( month % 12 ) + 1
                 
                 next_month_dt = datetime.datetime( next_month_year, next_month, 1 )
                 

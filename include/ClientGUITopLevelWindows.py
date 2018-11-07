@@ -444,6 +444,42 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         raise NotImplementedError()
         
     
+    def _TryEndModal( self, value ):
+        
+        try:
+            
+            self.EndModal( value )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'This dialog seems to have been unable to close for some reason. I am printing the stack to the log. The dialog may have already closed, or may attempt to close now. Please inform hydrus dev of this situation. I recommend you restart the client if you can. If the UI is locked, you will have to kill it via task manager.' )
+            
+            HydrusData.PrintException( e )
+            
+            import traceback
+            
+            HydrusData.DebugPrint( ''.join( traceback.format_stack() ) )
+            
+            try:
+                
+                self.Close()
+                
+            except:
+                
+                HydrusData.ShowText( 'The dialog would not close on command.' )
+                
+            
+            try:
+                
+                self.Destroy()
+                
+            except:
+                
+                HydrusData.ShowText( 'The dialog would not destroy on command.' )
+                
+            
+        
+    
     def DoOK( self ):
         
         raise NotImplementedError()
@@ -535,7 +571,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
-        self.EndModal( wx.ID_OK )
+        self._TryEndModal( wx.ID_OK )
         
     
 class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
@@ -577,7 +613,7 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
-        self.EndModal( wx.ID_OK )
+        self._TryEndModal( wx.ID_OK )
         
     
 class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel ):
@@ -634,7 +670,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
-        self.EndModal( wx.ID_OK )
+        self._TryEndModal( wx.ID_OK )
         
     
 class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
@@ -664,7 +700,7 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
-        self.EndModal( wx.ID_OK )
+        self._TryEndModal( wx.ID_OK )
         
     
 class Frame( wx.Frame ):

@@ -518,9 +518,15 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             sort_login_script = login_script.GetName()
             
+            network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+            
+            logged_in = login_script.IsLoggedIn( self._engine, network_context )
+            
         except HydrusExceptions.DataMissing:
             
             sort_login_script = 'login script not found'
+            
+            logged_in = False
             
         
         access = ClientNetworkingLogin.login_access_type_str_lookup[ login_access_type ] + ' - ' + login_access_text
@@ -540,10 +546,6 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             sort_validity += ' - ' + validity_error_text
             
-        
-        network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
-        
-        logged_in = login_script.IsLoggedIn( self._engine, network_context )
         
         if logged_in:
             
@@ -1257,26 +1259,6 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _DoTest( self ):
         
-        if self._currently_testing:
-            
-            wx.MessageBox( 'Currently testing already! Please cancel current job!' )
-            
-            return
-            
-        
-        try:
-            
-            login_script = self.GetValue()
-            
-        except HydrusExceptions.VetoException:
-            
-            return
-            
-        
-        self._test_listctrl.DeleteDatas( self._test_listctrl.GetData() )
-        
-        self._test_button.Disable()
-        
         def wx_add_result( test_result ):
             
             if not self:
@@ -1344,6 +1326,34 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        if self._currently_testing:
+            
+            wx.MessageBox( 'Currently testing already! Please cancel current job!' )
+            
+            return
+            
+        
+        try:
+            
+            login_script = self.GetValue()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
+        
+        if self._test_domain == '':
+            
+            example_domains = list( login_script.GetExampleDomains() )
+            
+            example_domains.sort()
+            
+            if len( example_domains ) > 0:
+                
+                self._test_domain = example_domains[0]
+                
+            
+        
         with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = self._test_domain, allow_blank = False ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
@@ -1380,6 +1390,10 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._test_credentials = {}
             
+        
+        self._test_listctrl.DeleteDatas( self._test_listctrl.GetData() )
+        
+        self._test_button.Disable()
         
         network_job_presentation_context_factory = GenerateTestNetworkJobPresentationContextFactory( self, self._test_network_job_control )
         

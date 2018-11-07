@@ -218,9 +218,35 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             nj.engine = HG.client_controller.network_engine
             
-            if nj.NeedsLogin() and not nj.CanLogin():
+            if nj.NeedsLogin():
                 
-                result = False
+                try:
+                    
+                    nj.CheckCanLogin()
+                    
+                    result = True
+                    
+                except Exception as e:
+                    
+                    result = False
+                    
+                    if not self._paused:
+                        
+                        login_fail_reason = HydrusData.ToUnicode( e )
+                        
+                        message = 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its file imports. The reason was:'
+                        message += os.linesep * 2
+                        message += login_fail_reason
+                        message += os.linesep * 2
+                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                        
+                        HydrusData.ShowText( message )
+                        
+                        self._DelayWork( 300, login_fail_reason )
+                        
+                        self._paused = True
+                        
+                    
                 
             else:
                 
@@ -231,13 +257,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         if HG.subscription_report_mode:
             
             HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" pre-work file login test. Login ok: ' + str( result ) + '.' )
-            
-        
-        if not result and not self._paused:
-            
-            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its file imports. The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.' )
-            
-            self._paused = True
             
         
         return result
@@ -259,9 +278,35 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             nj.engine = HG.client_controller.network_engine
             
-            if nj.NeedsLogin() and not nj.CanLogin():
+            if nj.NeedsLogin():
                 
-                result = False
+                try:
+                    
+                    nj.CheckCanLogin()
+                    
+                    result = True
+                    
+                except Exception as e:
+                    
+                    result = False
+                    
+                    if not self._paused:
+                        
+                        login_fail_reason = HydrusData.ToUnicode( e )
+                        
+                        message = 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login. The reason was:'
+                        message += os.linesep * 2
+                        message += login_fail_reason
+                        message += os.linesep * 2
+                        message += 'The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.'
+                        
+                        HydrusData.ShowText( message )
+                        
+                        self._DelayWork( 300, login_fail_reason )
+                        
+                        self._paused = True
+                        
+                    
                 
             else:
                 
@@ -272,13 +317,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         if HG.subscription_report_mode:
             
             HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" pre-work sync login test. Login ok: ' + str( result ) + '.' )
-            
-        
-        if not result and not self._paused:
-            
-            HydrusData.ShowText( 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its sync queries. The subscription has paused. Please see if you can fix the problem and then unpause. Hydrus dev would like feedback on this process.' )
-            
-            self._paused = True
             
         
         return result
@@ -634,7 +672,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             if query.CanWorkOnFiles():
                 
-                if self._QueryBandwidthIsOK( query ) and self._QueryFileLoginIsOK( query ):
+                if self._QueryBandwidthIsOK( query ):
                     
                     return True
                     

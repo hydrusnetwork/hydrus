@@ -63,6 +63,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'add_parents_on_manage_tags' ] = True
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
+        self._dictionary[ 'booleans' ][ 'yes_no_on_remove_on_manage_tags' ] = True
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
@@ -113,6 +114,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'highlight_new_watcher' ] = True
         self._dictionary[ 'booleans' ][ 'highlight_new_query' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'delete_files_after_export' ] = False
         
         #
         

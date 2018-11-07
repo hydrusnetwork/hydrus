@@ -229,7 +229,7 @@ def GetFileInfo( path, mime = None ):
         
     elif mime == HC.APPLICATION_PDF:
         
-        num_words = HydrusDocumentHandling.GetPDFNumWords( path )
+        num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
         
     elif mime in HC.AUDIO:
         

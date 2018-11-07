@@ -1784,9 +1784,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if len( gallery_importers ) > 0:
             
-            separator = os.linesep * 2
-            
-            text = separator.join( ( gallery_importer.GetQueryText() for gallery_importer in gallery_importers ) )
+            text = os.linesep.join( ( gallery_importer.GetQueryText() for gallery_importer in gallery_importers ) )
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -2444,9 +2442,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if len( watchers ) > 0:
             
-            separator = os.linesep * 2
-            
-            text = separator.join( ( watcher.GetURL() for watcher in watchers ) )
+            text = os.linesep.join( ( watcher.GetURL() for watcher in watchers ) )
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             

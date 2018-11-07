@@ -24,6 +24,7 @@ import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
 import ClientNetworkingContexts
+import ClientNetworkingJobs
 import ClientParsing
 import ClientPaths
 import ClientRendering
@@ -1742,7 +1743,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'UNDER CONSTRUCTION: manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'READY FOR CAUTIOUS USE: manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+            
+            debug_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+            
+            ClientGUIMenus.AppendMenu( submenu, debug_menu, 'DEBUG' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
             
@@ -1754,6 +1761,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
             
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+            
             ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
@@ -1761,34 +1770,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'UNDER CONSTRUCTION: manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
             ClientGUIMenus.AppendMenuItem( self, submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
-            
-            #
-            
-            submenu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
-            
-            reset_login_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, reset_login_menu, 'pixiv', 'Reset pixiv session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' ) )
-            ClientGUIMenus.AppendMenuItem( self, reset_login_menu, 'hentai foundry', 'Reset HF session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' ) )
-            
-            ClientGUIMenus.AppendMenu( submenu, reset_login_menu, 'DEBUG: reset login' )
-            
-            debug_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
-            
-            ClientGUIMenus.AppendMenu( submenu, debug_menu, 'DEBUG: misc' )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'logins' )
             
             #
             
@@ -2623,11 +2607,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             dlg.ShowModal()
             
-        
-    
-    def _ManagePixivAccount( self ):
-        
-        with ClientGUIDialogsManage.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageServer( self, service_key ):

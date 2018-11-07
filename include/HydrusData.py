@@ -379,6 +379,11 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
     
 def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3 ):
     
+    if timestamp is None:
+        
+        timestamp = 0
+        
+    
     if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
         
         return ConvertTimestampToPrettyTime( timestamp )

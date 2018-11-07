@@ -1957,9 +1957,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesSetDuplicatePairStatus( self, pair_info ):
         
-        for ( duplicate_type, hash_a, hash_b, list_of_service_keys_to_content_updates ) in pair_info:
+        for ( duplicate_type, hash_a, hash_b, service_keys_to_content_updates ) in pair_info:
             
-            for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+            if len( service_keys_to_content_updates ) > 0:
                 
                 self._ProcessContentUpdates( service_keys_to_content_updates )
                 
@@ -3166,7 +3166,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_job( 'notify_new_pending' )
         self.pub_after_job( 'notify_new_siblings_data' )
-        self.pub_after_job( 'notify_new_siblings_gui' )
         self.pub_after_job( 'notify_new_parents' )
         
         self.pub_service_updates_after_commit( { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
@@ -8127,7 +8126,6 @@ class DB( HydrusDB.HydrusDB ):
             if notify_new_siblings:
                 
                 self.pub_after_job( 'notify_new_siblings_data' )
-                self.pub_after_job( 'notify_new_siblings_gui' )
                 self.pub_after_job( 'notify_new_parents' )
                 
             elif notify_new_parents:
@@ -10382,7 +10380,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            message = 'If you are an EU/EEA user and are subject to GDPR, the tumblr downloader has likely broken for you. If so, please hit _network->logins->DEBUG: misc->do tumblr GDPR click-through_ to restore tumblr downloader functionality.'
+            message = 'If you are an EU/EEA user and are subject to GDPR, the tumblr downloader has likely broken for you. If so, please hit _network->downloaders->DEBUG->do tumblr GDPR click-through_ to restore tumblr downloader functionality.'
             
             self.pub_initial_message( message )
             
@@ -11198,6 +11196,56 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 328:
+            
+            try:
+            
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ 'imgur single media page gifv format', 'pixiv manga page' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'deviant art file page parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.OverwriteDefaultLoginScripts( [ 'pixiv login', 'danbooru login', 'gelbooru 0.2.x login', 'deviant art login (only works on a client that has already done some downloading)' ] )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+                self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( 'pixiv_account', ) )
                 
             except Exception as e:
                 

@@ -2595,6 +2595,7 @@ class TagParentsManager( object ):
         self._controller = controller
         
         self._dirty = False
+        self._refresh_job = None
         
         self._service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
         
@@ -2729,7 +2730,12 @@ class TagParentsManager( object ):
             
             self._dirty = True
             
-            self._controller.CallLater( 1.0, self.RefreshParentsIfDirty )
+            if self._refresh_job is not None:
+                
+                self._refresh_job.Cancel()
+                
+            
+            self._refresh_job = self._controller.CallLater( 1.0, self.RefreshParentsIfDirty )
             
         
     
@@ -2753,6 +2759,7 @@ class TagSiblingsManager( object ):
         self._controller = controller
         
         self._dirty = False
+        self._refresh_job = None
         
         self._service_keys_to_siblings = collections.defaultdict( dict )
         self._service_keys_to_reverse_lookup = collections.defaultdict( dict )
@@ -3059,7 +3066,12 @@ class TagSiblingsManager( object ):
             
             self._dirty = True
             
-            self._controller.CallLater( 1.0, self.RefreshSiblingsIfDirty )
+            if self._refresh_job is not None:
+                
+                self._refresh_job.Cancel()
+                
+            
+            self._refresh_job = self._controller.CallLater( 1.0, self.RefreshSiblingsIfDirty )
             
         
     
@@ -3072,6 +3084,8 @@ class TagSiblingsManager( object ):
                 self._RefreshSiblings()
                 
                 self._dirty = False
+                
+                self._controller.pub( 'notify_new_siblings_gui' )
                 
             
         

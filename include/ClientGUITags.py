@@ -1233,18 +1233,17 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._i_am_local_tag_service:
                 
-                text = 'remove all tags'
+                text = 'remove all/selected tags'
                 
             else:
                 
-                text = 'petition all tags'
+                text = 'petition all/selected tags'
                 
             
-            self._remove_tags = wx.Button( self._tags_box_sorter, label = text )
-            self._remove_tags.Bind( wx.EVT_BUTTON, self.EventRemoveTags )
+            self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
             
             self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.copy, self._Copy )
-            self._copy_button.SetToolTip( 'Copy the selected tags to the clipboard.' )
+            self._copy_button.SetToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
             
             self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.paste, self._Paste )
             self._paste_button.SetToolTip( 'Paste newline-separated tags from the clipboard into here.' )
@@ -1260,6 +1259,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'replace_siblings_on_manage_tags' )
             
             menu_items.append( ( 'check', 'auto-replace entered siblings', 'If checked, adding any tag that has a sibling will instead add that sibling.', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'yes_no_on_remove_on_manage_tags' )
+            
+            menu_items.append( ( 'check', 'confirm remove/petition tags', 'If checked, clicking the remove/petition tags button (or hitting the deleted key on the list) will first confirm the action with a yes/no dialog.', check_manager ) )
             
             check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipShowDeleted, lambda: self._show_deleted )
             
@@ -1665,11 +1668,21 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tags = list( self._tags_box.GetSelectedTags() )
             
-            tags = HydrusTags.SortNumericTags( tags )
+            if len( tags ) == 0:
+                
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._tag_service_key, collapse_siblings = False )
+                
+                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )    
+                
             
-            text = os.linesep.join( tags )
-            
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            if len( tags ) > 0:
+                
+                tags = HydrusTags.SortNumericTags( tags )
+                
+                text = os.linesep.join( tags )
+                
+                HG.client_controller.pub( 'clipboard', 'text', text )
+                
             
         
         def _FlipShowDeleted( self ):
@@ -1720,9 +1733,37 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self.EnterTags( tags, only_add = True )
                 
             except Exception as e:
-                HydrusData.ShowException( e )
+                
                 wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
+            
+        
+        def _RemoveTagsButton( self ):
+            
+            tag_managers = [ m.GetTagsManager() for m in self._media ]
+            
+            removable_tags = set()
+            
+            for tag_manager in tag_managers:
+                
+                removable_tags.update( tag_manager.GetCurrent( self._tag_service_key ) )
+                removable_tags.update( tag_manager.GetPending( self._tag_service_key ) )
+                
+            
+            selected_tags = list( self._tags_box.GetSelectedTags() )
+            
+            if len( selected_tags ) == 0:
+                
+                tags_to_remove = list( removable_tags )
+                
+            else:
+                
+                tags_to_remove = [ tag for tag in selected_tags if tag in removable_tags ]
+                
+            
+            tags_to_remove = HydrusTags.SortNumericTags( tags_to_remove )
+            
+            self.RemoveTags( tags_to_remove )
             
         
         def AddTags( self, tags, only_add = False ):
@@ -1746,21 +1787,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._AddTags( tags, only_add = only_add )
                 
-            
-        
-        def EventRemoveTags( self, event ):
-            
-            tag_managers = [ m.GetTagsManager() for m in self._media ]
-            
-            removable_tags = set()
-            
-            for tag_manager in tag_managers:
-                
-                removable_tags.update( tag_manager.GetCurrent( self._tag_service_key ) )
-                removable_tags.update( tag_manager.GetPending( self._tag_service_key ) )
-                
-            
-            self._AddTags( removable_tags, only_remove = True )
             
         
         def GetGroupsOfContentUpdates( self ):
@@ -1804,6 +1830,28 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def RemoveTags( self, tags ):
             
             if len( tags ) > 0:
+                
+                if self._new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' ):
+                    
+                    if len( tags ) < 10:
+                        
+                        message = 'Are you sure you want to remove these tags:'
+                        message += os.linesep * 2
+                        message += os.linesep.join( tags )
+                        
+                    else:
+                        
+                        message = 'Are you sure you want to remove these ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags?'
+                        
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() != wx.ID_YES:
+                            
+                            return
+                            
+                        
+                    
                 
                 self._AddTags( tags, only_remove = True )
                 
@@ -2174,30 +2222,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
-        def _AddFlatPairs( self, pairs, add_only = False ):
+        def _AddPairs( self, pairs, add_only = False ):
             
-            parents_to_children = HydrusData.BuildKeyToSetDict( ( ( parent, child ) for ( child, parent ) in pairs ) )
+            pairs = list( pairs )
             
-            for ( parent, children ) in parents_to_children.items():
-                
-                self._AddPairs( children, parent, add_only = add_only )
-                
-            
-            self._UpdateListCtrlData()
-            
-            self._SetButtonStatus()
-            
-        
-        def _AddPairs( self, children, parent, add_only = False ):
+            pairs.sort( key = lambda ( c, p ): HydrusTags.ConvertTagToSortable( p ) )
             
             new_pairs = []
             current_pairs = []
             petitioned_pairs = []
             pending_pairs = []
             
-            for child in children:
-                
-                pair = ( child, parent )
+            for pair in pairs:
                 
                 if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
@@ -2542,7 +2578,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._DeserialiseImportString( import_string )
             
-            self._AddFlatPairs( pairs, add_only )
+            self._AddPairs( pairs, add_only = add_only )
+            
+            self._UpdateListCtrlData()
             
         
         def _ImportFromTXT( self, add_only = False ):
@@ -2566,7 +2604,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._DeserialiseImportString( import_string )
             
-            self._AddFlatPairs( pairs, add_only )
+            self._AddPairs( pairs, add_only = add_only )
+            
+            self._UpdateListCtrlData()
             
         
         def _ListCtrlActivated( self ):
@@ -2575,17 +2615,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._tag_parents.GetData( only_selected = True )
             
-            for ( child, parent ) in pairs:
+            if len( pairs ) > 0:
                 
-                parents_to_children[ parent ].add( child )
-                
-            
-            if len( parents_to_children ) > 0:
-                
-                for ( parent, children ) in parents_to_children.items():
-                    
-                    self._AddPairs( children, parent )
-                    
+                self._AddPairs( pairs )
                 
             
         
@@ -2686,10 +2718,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             children = self._children.GetTags()
             parents = self._parents.GetTags()
             
-            for parent in parents:
-                
-                self._AddPairs( children, parent )
-                
+            pairs = list( itertools.product( children, parents ) )
+            
+            self._AddPairs( pairs )
             
             self._children.SetTags( [] )
             self._parents.SetTags( [] )
@@ -3020,32 +3051,18 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
-        def _AddFlatPairs( self, pairs, add_only = False ):
+        def _AddPairs( self, pairs, add_only = False, remove_only = False, default_reason = None ):
             
-            news_to_olds = HydrusData.BuildKeyToSetDict( ( ( new, old ) for ( old, new ) in pairs ) )
+            pairs = list( pairs )
             
-            for ( new, olds ) in news_to_olds.items():
-                
-                self._AutoPetitionConflicts( olds, new )
-                
-                self._AddPairs( olds, new, add_only = add_only )
-                
-            
-            self._UpdateListCtrlData()
-            
-            self._SetButtonStatus()
-            
-        
-        def _AddPairs( self, olds, new, add_only = False, remove_only = False, default_reason = None ):
+            pairs.sort( key = lambda ( c, p ): HydrusTags.ConvertTagToSortable( p ) )
             
             new_pairs = []
             current_pairs = []
             petitioned_pairs = []
             pending_pairs = []
             
-            for old in olds:
-                
-                pair = ( old, new )
+            for pair in pairs:
                 
                 if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
@@ -3242,25 +3259,36 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def _AutoPetitionConflicts( self, olds, new ):
+        def _AutoPetitionConflicts( self, pairs ):
             
             current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
-            olds_to_news = dict( current_pairs )
+            current_olds_to_news = dict( current_pairs )
             
             current_olds = { current_old for ( current_old, current_new ) in current_pairs }
             
-            for old in olds:
+            pairs_to_auto_petition = set()
+            
+            for ( old, new ) in pairs:
                 
                 if old in current_olds:
                     
-                    conflicting_new = olds_to_news[ old ]
+                    conflicting_new = current_olds_to_news[ old ]
                     
                     if conflicting_new != new:
                         
-                        self._AddPairs( [ old ], conflicting_new, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + new )
+                        conflicting_pair = ( old, conflicting_new )
+                        
+                        pairs_to_auto_petition.add( conflicting_pair )
                         
                     
+                
+            
+            if len( pairs_to_auto_petition ) > 0:
+                
+                pairs_to_auto_petition = list( pairs_to_auto_petition )
+                
+                self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + new )
                 
             
         
@@ -3415,7 +3443,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._DeserialiseImportString( import_string )
             
-            self._AddFlatPairs( pairs, add_only )
+            self._AutoPetitionConflicts( pairs )
+            
+            self._AddPairs( pairs, add_only = add_only )
+            
+            self._UpdateListCtrlData()
             
         
         def _ImportFromTXT( self, add_only = False ):
@@ -3439,26 +3471,20 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._DeserialiseImportString( import_string )
             
-            self._AddFlatPairs( pairs, add_only )
+            self._AutoPetitionConflicts( pairs )
+            
+            self._AddPairs( pairs, add_only = add_only )
+            
+            self._UpdateListCtrlData()
             
         
         def _ListCtrlActivated( self ):
             
-            news_to_olds = collections.defaultdict( set )
-            
             pairs = self._tag_siblings.GetData( only_selected = True )
             
-            for ( old, new ) in pairs:
+            if len( pairs ) > 0:
                 
-                news_to_olds[ new ].add( old )
-                
-            
-            if len( news_to_olds ) > 0:
-                
-                for ( new, olds ) in news_to_olds.items():
-                    
-                    self._AddPairs( olds, new )
-                    
+                self._AddPairs( pairs )
                 
             
             self._UpdateListCtrlData()
@@ -3552,9 +3578,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 olds = self._old_siblings.GetTags()
                 
-                self._AutoPetitionConflicts( olds, self._current_new )
+                pairs = [ ( old, self._current_new ) for old in olds ]
                 
-                self._AddPairs( olds, self._current_new )
+                self._AutoPetitionConflicts( pairs )
+                
+                self._AddPairs( pairs )
                 
                 self._old_siblings.SetTags( set() )
                 self.SetNew( set() )

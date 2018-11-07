@@ -1687,14 +1687,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 if duplicate_action_options is None:
                     
-                    list_of_service_keys_to_content_updates = []
+                    service_keys_to_content_updates = {}
                     
                 else:
                     
-                    list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+                    service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
                     
                 
-                pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+                pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
                 
             
             if len( pair_info ) > 0:

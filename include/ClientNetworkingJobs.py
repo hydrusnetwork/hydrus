@@ -530,20 +530,6 @@ class NetworkJob( object ):
             
         
     
-    def CanLogin( self ):
-        
-        try:
-            
-            self.CheckCanLogin()
-            
-            return True
-            
-        except:
-            
-            return False
-            
-        
-    
     def CanValidateInPopup( self ):
         
         with self._lock:

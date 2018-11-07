@@ -3008,7 +3008,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._unprocessed_pairs = []
         self._current_pair = None
         self._processed_pairs = []
-        self._batch_skip_hashes = set()
+        self._hashes_due_to_be_deleted_in_this_batch = set()
         
         self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, [] )
         
@@ -3078,9 +3078,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+            service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
             
-            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+            pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
             
         
         if len( pair_info ) > 0:
@@ -3089,7 +3089,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
         self._processed_pairs = []
-        self._batch_skip_hashes = set()
+        self._hashes_due_to_be_deleted_in_this_batch = set()
         
     
     def _CurrentMediaIsBetter( self ):
@@ -3325,7 +3325,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 self._unprocessed_pairs.append( hash_pair )
                 
             
-            self._batch_skip_hashes.difference_update( hash_pair )
+            self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
             
             self._ShowNewPair()
             
@@ -3364,7 +3364,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         deleted_hashes = duplicate_action_options.GetDeletedHashes( self._current_media, other_media )
         
-        self._batch_skip_hashes.update( deleted_hashes )
+        self._hashes_due_to_be_deleted_in_this_batch.update( deleted_hashes )
         
         was_auto_skipped = False
         
@@ -3407,14 +3407,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         self._unprocessed_pairs.append( hash_pair )
                         
                     
-                    self._batch_skip_hashes.difference_update( hash_pair )
+                    self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
                     
                 
             
         
         if len( self._unprocessed_pairs ) == 0:
             
-            self._batch_skip_hashes = set()
+            self._hashes_due_to_be_deleted_in_this_batch = set()
             self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above
             
             self.SetMedia( None )
@@ -3432,7 +3432,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 ( first_hash, second_hash ) = pair
                 
-                if first_hash in self._batch_skip_hashes or second_hash in self._batch_skip_hashes:
+                if first_hash in self._hashes_due_to_be_deleted_in_this_batch or second_hash in self._hashes_due_to_be_deleted_in_this_batch:
                     
                     return False
                     

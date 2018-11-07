@@ -1900,6 +1900,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
         
+        self._delete_files_after_export = wx.CheckBox( self, label = 'delete files from client after export?' )
+        self._delete_files_after_export.SetForegroundColour( wx.Colour( 127, 0, 0 ) )
+        
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         
         self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
@@ -1925,6 +1928,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         self._paths.SetData( list( enumerate( flat_media ) ) )
+        
+        self._delete_files_after_export.SetValue( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
+        self._delete_files_after_export.Bind( wx.EVT_CHECKBOX, self.EventDeleteFilesChanged )
         
         #
         
@@ -1953,6 +1959,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox.Add( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         vbox.Add( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
         vbox.Add( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
         vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
         
@@ -1991,13 +1998,35 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DoExport( self, quit_afterwards = False ):
         
+        delete_afterwards = self._delete_files_after_export.GetValue()
+        
         if quit_afterwards:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Export as shown?' ) as dlg:
+            message = 'Export as shown?'
+            
+            if delete_afterwards:
+                
+                message += os.linesep * 2
+                message += 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
+                
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
                 if dlg.ShowModal() != wx.ID_YES:
                     
                     self.GetParent().Close()
+                    
+                    return
+                    
+                
+            
+        elif delete_afterwards:
+            
+            message = 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
                     
                     return
                     
@@ -2055,7 +2084,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def do_it( neighbouring_txt_tag_service_keys, quit_afterwards ):
+        def do_it( neighbouring_txt_tag_service_keys, delete_afterwards, quit_afterwards ):
             
             for ( index, ( ordering_index, media ) ) in enumerate( to_do ):
                 
@@ -2120,6 +2149,22 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
             
+            if delete_afterwards:
+                
+                wx.CallAfter( wx_update_label, 'deleting' )
+                
+                deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do }
+                
+                chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                
+                for content_update in content_updates:
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                    
+                
+            
             wx.CallAfter( wx_update_label, 'done!' )
             
             time.sleep( 1 )
@@ -2129,7 +2174,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             wx.CallAfter( wx_done, quit_afterwards )
             
         
-        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, quit_afterwards )
+        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, delete_afterwards, quit_afterwards )
         
     
     def _GetPath( self, media ):
@@ -2202,6 +2247,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def EventExport( self, event ):
         
         self._DoExport()
+        
+    
+    def EventDeleteFilesChanged( self, event ):
+        
+        HG.client_controller.new_options.SetBoolean( 'delete_files_after_export', self._delete_files_after_export.GetValue() )
         
     
     def EventExportTagTxtsChanged( self, event ):

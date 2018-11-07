@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -140,14 +141,12 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
     def ProcessPairIntoContentUpdates( self, first_media, second_media ):
         
-        list_of_service_keys_to_content_updates = []
+        service_keys_to_content_updates = collections.defaultdict( list )
         
         first_hashes = first_media.GetHashes()
         second_hashes = second_media.GetHashes()
         
         #
-        
-        service_keys_to_content_updates = {}
         
         services_manager = HG.client_controller.services_manager
         
@@ -205,7 +204,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( content_updates ) > 0:
                 
-                service_keys_to_content_updates[ service_key ] = content_updates
+                service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
             
         
@@ -268,18 +267,11 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( content_updates ) > 0:
                 
-                service_keys_to_content_updates[ service_key ] = content_updates
+                service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
             
         
-        if len( service_keys_to_content_updates ) > 0:
-            
-            list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
-            
-        
         #
-        
-        service_keys_to_content_updates = {}
         
         if self._sync_archive:
             
@@ -287,19 +279,14 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ content_update ]
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
                 
             elif first_media.HasArchive() and second_media.HasInbox():
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ content_update ]
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
                 
-            
-        
-        if len( service_keys_to_content_updates ) > 0:
-            
-            list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
             
         
         #
@@ -338,15 +325,11 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( content_updates ) > 0:
                 
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
-                
-                list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( content_updates )
                 
             
         
         #
-        
-        service_keys_to_content_updates = {}
         
         deletee_media = []
         
@@ -379,25 +362,15 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             if deletee_service_key is not None:
                 
-                if deletee_service_key not in service_keys_to_content_updates:
-                    
-                    service_keys_to_content_updates[ deletee_service_key ] = []
-                    
-                
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes() )
                 
                 service_keys_to_content_updates[ deletee_service_key ].append( content_update )
                 
             
         
-        if len( service_keys_to_content_updates ) > 0:
-            
-            list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
-            
-        
         #
         
-        return list_of_service_keys_to_content_updates
+        return service_keys_to_content_updates
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS ] = DuplicateActionOptions

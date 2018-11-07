@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 329</h3></li>
+				<ul>
+					<li>login:</li>
+					<li>the login manager is fully turned on! hentai-foundry click-through and pixiv login now occur fully on the new system</li>
+					<li>wrote a Deviant Art login script for NSFW downloading--however, it only seems to work on a client that has done some logged-out downloading first (otherwise it thinks you are a robot)</li>
+					<li>updated the DA file page parser to only NSFW-veto if the user is currently logged out</li>
+					<li>wrote a danbooru login script for user prefs and special files if you have a gold account</li>
+					<li>wrote a gelbooru 0.2.x login script for user prefs</li>
+					<li>pixiv recently(?) allowed non-logged in users to see sfw content, so the login script is updated to reflect this. the login script doesn't detect a failed login any more, so I will revisit this</li>
+					<li>logging in in the regular order of things now makes a temporary popup message with the overall login status and final result. ~it is cancellable~--and if cancelled, future login attempts will be delayed</li>
+					<li>logging in in the regular order of things now prints simple started/result lines to the log</li>
+					<li>deleted old network->login menu and related code such as the custom pixiv login management. gdpr click-through is now under downloaders</li>
+					<li>subscription login errors will now specify the given login failure reason</li>
+					<li>subscription login tests will now occur at a better time, guaranteeing the sub will be correctly saved paused if the test fails</li>
+					<li>login errors will now always specify the domain for which they failed</li>
+					<li>testing a login script on a fresh edit login script dialog now pre-fills the alphabetically first example domain</li>
+					<li>the login script test ui now restores its 'run test' button correctly if the test is abandoned early</li>
+					<li>misc improvements to login error handling and reporting</li>
+					<li>.</li>
+					<li>other:</li>
+					<li>any texts across the program that ellipsize when they are too thin to display what they have will now tooltip their text (this most importantly includes the status on the network job control, which will now display full login problem info)</li>
+					<li>the copy button on manage tags goes back to copying all if no tags are selected</li>
+					<li>the remove button on manage tags now removes only selected if some tags are selected. it still removes all if none are selected</li>
+					<li>the remove button on manage tags is now wrapped in a yes/no dialog (as is hitting the delete key on the list's selection). this can be turned off under the cog button</li>
+					<li>filename tagging panels now support directory tagging for the last, second last, and third last directories. the related code for handling directory tagging is cleaned up significantly</li>
+					<li>the export files panel now lets you delete the files from the client after export. this value will be remembered, and if on will prompt a capital letters warning on export, either via the button or the quick-export shortcut</li>
+					<li>in manage tag parents, where there are multiple parents in a pending action (either by importing via clipboard/file or by putting multiple parents in right-hand box), the action will now be treated as one transaction with one 'enter a reason' confirmation!</li>
+					<li>in manage tag siblings, when multiple 'better' values are pended in one action via a clipboard/file import, they will now be treated as one transaction with one 'enter a reason' confirmation!</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>added a new url class that api-links .gifv-style imgur links so they are downloadable like regular imgur single media pages</li>
+					<li>the pixiv manga page url class now redirects to the new api, so mode=manga pages should now be drag-and-drop importable and generally downloadable if you have any still hanging around in any queues</li>
+					<li>clients now come with an additional danbooru parser that fetches the webm version of ugoiras</li>
+					<li>after discovering a pdf that ate indefinite 100% CPU while trying to parse, I have decided to stop pulling num_words for pdfs. it was always a super inaccurate number, so let's wait for a better solution at a later date. hydrus hence no longer requires pypdf2</li>
+					<li>fixed an issue with monthly bandwidth estimates rolling over to the new year incorrectly</li>
+					<li>in an attempt to chase down a duplicate files content move/copy bug, the duplicate action content updates got a bit of cleanup work. if you have noticed duplicate actions not copying tags/urls, please let me know the exact process in the ui, including services and merge options, you went through</li>
+					<li>tag lists should now update their sibling appearance correctly after a tag siblings dialog ok--previously, they were checking for new sibs too early</li>
+					<li>tag siblings and parents should now refresh their data more efficiently when spammed with new data notifications (this usually happens janitor-side, which approving dozens at once)</li>
+					<li>copy queries/watcher urls on the download pages' lists' right-click menus no longer double-spaces the copied texts (it just does single spaces)</li>
+					<li>fixed an issue where certain initialised watchers were erroring out when asked to provide next-check time estimates--in all cases, null timestamps will be dealt with better here</li>
+					<li>misc tag parents/siblings ui code cleanup</li>
+					<li>wrote some code to catch and report on an unusual dialog dismissal error</li>
+				</ul>
 				<li><h3>version 328</h3></li>
 				<ul>
 					<li>wrote test ui for edit login script panel</li>
