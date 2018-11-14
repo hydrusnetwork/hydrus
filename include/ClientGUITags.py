@@ -5,6 +5,7 @@ import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIDialogsQuick
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUITopLevelWindows
@@ -822,16 +823,13 @@ def ExportToHTA( parent, service_key, hashes ):
                 choice_tuples.append( ( 'sha1', HydrusTagArchive.HASH_TYPE_SHA1 ) )
                 choice_tuples.append( ( 'sha512', HydrusTagArchive.HASH_TYPE_SHA512 ) )
                 
-                with ClientGUIDialogs.DialogSelectFromList( parent, 'Select the hash type', choice_tuples ) as hash_dlg:
+                try:
                     
-                    if hash_dlg.ShowModal() == wx.ID_OK:
-                        
-                        hash_type = hash_dlg.GetChoice()
-                        
-                    else:
-                        
-                        return
-                        
+                    hash_type = ClientGUIDialogsQuick.SelectFromList( parent, 'select the hash type', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
                     
                 
             

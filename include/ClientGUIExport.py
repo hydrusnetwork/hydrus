@@ -1,0 +1,808 @@
+import ClientConstants as CC
+import ClientExporting
+import ClientGUIACDropdown
+import ClientGUICommon
+import ClientGUIDialogs
+import ClientGUIListBoxes
+import ClientGUIListCtrl
+import ClientGUIScrolledPanels
+import ClientGUIScrolledPanelsEdit
+import ClientGUITime
+import ClientGUITopLevelWindows
+import ClientSearch
+import HydrusConstants as HC
+import HydrusData
+import HydrusExceptions
+import HydrusGlobals as HG
+import HydrusPaths
+import os
+import stat
+import time
+import traceback
+import wx
+
+class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, export_folders ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ]
+        
+        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
+        
+        self._export_folders.AddDatas( export_folders )
+        
+        self._add_button = wx.Button( self, label = 'add' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit_button = wx.Button( self, label = 'edit' )
+        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete_button = wx.Button( self, label = 'delete' )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        file_buttons.Add( self._add_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._edit_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._delete_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Here you can set the client to regularly export a certain query to a particular location.'
+        
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _AddFolder( self ):
+        
+        new_options = HG.client_controller.new_options
+        
+        phrase = new_options.GetString( 'export_phrase' )
+        
+        name = 'export folder'
+        path = ''
+        export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+        period = 15 * 60
+        
+        export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, file_search_context = file_search_context, period = period, phrase = phrase )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folder' ) as dlg:
+            
+            panel = EditExportFolderPanel( dlg, export_folder )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                export_folder = panel.GetValue()
+                
+                export_folder.SetNonDupeName( self._GetExistingNames() )
+                
+                self._export_folders.AddDatas( ( export_folder, ) )
+                
+            
+        
+    
+    def _ConvertExportFolderToListCtrlTuples( self, export_folder ):
+        
+        ( name, path, export_type, file_search_context, period, phrase ) = export_folder.ToTuple()
+        
+        if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
+            
+            pretty_export_type = 'regular'
+            
+        elif export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+            
+            pretty_export_type = 'synchronise'
+            
+        
+        pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
+        
+        pretty_period = HydrusData.TimeDeltaToPrettyTimeDelta( period )
+        
+        pretty_phrase = phrase
+        
+        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase )
+        
+        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, period, phrase )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _GetExistingNames( self ):
+        
+        existing_names = { export_folder.GetName() for export_folder in self._export_folders.GetData() }
+        
+        return existing_names
+        
+    
+    def Edit( self ):
+        
+        export_folders = self._export_folders.GetData( only_selected = True )
+        
+        for export_folder in export_folders:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folder' ) as dlg:
+                
+                panel = EditExportFolderPanel( dlg, export_folder )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_export_folder = panel.GetValue()
+                    
+                    self._export_folders.DeleteDatas( ( export_folder, ) )
+                    
+                    edited_export_folder.SetNonDupeName( self._GetExistingNames() )
+                    
+                    self._export_folders.AddDatas( ( edited_export_folder, ) )
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        
+    
+    def EventAdd( self, event ):
+        
+        self._AddFolder()
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
+        
+    
+    def GetValue( self ):
+        
+        export_folders = self._export_folders.GetData()
+        
+        return export_folders
+        
+    
+class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, export_folder ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._export_folder = export_folder
+        
+        ( name, path, export_type, file_search_context, period, phrase ) = self._export_folder.ToTuple()
+        
+        self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
+        
+        self._name = wx.TextCtrl( self._path_box)
+        
+        self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        #
+        
+        self._type_box = ClientGUICommon.StaticBox( self, 'type of export' )
+        
+        self._type = ClientGUICommon.BetterChoice( self._type_box )
+        self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
+        self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
+        
+        #
+        
+        self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
+        
+        self._page_key = 'export folders placeholder'
+        
+        predicates = file_search_context.GetPredicates()
+        
+        self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._query_box, self._page_key, predicates )
+        
+        self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context )
+        
+        #
+        
+        self._period_box = ClientGUICommon.StaticBox( self, 'export period' )
+        
+        self._period = ClientGUITime.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
+        
+        #
+        
+        self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
+        
+        self._pattern = wx.TextCtrl( self._phrase_box )
+        
+        self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
+        
+        #
+        
+        self._name.SetValue( name )
+        
+        self._path.SetPath( path )
+        
+        self._type.SelectClientData( export_type )
+        
+        self._period.SetValue( period )
+        
+        self._pattern.SetValue( phrase )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'folder path: ', self._path ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._path_box, rows )
+        
+        self._path_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        text = '''regular - try to export the files to the directory, overwriting if the filesize if different
+
+synchronise - try to export the files to the directory, overwriting if the filesize if different, and delete anything else in the directory
+
+If you select synchronise, be careful!'''
+        
+        st = ClientGUICommon.BetterStaticText( self._type_box, label = text )
+        
+        st.SetWrapWidth( 440 )
+        
+        self._type_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._type_box.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._query_box.Add( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._query_box.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        phrase_hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        phrase_hbox.Add( self._examples, CC.FLAGS_VCENTER )
+        
+        self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        name = self._name.GetValue()
+        
+        path = HydrusData.ToUnicode( self._path.GetPath() )
+        
+        export_type = self._type.GetChoice()
+        
+        file_search_context = self._searchbox.GetFileSearchContext()
+        
+        predicates = self._predicates_box.GetPredicates()
+        
+        file_search_context.SetPredicates( predicates )
+        
+        period = self._period.GetValue()
+        
+        phrase = self._pattern.GetValue()
+        
+        if self._path.GetPath() in ( '', None ):
+            
+            raise HydrusExceptions.VetoException( 'You must enter a folder path to export to!' )
+            
+        
+        phrase = self._pattern.GetValue()
+        
+        try:
+            
+            ClientExporting.ParseExportPhrase( phrase )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.VetoException( 'Could not parse that export phrase! ' + HydrusData.ToUnicode( e ) )
+            
+        
+        export_folder = ClientExporting.ExportFolder( name, path, export_type, file_search_context, period, phrase )
+        
+        return export_folder
+        
+    
+class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, flat_media, do_export_and_then_quit = False ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        new_options = HG.client_controller.new_options
+        
+        self._media_to_paths = {}
+        self._existing_filenames = set()
+        self._last_phrase_used = ''
+        self._last_dir_used = ''
+        
+        self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
+        
+        services_manager = HG.client_controller.services_manager
+        
+        self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
+        
+        t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
+        
+        self._tags_box.SetTagsBox( t )
+        
+        self._tags_box.SetMinSize( ( 220, 300 ) )
+        
+        columns = [ ( 'number', 8 ), ( 'mime', 20 ), ( 'expected path', -1 ) ]
+        
+        self._paths = ClientGUIListCtrl.BetterListCtrl( self, 'export_files', 24, 64, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True )
+        
+        self._paths.Sort( 0 )
+        
+        self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
+        
+        self._directory_picker = wx.DirPickerCtrl( self._export_path_box )
+        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
+        
+        self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
+        self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
+        
+        self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
+        
+        self._pattern = wx.TextCtrl( self._filenames_box )
+        
+        self._update = wx.Button( self._filenames_box, label = 'update' )
+        self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
+        
+        self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
+        
+        self._delete_files_after_export = wx.CheckBox( self, label = 'delete files from client after export?' )
+        self._delete_files_after_export.SetForegroundColour( wx.Colour( 127, 0, 0 ) )
+        
+        text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
+        
+        self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
+        self._export_tag_txts.SetToolTip( text )
+        self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
+        
+        self._export = wx.Button( self, label = 'export' )
+        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        
+        #
+        
+        export_path = ClientExporting.GetExportPath()
+        
+        self._directory_picker.SetPath( export_path )
+        
+        phrase = new_options.GetString( 'export_phrase' )
+        
+        self._pattern.SetValue( phrase )
+        
+        if len( self._neighbouring_txt_tag_service_keys ) > 0:
+            
+            self._export_tag_txts.SetValue( True )
+            
+        
+        self._paths.SetData( list( enumerate( flat_media ) ) )
+        
+        self._delete_files_after_export.SetValue( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
+        self._delete_files_after_export.Bind( wx.EVT_CHECKBOX, self.EventDeleteFilesChanged )
+        
+        #
+        
+        top_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        top_hbox.Add( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        top_hbox.Add( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._open_location, CC.FLAGS_VCENTER )
+        
+        self._export_path_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._update, CC.FLAGS_VCENTER )
+        hbox.Add( self._examples, CC.FLAGS_VCENTER )
+        
+        self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        self._RefreshTags()
+        
+        wx.CallAfter( self._export.SetFocus )
+        
+        self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
+        self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
+        
+        if do_export_and_then_quit:
+            
+            wx.CallAfter( self._DoExport, True )
+            
+        
+    
+    def _ConvertDataToListCtrlTuples( self, data ):
+        
+        ( ordering_index, media ) = data
+        
+        number = ordering_index
+        mime = media.GetMime()
+        
+        try:
+            
+            path = self._GetPath( media )
+            
+        except Exception as e:
+            
+            path = HydrusData.ToUnicode( e )
+            
+        
+        pretty_number = HydrusData.ToHumanInt( ordering_index + 1 )
+        pretty_mime = HC.mime_string_lookup[ mime ]
+        pretty_path = path
+        
+        display_tuple = ( pretty_number, pretty_mime, pretty_path )
+        sort_tuple = ( number, pretty_mime, path )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DoExport( self, quit_afterwards = False ):
+        
+        delete_afterwards = self._delete_files_after_export.GetValue()
+        
+        if quit_afterwards:
+            
+            message = 'Export as shown?'
+            
+            if delete_afterwards:
+                
+                message += os.linesep * 2
+                message += 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
+                
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    self.GetParent().Close()
+                    
+                    return
+                    
+                
+            
+        elif delete_afterwards:
+            
+            message = 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
+        
+        self._RefreshPaths()
+        
+        export_tag_txts = self._export_tag_txts.GetValue()
+        
+        directory = self._directory_picker.GetPath()
+        
+        HydrusPaths.MakeSureDirectoryExists( directory )
+        
+        pattern = self._pattern.GetValue()
+        
+        new_options = HG.client_controller.new_options
+        
+        new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
+        
+        new_options.SetString( 'export_phrase', pattern )
+        
+        try:
+            
+            terms = ClientExporting.ParseExportPhrase( pattern )
+            
+        except Exception as e:
+            
+            wx.MessageBox( HydrusData.ToUnicode( e ) )
+            
+            return
+            
+        
+        client_files_manager = HG.client_controller.client_files_manager
+        
+        self._export.Disable()
+        
+        to_do = self._paths.GetData()
+        
+        num_to_do = len( to_do )
+        
+        def wx_update_label( text ):
+            
+            if not self or not self._export:
+                
+                return
+                
+            
+            self._export.SetLabel( text )
+            
+        
+        def wx_done( quit_afterwards ):
+            
+            if not self or not self._export:
+                
+                return
+                
+            
+            self._export.Enable()
+            
+            if quit_afterwards:
+                
+                wx.CallAfter( self.GetParent().Close )
+                
+            
+        
+        def do_it( neighbouring_txt_tag_service_keys, delete_afterwards, quit_afterwards ):
+            
+            for ( index, ( ordering_index, media ) ) in enumerate( to_do ):
+                
+                try:
+                    
+                    wx.CallAfter( wx_update_label, HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do ) )
+                    
+                    hash = media.GetHash()
+                    mime = media.GetMime()
+                    
+                    path = self._GetPath( media )
+                    
+                    path_dir = os.path.dirname( path )
+                    
+                    HydrusPaths.MakeSureDirectoryExists( path_dir )
+                    
+                    if export_tag_txts:
+                        
+                        tags_manager = media.GetTagsManager()
+                        
+                        tags = set()
+                        
+                        siblings_manager = HG.controller.GetManager( 'tag_siblings' )
+                        
+                        tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+                        
+                        for service_key in neighbouring_txt_tag_service_keys:
+                            
+                            current_tags = tags_manager.GetCurrent( service_key )
+                            
+                            current_tags = siblings_manager.CollapseTags( service_key, current_tags )
+                            
+                            current_tags = tag_censorship_manager.FilterTags( service_key, current_tags )
+                            
+                            tags.update( current_tags )
+                            
+                        
+                        tags = list( tags )
+                        
+                        tags.sort()
+                        
+                        txt_path = path + '.txt'
+                        
+                        with open( txt_path, 'wb' ) as f:
+                            
+                            f.write( HydrusData.ToByteString( os.linesep.join( tags ) ) )
+                            
+                        
+                    
+                    source_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
+                    
+                    HydrusPaths.MirrorFile( source_path, path )
+                    
+                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                    except: pass
+                    
+                except:
+                    
+                    wx.CallAfter( wx.MessageBox, 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                    
+                    break
+                    
+                
+            
+            if delete_afterwards:
+                
+                wx.CallAfter( wx_update_label, 'deleting' )
+                
+                deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do }
+                
+                chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                
+                for content_update in content_updates:
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                    
+                
+            
+            wx.CallAfter( wx_update_label, 'done!' )
+            
+            time.sleep( 1 )
+            
+            wx.CallAfter( wx_update_label, 'export' )
+            
+            wx.CallAfter( wx_done, quit_afterwards )
+            
+        
+        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, delete_afterwards, quit_afterwards )
+        
+    
+    def _GetPath( self, media ):
+        
+        if media in self._media_to_paths:
+            
+            return self._media_to_paths[ media ]
+            
+        
+        directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
+        
+        pattern = self._pattern.GetValue()
+        
+        terms = ClientExporting.ParseExportPhrase( pattern )
+        
+        filename = ClientExporting.GenerateExportFilename( directory, media, terms )
+        
+        i = 1
+        
+        while filename in self._existing_filenames:
+            
+            filename = ClientExporting.GenerateExportFilename( directory, media, terms + [ ( 'string', ' (' + str( i ) + ')' ) ] )
+            
+            i += 1
+            
+        
+        path = os.path.join( directory, filename )
+        
+        self._existing_filenames.add( filename )
+        self._media_to_paths[ media ] = path
+        
+        return path
+        
+    
+    def _RefreshPaths( self ):
+        
+        pattern = self._pattern.GetValue()
+        dir_path = self._directory_picker.GetPath()
+        
+        if pattern == self._last_phrase_used and dir_path == self._last_dir_used:
+            
+            return
+            
+        
+        self._last_phrase_used = pattern
+        self._last_dir_used = dir_path
+        
+        HG.client_controller.new_options.SetString( 'export_phrase', pattern )
+        
+        self._existing_filenames = set()
+        self._media_to_paths = {}
+        
+        self._paths.UpdateDatas()
+        
+    
+    def _RefreshTags( self ):
+        
+        data = self._paths.GetData( only_selected = True )
+        
+        if len( data ) == 0:
+            
+            data = self._paths.GetData()
+            
+        
+        all_media = [ media for ( ordering_index, media ) in data ]
+        
+        self._tags_box.SetTagsByMedia( all_media )
+        
+    
+    def EventExport( self, event ):
+        
+        self._DoExport()
+        
+    
+    def EventDeleteFilesChanged( self, event ):
+        
+        HG.client_controller.new_options.SetBoolean( 'delete_files_after_export', self._delete_files_after_export.GetValue() )
+        
+    
+    def EventExportTagTxtsChanged( self, event ):
+        
+        if self._export_tag_txts.GetValue() == True:
+            
+            services_manager = HG.client_controller.services_manager
+            
+            tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+            
+            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'select tag services' ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._neighbouring_txt_tag_service_keys = panel.GetValue()
+                    
+                    if len( self._neighbouring_txt_tag_service_keys ) == 0:
+                        
+                        self._export_tag_txts.SetValue( False )
+                        
+                    else:
+                        
+                        self._export_tag_txts.SetValue( True )
+                        
+                    
+                else:
+                    
+                    self._export_tag_txts.SetValue( False )
+                    
+                
+            
+        else:
+            
+            self._neighbouring_txt_tag_service_keys = []
+            
+        
+    
+    def EventOpenLocation( self, event ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        if directory is not None and directory != '':
+            
+            HydrusPaths.LaunchDirectory( directory )
+            
+        
+    
+    def EventRecalcPaths( self, event ):
+        
+        self._RefreshPaths()
+        
+    
+    def EventSelectPath( self, event ):
+        
+        self._RefreshTags()
+        
+        
+    

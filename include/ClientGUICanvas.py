@@ -8,6 +8,7 @@ import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
+import ClientGUIDialogsQuick
 import ClientGUIHoverFrames
 import ClientGUIMedia
 import ClientGUIMenus
@@ -3169,29 +3170,30 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
-        with ClientGUIDialogs.DialogSelectFromList( self, 'select duplicate type', choice_tuples ) as dlg_1:
+        try:
             
-            if dlg_1.ShowModal() == wx.ID_OK:
+            duplicate_type = ClientGUIDialogsQuick.SelectFromList( self, 'select duplicate type', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        new_options = HG.client_controller.new_options
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
+            
+            dlg_2.SetPanel( panel )
+            
+            if dlg_2.ShowModal() == wx.ID_OK:
                 
-                duplicate_type = dlg_1.GetChoice()
+                duplicate_action_options = panel.GetValue()
                 
-                new_options = HG.client_controller.new_options
-                
-                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-                
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
-                    
-                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
-                    
-                    dlg_2.SetPanel( panel )
-                    
-                    if dlg_2.ShowModal() == wx.ID_OK:
-                        
-                        duplicate_action_options = panel.GetValue()
-                        
-                        self._ProcessPair( duplicate_type, duplicate_action_options )
-                        
-                    
+                self._ProcessPair( duplicate_type, duplicate_action_options )
                 
             
         

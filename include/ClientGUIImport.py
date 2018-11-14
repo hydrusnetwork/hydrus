@@ -5,19 +5,22 @@ import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIDialogsQuick
 import ClientGUIFileSeedCache
 import ClientGUIGallerySeedLog
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIMenus
+import ClientGUIOptionsPanels
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
+import ClientImporting
 import ClientImportFileSeeds
 import ClientImportGallerySeeds
-import ClientImporting
+import ClientImportLocal
 import ClientImportOptions
 import collections
 import HydrusConstants as HC
@@ -838,6 +841,641 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
         
     
+class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, import_folders ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( 'name', 24 ), ( 'path', -1 ), ( 'paused', 8 ), ( 'check period', 24 ) ]
+        
+        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, columns, self._ConvertImportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        
+        import_folders_panel.SetListCtrl( self._import_folders )
+        
+        import_folders_panel.AddButton( 'add', self._Add )
+        import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        import_folders_panel.AddDeleteButton()
+        
+        #
+        
+        self._import_folders.SetData( import_folders )
+        
+        self._import_folders.Sort()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Here you can set the client to regularly check certain folders for new files to import.'
+        
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        warning = 'WARNING: Import folders check (and potentially move/delete!) the contents of all subdirectories as well as the base directory!'
+        
+        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        
+        warning_st.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        vbox.Add( warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( import_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        import_folder = ClientImportLocal.ImportFolder( 'import folder' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit import folder' ) as dlg:
+            
+            panel = EditImportFolderPanel( dlg, import_folder )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                import_folder = panel.GetValue()
+                
+                import_folder.SetNonDupeName( self._GetExistingNames() )
+                
+                self._import_folders.AddDatas( ( import_folder, ) )
+                
+                self._import_folders.Sort()
+                
+            
+        
+    
+    def _ConvertImportFolderToListCtrlTuples( self, import_folder ):
+        
+        ( name, path, paused, check_regularly, check_period ) = import_folder.ToListBoxTuple()
+        
+        if paused:
+            
+            pretty_paused = 'yes'
+            
+        else:
+            
+            pretty_paused = ''
+            
+        
+        if not check_regularly:
+            
+            pretty_check_period = 'not checking regularly'
+            
+        else:
+            
+            pretty_check_period = HydrusData.TimeDeltaToPrettyTimeDelta( check_period )
+            
+        
+        sort_tuple = ( name, path, paused, check_period )
+        display_tuple = ( name, path, pretty_paused, pretty_check_period )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Edit( self ):
+        
+        import_folders = self._import_folders.GetData( only_selected = True )
+        
+        for import_folder in import_folders:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit import folder' ) as dlg:
+                
+                panel = EditImportFolderPanel( dlg, import_folder )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_import_folder = panel.GetValue()
+                    
+                    self._import_folders.DeleteDatas( ( import_folder, ) )
+                    
+                    edited_import_folder.SetNonDupeName( self._GetExistingNames() )
+                    
+                    self._import_folders.AddDatas( ( edited_import_folder, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._import_folders.Sort()
+        
+    
+    def _GetExistingNames( self ):
+        
+        import_folders = self._import_folders.GetData()
+        
+        names = { import_folder.GetName() for import_folder in import_folders }
+        
+        return names
+        
+    
+    def GetValue( self ):
+        
+        import_folders = self._import_folders.GetData()
+        
+        return import_folders
+        
+    
+class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, import_folder ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._import_folder = import_folder
+        
+        ( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = self._import_folder.ToTuple()
+        
+        self._panel = wx.ScrolledWindow( self )
+        
+        self._folder_box = ClientGUICommon.StaticBox( self._panel, 'folder options' )
+        
+        self._name = wx.TextCtrl( self._folder_box )
+        
+        self._path = wx.DirPickerCtrl( self._folder_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._check_regularly = wx.CheckBox( self._folder_box )
+        
+        self._period = ClientGUITime.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
+        
+        self._paused = wx.CheckBox( self._folder_box )
+        
+        self._check_now = wx.CheckBox( self._folder_box )
+        
+        self._show_working_popup = wx.CheckBox( self._folder_box )
+        self._publish_files_to_popup_button = wx.CheckBox( self._folder_box )
+        self._publish_files_to_page = wx.CheckBox( self._folder_box )
+        
+        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
+        
+        #
+        
+        self._file_box = ClientGUICommon.StaticBox( self._panel, 'file options' )
+        
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self._file_box, HC.ALLOWED_MIMES )
+        
+        def create_choice():
+            
+            choice = ClientGUICommon.BetterChoice( self._file_box )
+            
+            for if_id in ( CC.IMPORT_FOLDER_DELETE, CC.IMPORT_FOLDER_IGNORE, CC.IMPORT_FOLDER_MOVE ):
+                
+                choice.Append( CC.import_folder_string_lookup[ if_id ], if_id )
+                
+            
+            choice.Bind( wx.EVT_CHOICE, self.EventCheckLocations )
+            
+            return choice
+            
+        
+        self._action_successful = create_choice()
+        self._location_successful = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._action_redundant = create_choice()
+        self._location_redundant = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._action_deleted = create_choice()
+        self._location_deleted = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        self._action_failed = create_choice()
+        self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        
+        show_downloader_options = False
+        
+        self._file_import_options = FileImportOptionsButton( self._file_box, file_import_options, show_downloader_options )
+        
+        #
+        
+        self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
+        
+        self._tag_import_options = TagImportOptionsButton( self._tag_box, tag_import_options, show_downloader_options )
+        
+        self._filename_tagging_options_box = ClientGUICommon.StaticBox( self._tag_box, 'filename tagging' )
+        
+        filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._filename_tagging_options_box )
+        
+        columns = [ ( 'filename tagging options services', -1 ) ]
+        
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, columns, self._ConvertFilenameTaggingOptionsToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
+        
+        filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
+        
+        filename_tagging_options_panel.AddButton( 'add', self._AddFilenameTaggingOptions )
+        filename_tagging_options_panel.AddButton( 'edit', self._EditFilenameTaggingOptions, enabled_only_on_selection = True )
+        filename_tagging_options_panel.AddDeleteButton()
+        
+        services_manager = HG.client_controller.services_manager
+        
+        #
+        
+        self._name.SetValue( name )
+        self._path.SetPath( path )
+        
+        self._check_regularly.SetValue( check_regularly )
+        
+        self._period.SetValue( period )
+        self._paused.SetValue( paused )
+        
+        self._show_working_popup.SetValue( show_working_popup )
+        self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
+        self._publish_files_to_page.SetValue( publish_files_to_page )
+        
+        self._mimes.SetValue( mimes )
+        
+        self._action_successful.SelectClientData( actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] )
+        if CC.STATUS_SUCCESSFUL_AND_NEW in action_locations:
+            
+            self._location_successful.SetPath( action_locations[ CC.STATUS_SUCCESSFUL_AND_NEW ] )
+            
+        
+        self._action_redundant.SelectClientData( actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] )
+        if CC.STATUS_SUCCESSFUL_BUT_REDUNDANT in action_locations:
+            
+            self._location_redundant.SetPath( action_locations[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] )
+            
+        
+        self._action_deleted.SelectClientData( actions[ CC.STATUS_DELETED ] )
+        if CC.STATUS_DELETED in action_locations:
+            
+            self._location_deleted.SetPath( action_locations[ CC.STATUS_DELETED ] )
+            
+        
+        self._action_failed.SelectClientData( actions[ CC.STATUS_ERROR ] )
+        if CC.STATUS_ERROR in action_locations:
+            
+            self._location_failed.SetPath( action_locations[ CC.STATUS_ERROR ] )
+            
+        
+        good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in tag_service_keys_to_filename_tagging_options.items() if HG.client_controller.services_manager.ServiceExists( service_key ) }
+        
+        self._filename_tagging_options.AddDatas( good_tag_service_keys_to_filename_tagging_options.items() )
+        
+        self._filename_tagging_options.Sort()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'folder path: ', self._path ) )
+        rows.append( ( 'currently paused (if set, will not ever do any work): ', self._paused ) )
+        rows.append( ( 'check regularly?: ', self._check_regularly ) )
+        rows.append( ( 'check period: ', self._period ) )
+        rows.append( ( 'check on manage dialog ok: ', self._check_now ) )
+        rows.append( ( 'show a popup while working: ', self._show_working_popup ) )
+        rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'review currently cached import paths: ', self._file_seed_cache_button ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )
+        
+        self._folder_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'mimes to import: ', self._mimes ) )
+        
+        mimes_gridbox = ClientGUICommon.WrapInGrid( self._file_box, rows, expand_text = True )
+        
+        gridbox = wx.FlexGridSizer( 3 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file has previously been deleted from the db: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._file_box.Add( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_box.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        self._filename_tagging_options_box.Add( filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._tag_box.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._tag_box.Add( self._filename_tagging_options_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._panel.SetSizer( vbox )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._CheckLocations()
+        
+        self._check_regularly.Bind( wx.EVT_CHECKBOX, self.EventCheckRegularly )
+        
+        self._UpdateCheckRegularly()
+        
+    
+    def _AddFilenameTaggingOptions( self ):
+        
+        service_key = ClientGUIDialogs.SelectServiceKey( HC.TAG_SERVICES )
+        
+        if service_key is None:
+            
+            return
+            
+        
+        existing_service_keys = { service_key for ( service_key, filename_tagging_options ) in self._filename_tagging_options.GetData() }
+        
+        if service_key in existing_service_keys:
+            
+            wx.MessageBox( 'You already have an entry for that service key! Please try editing it instead!' )
+            
+            return
+            
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+            
+            filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
+            
+            panel = EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                filename_tagging_options = panel.GetValue()
+                
+                self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ] )
+                
+                self._filename_tagging_options.Sort()
+                
+            
+        
+    
+    def _CheckLocations( self ):
+        
+        if self._action_successful.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_successful.Enable()
+            
+        else:
+            
+            self._location_successful.Disable()
+            
+        
+        if self._action_redundant.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_redundant.Enable()
+            
+        else:
+            
+            self._location_redundant.Disable()
+            
+        
+        if self._action_deleted.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_deleted.Enable()
+            
+        else:
+            
+            self._location_deleted.Disable()
+            
+        
+        if self._action_failed.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            self._location_failed.Enable()
+            
+        else:
+            
+            self._location_failed.Disable()
+            
+        
+    
+    def _CheckValid( self ):
+        
+        path = self._path.GetPath()
+        
+        if path in ( '', None ):
+            
+            raise HydrusExceptions.VetoException( 'You must enter a path to import from!' )
+            
+        
+        if not os.path.exists( path ):
+            
+            wx.MessageBox( 'The path you have entered--"' + path + '"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
+            
+        
+        if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):
+            
+            raise HydrusExceptions.VetoException( 'You cannot set an import path that includes your install or database directory!' )
+            
+        
+        if self._action_successful.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            path = self._location_successful.GetPath()
+            
+            if path in ( '', None ):
+                
+                raise HydrusExceptions.VetoException( 'You must enter a path for your successful file move location!' )
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your successful file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
+            
+        
+        if self._action_redundant.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            path = self._location_redundant.GetPath()
+            
+            if path in ( '', None ):
+                
+                raise HydrusExceptions.VetoException( 'You must enter a path for your redundant file move location!' )
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your redundant file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
+            
+        
+        if self._action_deleted.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            path = self._location_deleted.GetPath()
+            
+            if path in ( '', None ):
+                
+                raise HydrusExceptions.VetoException( 'You must enter a path for your deleted file move location!' )
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your deleted file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
+            
+        
+        if self._action_failed.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            path = self._location_failed.GetPath()
+            
+            if path in ( '', None ):
+                
+                raise HydrusExceptions.VetoException( 'You must enter a path for your failed file move location!' )
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your failed file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
+            
+        
+    
+    def _ConvertFilenameTaggingOptionsToListCtrlTuples( self, data ):
+        
+        ( service_key, filename_tagging_options ) = data
+        
+        name = HG.client_controller.services_manager.GetName( service_key )
+        
+        display_tuple = ( name, )
+        sort_tuple = ( name, )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _EditFilenameTaggingOptions( self ):
+        
+        selected_data = self._filename_tagging_options.GetData( only_selected = True )
+        
+        for data in selected_data:
+            
+            ( service_key, filename_tagging_options ) = data
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+                
+                panel = EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._filename_tagging_options.DeleteDatas( ( data, ) )
+                    
+                    filename_tagging_options = panel.GetValue()
+                    
+                    self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ] )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _UpdateCheckRegularly( self ):
+        
+        if self._check_regularly.GetValue():
+            
+            self._period.Enable()
+            
+        else:
+            
+            self._period.Disable()
+            
+        
+    
+    def EventCheckRegularly( self, event ):
+        
+        self._UpdateCheckRegularly()
+        
+    
+    def EventCheckLocations( self, event ):
+        
+        self._CheckLocations()
+        
+    
+    def GetValue( self ):
+        
+        self._CheckValid()
+        
+        name = self._name.GetValue()
+        path = HydrusData.ToUnicode( self._path.GetPath() )
+        mimes = self._mimes.GetValue()
+        file_import_options = self._file_import_options.GetValue()
+        tag_import_options = self._tag_import_options.GetValue()
+        
+        actions = {}
+        action_locations = {}
+        
+        actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] = self._action_successful.GetChoice()
+        if actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_SUCCESSFUL_AND_NEW ] = HydrusData.ToUnicode( self._location_successful.GetPath() )
+            
+        
+        actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = self._action_redundant.GetChoice()
+        if actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = HydrusData.ToUnicode( self._location_redundant.GetPath() )
+            
+        
+        actions[ CC.STATUS_DELETED ] = self._action_deleted.GetChoice()
+        if actions[ CC.STATUS_DELETED] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_DELETED ] = HydrusData.ToUnicode( self._location_deleted.GetPath() )
+            
+        
+        actions[ CC.STATUS_ERROR ] = self._action_failed.GetChoice()
+        if actions[ CC.STATUS_ERROR ] == CC.IMPORT_FOLDER_MOVE:
+            
+            action_locations[ CC.STATUS_ERROR ] = HydrusData.ToUnicode( self._location_failed.GetPath() )
+            
+        
+        period = self._period.GetValue()
+        check_regularly = self._check_regularly.GetValue()
+        
+        paused = self._paused.GetValue()
+        
+        check_now = self._check_now.GetValue()
+        
+        show_working_popup = self._show_working_popup.GetValue()
+        publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
+        publish_files_to_page = self._publish_files_to_page.GetValue()
+        
+        tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
+        
+        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+        
+        return self._import_folder
+        
+    
 class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, paths ):
@@ -1405,46 +2043,41 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
             choice_tuples.append( ( '--non-functional galleries', -2 ) )
             
         
-        with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False ) as dlg:
+        try:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if gug == -1:
+            
+            try:
                 
-                gug = dlg.GetChoice()
+                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', second_choice_tuples, value_to_select = my_gug, sort_tuples = False )
                 
-                if gug == -1:
-                    
-                    with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', second_choice_tuples, value_to_select = my_gug ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            gug = dlg.GetChoice()
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    
-                elif gug == -2:
-                    
-                    with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            gug = dlg.GetChoice()
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    
+            except HydrusExceptions.CancelledException:
                 
-                gug_key_and_name = gug.GetGUGKeyAndName()
-                
-                self._SetValue( gug_key_and_name )
+                return
                 
             
+        elif gug == -2:
+            
+            try:
+                
+                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug, sort_tuples = False )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+        
+        gug_key_and_name = gug.GetGUGKeyAndName()
+        
+        self._SetValue( gug_key_and_name )
         
     
     def _SetLabel( self ):

@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIDialogsQuick
 import ClientGUIMenus
 import ClientGUIControls
 import ClientGUIListBoxes
@@ -884,12 +885,13 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        with ClientGUIDialogs.DialogSelectFromList( self, 'select formula type', choice_tuples ) as dlg:
+        try:
             
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._current_formula = dlg.GetChoice()
-                
+            self._current_formula = ClientGUIDialogsQuick.SelectFromList( self, 'select formula type', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
             
         
         self._UpdateControls()

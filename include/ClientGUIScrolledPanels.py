@@ -18,6 +18,16 @@ class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
         
     
+    def CanCancel( self ):
+        
+        return True
+        
+    
+    def CanOK( self ):
+        
+        return True
+        
+    
     def EventSizeChanged( self, event ):
         
         self.SetVirtualSize( self.GetBestVirtualSize() )
@@ -26,11 +36,6 @@ class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
     
 class EditPanel( ResizingScrolledPanel ):
-    
-    def CanCancel( self ):
-        
-        return True
-        
     
     def GetValue( self ):
         
@@ -102,11 +107,6 @@ class EditSingleCtrlPanel( EditPanel ):
         
     
 class ManagePanel( ResizingScrolledPanel ):
-    
-    def CanCancel( self ):
-        
-        return True
-        
     
     def CommitChanges( self ):
         

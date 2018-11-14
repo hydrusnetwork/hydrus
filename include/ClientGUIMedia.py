@@ -8,6 +8,8 @@ import ClientGUICanvas
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
+import ClientGUIDialogsQuick
+import ClientGUIExport
 import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
@@ -739,7 +741,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
             frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'export files' )
             
-            panel = ClientGUIScrolledPanelsReview.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
+            panel = ClientGUIExport.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
             
             frame.SetPanel( panel )
             
@@ -1714,29 +1716,30 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
-        with ClientGUIDialogs.DialogSelectFromList( self, 'select duplicate type', choice_tuples ) as dlg_1:
+        try:
             
-            if dlg_1.ShowModal() == wx.ID_OK:
+            duplicate_type = ClientGUIDialogsQuick.SelectFromList( self, 'select duplicate type', choice_tuples )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        new_options = HG.client_controller.new_options
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options, for_custom_action = True )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
                 
-                duplicate_type = dlg_1.GetChoice()
+                duplicate_action_options = panel.GetValue()
                 
-                new_options = HG.client_controller.new_options
-                
-                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-                
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
-                    
-                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
-                    
-                    dlg_2.SetPanel( panel )
-                    
-                    if dlg_2.ShowModal() == wx.ID_OK:
-                        
-                        duplicate_action_options = panel.GetValue()
-                        
-                        self._SetDuplicates( duplicate_type, duplicate_action_options = duplicate_action_options )
-                        
-                    
+                self._SetDuplicates( duplicate_type, duplicate_action_options = duplicate_action_options )
                 
             
         
@@ -1887,10 +1890,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
     
     def _UpdateBackgroundColour( self ):
-        
-        new_options = HG.client_controller.new_options
-        
-        self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) )
         
         self.Refresh()
         
@@ -2341,7 +2340,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( wx.Bitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 24 ) )
+        self._dirty_canvas_pages.append( wx.Bitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 32 ) )
         
     
     def _DeleteAllDirtyPages( self ):
@@ -2385,7 +2384,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         new_options = HG.client_controller.new_options
         
-        bg_colour = new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+        bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
         
         if HG.thumbnail_debug_mode and page_index % 2 == 0:
             
@@ -2393,8 +2392,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         dc.SetBackground( wx.Brush( bg_colour ) )
-        
-        dc.SetPen( wx.TRANSPARENT_PEN )
         
         dc.Clear()
         
@@ -3103,7 +3100,22 @@ class MediaPanelThumbnails( MediaPanel ):
         y_start = self._GetYStart()
         
         earliest_y = y_start * yUnit
+        '''
+        bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
         
+        dc.SetBackground( wx.Brush( bg_colour ) )
+        
+        dc.Clear()
+        
+        background_bmp = HG.client_controller.bitmap_manager.GetMediaBackgroundBitmap()
+        
+        if background_bmp is not None:
+            
+            ( background_bmp_width, background_bmp_height ) = background_bmp.GetSize()
+            
+            dc.DrawBitmap( background_bmp, client_x - background_bmp_width, client_y - background_bmp_height )
+            
+        '''
         for page_index in page_indices_to_draw:
             
             if page_index not in self._clean_canvas_pages:
@@ -3137,7 +3149,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 page_client_y = page_virtual_y - earliest_y
                 
-                dc.DrawBitmap( bmp, 0, page_client_y )
+                dc.DrawBitmap( bmp, 0, page_client_y, True )
                 
             
         

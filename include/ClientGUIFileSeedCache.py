@@ -64,9 +64,13 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             file_seed_index = self._file_seed_cache.GetFileSeedIndex( file_seed )
             
+            pretty_file_seed_index = HydrusData.ToHumanInt( file_seed_index )
+            
         except:
             
             file_seed_index = '--'
+            
+            pretty_file_seed_index = '--'
             
         
         file_seed_data = file_seed.file_seed_data
@@ -76,7 +80,6 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         source_time = file_seed.source_time
         note = file_seed.note
         
-        pretty_file_seed_index = HydrusData.ToHumanInt( file_seed_index )
         pretty_file_seed_data = HydrusData.ToUnicode( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )

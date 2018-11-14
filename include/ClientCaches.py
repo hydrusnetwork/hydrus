@@ -204,6 +204,55 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     return False
     
+class BitmapManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._media_background_bmp_path = None
+        self._media_background_bmp = None
+        
+    
+    def _DestroyBmp( self, bmp ):
+        
+        wx.CallAfter( self._media_background_bmp.Destroy )
+        
+    
+    def GetMediaBackgroundBitmap( self ):
+        
+        bmp_path = self._controller.new_options.GetNoneableString( 'media_background_bmp_path' )
+        
+        if bmp_path != self._media_background_bmp_path:
+            
+            self._media_background_bmp_path = bmp_path
+            
+            if self._media_background_bmp is not None:
+                
+                self._DestroyBmp( self._media_background_bmp )
+                
+            
+            try:
+                
+                bmp = wx.Bitmap( self._media_background_bmp_path )
+                
+                self._media_background_bmp = bmp
+                
+            except Exception as e:
+                
+                self._media_background_bmp = None
+                
+                HydrusData.ShowText( 'Loading a bmp caused an error!' )
+                
+                HydrusData.ShowException( e )
+                
+                return None
+                
+            
+        
+        return self._media_background_bmp
+        
+    
 class ClientFilesManager( object ):
     
     def __init__( self, controller ):
@@ -2735,7 +2784,7 @@ class TagParentsManager( object ):
                 self._refresh_job.Cancel()
                 
             
-            self._refresh_job = self._controller.CallLater( 1.0, self.RefreshParentsIfDirty )
+            self._refresh_job = self._controller.CallLater( 8.0, self.RefreshParentsIfDirty )
             
         
     
@@ -3071,7 +3120,7 @@ class TagSiblingsManager( object ):
                 self._refresh_job.Cancel()
                 
             
-            self._refresh_job = self._controller.CallLater( 1.0, self.RefreshSiblingsIfDirty )
+            self._refresh_job = self._controller.CallLater( 8.0, self.RefreshSiblingsIfDirty )
             
         
     

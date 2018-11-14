@@ -7,7 +7,10 @@ import ClientExporting
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
+import ClientGUIDialogsQuick
+import ClientGUIExport
 import ClientGUIFrames
+import ClientGUIImport
 import ClientGUILogin
 import ClientGUIManagement
 import ClientGUIMenus
@@ -1743,7 +1746,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'READY FOR CAUTIOUS USE: manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
             
             debug_menu = wx.Menu()
             
@@ -2337,9 +2340,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 return
                 
             
-            with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg:
+            export_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folders' ) as dlg:
                 
-                dlg.ShowModal()
+                panel = ClientGUIExport.EditExportFoldersPanel( dlg, export_folders )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    export_folders = panel.GetValue()
+                    
+                    existing_db_names = set( self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ) )
+                    
+                    good_names = set()
+                    
+                    for export_folder in export_folders:
+                        
+                        self._controller.Write( 'serialisable', export_folder )
+                        
+                        good_names.add( export_folder.GetName() )
+                        
+                    
+                    names_to_delete = existing_db_names - good_names
+                    
+                    for name in names_to_delete:
+                        
+                        self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
+                        
+                    
+                    self._controller.pub( 'notify_new_export_folders' )
+                    
                 
             
         
@@ -2425,9 +2457,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 return
                 
             
-            with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg:
+            import_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit import folders' ) as dlg:
                 
-                dlg.ShowModal()
+                panel = ClientGUIImport.EditImportFoldersPanel( dlg, import_folders )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    import_folders = panel.GetValue()
+                    
+                    existing_db_names = set( self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ) )
+                    
+                    good_names = set()
+                    
+                    for import_folder in import_folders:
+                        
+                        good_names.add( import_folder.GetName() )
+                        
+                        self._controller.Write( 'serialisable', import_folder )
+                        
+                    
+                    names_to_delete = existing_db_names.difference( good_names )
+                    
+                    for name in names_to_delete:
+                        
+                        self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
+                        
+                    
+                    self._controller.pub( 'notify_new_import_folders' )
+                    
                 
             
         
@@ -3311,16 +3372,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 choice_tuples = [ ( service.GetName(), service ) for service in ipfs_services ]
                 
-                with ClientGUIDialogs.DialogSelectFromList( self, 'Select which IPFS Daemon', choice_tuples ) as dlg:
+                try:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        service = dlg.GetChoice()
-                        
-                    else:
-                        
-                        return
-                        
+                    service = ClientGUIDialogsQuick.SelectFromList( self, 'Select which IPFS Daemon', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
                     
                 
             

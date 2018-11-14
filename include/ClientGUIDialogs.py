@@ -10,6 +10,7 @@ import ClientFiles
 import ClientGUIACDropdown
 import ClientGUIFrames
 import ClientGUICommon
+import ClientGUIDialogsQuick
 import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
@@ -85,18 +86,15 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
         choice_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
-        with DialogSelectFromList( HG.client_controller.GetGUI(), 'select service', choice_tuples ) as dlg:
+        try:
             
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                service_key = dlg.GetChoice()
-                
-                return service_key
-                
-            else:
-                
-                return None
-                
+            service_key = ClientGUIDialogsQuick.SelectFromList( HG.client_controller.GetGUI(), 'select service', choice_tuples )
+            
+            return service_key
+            
+        except HydrusExceptions.CancelledException:
+            
+            return None
             
         
     
@@ -2044,75 +2042,6 @@ class DialogSelectImageboard( Dialog ):
         
     
     def GetImageboard( self ): return self._tree.GetItemData( self._tree.GetSelection() ).GetData()
-    
-class DialogSelectFromList( Dialog ):
-    
-    def __init__( self, parent, title, choice_tuples, value_to_select = None, sort_tuples = True ):
-        
-        Dialog.__init__( self, parent, title )
-        
-        self._list = wx.ListBox( self )
-        self._list.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.SetDefault()
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) ) # to handle esc key events properly
-        
-        #
-        
-        selected_a_value = False
-        
-        if sort_tuples:
-            
-            choice_tuples.sort()
-            
-        
-        for ( i, ( label, value ) ) in enumerate( choice_tuples ):
-            
-            self._list.Append( label, value )
-            
-            if value_to_select is not None and value_to_select == value:
-                
-                self._list.Select( i )
-                
-                selected_a_value = True
-                
-            
-        
-        if not selected_a_value:
-            
-            self._list.Select( 0 )
-            
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        x = max( x, 320 )
-        y = max( y, 320 )
-        
-        self.SetInitialSize( ( x, y ) )
-        
-    
-    def EventSelect( self, event ):
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-    def GetChoice( self ):
-        
-        selection = self._list.GetSelection()
-        
-        return self._list.GetClientData( selection )
-        
     
 class DialogSelectYoutubeURL( Dialog ):
     

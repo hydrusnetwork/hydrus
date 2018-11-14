@@ -5091,11 +5091,17 @@ class DB( HydrusDB.HydrusDB ):
             selects.extend( pending_selects )
             
         
-        if allowed_hash_ids is None:
+        # 25k static value here sucks, but we'll see how it goes--it translates to 100 chunks in selectfromlist, and most tags have n < this anyway
+        if allowed_hash_ids is None or len( allowed_hash_ids ) > 25600:
             
             for select in selects:
                 
                 hash_ids.update( self._STI( self._c.execute( select ) ) )
+                
+            
+            if allowed_hash_ids is not None:
+                
+                hash_ids.intersection_update( allowed_hash_ids )
                 
             
         else:
@@ -8139,9 +8145,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessRepositoryContentUpdate( self, job_key, service_id, content_update ):
         
-        FILES_CHUNK_SIZE = 20
-        MAPPINGS_CHUNK_SIZE = 1000
-        NEW_TAG_PARENTS_CHUNK_SIZE = 5
+        FILES_CHUNK_SIZE = 200
+        MAPPINGS_CHUNK_SIZE = 50000
+        NEW_TAG_PARENTS_CHUNK_SIZE = 10
         
         total_rows = content_update.GetNumRows()
         
@@ -9459,163 +9465,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 272:
-            
-            try:
-                
-                options = self._GetOptions()
-                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND, 'default', options[ 'gui_colours' ][ 'thumb_background' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_background_selected' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND_REMOTE, 'default', options[ 'gui_colours' ][ 'thumb_background_remote' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_background_remote_selected' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BORDER, 'default', options[ 'gui_colours' ][ 'thumb_border' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BORDER_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_border_selected' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BORDER_REMOTE, 'default', options[ 'gui_colours' ][ 'thumb_border_remote' ] )
-                new_options.SetColour( CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_border_remote_selected' ] )
-                new_options.SetColour( CC.COLOUR_THUMBGRID_BACKGROUND, 'default', options[ 'gui_colours' ][ 'thumbgrid_background' ] )
-                new_options.SetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND, 'default', options[ 'gui_colours' ][ 'autocomplete_background' ] )
-                new_options.SetColour( CC.COLOUR_MEDIA_BACKGROUND, 'default', options[ 'gui_colours' ][ 'media_background' ] )
-                new_options.SetColour( CC.COLOUR_MEDIA_TEXT, 'default', options[ 'gui_colours' ][ 'media_text' ] )
-                new_options.SetColour( CC.COLOUR_TAGS_BOX, 'default', options[ 'gui_colours' ][ 'tags_box' ] )
-                
-                self._SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Your colour options failed to update, so they have reset to default. The error has been written to your log--please send this information to hydrus dev!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 275:
-            
-            try:
-                
-                self._service_cache = {}
-                
-                file_repo_ids = self._GetServiceIds( ( HC.FILE_REPOSITORY, ) )
-                
-                for service_id in file_repo_ids:
-                    
-                    service = self._GetService( service_id )
-                    
-                    service._no_requests_reason = ''
-                    service._no_requests_until = 0
-                    
-                    service._account = HydrusNetwork.Account.GenerateUnknownAccount()
-                    self._next_account_sync = 0
-                    
-                    service._metadata = HydrusNetwork.Metadata()
-                    
-                    service._SetDirty()
-                    
-                    self._ResetRepository( service )
-                    
-                    self._SaveDirtyServices( ( service, ) )
-                    
-                
-                if len( file_repo_ids ) > 0:
-                    
-                    message = 'All file repositories\' processing caches were reset on this update. They will resync (and have more accurate \'deleted file\' counts!) in the normal maintenance cycle.'
-                    
-                    self.pub_initial_message( message )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'While attempting to update, the database failed to reset your file repositories. The full error has been written to the log. Please check your file repos in _review services_ to make sure everything looks good, and when it is convenient, try resetting them manually.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 276:
-            
-            domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-            
-            ClientDefaults.SetDefaultDomainManagerData( domain_manager )
-            
-            self._SetJSONDump( domain_manager )
-            
-            #
-            
-            bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
-            
-            rules = HydrusNetworking.BandwidthRules()
-            
-            rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60 * 7, 80 )
-            
-            rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
-            
-            bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
-            
-            self._SetJSONDump( bandwidth_manager )
-            
-            message = 'The Sankaku downloader appears to be working again with a User-Agent substitution. There are also some new, conservative Sankaku bandwidth rules.'
-            message += os.linesep * 2
-            message += 'If you do not currently have the Sankaku downloader(s) in your booru list but would like to try, please check the user-run wiki (linked off the \'contact\' help page) for the .yaml \'preset\' import files.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 277:
-            
-            self._controller.pub( 'splash_set_status_subtext', 'updating tumblr urls' )
-            
-            urls = self._c.execute( 'SELECT hash_id, url FROM urls;' ).fetchall()
-            
-            # don't catch the 68.media.whatever, as these may be valid, not raw urls
-            magic_phrase = '//media.tumblr.com'
-            replacement = '//data.tumblr.com'
-            
-            updates = []
-            
-            for ( hash_id, url ) in urls:
-                
-                if magic_phrase in url:
-                    
-                    fixed_url = url.replace( magic_phrase, replacement )
-                    
-                    updates.append( ( fixed_url, hash_id ) )
-                    
-                
-            
-            self._c.executemany( 'UPDATE OR IGNORE urls SET url = ? WHERE hash_id = ?;', updates )
-            
-        
-        if version == 278:
-            
-            message = 'The hydrus network now uses the new networking engine. Please be warned that your new client will be unable to \'log in\' to older repositories. It is safe to leave them alone--they will catch up in time once the server\'s admin updates.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 279:
-            
-            bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
-            
-            rules = HydrusNetworking.BandwidthRules()
-            
-            rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1048576 ) # don't sync a giant db in one day
-            
-            bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
-            
-            self._SetJSONDump( bandwidth_manager )
-            
-            message = 'Your default hydrus service bandwidth rules have been reset to a new default that works better now the hydrus network runs on the new networking engine.'
-            message += os.linesep * 2
-            message += 'If you don\'t care about bandwidth rules, you do not have to do anything!'
-            
-            self.pub_initial_message( message )
-            
         
         if version == 281:
             
@@ -11210,7 +11059,7 @@ class DB( HydrusDB.HydrusDB ):
         if version == 328:
             
             try:
-            
+                
                 domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
                 
                 domain_manager.Initialise()
@@ -11240,6 +11089,56 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 login_manager.OverwriteDefaultLoginScripts( [ 'pixiv login', 'danbooru login', 'gelbooru 0.2.x login', 'deviant art login (only works on a client that has already done some downloading)' ] )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+                self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( 'pixiv_account', ) )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 329:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'deviant art file page parser', 'pixiv file page api parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.DeleteLoginDomain( 'safebooru.com' ) # typo in last week's script
+                
+                #
+                
+                login_manager.OverwriteDefaultLoginScripts( [ 'hentai foundry login', 'gelbooru 0.2.x login', 'pixiv login', 'shimmie login', 'danbooru login', 'sankakucomplex login 2018.11.08', 'e-hentai login 2018.11.08' ] )
                 
                 #
                 

@@ -1175,6 +1175,14 @@ class ServiceRepository( ServiceRestricted ):
                 
                 self.SyncThumbnails( stop_time )
                 
+            except Exception as e:
+                
+                self._DelayFutureRequests( HydrusData.ToUnicode( e ) )
+                
+                HydrusData.ShowText( 'The service "' + self._name + '" encountered an error while trying to sync! It will not do any work for a little while. Please elevate this to hydrus dev if a fix is not obvious.' )
+                
+                HydrusData.ShowException( e )
+                
             finally:
                 
                 if self.IsDirty():
@@ -1241,6 +1249,12 @@ class ServiceRepository( ServiceRestricted ):
                     try:
                         
                         update_network_string = self.Request( HC.GET, 'update', { 'update_hash' : update_hash } )
+                        
+                    except HydrusExceptions.CancelledException as e:
+                        
+                        self._DelayFutureRequests( HydrusData.ToUnicode( e ) )
+                        
+                        return
                         
                     except HydrusExceptions.NetworkException as e:
                         
@@ -1376,6 +1390,12 @@ class ServiceRepository( ServiceRestricted ):
                 
                 metadata_slice = response[ 'metadata_slice' ]
                 
+            except HydrusExceptions.CancelledException as e:
+                
+                self._DelayFutureRequests( HydrusData.ToUnicode( e ) )
+                
+                return
+                
             except HydrusExceptions.NetworkException as e:
                 
                 HydrusData.Print( 'Attempting to download metadata for ' + name + ' resulted in a network error:' )
@@ -1507,6 +1527,12 @@ class ServiceRepository( ServiceRestricted ):
                     try:
                         
                         thumbnail = self.Request( HC.GET, 'thumbnail', { 'hash' : thumbnail_hash } )
+                        
+                    except HydrusExceptions.CancelledException as e:
+                        
+                        self._DelayFutureRequests( HydrusData.ToUnicode( e ) )
+                        
+                        return
                         
                     except HydrusExceptions.NetworkException as e:
                         

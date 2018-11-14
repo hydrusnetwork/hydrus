@@ -7,6 +7,7 @@ import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIDialogsQuick
 import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
@@ -151,16 +152,13 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         choice_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
                         
-                        with ClientGUIDialogs.DialogSelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', choice_tuples ) as dlg:
+                        try:
                             
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                new_account_type = dlg.GetChoice()
-                                
-                            else:
-                                
-                                return
-                                
+                            new_account_type = ClientGUIDialogsQuick.SelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', choice_tuples )
+                            
+                        except HydrusExceptions.CancelledException:
+                            
+                            return
                             
                         
                     else:
@@ -3984,6 +3982,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
             self._thumbnail_visibility_scroll_percent.SetToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
+            self._media_background_bmp_path = wx.FilePickerCtrl( self )
+            
             #
             
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
@@ -4000,6 +4000,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
             
+            media_background_bmp_path = self._new_options.GetNoneableString( 'media_background_bmp_path' )
+            
+            if media_background_bmp_path is not None:
+                
+                self._media_background_bmp_path.SetPath( media_background_bmp_path )
+                
+            
+            self._media_background_bmp_path.Hide()
+            
             #
             
             rows = []
@@ -4011,6 +4020,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
+            #rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -4046,6 +4056,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.GetValue() )
             
             self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.GetValue() )
+            
+            media_background_bmp_path = self._media_background_bmp_path.GetPath()
+            
+            if media_background_bmp_path == '':
+                
+                media_background_bmp_path = None
+                
+            
+            self._new_options.SetNoneableString( 'media_background_bmp_path', media_background_bmp_path )
             
         
     

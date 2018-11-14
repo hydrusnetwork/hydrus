@@ -319,6 +319,11 @@ class NewDialog( wx.Dialog ):
         return True
         
     
+    def _CanOK( self ):
+        
+        return True
+        
+    
     def EventMenuClose( self, event ):
         
         menu = event.GetMenu()
@@ -398,6 +403,14 @@ class NewDialog( wx.Dialog ):
                 
             
         
+        if event_id == wx.ID_OK:
+            
+            if not self._CanOK():
+                
+                return
+                
+            
+        
         if not self.IsModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
             
             return
@@ -432,6 +445,11 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
     def _CanCancel( self ):
         
         return self._panel.CanCancel()
+        
+    
+    def _CanOK( self ):
+        
+        return self._panel.CanOK()
         
     
     def _GetButtonBox( self ):
@@ -569,6 +587,11 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
             return
             
         
+        if not self._CanOK():
+            
+            return
+            
+        
         SaveTLWSizeAndPosition( self, self._frame_key )
         
         self._TryEndModal( wx.ID_OK )
@@ -591,6 +614,11 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
     def DoOK( self ):
         
         if not self.IsModal():
+            
+            return
+            
+        
+        if not self._CanOK():
             
             return
             
@@ -652,6 +680,11 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
             return
             
         
+        if not self._CanOK():
+            
+            return
+            
+        
         try:
             
             value = self._panel.GetValue()
@@ -678,6 +711,11 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
     def DoOK( self ):
         
         if not self.IsModal():
+            
+            return
+            
+        
+        if not self._CanOK():
             
             return
             

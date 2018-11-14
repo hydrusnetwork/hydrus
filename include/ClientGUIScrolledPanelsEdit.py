@@ -6,6 +6,7 @@ import ClientImporting
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIDialogsQuick
 import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
@@ -990,51 +991,49 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            with ClientGUIDialogs.DialogSelectFromList( self, 'select service', choice_tuples ) as dlg_1:
+            try:
                 
-                if dlg_1.ShowModal() == wx.ID_OK:
+                service_key = ClientGUIDialogsQuick.SelectFromList( self, 'select service', choice_tuples )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if self._duplicate_action == HC.DUPLICATE_BETTER:
+                
+                service = services_manager.GetService( service_key )
+                
+                if service.GetServiceType() == HC.TAG_REPOSITORY:
                     
-                    service_key = dlg_1.GetChoice()
+                    possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
                     
-                    if self._duplicate_action == HC.DUPLICATE_BETTER:
-                        
-                        service = services_manager.GetService( service_key )
-                        
-                        if service.GetServiceType() == HC.TAG_REPOSITORY:
-                            
-                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
-                            
-                        else:
-                            
-                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
-                            
-                        
-                        choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
-                        
-                        with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
-                            
-                            if dlg_2.ShowModal() == wx.ID_OK:
-                                
-                                action = dlg_2.GetChoice()
-                                
-                            else:
-                                
-                                return
-                                
-                            
-                        
-                    else:
-                        
-                        action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
-                        
+                else:
                     
-                    sort_tuple = ( service_key, action )
-                    
-                    display_tuple = self._GetRatingDisplayTuple( sort_tuple )
-                    
-                    self._rating_service_actions.Append( display_tuple, sort_tuple )
+                    possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
                     
                 
+                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                
+                try:
+                    
+                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+            else:
+                
+                action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                
+            
+            sort_tuple = ( service_key, action )
+            
+            display_tuple = self._GetRatingDisplayTuple( sort_tuple )
+            
+            self._rating_service_actions.Append( display_tuple, sort_tuple )
             
         
     
@@ -1069,65 +1068,63 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            with ClientGUIDialogs.DialogSelectFromList( self, 'select service', choice_tuples ) as dlg_1:
+            try:
                 
-                if dlg_1.ShowModal() == wx.ID_OK:
+                service_key = ClientGUIDialogsQuick.SelectFromList( self, 'select service', choice_tuples )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            if self._duplicate_action == HC.DUPLICATE_BETTER:
+                
+                service = services_manager.GetService( service_key )
+                
+                if service.GetServiceType() == HC.TAG_REPOSITORY:
                     
-                    service_key = dlg_1.GetChoice()
+                    possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
                     
-                    if self._duplicate_action == HC.DUPLICATE_BETTER:
-                        
-                        service = services_manager.GetService( service_key )
-                        
-                        if service.GetServiceType() == HC.TAG_REPOSITORY:
-                            
-                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
-                            
-                        else:
-                            
-                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
-                            
-                        
-                        choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
-                        
-                        with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
-                            
-                            if dlg_2.ShowModal() == wx.ID_OK:
-                                
-                                action = dlg_2.GetChoice()
-                                
-                            else:
-                                
-                                return
-                                
-                            
-                        
-                    else:
-                        
-                        action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
-                        
+                else:
                     
-                    tag_filter = ClientTags.TagFilter()
+                    possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
                     
-                    with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
-                        
-                        namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
-                        
-                        panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
-                        
-                        dlg_3.SetPanel( panel )
-                        
-                        if dlg_3.ShowModal() == wx.ID_OK:
-                            
-                            tag_filter = panel.GetValue()
-                            
-                            sort_tuple = ( service_key, action, tag_filter )
-                            
-                            display_tuple = self._GetTagDisplayTuple( sort_tuple )
-                            
-                            self._tag_service_actions.Append( display_tuple, sort_tuple )
-                            
-                        
+                
+                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                
+                try:
+                    
+                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+            else:
+                
+                action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                
+            
+            tag_filter = ClientTags.TagFilter()
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+                
+                namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+                
+                panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
+                
+                dlg_3.SetPanel( panel )
+                
+                if dlg_3.ShowModal() == wx.ID_OK:
+                    
+                    tag_filter = panel.GetValue()
+                    
+                    sort_tuple = ( service_key, action, tag_filter )
+                    
+                    display_tuple = self._GetTagDisplayTuple( sort_tuple )
+                    
+                    self._tag_service_actions.Append( display_tuple, sort_tuple )
                     
                 
             
@@ -1169,16 +1166,13 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
                 
-                with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
+                try:
                     
-                    if dlg_2.ShowModal() == wx.ID_OK:
-                        
-                        action = dlg_2.GetChoice()
-                        
-                    else:
-                        
-                        break
-                        
+                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
                     
                 
             else: # This shouldn't get fired because the edit button is hidden, but w/e
@@ -1208,16 +1202,13 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
                 
-                with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
+                try:
                     
-                    if dlg_2.ShowModal() == wx.ID_OK:
-                        
-                        action = dlg_2.GetChoice()
-                        
-                    else:
-                        
-                        break
-                        
+                    action = ClientGUIDialogsQuick.SelectFromList( self, 'select action', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
                     
                 
             else:
@@ -4452,16 +4443,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     choice_tuples = [ ( sub.GetName(), sub ) for sub in mergeable_group ]
                     
-                    with ClientGUIDialogs.DialogSelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples ) as dlg:
+                    try:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            primary_sub = dlg.GetChoice()
-                            
-                        else:
-                            
-                            return
-                            
+                        primary_sub = ClientGUIDialogsQuick.SelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples )
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        return
                         
                     
                     mergeable_group.remove( primary_sub )
@@ -5010,6 +4998,71 @@ Please note that you can set up the 'default' values for these tag import option
             
         
         return tag_import_options
+        
+    
+class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, choice_tuples, value_to_select = None, sort_tuples = True ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._list = wx.ListBox( self )
+        self._list.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
+        
+        max_width = max( ( label for ( label, value ) in choice_tuples ) )
+        
+        width_chars = min( 36, max_width )
+        height_chars = max( 6, len( choice_tuples ) )
+        
+        l_size = ClientGUICommon.ConvertTextToPixels( self._list, ( width_chars, height_chars ) )
+        
+        self._list.SetMinClientSize( l_size )
+        
+        #
+        
+        selected_a_value = False
+        
+        if sort_tuples:
+            
+            choice_tuples.sort()
+            
+        
+        for ( i, ( label, value ) ) in enumerate( choice_tuples ):
+            
+            self._list.Append( label, value )
+            
+            if value_to_select is not None and value_to_select == value:
+                
+                self._list.Select( i )
+                
+                selected_a_value = True
+                
+            
+        
+        if not selected_a_value:
+            
+            self._list.Select( 0 )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def EventSelect( self, event ):
+        
+        self.GetParent().DoOK()
+        
+    
+    def GetValue( self ):
+        
+        selection = self._list.GetSelection()
+        
+        return self._list.GetClientData( selection )
         
     
 class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -6529,23 +6582,20 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
             choice_tuples = [ ( parser.GetName(), parser ) for parser in self._parsers ]
             
-            with ClientGUIDialogs.DialogSelectFromList( self, 'select parser for ' + url_match.GetName(), choice_tuples ) as dlg:
+            try:
                 
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    parser = dlg.GetChoice()
-                    
-                    self._parser_list_ctrl.DeleteDatas( ( data, ) )
-                    
-                    new_data = ( url_match_key, parser.GetParserKey() )
-                    
-                    self._parser_list_ctrl.AddDatas( ( new_data, ) )
-                    
-                else:
-                    
-                    break
-                    
+                parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_match.GetName(), choice_tuples )
                 
+            except HydrusExceptions.CancelledException:
+                
+                break
+                
+            
+            self._parser_list_ctrl.DeleteDatas( ( data, ) )
+            
+            new_data = ( url_match_key, parser.GetParserKey() )
+            
+            self._parser_list_ctrl.AddDatas( ( new_data, ) )
             
         
         self._parser_list_ctrl.Sort()

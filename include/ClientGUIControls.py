@@ -1475,6 +1475,148 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         self._UpdateLabel()
         
     
+class StringMatchToStringMatchDictControl( wx.Panel ):
+    
+    def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key' ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._key_name = key_name
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( self._key_name, 20 ), ( 'matching', -1 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_string_match', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddDeleteButton()
+        
+        #
+        
+        self._listctrl.AddDatas( initial_dict.items() )
+        
+        self._listctrl.Sort()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, data ):
+        
+        ( key_string_match, value_string_match ) = data
+        
+        pretty_key = key_string_match.ToUnicode()
+        pretty_value = value_string_match.ToUnicode()
+        
+        display_tuple = ( pretty_key, pretty_value )
+        sort_tuple = ( pretty_key, pretty_value )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Add( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
+            
+            string_match = ClientParsing.StringMatch()
+            
+            panel = EditStringMatchPanel( dlg, string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                key_string_match = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+            
+            string_match = ClientParsing.StringMatch()
+            
+            panel = EditStringMatchPanel( dlg, string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                value_string_match = panel.GetValue()
+                
+                data = ( key_string_match, value_string_match )
+                
+                self._listctrl.AddDatas( ( data, ) )
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for data in self._listctrl.GetData( only_selected = True ):
+            
+            ( key_string_match, value_string_match ) = data
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
+                
+                panel = EditStringMatchPanel( dlg, key_string_match )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    key_string_match = panel.GetValue()
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit match' ) as dlg:
+                
+                panel = EditStringMatchPanel( dlg, value_string_match )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    value_string_match = panel.GetValue()
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            self._listctrl.DeleteDatas( ( data, ) )
+            
+            edited_data = ( key_string_match, value_string_match )
+            
+            self._listctrl.AddDatas( ( edited_data, ) )
+            
+        
+        self._listctrl.Sort()
+        
+    
+    def GetValue( self ):
+        
+        value_dict = dict( self._listctrl.GetData() )
+        
+        return value_dict
+        
+    
 class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, label ):

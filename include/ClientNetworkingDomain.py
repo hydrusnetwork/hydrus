@@ -238,33 +238,32 @@ def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
     
     return re.search( rule, test_domain ) is not None
     
-def GetCookie( cookies, search_domain, name ):
+def CookieDomainMatches( cookie, search_domain ):
     
-    existing_domains = cookies.list_domains()
+    cookie_domain = cookie.domain
     
-    for existing_domain in existing_domains:
+    # blah.com is viewable by blah.com
+    matches_exactly = cookie_domain == search_domain
+    
+    # .blah.com is viewable by blah.com
+    matches_dot = cookie_domain == '.' + search_domain
+    
+    # .blah.com applies to subdomain.blah.com, blah.com does not
+    valid_subdomain = cookie_domain.startswith( '.' ) and search_domain.endswith( cookie_domain )
+    
+    return matches_exactly or matches_dot or valid_subdomain
+    
+def GetCookie( cookies, search_domain, cookie_name_string_match ):
+    
+    for cookie in cookies:
         
-        # blah.com is viewable by blah.com
-        matches_exactly = existing_domain == search_domain
-        
-        # .blah.com is viewable by blah.com
-        matches_dot = existing_domain == '.' + search_domain
-        
-        # .blah.com applies to subdomain.blah.com, blah.com does not
-        valid_subdomain = existing_domain.startswith( '.' ) and search_domain.endswith( existing_domain )
-        
-        if matches_exactly or matches_dot or valid_subdomain:
+        if CookieDomainMatches( cookie, search_domain ) and cookie_name_string_match.Matches( cookie.name ):
             
-            cookie_dict = cookies.get_dict( existing_domain )
-            
-            if name in cookie_dict:
-                
-                return cookie_dict[ name ]
-                
+            return cookie
             
         
     
-    raise HydrusExceptions.DataMissing( 'Cookie ' + name + ' not found for domain ' + search_domain + '!' )
+    raise HydrusExceptions.DataMissing( 'Cookie "' + cookie_name_string_match.ToUnicode() + '" not found for domain ' + search_domain + '!' )
     
 def GetSearchURLs( url ):
     

@@ -269,6 +269,7 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
         
     
     duration_in_ms = int( duration * 1000 )
+    num_frames = int( num_frames )
     
     return ( resolution, duration_in_ms, num_frames )
     
@@ -739,6 +740,8 @@ class VideoRendererFFMPEG( object ):
         
     
     def skip_frames( self, n ):
+        
+        n = int( n )
         
         ( w, h ) = self._target_resolution
         

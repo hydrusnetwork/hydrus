@@ -17,6 +17,7 @@ import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIFileSeedCache
 import ClientGUIGallerySeedLog
+import ClientGUIScrolledPanelsEdit
 import ClientGUITopLevelWindows
 import ClientImportGallery
 import ClientImportLocal
@@ -980,6 +981,17 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_better_duplicates.SetToolTip( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
         self._num_same_quality_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
         self._num_alternate_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
+        
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
+        
+        self._edit_merge_options = ClientGUICommon.MenuButton( self._filtering_panel, 'edit default duplicate action options', menu_items )
+        
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
         random_filtering_panel = ClientGUICommon.StaticBox( self._filtering_panel, 'quick and dirty filtering' )
@@ -1047,6 +1059,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._filtering_panel.Add( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._num_same_quality_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1067,6 +1080,27 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self.SetSizer( vbox )
         
         HG.client_controller.sub( self, 'RefreshAndUpdateStatus', 'refresh_dupe_numbers' )
+        
+    
+    def _EditMergeOptions( self, duplicate_type ):
+        
+        new_options = HG.client_controller.new_options
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                duplicate_action_options = panel.GetValue()
+                
+                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
+                
+            
         
     
     def _FileDomainButtonHit( self ):

@@ -704,6 +704,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
             self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
+            self.bitmap_manager = ClientCaches.BitmapManager( self )
             
             CC.GlobalBMPs.STATICInitialise()
             

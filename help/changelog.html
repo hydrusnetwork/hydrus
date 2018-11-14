@@ -8,6 +8,50 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 330</h3></li>
+				<ul>
+					<li>login:</li>
+					<li>added a proper username/password login script for hentai foundry--double-check your hf filters are set how you want in your profile, and your hydrus should inherit the same rules</li>
+					<li>fixed the gelbooru login script from last week, which typoed safebooru.com instead of .org</li>
+					<li>fixed the pixiv login 'link' to correctly say nsfw rather than everything, which wasn't going through last week right</li>
+					<li>improved the pixiv file page api parser to veto on 'could not access nsfw due to not logged in' status, although in further testing, this state seems to be rarer than previously/completely gone</li>
+					<li>added login scripts from the github for shimmie, sankaku, and e-hentai--thanks to Cuddlebear and any other users who helped put these together</li>
+					<li>added safebooru.donmai.us to danbooru login</li>
+					<li>improved the deviant art file page parser to get the 'full' embedded image link at higher preference than the standard embed, and only get the 'download' button if it looks like an image (hence, deviant art should stop getting 140MB brush zips!)</li>
+					<li>the manage logins panel now says when a login is expected to expire</li>
+					<li>the manage logins dialog now has a 'scrub invalidity' button to 'try again' a login that broke due to server error or similar</li>
+					<li>entering blank/invalid credentials is now permitted in the manage logins panel, and if entered on an 'active' domain, it will additionally deactivate it automatically</li>
+					<li>the manage logins panel is better at figuring out and updating validity after changes</li>
+					<li>the 'required cookies' in login scripts and steps now use string match names! hence, dynamically named cookies can now be checked! all existing checks are updated to fixed-string string matches</li>
+					<li>improved some cookie lookup code</li>
+					<li>improved some login manager script-updating code</li>
+					<li>deleted all the old legacy login code</li>
+					<li>misc login ui cleanup and fixes</li>
+					<li>.</li>
+					<li>other:</li>
+					<li>sped up tag searches in certain situations (usually huge inbox) by using a different optimisation</li>
+					<li>increased the repository mappings processing chunk size from 1k to 50k, which greatly increases processing in certain situations. let's see how it goes for different users--I may revisit the pipeline here to make it more flexible for faster and slower hard drives</li>
+					<li>many of the 'select from a list of texts' dialogs--such as when you select a gallery to download from--are now on the new panel system. the list will grow and shrink depending on its length and available screen real estate</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>extended my new dialog panel code so it can ask a question before an OK happens</li>
+					<li>fixed an issue with scanning through videos that have non-integer frame-counts due to previous misparsing</li>
+					<li>fixed a issue where file import objects that have been removed from the list but were still lingering on the list ui were not rendering their (invalid) index correctly</li>
+					<li>when export folders fail to do their work, the error is now presented in a better way and all export folders are paused</li>
+					<li>fixed an issue where the export files dialog could not boot if the most previous export phrase was invalid</li>
+					<li>the duplicate filter page now has a button to more easily edit the default merge options</li>
+					<li>increased the sibling/parent refresh delay for 1s to 8s</li>
+					<li>hydrus repository sync fails due to network login issues or manual network user cancel will now be caught properly and a reasonable delay added</li>
+					<li>additional errors on repository sync will cause a reasonable delay on future work but still elevate the error</li>
+					<li>converted import folder management ui to the new panel system</li>
+					<li>refactored import folder ui code to ClientGUIImport.py</li>
+					<li>converted export folder management ui to the new panel system</li>
+					<li>refactored export folder ui code to the new ClientGUIExport.py</li>
+					<li>refactored manual file export ui code to ClientGUIExport.py</li>
+					<li>deleted some very old imageboard dumping management code</li>
+					<li>deleted some very old contact management code</li>
+					<li>did a little prep work for some 'show background image behind thumbs', including the start of a bitmap manager. I'll give it another go later</li>
+				</ul>
 				<li><h3>version 329</h3></li>
 				<ul>
 					<li>login:</li>
