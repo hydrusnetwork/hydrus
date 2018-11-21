@@ -1183,6 +1183,10 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
             
             if self._rule_type == HTML_RULE_TYPE_DESCENDING:
                 
+                # having class : [ 'a', 'b' ] works here, but it does OR not AND
+                # instead do node.find_all( lambda tag: 'class' in tag.attrs and 'a' in tag[ 'class' ] and 'b' in tag[ 'class' ] )
+                # which means we want to just roll all this into one method to support multiple class matching
+                
                 kwargs = { 'attrs' : self._tag_attributes }
                 
                 if self._tag_name is not None:

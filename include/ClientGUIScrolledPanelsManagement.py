@@ -21,6 +21,7 @@ import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
 import ClientNetworkingContexts
 import ClientNetworkingJobs
+import ClientNetworkingSessions
 import ClientImporting
 import ClientMedia
 import ClientRatings
@@ -1500,19 +1501,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
             
-            self._proxy_type = ClientGUICommon.BetterChoice( proxy_panel )
-            
-            self._proxy_address = wx.TextCtrl( proxy_panel )
-            self._proxy_port = wx.SpinCtrl( proxy_panel, min = 0, max = 65535 )
-            
-            self._proxy_username = wx.TextCtrl( proxy_panel )
-            self._proxy_password = wx.TextCtrl( proxy_panel )
+            self._http_proxy = ClientGUICommon.NoneableTextCtrl( proxy_panel )
+            self._https_proxy = ClientGUICommon.NoneableTextCtrl( proxy_panel )
             
             #
             
             self._new_options = HG.client_controller.new_options
             
             self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
+            
+            self._http_proxy.SetValue( self._new_options.GetNoneableString( 'http_proxy' ) )
+            self._https_proxy.SetValue( self._new_options.GetNoneableString( 'https_proxy' ) )
             
             self._network_timeout.SetValue( self._new_options.GetInteger( 'network_timeout' ) )
             
@@ -1522,34 +1521,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             if HC.options[ 'external_host' ] is not None:
                 
                 self._external_host.SetValue( HC.options[ 'external_host' ] )
-                
-            
-            self._proxy_type.Append( 'http', 'http' )
-            self._proxy_type.Append( 'socks4', 'socks4' )
-            self._proxy_type.Append( 'socks5', 'socks5' )
-            
-            if HC.options[ 'proxy' ] is not None:
-                
-                ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
-                
-                self._proxy_type.SelectClientData( proxytype )
-                
-                self._proxy_address.SetValue( host )
-                self._proxy_port.SetValue( port )
-                
-                if username is not None:
-                    
-                    self._proxy_username.SetValue( username )
-                    
-                
-                if password is not None:
-                    
-                    self._proxy_password.SetValue( password )
-                    
-                
-            else:
-                
-                self._proxy_type.Select( 0 )
                 
             
             #
@@ -1562,27 +1533,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
-            text = 'You have to restart the client for proxy settings to take effect.'
-            text += os.linesep
-            text += 'This is in a buggy prototype stage right now, pending a rewrite of the networking engine.'
-            text += os.linesep
-            text += 'Please send me your feedback.'
+            text = 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port". It should take affect immediately on dialog ok.'
+            text += os.linesep * 2
+            
+            if ClientNetworkingSessions.SOCKS_PROXY_OK:
+                
+                text += 'It looks like you have socks support! You should also be able to enter (socks4 or) "socks5://ip:port".'
+                
+            else:
+                
+                text += 'It does not look like you have socks support! If you want it, try adding "pysocks" (or "requests[socks]")!'
+                
             
             proxy_panel.Add( wx.StaticText( proxy_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
-            rows.append( ( 'proxy type: ', self._proxy_type ) )
-            rows.append( ( 'address: ', self._proxy_address ) )
-            rows.append( ( 'port: ', self._proxy_port ) )
-            rows.append( ( 'username (optional): ', self._proxy_username ) )
-            rows.append( ( 'password (optional): ', self._proxy_password ) )
+            rows.append( ( 'http: ', self._http_proxy ) )
+            rows.append( ( 'https: ', self._https_proxy ) )
             
             gridbox = ClientGUICommon.WrapInGrid( proxy_panel, rows )
             
             proxy_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            proxy_panel.Hide() # proxy settings no longer in use for new engine
             
             #
             
@@ -1608,23 +1580,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             
-            if self._proxy_address.GetValue() == '':
-                
-                HC.options[ 'proxy' ] = None
-                
-            else:
-                
-                proxytype = self._proxy_type.GetChoice()
-                address = self._proxy_address.GetValue()
-                port = self._proxy_port.GetValue()
-                username = self._proxy_username.GetValue()
-                password = self._proxy_password.GetValue()
-                
-                if username == '': username = None
-                if password == '': password = None
-                
-                HC.options[ 'proxy' ] = ( proxytype, address, port, username, password )
-                
+            self._new_options.SetNoneableString( 'http_proxy', self._http_proxy.GetValue() )
+            self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )
             
             external_host = self._external_host.GetValue()
             
@@ -3473,7 +3430,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             expand_parents = False
             
             self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel )
-            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._favourites.SetTagServiceKey )
             
             #
             
@@ -3763,7 +3720,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = False
             
-            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._suggested_favourites.SetTagServiceKey )
             
             #
             

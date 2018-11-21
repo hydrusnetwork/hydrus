@@ -72,6 +72,8 @@ class NetworkEngine( object ):
         
         self._new_work_to_do = threading.Event()
         
+        self._domains_to_login = []
+        
         self._active_domains_counter = collections.Counter()
         
         self._jobs_awaiting_validity = []
@@ -106,6 +108,16 @@ class NetworkEngine( object ):
             
         
         self._new_work_to_do.set()
+        
+    
+    def ForceLogins( self, domains_to_login ):
+        
+        with self._lock:
+            
+            self._domains_to_login.extend( domains_to_login )
+            
+            self._domains_to_login = HydrusData.DedupeList( self._domains_to_login )
+            
         
     
     def GetJobsSnapshot( self ):
@@ -230,6 +242,29 @@ class NetworkEngine( object ):
                 self._jobs_awaiting_login.append( job )
                 
                 return False
+                
+            
+        
+        def ProcessForceLogins():
+            
+            if len( self._domains_to_login ) > 0 and self._current_login_process is None:
+                
+                try:
+                    
+                    login_domain = self._domains_to_login.pop( 0 )
+                    
+                    login_process = self.login_manager.GenerateLoginProcessForDomain( login_domain )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
+                
+                self.controller.CallToThread( login_process.Start )
+                
+                self._current_login_process = login_process
                 
             
         
@@ -419,6 +454,8 @@ class NetworkEngine( object ):
                 ProcessCurrentValidationJob()
                 
                 self._jobs_awaiting_bandwidth = filter( ProcessBandwidthJob, self._jobs_awaiting_bandwidth )
+                
+                ProcessForceLogins()
                 
                 self._jobs_awaiting_login = filter( ProcessLoginJob, self._jobs_awaiting_login )
                 

@@ -2340,7 +2340,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( wx.Bitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 32 ) )
+        self._dirty_canvas_pages.append( wx.Bitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height ) )
         
     
     def _DeleteAllDirtyPages( self ):
@@ -3100,7 +3100,11 @@ class MediaPanelThumbnails( MediaPanel ):
         y_start = self._GetYStart()
         
         earliest_y = y_start * yUnit
+        
         '''
+        
+        # an old effort to get a neat image drawn behind the thumbs. real hassle working with transparency and bmps across multiple platforms at the time
+        
         bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
         
         dc.SetBackground( wx.Brush( bg_colour ) )
@@ -3149,7 +3153,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 page_client_y = page_virtual_y - earliest_y
                 
-                dc.DrawBitmap( bmp, 0, page_client_y, True )
+                dc.DrawBitmap( bmp, 0, page_client_y )
                 
             
         

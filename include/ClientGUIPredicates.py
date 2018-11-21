@@ -3,6 +3,8 @@ import ClientData
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIOptionsPanels
+import ClientGUIScrolledPanels
+import ClientGUIShortcuts
 import ClientRatings
 import ClientSearch
 import datetime
@@ -14,6 +16,164 @@ import string
 import wx
 import wx.adv
 
+class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, predicate_type ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._predicates = []
+        
+        pred_classes = []
+        
+        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+            
+            pred_classes.append( PanelPredicateSystemAgeDelta )
+            pred_classes.append( PanelPredicateSystemAgeDate )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
+            
+            pred_classes.append( PanelPredicateSystemHeight )
+            pred_classes.append( PanelPredicateSystemWidth )
+            pred_classes.append( PanelPredicateSystemRatio )
+            pred_classes.append( PanelPredicateSystemNumPixels )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
+            
+            pred_classes.append( PanelPredicateSystemDuration )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+            
+            pred_classes.append( PanelPredicateSystemFileService )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+            
+            pred_classes.append( PanelPredicateSystemKnownURLsExactURL )
+            pred_classes.append( PanelPredicateSystemKnownURLsDomain )
+            pred_classes.append( PanelPredicateSystemKnownURLsRegex )
+            pred_classes.append( PanelPredicateSystemKnownURLsURLMatch )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+            
+            pred_classes.append( PanelPredicateSystemHash )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
+            
+            pred_classes.append( PanelPredicateSystemLimit )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
+            
+            pred_classes.append( PanelPredicateSystemMime )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+            
+            pred_classes.append( PanelPredicateSystemNumTags )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
+            
+            pred_classes.append( PanelPredicateSystemNumWords )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
+            
+            services_manager = HG.client_controller.services_manager
+            
+            ratings_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            
+            if len( ratings_services ) > 0:
+                
+                pred_classes.append( PanelPredicateSystemRating )
+                
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            
+            pred_classes.append( PanelPredicateSystemSimilarTo )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
+            
+            pred_classes.append( PanelPredicateSystemSize )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+            
+            pred_classes.append( PanelPredicateSystemTagAsNumber )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
+            
+            pred_classes.append( PanelPredicateSystemDuplicateRelationships )
+            
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        for pred_class in pred_classes:
+            
+            panel = self._Panel( self, pred_class )
+            
+            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        return self._predicates
+        
+    
+    def SubPanelOK( self, predicates ):
+        
+        self._predicates = predicates
+        
+        self.GetParent().DoOK()
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, predicate_class ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._predicate_panel = predicate_class( self )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.Add( self._ok, CC.FLAGS_VCENTER )
+            
+            self.SetSizer( hbox )
+            
+            self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+            
+        
+        def _DoOK( self ):
+            
+            predicates = self._predicate_panel.GetPredicates()
+            
+            self.GetParent().SubPanelOK( predicates )
+            
+        
+        def EventCharHook( self, event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                self._DoOK()
+                
+            else:
+                
+                event.Skip()
+                
+            
+        
+        def EventOK( self, event ):
+            
+            self._DoOK()
+            
+        
+    
 class PanelPredicateSystem( wx.Panel ):
     
     PREDICATE_TYPE = None

@@ -997,11 +997,31 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetHashes( self ):
+        
+        with self._lock:
+            
+            return self._file_seed_cache.GetHashes()
+            
+        
+    
     def GetNetworkJobs( self ):
         
         with self._lock:
             
             return ( self._file_network_job, self._checker_network_job )
+            
+        
+    
+    def GetNewHashes( self ):
+        
+        with self._lock:
+            
+            file_import_options = ClientImportOptions.FileImportOptions()
+            
+            file_import_options.SetPresentationOptions( True, False, False )
+            
+            return self._file_seed_cache.GetPresentedHashes( file_import_options )
             
         
     

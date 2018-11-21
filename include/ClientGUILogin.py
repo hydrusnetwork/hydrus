@@ -266,6 +266,8 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._engine = engine
         self._login_scripts = login_scripts
         
+        self._domains_to_login_after_ok = []
+        
         domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
         columns = [ ( 'domain', 20 ), ( 'login script', -1 ), ( 'access given', 36 ), ( 'active?', 8 ), ( 'logged in now?', 28 ), ( 'validity', 28 ), ( 'recent error/delay?', 21 ) ]
@@ -277,13 +279,14 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         domains_and_login_info_panel.AddButton( 'add', self._Add )
         domains_and_login_info_panel.AddDeleteButton()
         domains_and_login_info_panel.AddSeparator()
-        domains_and_login_info_panel.AddButton( 'change login script', self._EditLoginScript, enabled_only_on_selection = True )
         domains_and_login_info_panel.AddButton( 'edit credentials', self._EditCredentials, enabled_check_func = self._CanEditCreds )
+        domains_and_login_info_panel.AddButton( 'change login script', self._EditLoginScript, enabled_only_on_selection = True )
         domains_and_login_info_panel.AddButton( 'flip active', self._FlipActive, enabled_only_on_selection = True )
         domains_and_login_info_panel.AddSeparator()
         domains_and_login_info_panel.AddButton( 'scrub invalidity', self._ScrubInvalidity, enabled_check_func = self._CanScrubInvalidity )
         domains_and_login_info_panel.AddButton( 'scrub delays', self._ScrubDelays, enabled_check_func = self._CanScrubDelays )
         domains_and_login_info_panel.NewButtonRow()
+        domains_and_login_info_panel.AddButton( 'do login now', self._DoLogin, enabled_check_func = self._CanDoLogin )
         domains_and_login_info_panel.AddButton( 'reset login (delete cookies)', self._ClearSessions, enabled_only_on_selection = True )
         
         #
@@ -495,6 +498,48 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._domains_and_login_info.Sort()
         
     
+    def _CanDoLogin( self ):
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            if not active:
+                
+                continue
+                
+            
+            if validity == ClientNetworkingLogin.VALIDITY_INVALID:
+                
+                continue
+                
+            
+            try:
+                
+                login_script = self._GetLoginScript( login_script_key_and_name )
+                
+                network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+                
+                logged_in = login_script.IsLoggedIn( self._engine, network_context )
+                
+                if logged_in:
+                    
+                    continue
+                    
+                
+            except HydrusExceptions.DataMissing:
+                
+                continue
+                
+            
+            return True
+            
+        
+        return False
+        
+    
     def _CanEditCreds( self ):
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
@@ -671,6 +716,75 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
+    def _DoLogin( self ):
+        
+        domains_to_login = []
+        
+        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        
+        for domain_and_login_info in domain_and_login_infos:
+            
+            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            
+            if not active:
+                
+                continue
+                
+            
+            if validity == ClientNetworkingLogin.VALIDITY_INVALID:
+                
+                continue
+                
+            
+            try:
+                
+                login_script = self._GetLoginScript( login_script_key_and_name )
+                
+                network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+                
+                logged_in = login_script.IsLoggedIn( self._engine, network_context )
+                
+                if logged_in:
+                    
+                    continue
+                    
+                
+            except HydrusExceptions.DataMissing:
+                
+                continue
+                
+            
+            domains_to_login.append( login_domain )
+            
+        
+        if len( domains_to_login ) == 0:
+            
+            wx.MessageBox( 'Unfortunately, none of the selected domains appear able to log in. Do you need to activate or scrub something somewhere?' )
+            
+        else:
+            
+            domains_to_login.sort()
+            
+            message = 'It looks like the following domains can log in:'
+            message += os.linesep * 2
+            message += os.linesep.join( domains_to_login )
+            message += os.linesep * 2
+            message += 'The dialog will ok and the login attempts will start. Is this ok?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
+            self._domains_to_login_after_ok = domains_to_login
+            
+            self.GetParent().DoOK()
+            
+        
+    
     def _EditCredentials( self ):
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
@@ -779,20 +893,44 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                login_script = self._GetLoginScript( login_script_key_and_name )
+                current_login_script = self._GetLoginScript( login_script_key_and_name )
                 
             except HydrusExceptions.DataMissing:
                 
-                login_script = None
+                current_login_script = None
                 
             
-            choice_tuples = [ ( login_script.GetName(), login_script ) for login_script in self._login_scripts ]
+            potential_login_scripts = list( self._login_scripts )
+            
+            potential_login_scripts.sort( key = lambda ls: ls.GetName() )
+            
+            matching_potential_login_scripts = [ login_script for login_script in potential_login_scripts if login_domain in login_script.GetExampleDomains() ]
+            unmatching_potential_login_scripts = [ login_script for login_script in potential_login_scripts if login_domain not in login_script.GetExampleDomains() ]
+            
+            choice_tuples = [ ( login_script.GetName(), login_script ) for login_script in matching_potential_login_scripts ]
+            
+            if len( matching_potential_login_scripts ) > 0 and len( unmatching_potential_login_scripts ) > 0:
+                
+                choice_tuples.append( ( '------', None ) )
+                
+            
+            choice_tuples.extend( [ ( login_script.GetName(), login_script ) for login_script in unmatching_potential_login_scripts ] )
             
             try:
                 
-                login_script = ClientGUIDialogsQuick.SelectFromList( self, 'select the login script to use', choice_tuples, value_to_select = login_script )
+                login_script = ClientGUIDialogsQuick.SelectFromList( self, 'select the login script to use', choice_tuples, value_to_select = current_login_script, sort_tuples = False )
                 
             except HydrusExceptions.CancelledException:
+                
+                break
+                
+            
+            if login_script is None:
+                
+                break
+                
+            
+            if login_script == current_login_script:
                 
                 break
                 
@@ -975,6 +1113,11 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._domains_and_login_info.Sort()
+        
+    
+    def GetDomainsToLoginAfterOK( self ):
+        
+        return self._domains_to_login_after_ok
         
     
     def GetValue( self ):

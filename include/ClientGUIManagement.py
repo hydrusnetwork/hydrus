@@ -1836,7 +1836,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         menu = wx.Menu()
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'copy queries', 'Copy all the selected downloaders\' queries to clipboard.', self._CopySelectedQueries )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'show all importers\' files in a new page', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectionInNewPage )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all importers\' presented files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show = 'presented' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all importers\' new files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show = 'new' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all importers\' files', 'Gather the presented files for the selected importers and show them in a new page.', self._ShowSelectedImportersFiles, show = 'all' )
         
         if self._CanRetryFailed():
             
@@ -2057,7 +2062,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         
     
-    def _ShowSelectionInNewPage( self ):
+    def _ShowSelectedImportersFiles( self, show = 'presented' ):
         
         gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
         
@@ -2071,7 +2076,18 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         for gallery_import in gallery_imports:
             
-            gallery_hashes = gallery_import.GetPresentedHashes()
+            if show == 'presented':
+                
+                gallery_hashes = gallery_import.GetPresentedHashes()
+                
+            elif show == 'new':
+                
+                gallery_hashes = gallery_import.GetNewHashes()
+                
+            elif show == 'all':
+                
+                gallery_hashes = gallery_import.GetHashes()
+                
             
             new_hashes = [ hash for hash in gallery_hashes if hash not in seen_hashes ]
             
@@ -2083,7 +2099,17 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            self._ClearExistingHighlightAndPanel()
+            
+            media_results = self._controller.Read( 'media_results', hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            
+            self._page.SwapMediaPanel( panel )
             
         else:
             
@@ -2495,7 +2521,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected watchers\' urls to clipboard.', self._CopySelectedURLs )
         ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected watchers\' urls in your browser.', self._OpenSelectedURLs )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'show all watchers\' files in a new page', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectionInNewPage )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all watchers\' presented files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show = 'presented' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all watchers\' new files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show = 'new' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'show all watchers\' files', 'Gather the presented files for the selected watchers and show them in a new page.', self._ShowSelectedImportersFiles, show = 'all' )
         
         if self._CanRetryFailed():
             
@@ -2719,7 +2750,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
-    def _ShowSelectionInNewPage( self ):
+    def _ShowSelectedImportersFiles( self, show = 'presented' ):
         
         watchers = self._watchers_listctrl.GetData( only_selected = True )
         
@@ -2733,7 +2764,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         for watcher in watchers:
             
-            watcher_hashes = watcher.GetPresentedHashes()
+            if show == 'presented':
+                
+                watcher_hashes = watcher.GetPresentedHashes()
+                
+            elif show == 'new':
+                
+                watcher_hashes = watcher.GetNewHashes()
+                
+            elif show == 'all':
+                
+                watcher_hashes = watcher.GetHashes()
+                
             
             new_hashes = [ hash for hash in watcher_hashes if hash not in seen_hashes ]
             
@@ -2745,7 +2787,17 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            self._ClearExistingHighlightAndPanel()
+            
+            media_results = self._controller.Read( 'media_results', hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            
+            self._page.SwapMediaPanel( panel )
             
         else:
             

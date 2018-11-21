@@ -430,9 +430,10 @@ class DialogThatResizes( NewDialog ):
     
 class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
-    def __init__( self, parent, title, frame_key = 'regular_dialog', style_override = None ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog', style_override = None, hide_buttons = False ):
         
         self._panel = None
+        self._hide_buttons = hide_buttons
         
         DialogThatResizes.__init__( self, parent, title, frame_key, style_override = style_override )
         
@@ -569,6 +570,11 @@ class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
         self._close = wx.Button( self, id = wx.ID_OK, label = 'close' )
         self._close.Bind( wx.EVT_BUTTON, self.EventOK )
         
+        if self._hide_buttons:
+            
+            self._close.Hide()
+            
+        
         self._cancel = wx.Button( self, id = wx.ID_CANCEL )
         self._cancel.Hide()
         
@@ -665,12 +671,18 @@ class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel 
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
+        if self._hide_buttons:
+            
+            self._apply.Hide()
+            self._cancel.Hide()
+            
+        
     
 class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
     
-    def __init__( self, parent, title, frame_key = 'regular_dialog' ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
         
-        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title, frame_key = frame_key )
+        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
         
     
     def DoOK( self ):

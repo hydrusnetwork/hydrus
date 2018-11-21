@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 331</h3></li>
+				<ul>
+					<li>added a 'do login now' button to the manage logins dialog. it only enables when the selected logins are active and not invalid and so on, and will ok the dialog and queue up some login attempts, which will make report popups as normal</li>
+					<li>'review session cookies' panels now support drag and drop cookies.txt import! cookies.txt importing will also handle errors a bit better and report total number of added cookies</li>
+					<li>the 'review session cookies' panel now defaults to not showing sessions with zero cookies. a new checkbox controls this</li>
+					<li>login scripts can now be rolled into easy import pngs! should work for export and import just like the other objects (although they won't be auto-added based on domain in export dialog)</li>
+					<li>brushed up some of the 'change login script' code--particularly, it now puts login scripts that have matching domains first in the selection list, for easier selection</li>
+					<li>after striking a reckless bargain with a daemon from the database-plane, system:num_tags now runs significantly faster and produces accurate tag counts even when searching over multiple tag services that have duplicate tags. if this works out, the immaterial beast promises greater gains for similar jobs with no possibility of anything going wrong</li>
+					<li>prototyped a new tag cache in the db that affects (and should speed up) many tag fetching routines. let's see how it goes</li>
+					<li>added complete, global proxy support for the new network engine! there are new options under options->connection (with some explanation text) to handle it. if pysocks is installed, socks4/5 proxies are also available!</li>
+					<li>updated the e-hentai.org login script to the new one on the github. your existing mappings for e-hentai.org _should_ all be updated right. exhentai.org is likely too difficult to properly support in the current system</li>
+					<li>the different panels where you enter system predicate information now all run on the new panel sizing system--if you have had problems with these, please let me know how they size now!</li>
+					<li>added a '4channel thread' url class to support watchers for the new 4channel sfw domain. it works for now, but let's see if their api changes when the split actually happens</li>
+					<li>the list right-click menu on gallery import and thread watcher panels now has three options to show combined importers' files--presented, new, and all. it also now shows the files (more smoothly) in the same page, clearing any existing highlight.</li>
+					<li>misc ui improvements</li>
+					<li>updated 'running from source' in help</li>
+				</ul>
 				<li><h3>version 330</h3></li>
 				<ul>
 					<li>login:</li>

@@ -262,6 +262,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
         self._dictionary[ 'noneable_strings' ][ 'last_png_export_dir' ] = None
         self._dictionary[ 'noneable_strings' ][ 'media_background_bmp_path' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'http_proxy' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'https_proxy' ] = None
         
         self._dictionary[ 'strings' ] = {}
         

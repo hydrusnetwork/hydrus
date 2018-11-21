@@ -2505,6 +2505,13 @@ class ListBoxTagsStrings( ListBoxTags ):
         return set( self._terms )
         
     
+    def SetTagServiceKey( self, service_key ):
+        
+        self._service_key = service_key
+        
+        self._RecalcTags()
+        
+    
     def SetTags( self, tags ):
         
         self._Clear()

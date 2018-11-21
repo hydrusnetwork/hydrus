@@ -1274,11 +1274,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, chosen_tag_callable, expand_parents, file_service_key, tag_service_key, null_entry_callable = None ):
+    def __init__( self, parent, chosen_tag_callable, expand_parents, file_service_key, tag_service_key, null_entry_callable = None, tag_service_key_changed_callable = None ):
         
         self._chosen_tag_callable = chosen_tag_callable
         self._expand_parents = expand_parents
         self._null_entry_callable = null_entry_callable
+        self._tag_service_key_changed_callable = tag_service_key_changed_callable
         
         if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY and HC.options[ 'show_all_tags_in_autocomplete' ]:
             
@@ -1366,6 +1367,16 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
         self._BroadcastChoices( { entry_predicate } )
+        
+    
+    def _ChangeTagService( self, tag_service_key ):
+        
+        AutoCompleteDropdownTags._ChangeTagService( self, tag_service_key )
+        
+        if self._tag_service_key_changed_callable is not None:
+            
+            self._tag_service_key_changed_callable( tag_service_key )
+            
         
     
     def _GenerateMatches( self ):

@@ -5215,7 +5215,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetHashIdsTagCounts( self, tag_service_key, include_current, include_pending, hash_ids = None ):
+    def _GetHashIdsTagCounts( self, tag_service_key, include_current, include_pending, hash_ids ):
         
         if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -5226,59 +5226,37 @@ class DB( HydrusDB.HydrusDB ):
             search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
             
         
-        tags_counter = collections.Counter()
+        table_names = []
         
-        if hash_ids is None:
+        for search_tag_service_id in search_tag_service_ids:
             
-            for search_tag_service_id in search_tag_service_ids:
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
+            
+            if include_current:
                 
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
-                if include_current:
-                    
-                    for ( hash_id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + current_mappings_table_name + ' GROUP BY hash_id;' ):
-                        
-                        tags_counter[ hash_id ] += count
-                        
-                    
-                
-                if include_pending:
-                    
-                    for ( hash_id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + pending_mappings_table_name + ' GROUP BY hash_id;' ):
-                        
-                        tags_counter[ hash_id ] += count
-                        
-                    
+                table_names.append( current_mappings_table_name )
                 
             
-        else:
-            
-            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_table_name:
+            if include_pending:
                 
-                for search_tag_service_id in search_tag_service_ids:
-                    
-                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                    
-                    if include_current:
-                        
-                        for ( hash_id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + temp_table_name + ' NATURAL JOIN ' + current_mappings_table_name + ' GROUP BY hash_id;' ):
-                            
-                            tags_counter[ hash_id ] += count
-                            
-                        
-                    
-                    if include_pending:
-                        
-                        for ( hash_id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + temp_table_name + ' NATURAL JOIN ' + pending_mappings_table_name + ' GROUP BY hash_id;' ):
-                            
-                            tags_counter[ hash_id ] += count
-                            
-                        
-                    
+                table_names.append( pending_mappings_table_name )
                 
             
         
-        return tags_counter.items()
+        # this is only fast because of the very simple union and the hash_id IN (blah). If you try to natural join to some table, it falls over.
+        
+        if len( table_names ) == 0:
+            
+            return []
+            
+    
+        table_union_to_select_from = '( ' + ' UNION ALL '.join( ( 'SELECT * FROM ' + table_name for table_name in table_names ) ) + ' )'
+        
+        select_statement = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + table_union_to_select_from + ' WHERE hash_id IN %s GROUP BY hash_id;'
+        
+        hash_id_tag_counts = list( self._SelectFromList( select_statement, hash_ids ) )
+        
+        return hash_id_tag_counts
         
     
     def _GetHashIdsThatHaveTags( self, tag_service_key, include_current, include_pending, hash_ids = None ):
@@ -6664,6 +6642,44 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetTagIdsToTags( self, tag_ids ):
         
+        if len( self._tag_ids_to_tags_cache ) > 10000:
+            
+            self._tag_ids_to_tags_cache = {}
+            
+        
+        uncached_tag_ids = [ tag_id for tag_id in tag_ids if tag_id not in self._tag_ids_to_tags_cache ]
+        
+        if len( uncached_tag_ids ) > 0:
+            
+            select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
+            
+            uncached_tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, uncached_tag_ids ) }
+            
+            if len( uncached_tag_ids_to_tags ) < uncached_tag_ids:
+                
+                for tag_id in uncached_tag_ids:
+                    
+                    if tag_id not in uncached_tag_ids_to_tags:
+                        
+                        tag = 'unknown tag:' + HydrusData.GenerateKey().encode( 'hex' )
+                        
+                        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                        
+                        namespace_id = self._GetNamespaceId( namespace )
+                        subtag_id = self._GetSubtagId( subtag )
+                        
+                        self._c.execute( 'REPLACE INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
+                        
+                        uncached_tag_ids_to_tags[ tag_id ] = tag
+                        
+                    
+                
+            
+            self._tag_ids_to_tags_cache.update( uncached_tag_ids_to_tags )
+            
+        
+        '''
+        # old method
         select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
         
         tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, tag_ids ) }
@@ -6687,8 +6703,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-        
-        return tag_ids_to_tags
+        '''
+        return self._tag_ids_to_tags_cache
         
     
     def _GetTagParents( self, service_key = None ):
@@ -7204,6 +7220,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._subscriptions_cache = {}
         self._service_cache = {}
+        
+        self._hash_ids_to_hashes_cache = {}
+        self._tag_ids_to_tags_cache = {}
         
         ( self._null_namespace_id, ) = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) ).fetchone()
         
@@ -11139,6 +11158,60 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 login_manager.OverwriteDefaultLoginScripts( [ 'hentai foundry login', 'gelbooru 0.2.x login', 'pixiv login', 'shimmie login', 'danbooru login', 'sankakucomplex login 2018.11.08', 'e-hentai login 2018.11.08' ] )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+                self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( 'pixiv_account', ) )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 330:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ '4channel thread' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.DeleteLoginScripts( [ 'e-hentai login 2018.11.08' ] )
+                
+                #
+                
+                login_manager.OverwriteDefaultLoginScripts( [ 'e-hentai login 2018.11.12' ] )
+                
+                #
+                
+                login_manager.TryToLinkMissingLoginScripts( [ 'e-hentai.org' ] ) # remapping new login script
                 
                 #
                 

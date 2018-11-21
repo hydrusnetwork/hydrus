@@ -4,8 +4,21 @@ import ClientNetworkingContexts
 import ClientNetworkingDomain
 import HydrusData
 import HydrusSerialisable
+import HydrusGlobals as HG
 import requests
 import threading
+
+try:
+    
+    import socket
+    import socks
+    
+    SOCKS_PROXY_OK = True
+    
+except:
+    
+    SOCKS_PROXY_OK = False
+    
 
 class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
@@ -28,6 +41,12 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         self._network_contexts_to_sessions = {}
         
         self._network_contexts_to_session_timeouts = {}
+        
+        self._proxies_dict = {}
+        
+        self._Reinitialise()
+        
+        HG.client_controller.sub( self, 'Reinitialise', 'notify_new_options' )
         
     
     def _CleanSessionCookies( self, network_context, session ):
@@ -104,6 +123,24 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def _Reinitialise( self ):
+        
+        self._proxies_dict = {}
+        
+        http_proxy = HG.client_controller.new_options.GetNoneableString( 'http_proxy' )
+        https_proxy = HG.client_controller.new_options.GetNoneableString( 'https_proxy' )
+        
+        if http_proxy is not None:
+            
+            self._proxies_dict[ 'http' ] = http_proxy
+            
+        
+        if https_proxy is not None:
+            
+            self._proxies_dict[ 'https' ] = https_proxy
+            
+        
+    
     def _SetDirty( self ):
         
         self._dirty = True
@@ -145,6 +182,11 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
             session = self._network_contexts_to_sessions[ network_context ]
             
+            if session.proxies != self._proxies_dict:
+                
+                session.proxies = dict( self._proxies_dict )
+                
+            
             #
             
             self._CleanSessionCookies( network_context, session )
@@ -179,6 +221,14 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dirty
+            
+        
+    
+    def Reinitialise( self ):
+        
+        with self._lock:
+            
+            self._Reinitialise()
             
         
     

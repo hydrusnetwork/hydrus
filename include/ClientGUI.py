@@ -17,6 +17,7 @@ import ClientGUIMenus
 import ClientGUIPages
 import ClientGUIParsing
 import ClientGUIPopupMessages
+import ClientGUIPredicates
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
@@ -2563,6 +2564,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 login_manager.SetDomainsToLoginInfo( domains_to_login_info )
                 
+                domains_to_login = panel.GetDomainsToLoginAfterOK()
+                
+                if len( domains_to_login ) > 0:
+                    
+                    self._controller.network_engine.ForceLogins( domains_to_login )
+                    
+                
             
         
     
@@ -4024,6 +4032,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             windows = []
             
+        
         if len( self._animation_update_windows ) == 0:
             
             self._animation_update_timer.Stop()
@@ -4163,15 +4172,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
                 
-                with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
+                with ClientGUITopLevelWindows.DialogEdit( self, 'input predicate', hide_buttons = True ) as dlg:
+                    
+                    panel = ClientGUIPredicates.InputFileSystemPredicate( dlg, predicate_type )
+                    
+                    dlg.SetPanel( panel )
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        good_predicates.extend( dlg.GetPredicates() )
-                        
-                    else:
-                        
-                        continue
+                        good_predicates.extend( panel.GetValue() )
                         
                     
                 

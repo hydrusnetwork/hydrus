@@ -84,6 +84,21 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self._error_names = set()
         
     
+    def _GetBestLoginScript( self, login_domain ):
+        
+        self._login_scripts.sort( key = lambda ls: len( ls.GetCredentialDefinitions() ) )
+        
+        for login_script in self._login_scripts:
+            
+            if login_domain in login_script.GetExampleDomains():
+                
+                return login_script
+                
+            
+        
+        return None
+        
+    
     def _GetLoginDomainStatus( self, network_context ):
         
         login_domain = None
@@ -262,6 +277,47 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = True
         
     
+    def AlreadyHaveExactlyThisLoginScript( self, new_login_script ):
+        
+        with self._lock:
+            
+            # absent irrelevant variables, do we have the exact same object already in?
+            
+            login_script_key_and_name = new_login_script.GetLoginScriptKeyAndName()
+            
+            dupe_login_scripts = [ login_script.Duplicate() for login_script in self._login_scripts ]
+            
+            for dupe_login_script in dupe_login_scripts:
+                
+                dupe_login_script.SetLoginScriptKeyAndName( login_script_key_and_name )
+                
+                if dupe_login_script.DumpToString() == new_login_script.DumpToString():
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def AutoAddLoginScripts( self, login_scripts ):
+        
+        with self._lock:
+            
+            next_login_scripts = list( self._login_scripts )
+            
+            for login_script in login_scripts:
+                
+                login_script.RegenerateLoginScriptKey()
+                
+            
+            next_login_scripts.extend( login_scripts )
+            
+        
+        self.SetLoginScripts( next_login_scripts )
+        
+    
     def CheckCanLogin( self, network_context ):
         
         with self._lock:
@@ -350,6 +406,16 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def DeleteLoginScripts( self, login_script_names ):
+        
+        with self._lock:
+            
+            login_scripts = [ login_script for login_script in self._login_scripts if login_script.GetName() not in login_script_names ]
+            
+        
+        self.SetLoginScripts( login_scripts )
+        
+    
     def GenerateLoginProcess( self, network_context ):
         
         with self._lock:
@@ -384,6 +450,13 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 return login_process
                 
             
+        
+    
+    def GenerateLoginProcessForDomain( self, login_domain ):
+        
+        network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( login_domain )
+        
+        return self.GenerateLoginProcess( network_context )
         
     
     def GetDomainsToLoginInfo( self ):
@@ -621,6 +694,41 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             validity_error_text = ''
             
             self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+            
+            self._SetDirty()
+            
+        
+    
+    def TryToLinkMissingLoginScripts( self, login_domains ):
+        
+        with self._lock:
+            
+            for login_domain in login_domains:
+                
+                try:
+                    
+                    ( existing_login_script, existing_credentials ) = self._GetLoginScriptAndCredentials( login_domain )
+                    
+                    continue # already seems to have a good login script, so nothing to fix
+                    
+                except HydrusExceptions.ValidationException:
+                    
+                    pass
+                    
+                
+                ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = self._domains_to_login_info[ login_domain ]
+                
+                login_script = self._GetBestLoginScript( login_domain )
+                
+                if login_script is None:
+                    
+                    continue
+                    
+                
+                login_script_key_and_name = login_script.GetLoginScriptKeyAndName()
+                
+                self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+                
             
             self._SetDirty()
             
@@ -1199,6 +1307,11 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         return required_creds
         
     
+    def GetSafeSummary( self ):
+        
+        return 'Login Script "' + self._name + '" - ' + ', '.join( self.GetExampleDomains() )
+        
+    
     def IsLoggedIn( self, engine, network_context ):
         
         return self._IsLoggedIn( engine, network_context )
@@ -1212,6 +1325,14 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
     def SetLoginScriptKey( self, login_script_key ):
         
         self._login_script_key = login_script_key
+        
+    
+    def SetLoginScriptKeyAndName( self, login_script_key_and_name ):
+        
+        ( login_script_key, name ) = login_script_key_and_name
+        
+        self._login_script_key = login_script_key
+        self._name = name
         
     
     def Start( self, engine, network_context, given_credentials, network_job_presentation_context_factory = None, test_result_callable = None, job_key = None ):

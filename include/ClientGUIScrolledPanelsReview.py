@@ -20,6 +20,7 @@ import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingContexts
 import ClientNetworkingDomain
+import ClientNetworkingLogin
 import ClientParsing
 import ClientPaths
 import ClientRendering
@@ -1554,11 +1555,13 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         url_matches = []
         parsers = []
         domain_metadatas = []
+        login_scripts = []
         
         num_misc_objects = 0
         
         bandwidth_manager = self._network_engine.bandwidth_manager
         domain_manager = self._network_engine.domain_manager
+        login_manager = self._network_engine.login_manager
         
         for path in paths:
             
@@ -1586,7 +1589,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
-            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLMatch, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage ) ):
+            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLMatch, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage, ClientNetworkingLogin.LoginScriptDomain ) ):
                 
                 obj_list = HydrusSerialisable.SerialisableList( [ obj_list ] )
                 
@@ -1615,6 +1618,10 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 elif isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ):
                     
                     domain_metadatas.append( obj )
+                    
+                elif isinstance( obj, ClientNetworkingLogin.LoginScriptDomain ):
+                    
+                    login_scripts.append( obj )
                     
                 else:
                     
@@ -1686,6 +1693,23 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        # now login scripts
+        
+        num_exact_dupe_login_scripts = 0
+        new_login_scripts = []
+        
+        for login_script in login_scripts:
+            
+            if login_manager.AlreadyHaveExactlyThisLoginScript( login_script ):
+                
+                num_exact_dupe_login_scripts += 1
+                
+            else:
+                
+                new_login_scripts.append( login_script )
+                
+            
+        
         # now domain metadata
         
         num_exact_dupe_domain_metadatas = 0
@@ -1735,9 +1759,9 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_matches + num_exact_dupe_parsers + num_exact_dupe_domain_metadatas
+        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_matches + num_exact_dupe_parsers + num_exact_dupe_domain_metadatas + num_exact_dupe_login_scripts
         
-        if len( new_gugs ) + len( new_url_matches ) + len( new_parsers ) + len( new_domain_metadatas ) == 0:
+        if len( new_gugs ) + len( new_url_matches ) + len( new_parsers ) + len( new_domain_metadatas ) + len( new_login_scripts ) == 0:
             
             wx.MessageBox( 'All ' + HydrusData.ToHumanInt( total_num_dupes ) + ' downloader objects in that package appeared to already be in the client, so nothing need be added.' )
             
@@ -1752,6 +1776,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             choice_tuples.extend( [ ( 'GUG: ' + gug.GetName(), gug, True ) for gug in new_gugs ] )
             choice_tuples.extend( [ ( 'URL Class: ' + url_match.GetName(), url_match, True ) for url_match in new_url_matches ] )
             choice_tuples.extend( [ ( 'Parser: ' + parser.GetName(), parser, True ) for parser in new_parsers ] )
+            choice_tuples.extend( [ ( 'Login Script: ' + login_script.GetName(), login_script, True ) for login_script in new_login_scripts ] )
             choice_tuples.extend( [ ( 'Domain Metadata: ' + domain_metadata.GetDomain(), domain_metadata, True ) for domain_metadata in new_domain_metadatas ] )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'select objects to add' ) as dlg:
@@ -1767,6 +1792,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     new_gugs = [ obj for obj in new_objects if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ) ]
                     new_url_matches = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.URLMatch ) ]
                     new_parsers = [ obj for obj in new_objects if isinstance( obj, ClientParsing.PageParser ) ]
+                    new_login_scripts = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingLogin.LoginScriptDomain ) ]
                     new_domain_metadatas = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ) ]
                     
                 else:
@@ -1781,6 +1807,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         new_gugs.sort( key = lambda o: o.GetName() )
         new_url_matches.sort( key = lambda o: o.GetName() )
         new_parsers.sort( key = lambda o: o.GetName() )
+        new_login_scripts.sort( key = lambda o: o.GetName() )
         new_domain_metadatas.sort( key = lambda o: o.GetDomain() )
         
         if len( new_domain_metadatas ) > 0:
@@ -1806,6 +1833,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         all_to_add = list( new_gugs )
         all_to_add.extend( new_url_matches )
         all_to_add.extend( new_parsers )
+        all_to_add.extend( new_login_scripts )
         all_to_add.extend( new_domain_metadatas )
         
         message = 'The client is about to add and link these objects:'
@@ -1840,11 +1868,12 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         bandwidth_manager.AutoAddDomainMetadatas( new_domain_metadatas )
         domain_manager.AutoAddDomainMetadatas( new_domain_metadatas, approved = True )
+        login_manager.AutoAddLoginScripts( new_login_scripts )
         
         num_new_gugs = len( new_gugs )
-        num_aux = len( new_url_matches ) + len( new_parsers )
+        num_aux = len( new_url_matches ) + len( new_parsers ) + len( new_login_scripts ) + len( new_domain_metadatas )
         
-        final_message = 'Successfully added ' + HydrusData.ToHumanInt( len( new_gugs ) ) + ' new downloaders and ' + HydrusData.ToHumanInt( len( new_url_matches ) + len( new_parsers ) + len( new_domain_metadatas ) ) + ' auxiliary objects.'
+        final_message = 'Successfully added ' + HydrusData.ToHumanInt( num_new_gugs ) + ' new downloaders and ' + HydrusData.ToHumanInt( num_aux ) + ' auxiliary objects.'
         
         if total_num_dupes > 0:
             
@@ -2262,11 +2291,15 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'create new', self._Add )
-        listctrl_panel.AddButton( 'import cookies.txt', self._ImportCookiesTXT )
+        listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'review', self._Review, enabled_only_on_selection = True )
         listctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
+        
+        listctrl_panel.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self._ImportCookiesTXTPaths ) )
+        
+        self._show_empty = wx.CheckBox( self, label = 'show empty' )
         
         #
         
@@ -2277,8 +2310,11 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._show_empty, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
+        
+        self._show_empty.Bind( wx.EVT_CHECKBOX, self.EventShowEmpty )
         
     
     def _Add( self ):
@@ -2298,6 +2334,8 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._AddNetworkContext( network_context )
                 
             
+        
+        self._show_empty.SetValue( True )
         
         self._Update()
         
@@ -2366,18 +2404,43 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 path = HydrusData.ToUnicode( f_dlg.GetPath() )
                 
-                cj = cookielib.MozillaCookieJar()
+                self._ImportCookiesTXTPaths( ( path, ) )
+                
+            
+        
+    
+    def _ImportCookiesTXTPaths( self, paths ):
+        
+        num_added = 0
+        
+        for path in paths:
+            
+            cj = cookielib.MozillaCookieJar()
+            
+            try:
                 
                 cj.load( path, ignore_discard = True, ignore_expires = True )
                 
-                for cookie in cj:
-                    
-                    session = self._session_manager.GetSessionForDomain( cookie.domain )
-                    
-                    session.cookies.set_cookie( cookie )
-                    
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                wx.MessageBox( 'It looks like that cookies.txt failed to load. Unfortunately, not all formats are supported (for now!).' )
+                
+                return
                 
             
+            for cookie in cj:
+                
+                session = self._session_manager.GetSessionForDomain( cookie.domain )
+                
+                session.cookies.set_cookie( cookie )
+                
+                num_added += 1
+                
+            
+        
+        wx.MessageBox( 'Added ' + HydrusData.ToUnicode( num_added ) + ' cookies!' )
         
         self._Update()
         
@@ -2400,7 +2463,29 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         network_contexts = [ network_context for network_context in self._session_manager.GetNetworkContexts() if network_context.context_type in ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS ) ]
         
+        if not self._show_empty.GetValue():
+            
+            non_empty_network_contexts = []
+            
+            for network_context in network_contexts:
+                
+                session = self._session_manager.GetSession( network_context )
+                
+                if len( session.cookies ) > 0:
+                    
+                    non_empty_network_contexts.append( network_context )
+                    
+                
+            
+            network_contexts = non_empty_network_contexts
+            
+        
         self._listctrl.SetData( network_contexts )
+        
+    
+    def EventShowEmpty( self, event ):
+        
+        self._Update()
         
     
 class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -2427,11 +2512,13 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'add', self._Add )
-        listctrl_panel.AddButton( 'import cookies.txt', self._ImportCookiesTXT )
+        listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
         listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
         listctrl_panel.AddDeleteButton()
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
+        
+        listctrl_panel.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self._ImportCookiesTXTPaths ) )
         
         #
         
@@ -2565,7 +2652,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    # this method is thanks to user prkc on the discord!
+    # these methods are thanks to user prkc on the discord!
     def _ImportCookiesTXT( self ):
         
         with wx.FileDialog( self, 'select cookies.txt', style = wx.FD_OPEN ) as f_dlg:
@@ -2574,20 +2661,45 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 path = HydrusData.ToUnicode( f_dlg.GetPath() )
                 
-                cj = cookielib.MozillaCookieJar()
-                
-                cj.load( path, ignore_discard = True, ignore_expires = True )
-                
-                for cookie in cj:
-                    
-                    self._session.cookies.set_cookie( cookie )
-                    
+                self._ImportCookiesTXTPaths( ( path, ) )
                 
             
         
+    
+    def _ImportCookiesTXTPaths( self, paths ):
+        
+        num_added = 0
+        
+        for path in paths:
+            
+            cj = cookielib.MozillaCookieJar()
+            
+            try:
+                
+                cj.load( path, ignore_discard = True, ignore_expires = True )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                wx.MessageBox( 'It looks like that cookies.txt failed to load. Unfortunately, not all formats are supported (for now!).' )
+                
+                return
+                
+            
+            for cookie in cj:
+                
+                self._session.cookies.set_cookie( cookie )
+                
+                num_added += 1
+                
+            
+        
+        wx.MessageBox( 'Added ' + HydrusData.ToUnicode( num_added ) + ' cookies!' )
+        
         self._Update()
         
-
+    
     def _SetCookie( self, name, value, domain, path, expires ):
         
         version = 0

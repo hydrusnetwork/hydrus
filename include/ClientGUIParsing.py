@@ -67,6 +67,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.AddButton( 'add gug', self._AddGUG )
         listctrl_panel.AddButton( 'add url class', self._AddURLMatch )
         listctrl_panel.AddButton( 'add parser', self._AddParser )
+        listctrl_panel.AddButton( 'add login script', self._AddLoginScript )
         listctrl_panel.AddButton( 'add headers/bandwidth rules', self._AddDomainMetadata )
         listctrl_panel.AddDeleteButton()
         listctrl_panel.AddSeparator()
@@ -154,6 +155,39 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._listctrl.AddDatas( gugs_to_include )
         self._listctrl.AddDatas( url_matches_to_include )
         self._listctrl.AddDatas( parsers_to_include )
+        
+    
+    def _AddLoginScript( self ):
+        
+        choosable_login_scripts = self._network_engine.login_manager.GetLoginScripts()
+        
+        for obj in self._listctrl.GetData():
+            
+            if obj in choosable_login_scripts:
+                
+                choosable_login_scripts.remove( obj )
+                
+            
+        
+        choice_tuples = [ ( login_script.GetName(), login_script, False ) for login_script in choosable_login_scripts ]
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select login scripts' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                login_scripts_to_include = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        self._listctrl.AddDatas( login_scripts_to_include )
         
     
     def _AddParser( self ):
