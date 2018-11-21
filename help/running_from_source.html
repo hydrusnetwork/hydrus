@@ -27,9 +27,15 @@
 			<p>That '. venv/bin/activate' line turns your venv on, and will be needed every time you run the client.pyw/server.py files. You can easily tuck it into a launch script.</p>
 			<p>After that, you can go nuts with pip. I think this will do for most systems:</p>
 			<ul>
-				<li>pip install beautifulsoup4 html5lib lxml lz4 nose numpy opencv-python six pafy Pillow psutil pycrypto pylzma PyOpenSSL PyYAML requests Send2Trash service_identity twisted youtube-dl</li>
+				<li>pip install beautifulsoup4 html5lib lxml nose numpy opencv-python six pafy Pillow psutil pycrypto pylzma PyOpenSSL PyYAML requests Send2Trash service_identity twisted youtube-dl</li>
 			</ul>
 			<p>You may want to do all that in smaller batches.</p>
+			<p>And optionally, you can add these packages:</p>
+			<ul>
+				<li>lz4 - for some memory compression in the client</li>
+				<li>pysocks - for socks4/socks5 proxy support (although you may want to try "requests[socks]" instead)</li>
+				</li>matplotlib - for some bandwidth graph drawing<li>
+			</ul>
 			<p>Depending on your OS, you might need something else. Ultimately, the best way to figure out if you have enough for hydrus is to just keep running client.pyw and see what it complains about missing. If you are not familiar with pip and get an error about a library already existing, know that you update an existing library with the --upgrade switch, like so:</p>
 			<ul>
 				<li>pip install --upgrade libraryname</li>
