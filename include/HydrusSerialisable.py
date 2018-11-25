@@ -190,7 +190,7 @@ class SerialisableBase( object ):
         
         obj_tuple = self.GetSerialisableTuple()
         
-        return json.dumps( obj_tuple )
+        return json.dumps( obj_tuple,separators=(',', ':') )
         
     
     def Duplicate( self ):
