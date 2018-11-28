@@ -567,6 +567,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         ( data, display_tuple, sort_tuple ) = data_info
         
+        if data in self._data_to_indices:
+            
+            return
+            
+        
         index = self.Append( display_tuple )
         
         self._indices_to_data_info[ index ] = data_info

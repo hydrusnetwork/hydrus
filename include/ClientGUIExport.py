@@ -27,34 +27,28 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
         columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ]
         
-        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
+        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self._export_folders_panel, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        
+        self._export_folders_panel.SetListCtrl( self._export_folders )
+        
+        self._export_folders_panel.AddButton( 'add', self._AddFolder )
+        self._export_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._export_folders_panel.AddDeleteButton()
+        
+        #
         
         self._export_folders.AddDatas( export_folders )
-        
-        self._add_button = wx.Button( self, label = 'add' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
-        
-        self._edit_button = wx.Button( self, label = 'edit' )
-        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
-        
-        self._delete_button = wx.Button( self, label = 'delete' )
-        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
-        
-        file_buttons = wx.BoxSizer( wx.HORIZONTAL )
-        
-        file_buttons.Add( self._add_button, CC.FLAGS_VCENTER )
-        file_buttons.Add( self._edit_button, CC.FLAGS_VCENTER )
-        file_buttons.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         intro = 'Here you can set the client to regularly export a certain query to a particular location.'
         
         vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._export_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -68,10 +62,11 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         name = 'export folder'
         path = ''
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
+        delete_from_client_after_export = False
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         period = 15 * 60
         
-        export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, file_search_context = file_search_context, period = period, phrase = phrase )
+        export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folder' ) as dlg:
             
@@ -92,7 +87,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertExportFolderToListCtrlTuples( self, export_folder ):
         
-        ( name, path, export_type, file_search_context, period, phrase ) = export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, file_search_context, period, phrase ) = export_folder.ToTuple()
         
         if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
             
@@ -101,6 +96,11 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         elif export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
             pretty_export_type = 'synchronise'
+            
+        
+        if delete_from_client_after_export:
+            
+            pretty_export_type += ' and deleting from the client!'
             
         
         pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
@@ -116,14 +116,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _GetExistingNames( self ):
-        
-        existing_names = { export_folder.GetName() for export_folder in self._export_folders.GetData() }
-        
-        return existing_names
-        
-    
-    def Edit( self ):
+    def _Edit( self ):
         
         export_folders = self._export_folders.GetData( only_selected = True )
         
@@ -153,19 +146,11 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def EventAdd( self, event ):
+    def _GetExistingNames( self ):
         
-        self._AddFolder()
+        existing_names = { export_folder.GetName() for export_folder in self._export_folders.GetData() }
         
-    
-    def EventDelete( self, event ):
-        
-        self.Delete()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
+        return existing_names
         
     
     def GetValue( self ):
@@ -183,7 +168,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folder = export_folder
         
-        ( name, path, export_type, file_search_context, period, phrase ) = self._export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, file_search_context, period, phrase ) = self._export_folder.ToTuple()
         
         self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
         
@@ -198,6 +183,8 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._type = ClientGUICommon.BetterChoice( self._type_box )
         self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
         self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
+        
+        self._delete_from_client_after_export = wx.CheckBox( self._type_box )
         
         #
         
@@ -233,6 +220,8 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._type.SelectClientData( export_type )
         
+        self._delete_from_client_after_export.SetValue( delete_from_client_after_export )
+        
         self._period.SetValue( period )
         
         self._pattern.SetValue( phrase )
@@ -263,6 +252,14 @@ If you select synchronise, be careful!'''
         self._type_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._type_box.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        rows = []
+        
+        rows.append( ( 'delete files from client after export: ', self._delete_from_client_after_export ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._type_box, rows )
+        
+        self._type_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
         self._query_box.Add( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._query_box.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -285,6 +282,59 @@ If you select synchronise, be careful!'''
         
         self.SetSizer( vbox )
         
+        self._UpdateTypeDeleteUI()
+        
+        self._type.Bind( wx.EVT_CHOICE, self.EventTypeChoice )
+        self._delete_from_client_after_export.Bind( wx.EVT_CHECKBOX, self.EventDeleteFilesAfterExport )
+        
+    
+    def _UpdateTypeDeleteUI( self ):
+        
+        if self._type.GetChoice() == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+            
+            self._delete_from_client_after_export.Disable()
+            
+            if self._delete_from_client_after_export.GetValue():
+                
+                self._delete_from_client_after_export.SetValue( False )
+                
+            
+        else:
+            
+            self._delete_from_client_after_export.Enable()
+            
+        
+    
+    def CanOK( self ):
+        
+        if self._delete_from_client_after_export.GetValue():
+            
+            message = 'You have set this export folder to delete the files from the client after export! Are you absolutely sure this is what you want?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return False
+                    
+                
+            
+        
+        return True
+        
+    
+    def EventDeleteFilesAfterExport( self, event ):
+        
+        if self._delete_from_client_after_export.GetValue():
+            
+            wx.MessageBox( 'This will delete the exported files from your client after the export! If you do not know what this means, uncheck it!' )
+            
+        
+    
+    def EventTypeChoice( self, event ):
+        
+        self._UpdateTypeDeleteUI()
+        
     
     def GetValue( self ):
         
@@ -293,6 +343,8 @@ If you select synchronise, be careful!'''
         path = HydrusData.ToUnicode( self._path.GetPath() )
         
         export_type = self._type.GetChoice()
+        
+        delete_from_client_after_export = self._delete_from_client_after_export.GetValue()
         
         file_search_context = self._searchbox.GetFileSearchContext()
         
@@ -320,7 +372,7 @@ If you select synchronise, be careful!'''
             raise HydrusExceptions.VetoException( 'Could not parse that export phrase! ' + HydrusData.ToUnicode( e ) )
             
         
-        export_folder = ClientExporting.ExportFolder( name, path, export_type, file_search_context, period, phrase )
+        export_folder = ClientExporting.ExportFolder( name, path = path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
         
         return export_folder
         

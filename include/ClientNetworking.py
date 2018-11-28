@@ -296,7 +296,16 @@ class NetworkEngine( object ):
                         
                     else:
                         
-                        job.Cancel( 'Job seems to have an invalid login, and it is not willing to wait!' )
+                        if job.IsHydrusJob():
+                            
+                            message = 'This hydrus service (' + job.GetLoginNetworkContext().ToUnicode() + ') recently failed to log in. Please hit its \'refresh account\' under \'review services\' and try again.'
+                            
+                        else:
+                            
+                            message = 'This job\'s network context (' + job.GetLoginNetworkContext().ToUnicode() + ') seems to have an invalid login, and it is not willing to wait! Please review its login details and then try again.'
+                            
+                        
+                        job.Cancel( message )
                         
                         return False
                         

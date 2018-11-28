@@ -635,7 +635,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.NetworkException as e:
             
-            self._DelayWork( 4 * 3600, HydrusData.ToUnicode( e ) )
+            delay = HG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
+            
+            self._DelayWork( delay, HydrusData.ToUnicode( e ) )
             
             HydrusData.PrintException( e )
             

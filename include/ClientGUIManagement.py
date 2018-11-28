@@ -1610,6 +1610,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._query_input = ClientGUIControls.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
         
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self._gallery_downloader_panel, CC.GlobalBMPs.cog, self._ShowCogMenu )
+        
         self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
@@ -1627,10 +1629,15 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         #
         
+        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        input_hbox.Add( self._query_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        input_hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
+        
         self._gallery_downloader_panel.Add( self._gallery_importers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gallery_importers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gallery_importers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._gallery_downloader_panel.Add( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2060,6 +2067,18 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     
                 
             
+        
+    
+    def _ShowCogMenu( self ):
+        
+        menu = wx.Menu()
+        
+        ( start_file_queues_paused, start_gallery_queues_paused ) = self._multiple_gallery_import.GetQueueStartSettings()
+        
+        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', start_file_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, not start_file_queues_paused, start_gallery_queues_paused )
+        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', start_gallery_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, not start_gallery_queues_paused )
+        
+        HG.client_controller.PopupMenu( self._cog_button, menu )
         
     
     def _ShowSelectedImportersFiles( self, show = 'presented' ):
@@ -3703,7 +3722,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 self._contents.Append( content_string, content )
                 
             
-            self._contents.SetChecked( range( self._contents.GetCount() ) )
+            self._contents.SetCheckedItems( range( self._contents.GetCount() ) )
             
             self._process.Enable()
             

@@ -2284,7 +2284,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
         
-        self.SetScrollRate( 0, int( thumbnail_span_height * thumbnail_scroll_rate ) )
+        self.SetScrollRate( 0, int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
         self.Bind( wx.EVT_MOTION, self.EventDrag )
@@ -4107,7 +4107,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
         
-        self.SetScrollRate( 0, int( thumbnail_span_height * thumbnail_scroll_rate ) )
+        self.SetScrollRate( 0, int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
         self._DirtyAllPages()
         

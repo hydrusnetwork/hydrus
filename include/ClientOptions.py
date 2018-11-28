@@ -219,6 +219,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'thumbnail_border' ] = 1
         self._dictionary[ 'integers' ][ 'thumbnail_margin' ] = 2
         
+        self._dictionary[ 'integers' ][ 'subscription_network_error_delay' ] = 12 * 3600
+        self._dictionary[ 'integers' ][ 'subscription_other_error_delay' ] = 36 * 3600
+        self._dictionary[ 'integers' ][ 'downloader_network_error_delay' ] = 90 * 60
+        
         #
         
         self._dictionary[ 'keys' ] = {}

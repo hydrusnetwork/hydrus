@@ -113,15 +113,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddGUG( self ):
         
-        choosable_gugs = [ gug for gug in self._network_engine.domain_manager.GetGUGs() if gug.IsFunctional() ]
+        existing_data = self._listctrl.GetData()
         
-        for obj in self._listctrl.GetData():
-            
-            if obj in choosable_gugs:
-                
-                choosable_gugs.remove( obj )
-                
-            
+        choosable_gugs = [ gug for gug in self._network_engine.domain_manager.GetGUGs() if gug.IsFunctional() and gug not in existing_data ]
         
         choice_tuples = [ ( gug.GetName(), gug, False ) for gug in choosable_gugs ]
         
@@ -141,6 +135,8 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        gugs_to_include = self._FleshOutNGUGsWithGUGs( gugs_to_include )
+        
         domains = { ClientNetworkingDomain.ConvertURLIntoDomain( example_url ) for example_url in itertools.chain.from_iterable( ( gug.GetExampleURLs() for gug in gugs_to_include ) ) }
         
         domain_metadatas_to_include = self._GetDomainMetadatasToInclude( domains )
@@ -159,15 +155,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddLoginScript( self ):
         
-        choosable_login_scripts = self._network_engine.login_manager.GetLoginScripts()
+        existing_data = self._listctrl.GetData()
         
-        for obj in self._listctrl.GetData():
-            
-            if obj in choosable_login_scripts:
-                
-                choosable_login_scripts.remove( obj )
-                
-            
+        choosable_login_scripts = [ ls for ls in self._network_engine.login_manager.GetLoginScripts() if ls not in existing_data ]
         
         choice_tuples = [ ( login_script.GetName(), login_script, False ) for login_script in choosable_login_scripts ]
         
@@ -192,15 +182,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddParser( self ):
         
-        choosable_parsers = list( self._network_engine.domain_manager.GetParsers() )
+        existing_data = self._listctrl.GetData()
         
-        for obj in self._listctrl.GetData():
-            
-            if obj in choosable_parsers:
-                
-                choosable_parsers.remove( obj )
-                
-            
+        choosable_parsers = [ p for p in self._network_engine.domain_manager.GetParsers() if p not in existing_data ]
         
         choice_tuples = [ ( parser.GetName(), parser, False ) for parser in choosable_parsers ]
         
@@ -225,15 +209,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _AddURLMatch( self ):
         
-        choosable_url_matches = list( self._network_engine.domain_manager.GetURLMatches() )
+        existing_data = self._listctrl.GetData()
         
-        for obj in self._listctrl.GetData():
-            
-            if obj in choosable_url_matches:
-                
-                choosable_url_matches.remove( obj )
-                
-            
+        choosable_url_matches = [ u for u in self._network_engine.domain_manager.GetURLMatches() if u not in existing_data ]
         
         choice_tuples = [ ( url_match.GetName(), url_match, False ) for url_match in choosable_url_matches ]
         
@@ -352,6 +330,30 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _FleshOutNGUGsWithGUGs( self, gugs ):
+        
+        gugs_to_include = set( gugs )
+        
+        existing_data = self._listctrl.GetData()
+        
+        possible_new_gugs = [ gug for gug in self._network_engine.domain_manager.GetGUGs() if gug.IsFunctional() and gug not in existing_data and gug not in gugs_to_include ]
+        
+        interesting_gug_keys_and_names = list( itertools.chain.from_iterable( [ gug.GetGUGKeysAndNames() for gug in gugs_to_include if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ] ) )
+        
+        interesting_gugs = [ gug for gug in possible_new_gugs if gug.GetGUGKeyAndName() in interesting_gug_keys_and_names ]
+        
+        gugs_to_include.update( interesting_gugs )
+        
+        if True in ( isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) for gug in interesting_gugs ):
+            
+            return self._FleshOutNGUGsWithGUGs( gugs_to_include )
+            
+        else:
+            
+            return gugs_to_include
+            
+        
+    
     def _FleshOutURLMatchesWithAPILinks( self, url_matches ):
         
         url_matches_to_include = set( url_matches )
@@ -372,7 +374,11 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        return list( url_matches_to_include )
+        existing_data = self._listctrl.GetData()
+        
+        url_matches_to_include = [ u for u in url_matches_to_include if u not in existing_data ]
+        
+        return url_matches_to_include
         
     
     def _GetDomainMetadatasToInclude( self, domains ):
@@ -452,7 +458,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        return list( parsers_to_include )
+        existing_data = self._listctrl.GetData()
+        
+        return [ p for p in parsers_to_include if p not in existing_data ]
         
     
     def _GetURLMatchesToInclude( self, gugs ):
@@ -493,7 +501,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        return list( url_matches_to_include )
+        existing_data = self._listctrl.GetData()
+        
+        return [ u for u in url_matches_to_include if u not in existing_data ]
         
     
 class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):

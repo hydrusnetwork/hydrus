@@ -626,6 +626,14 @@ class NetworkJob( object ):
             
         
     
+    def GetLoginNetworkContext( self ):
+        
+        with self._lock:
+            
+            return self._login_network_context
+            
+        
+    
     def GetNetworkContexts( self ):
         
         with self._lock:
@@ -707,6 +715,14 @@ class NetworkJob( object ):
         with self._lock:
             
             return self._IsDone()
+            
+        
+    
+    def IsHydrusJob( self ):
+        
+        with self._lock:
+            
+            return False
             
         
     
@@ -1232,6 +1248,14 @@ class NetworkJobHydrus( NetworkJob ):
             
         
         return response
+        
+    
+    def IsHydrusJob( self ):
+        
+        with self._lock:
+            
+            return True
+            
         
     
 class NetworkJobWatcherPage( NetworkJob ):

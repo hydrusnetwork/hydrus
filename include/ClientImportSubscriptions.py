@@ -1314,14 +1314,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.NetworkException as e:
                 
-                if isinstance( e, HydrusExceptions.NetworkInfrastructureException ):
-                    
-                    delay = 3600
-                    
-                else:
-                    
-                    delay = HC.UPDATE_DURATION
-                    
+                delay = HG.client_controller.new_options.GetInteger( 'subscription_network_error_delay' )
                 
                 HydrusData.Print( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
                 HydrusData.PrintException( e )
@@ -1337,7 +1330,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 HydrusData.ShowText( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
                 HydrusData.ShowException( e )
                 
-                self._DelayWork( HC.UPDATE_DURATION, 'error: ' + HydrusData.ToUnicode( e ) )
+                delay = HG.client_controller.new_options.GetInteger( 'subscription_other_error_delay' )
+                
+                self._DelayWork( delay, 'error: ' + HydrusData.ToUnicode( e ) )
                 
             finally:
                 

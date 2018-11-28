@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 332</h3></li>
+				<ul>
+					<li>the client serialisation system now supports multiple rolling backups!</li>
+					<li>client sessions (like the 'last session' that typically loads on boot) are now automatically backed up to ten times in rolling backups! you can review and append the backups if you need to recover from _pages->sessions->append session backup_, where they are listed by their timestamp!</li>
+					<li>when the client closes, an additional 'exit session' is now saved. this differs to 'last session', which is overwritten every x minutes, and is now available (especially with the new backup) for various error recovery situations</li>
+					<li>gallery import pages now have a little cog icon to control if new import queues will start with files and/or galleries paused. these states persist through a session reload</li>
+					<li>tag import options that are 'defaultable' now have a button to let you load in a specific default, so you can easily quickly edit in a one-time slight alteration of the default rather than having to create everything from scratch</li>
+					<li>under options->downloading, you can now set the 'delay' times on gallery/watcher network error, subscription network error, and subscription other error, now defaulting to 90mins, 12hours, and 36 hours respectively</li>
+					<li>attempting to launch a client with db version > software version now spawns a blocking messagebox on pre-launch informing the user of the risks and advising task manager force-kill of the process</li>
+					<li>did a little cleanup on the new tag id database cache and merged some other, older semi-laggy tag-fetching code to use the same system</li>
+					<li>wrote a similar 'file id' database cache for caching file hashes and also merged some old hash-fetching code into it. a variety of file operations are now significantly faster</li>
+					<li>export folders can now delete files from the client after export. the edit panel will warn you on selecting this and oking the panel. it can't be set if the export type is 'synchronise'.</li>
+					<li>fixed the edit export folders dialog's old buttons, which were semi-working due to some recent update work</li>
+					<li>when checking for file integrity, you can now choose to export a .txt file listing all the missing files' known urls, so you can try to recover by feeding them all back into a new url downloader!</li>
+					<li>the physical file deletion process is now a little simpler and deals with larger jobs in smaller batches, no longer hogging the file read lock the whole time. clearing a large trash should no longer hang other media loads</li>
+					<li>adding ngugs in the 'export downloaders' dialog now attempts to add the respective gugs as well</li>
+					<li>fixed an issue where the listctrl would accept certain kinds of duplicate data and hence confuse its indices</li>
+					<li>fixed all the add buttons on the export downloader panel to exclude all items already in the list when figuring out what additional objects to add</li>
+					<li>the 'scroll thumbs at this rate per tick' option now _rounds_ the pixel result, rather than always _floor_ing it</li>
+					<li>wrote a new mass-selection database routine that should reduce memory footprint of autocomplete regeneration. if it works out, I will use it in some other places</li>
+					<li>improved the errors when a network job that cannot wait fails on an invalid login, and added a separate error when it refers to a hydrus service</li>
+					<li>fixed a small typo bug when trying to auto-add url classes and parsers</li>
+					<li>updated an old deprecated checkboxlist call</li>
+					<li>clarified the integrity section of 'help my db is broke.txt'.</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 331</h3></li>
 				<ul>
 					<li>added a 'do login now' button to the manage logins dialog. it only enables when the selected logins are active and not invalid and so on, and will ok the dialog and queue up some login attempts, which will make report popups as normal</li>

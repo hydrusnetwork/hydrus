@@ -574,6 +574,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             if dlg_yn.ShowModal() == wx.ID_YES:
                 
                 self._notebook.SaveGUISession( 'last session' )
+                self._notebook.SaveGUISession( 'exit session' )
                 
                 # session save causes a db read in the menu refresh, so let's put this off just a bit
                 self._controller.CallLater( 1.5, self._controller.Write, 'backup', path )
@@ -663,9 +664,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if result == wx.ID_YES:
                 
-                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'quick', allowed_mimes = allowed_mimes )
+                do_quick = True
                 
             elif result == wx.ID_NO:
+                
+                do_quick = False
                 
                 text = 'If an existing file is found to be corrupt/incorrect, would you like to move it or delete it?'
                 
@@ -679,18 +682,59 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                             if dlg_3.ShowModal() == wx.ID_OK:
                                 
-                                path = HydrusData.ToUnicode( dlg_3.GetPath() )
+                                move_location = HydrusData.ToUnicode( dlg_3.GetPath() )
                                 
-                                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', allowed_mimes = allowed_mimes, move_location = path )
+                            else:
+                                
+                                return
                                 
                             
                         
                     elif result == wx.ID_NO:
                         
-                        self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', allowed_mimes = allowed_mimes )
+                        move_location = None
+                        
+                    else:
+                        
+                        return
                         
                     
                 
+            else:
+                
+                return
+                
+            
+        
+        message = 'Would you like to export a .txt file including known URLs for any missing files?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Make a URL .txt?' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                wx.MessageBox( 'A .txt with missing URLs will be created in your db directory!' )
+                
+                create_urls_txt = True
+                
+            elif result == wx.ID_NO:
+                
+                create_urls_txt = False
+                
+            else:
+                
+                return
+                
+            
+        
+        if do_quick:
+            
+            self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'quick', allowed_mimes = allowed_mimes, create_urls_txt = create_urls_txt )
+            
+        else:
+            
+            self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', allowed_mimes = allowed_mimes, create_urls_txt = create_urls_txt, move_location = move_location )
             
         
     
@@ -1418,12 +1462,37 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenu( sessions, append, 'append' )
                 
+                gui_session_names_to_backup_timestamps = self._controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+                
+                if len( gui_session_names_to_backup_timestamps ) > 0:
+                    
+                    append_backup = wx.Menu()
+                    
+                    rows = list( gui_session_names_to_backup_timestamps.items() )
+                    
+                    rows.sort()
+                    
+                    for ( name, timestamps ) in rows:
+                        
+                        submenu = wx.Menu()
+                        
+                        for timestamp in timestamps:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, submenu, HydrusData.ConvertTimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
+                            
+                        
+                        ClientGUIMenus.AppendMenu( append_backup, submenu, name )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( sessions, append_backup, 'append session backup' )
+                    
+                
             
             save = wx.Menu()
             
             for name in gui_session_names:
                 
-                if name == 'last session':
+                if name in ClientGUIPages.RESERVED_SESSION_NAMES:
                     
                     continue
                     
@@ -1435,16 +1504,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( sessions, save, 'save' )
             
-            if len( gui_session_names ) > 0 and gui_session_names != [ 'last session' ]:
+            if len( set( gui_session_names ).difference( ClientGUIPages.RESERVED_SESSION_NAMES ) ) > 0:
                 
                 delete = wx.Menu()
                 
                 for name in gui_session_names:
                     
-                    if name != 'last session':
+                    if name in ClientGUIPages.RESERVED_SESSION_NAMES:
                         
-                        ClientGUIMenus.AppendMenuItem( self, delete, name, 'Delete this session.', self._DeleteGUISession, name )
+                        continue
                         
+                    
+                    ClientGUIMenus.AppendMenuItem( self, delete, name, 'Delete this session.', self._DeleteGUISession, name )
                     
                 
                 ClientGUIMenus.AppendMenu( sessions, delete, 'delete' )
@@ -4092,6 +4163,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         try:
             
             self._notebook.SaveGUISession( 'last session' )
+            self._notebook.SaveGUISession( 'exit session' )
             
             self._DestroyTimers()
             

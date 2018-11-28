@@ -1652,6 +1652,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_new_on_file_seed_short_summary = wx.CheckBox( misc )
             self._show_deleted_on_file_seed_short_summary = wx.CheckBox( misc )
             
+            self._subscription_network_error_delay = ClientGUITime.TimeDeltaButton( misc, min = 600, days = True, hours = True, minutes = True )
+            self._subscription_other_error_delay = ClientGUITime.TimeDeltaButton( misc, min = 600, days = True, hours = True, minutes = True )
+            self._downloader_network_error_delay = ClientGUITime.TimeDeltaButton( misc, min = 600, days = True, hours = True, minutes = True )
+            
             #
             
             gallery_page_tt = 'Gallery page fetches are heavy requests with unusual fetch-time requirements. It is important they not wait too long, but it is also useful to throttle them:'
@@ -1685,6 +1689,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._watcher_page_wait_period.SetValue( self._new_options.GetInteger( 'watcher_page_wait_period' ) )
             self._watcher_page_wait_period.SetToolTip( gallery_page_tt )
             self._highlight_new_watcher.SetValue( self._new_options.GetBoolean( 'highlight_new_watcher' ) )
+            
+            self._subscription_network_error_delay.SetValue( self._new_options.GetInteger( 'subscription_network_error_delay' ) )
+            self._subscription_other_error_delay.SetValue( self._new_options.GetInteger( 'subscription_other_error_delay' ) )
+            self._downloader_network_error_delay.SetValue( self._new_options.GetInteger( 'downloader_network_error_delay' ) )
             
             #
             
@@ -1732,6 +1740,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Stop character:', self._stop_character ) )
             rows.append( ( 'Show a \'N\' (for \'new\') count on short file import summaries:', self._show_new_on_file_seed_short_summary ) )
             rows.append( ( 'Show a \'D\' (for \'deleted\') count on short file import summaries:', self._show_deleted_on_file_seed_short_summary ) )
+            rows.append( ( 'Delay time on a gallery/watcher network error:', self._downloader_network_error_delay ) )
+            rows.append( ( 'Delay time on a subscription network error:', self._subscription_network_error_delay ) )
+            rows.append( ( 'Delay time on a subscription other error:', self._subscription_other_error_delay ) )
             
             gridbox = ClientGUICommon.WrapInGrid( misc, rows )
             
@@ -1771,6 +1782,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetString( 'stop_character', self._stop_character.GetValue() )
             self._new_options.SetBoolean( 'show_new_on_file_seed_short_summary', self._show_new_on_file_seed_short_summary.GetValue() )
             self._new_options.SetBoolean( 'show_deleted_on_file_seed_short_summary', self._show_deleted_on_file_seed_short_summary.GetValue() )
+            
+            self._new_options.SetInteger( 'subscription_network_error_delay', self._subscription_network_error_delay.GetValue() )
+            self._new_options.SetInteger( 'subscription_other_error_delay', self._subscription_other_error_delay.GetValue() )
+            self._new_options.SetInteger( 'downloader_network_error_delay', self._downloader_network_error_delay.GetValue() )
             
         
     

@@ -55,6 +55,34 @@ def CanVacuum( db_path, stop_time = None ):
         return False
         
     
+def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
+    
+    table_name = 'mem.tempbigread' + os.urandom( 32 ).encode( 'hex' )
+    
+    cursor.execute( 'CREATE TABLE ' + table_name + ' ( temp_id INTEGER PRIMARY KEY );' )
+    
+    cursor.execute( 'INSERT INTO ' + table_name + ' ( temp_id ) ' + select_statement ) # given statement should end in semicolon, so we are good
+    
+    finished = False
+    
+    while not finished:
+        
+        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' LIMIT ?;', ( chunk_size, ) ) ]
+        
+        if len( chunk ) == 0:
+            
+            finished = True
+            
+        else:
+            
+            cursor.executemany( 'DELETE FROM ' + table_name + ' WHERE temp_id = ?;', ( ( temp_id, ) for temp_id in chunk ) )
+            
+            yield chunk
+            
+        
+    
+    cursor.execute( 'DROP TABLE ' + table_name + ';' )
+    
 def VacuumDB( db_path ):
     
     db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
@@ -174,14 +202,14 @@ class HydrusDB( object ):
         
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
+        if version > HC.SOFTWARE_VERSION:
+            
+            self._ReportOverupdatedDB( version )
+            
+        
         if version < HC.SOFTWARE_VERSION - 50:
             
             raise Exception( 'Your current database version of hydrus ' + str( version ) + ' is too old for this software version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
-            
-        
-        if version < 238:
-            
-            raise Exception( 'Unfortunately, this software cannot update your database. Please try installing version 238 first.' )
             
         
         while version < HC.SOFTWARE_VERSION:
@@ -598,6 +626,11 @@ class HydrusDB( object ):
         
     
     def _RepairDB( self ):
+        
+        pass
+        
+    
+    def _ReportOverupdatedDB( self, version ):
         
         pass
         

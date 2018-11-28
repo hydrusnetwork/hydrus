@@ -3784,6 +3784,13 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
         return self._tag_filter
         
     
+    def SetValue( self, tag_filter ):
+        
+        self._tag_filter = tag_filter
+        
+        self._UpdateLabel()
+        
+    
 class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR

@@ -1000,7 +1000,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 for new_url_match in new_url_matches:
                     
-                    if new_url_match.Matches( existing_url_match.GetExampleURL() ) and existing_url_match.Matches( new_url_match.GetExampleURL ):
+                    if new_url_match.Matches( existing_url_match.GetExampleURL() ) and existing_url_match.Matches( new_url_match.GetExampleURL() ):
                         
                         # the url matches match each other, so they are doing the same job
                         

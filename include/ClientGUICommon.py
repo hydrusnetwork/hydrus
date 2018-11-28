@@ -1231,7 +1231,7 @@ class CheckboxCollect( wx.ComboCtrl ):
                 
                 if len( indices_to_check ) > 0:
                     
-                    self.SetChecked( indices_to_check )
+                    self.SetCheckedItems( indices_to_check )
                     
                     self._BroadcastCollect()
                     

@@ -113,6 +113,11 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return self.context_type in ( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_WATCHER_PAGE )
         
     
+    def IsHydrus( self ):
+        
+        return self.context_type == CC.NETWORK_CONTEXT_HYDRUS
+        
+    
     def GetSummary( self ):
         
         summary = self.ToUnicode()

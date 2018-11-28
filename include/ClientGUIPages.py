@@ -26,6 +26,7 @@ import wx
 import HydrusGlobals as HG
 
 USER_PAGE_NAME_PREFIX = '[USER]'
+RESERVED_SESSION_NAMES = { '', 'just a blank page', 'last session', 'exit session' }
 
 class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
@@ -1359,8 +1360,6 @@ class PagesNotebook( wx.Notebook ):
         
         click_over_page_of_pages = False
         
-        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-        
         menu = wx.Menu()
         
         if click_over_tab:
@@ -1444,6 +1443,8 @@ class PagesNotebook( wx.Notebook ):
                 
             
         
+        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        
         if len( existing_session_names ) > 0 or click_over_page_of_pages:
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1467,7 +1468,7 @@ class PagesNotebook( wx.Notebook ):
             
             for name in existing_session_names:
                 
-                if name == 'last session':
+                if name in RESERVED_SESSION_NAMES:
                     
                     continue
                     
@@ -1492,6 +1493,36 @@ class PagesNotebook( wx.Notebook ):
         except Exception as e:
             
             HydrusData.ShowText( 'While trying to load session ' + name + ', this error happened:' )
+            HydrusData.ShowException( e )
+            
+            self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            return
+            
+        
+        if load_in_a_page_of_pages:
+            
+            destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False)
+            
+        else:
+            
+            destination = self
+            
+        
+        page_tuples = session.GetPages()
+        
+        destination.AppendSessionPageTuples( page_tuples )
+        
+    
+    def AppendGUISessionBackup( self, name, timestamp, load_in_a_page_of_pages = True ):
+        
+        try:
+            
+            session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name, timestamp )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'While trying to load session ' + name + ' (ts ' + str( timestamp ) + ', this error happened:' )
             HydrusData.ShowException( e )
             
             self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
@@ -2667,7 +2698,7 @@ class PagesNotebook( wx.Notebook ):
                         
                         name = dlg.GetValue()
                         
-                        if name in ( '', 'just a blank page', 'last session' ):
+                        if name in RESERVED_SESSION_NAMES:
                             
                             wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
                             
@@ -2698,7 +2729,7 @@ class PagesNotebook( wx.Notebook ):
                     
                 
             
-        elif name != 'last session':
+        elif name not in RESERVED_SESSION_NAMES: # i.e. a human asked to do this
             
             message = 'Overwrite this session?'
             

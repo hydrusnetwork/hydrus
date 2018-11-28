@@ -23,10 +23,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Gallery Import'
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, query = None, source_name = None, initial_search_urls = None ):
-        
-        # eventually move this to be ( name, first_url ). the name will be like 'samus_aran on gelbooru'
-        # then queue up a first url
+    def __init__( self, query = None, source_name = None, initial_search_urls = None, start_file_queue_paused = False, start_gallery_queue_paused = False ):
         
         if query is None:
             
@@ -61,8 +58,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._file_limit = HC.options[ 'gallery_file_limit' ]
         
-        self._gallery_paused = False
-        self._files_paused = False
+        self._files_paused = start_file_queue_paused
+        self._gallery_paused = start_gallery_queue_paused
         
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
@@ -359,7 +356,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                self._DelayWork( 4 * 3600, HydrusData.ToUnicode( e ) )
+                delay = HG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
+                
+                self._DelayWork( delay, HydrusData.ToUnicode( e ) )
                 
             
             return
@@ -833,7 +832,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_GALLERY_IMPORT
     SERIALISABLE_NAME = 'Multiple Gallery Import'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self, gug_key_and_name = None ):
         
@@ -855,6 +854,9 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         new_options = HG.client_controller.new_options
         
         self._file_limit = HC.options[ 'gallery_file_limit' ]
+        
+        self._start_file_queues_paused = False
+        self._start_gallery_queues_paused = False
         
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
@@ -914,12 +916,12 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_gallery_imports = self._gallery_imports.GetSerialisableTuple()
         
-        return ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, self._file_limit, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports )
+        return ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, self._file_limit, self._start_file_queues_paused, self._start_gallery_queues_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, self._file_limit, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports ) = serialisable_info
+        ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, self._file_limit, self._start_file_queues_paused, self._start_gallery_queues_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports ) = serialisable_info
         
         ( serialisable_gug_key, gug_name ) = serialisable_gug_key_and_name
         
@@ -1060,6 +1062,18 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, file_limit, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports ) = old_serialisable_info
+            
+            start_file_queues_paused = False
+            start_gallery_queues_paused = False
+            
+            new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, file_limit, start_file_queues_paused, start_gallery_queues_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def CurrentlyWorking( self ):
         
@@ -1140,6 +1154,14 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetQueueStartSettings( self ):
+        
+        with self._lock:
+            
+            return ( self._start_file_queues_paused, self._start_gallery_queues_paused )
+            
+        
+    
     def GetTagImportOptions( self ):
         
         with self._lock:
@@ -1209,7 +1231,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 return None
                 
             
-            gallery_import = GalleryImport( query = query_text, source_name = self._gug_key_and_name[1], initial_search_urls = initial_search_urls )
+            gallery_import = GalleryImport( query = query_text, source_name = self._gug_key_and_name[1], initial_search_urls = initial_search_urls, start_file_queue_paused = self._start_file_queues_paused, start_gallery_queue_paused = self._start_gallery_queues_paused )
             
             gallery_import.SetFileLimit( self._file_limit )
             
@@ -1278,6 +1300,15 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 highlighted_gallery_import.PublishToPage( True )
                 
+            
+        
+    
+    def SetQueueStartSettings( self, start_file_queues_paused, start_gallery_queues_paused ):
+        
+        with self._lock:
+            
+            self._start_file_queues_paused = start_file_queues_paused
+            self._start_gallery_queues_paused = start_gallery_queues_paused
             
         
     

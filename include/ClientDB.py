@@ -565,9 +565,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if current_mappings_exist or pending_mappings_exist:
             
-            all_known_ids = self._STL( self._c.execute( 'SELECT tag_id FROM tags;' ) )
-            
-            for group_of_ids in HydrusData.SplitListIntoChunks( all_known_ids, 10000 ):
+            for group_of_ids in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT tag_id FROM tags;', 10000 ):
                 
                 current_counter = collections.Counter()
                 
@@ -1321,9 +1319,9 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        hash_ids_to_hashes = self._GetHashIdsToHashes( seen_hash_ids )
+        self._PopulateHashIdsToHashesCache( seen_hash_ids )
         
-        pairs_of_hashes = [ ( hash_ids_to_hashes[ smaller_hash_id ], hash_ids_to_hashes[ larger_hash_id ] ) for ( smaller_hash_id, larger_hash_id ) in pairs_of_hash_ids ]
+        pairs_of_hashes = [ ( self._hash_ids_to_hashes_cache[ smaller_hash_id ], self._hash_ids_to_hashes_cache[ larger_hash_id ] ) for ( smaller_hash_id, larger_hash_id ) in pairs_of_hash_ids ]
         
         return pairs_of_hashes
         
@@ -2548,7 +2546,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _CheckFileIntegrity( self, mode, allowed_mimes = None, move_location = None ):
+    def _CheckFileIntegrity( self, mode, allowed_mimes = None, create_urls_txt = False, move_location = None ):
         
         prefix_string = 'checking file integrity: '
         
@@ -2582,7 +2580,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if should_quit:
                     
-                    return
+                    break
                     
                 
                 job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( info ) ) )
@@ -2640,6 +2638,23 @@ class DB( HydrusDB.HydrusDB ):
                 final_text += 'all files ok!'
                 
             else:
+                
+                if create_urls_txt:
+                    
+                    with open( os.path.join( self._db_dir, 'missing filename urls.txt' ), 'wb' ) as f:
+                        
+                        for hash_id in deletee_hash_ids:
+                            
+                            urls = self._STL( self._c.execute( 'SELECT url FROM url_map NATURAL JOIN urls WHERE hash_id = ?;', ( hash_id, ) ) )
+                            
+                            for url in urls:
+                                
+                                f.write( HydrusData.ToByteString( url ) )
+                                f.write( os.linesep )
+                                
+                            
+                        
+                    
                 
                 final_text += HydrusData.ToHumanInt( missing_count ) + ' files were missing!'
                 
@@ -2836,7 +2851,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE json_dict ( name TEXT PRIMARY KEY, dump BLOB_BYTES );' )
         self._c.execute( 'CREATE TABLE json_dumps ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );' )
-        self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name ) );' )
+        self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );' )
         
         self._c.execute( 'CREATE TABLE last_shutdown_work_time ( last_shutdown_work_time INTEGER );' )
         
@@ -2982,7 +2997,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
         
-        self._c.executemany( 'INSERT INTO json_dumps_named VALUES ( ?, ?, ?, ? );', ClientDefaults.GetDefaultScriptRows() )
+        self._c.executemany( 'INSERT INTO json_dumps_named VALUES ( ?, ?, ?, ?, ? );', ClientDefaults.GetDefaultScriptRows() )
         
     
     def _CreateDBCaches( self ):
@@ -3127,15 +3142,19 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
         
     
-    def _DeleteJSONDumpNamed( self, dump_type, dump_name = None ):
+    def _DeleteJSONDumpNamed( self, dump_type, dump_name = None, timestamp = None ):
         
         if dump_name is None:
             
             self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) )
             
-        else:
+        elif timestamp is None:
             
             self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+            
+        else:
+            
+            self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) )
             
         
     
@@ -3187,9 +3206,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_hashes = self._GetHashes( deletable_file_hash_ids )
             
-            time_to_delete = HydrusData.GetNow() + 2
-            
-            self._controller.CallToThread( client_files_manager.DelayedDeleteFiles, file_hashes, time_to_delete )
+            self._controller.CallToThread( client_files_manager.DelayedDeleteFiles, file_hashes )
             
         
         useful_thumbnail_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) )
@@ -3200,9 +3217,7 @@ class DB( HydrusDB.HydrusDB ):
             
             thumbnail_hashes = self._GetHashes( deletable_thumbnail_hash_ids )
             
-            time_to_delete = HydrusData.GetNow() + 2
-            
-            self._controller.CallToThread( client_files_manager.DelayedDeleteThumbnails, thumbnail_hashes, time_to_delete )
+            self._controller.CallToThread( client_files_manager.DelayedDeleteThumbnails, thumbnail_hashes )
             
         
         for hash_id in hash_ids:
@@ -3433,7 +3448,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     tag_ids = self._STL( self._c.execute( 'SELECT tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id = ?;', ( hash_id, ) ) )
                     
-                    tags = self._GetTags( tag_ids )
+                    self._PopulateTagIdsToTagsCache( tag_ids )
+                    
+                    tags = [ self._tag_ids_to_tags_cache[ tag_id ] for tag_id in tag_ids ]
                     
                     hta.AddMappings( archive_hash, tags )
                     
@@ -3819,9 +3836,9 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            tag_ids_to_tags = self._GetTagIdsToTags( ids_to_count.keys() )
+            self._PopulateTagIdsToTagsCache( ids_to_count.keys() )
             
-            tags_and_counts_generator = ( ( tag_ids_to_tags[ id ], ids_to_count[ id ] ) for id in ids_to_count.keys() )
+            tags_and_counts_generator = ( ( self._tag_ids_to_tags_cache[ id ], ids_to_count[ id ] ) for id in ids_to_count.keys() )
             
             predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
             
@@ -4092,23 +4109,16 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHash( self, hash_id ):
         
-        result = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        self._PopulateHashIdsToHashesCache( ( hash_id, ) )
         
-        if result is None:
-            
-            HydrusData.ShowText( 'Database hash error: hash_id ' + str( hash_id ) + ' was missing! This is a serious error that likely needs a repository reset to fix! Think about contacting hydrus dev!' )
-            
-            return 'aaaaaaaaaaaaaaaa'.decode( 'hex' ) + os.urandom( 16 )
-            
-        
-        ( hash, ) = result
-        
-        return hash
+        return self._hash_ids_to_hashes_cache[ hash_id ]
         
     
     def _GetHashes( self, hash_ids ):
         
-        return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) ]
+        self._PopulateHashIdsToHashesCache( hash_ids )
+        
+        return [ self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids ]
         
     
     def _GetHashId( self, hash ):
@@ -4235,6 +4245,8 @@ class DB( HydrusDB.HydrusDB ):
             # i.e. fetch all where it is 'better', recursively, and discount any chains where it is the 'worse'
             
             # for each of them, union the results of gethashidsfromtagids
+            
+            # OR maybe just wait for the better db sibling cache or a/c sibling-collapsed layer
             
             pass
             
@@ -5334,22 +5346,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetHashIdsToHashes( self, hash_ids ):
-        
-        # this is actually a bit faster than saying "hash_id IN ( bigass_list )"
-        
-        results = {}
-        
-        for hash_id in hash_ids:
-            
-            ( hash, ) = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-            
-            results[ hash_id ] = hash
-            
-        
-        return results
-        
-    
     def _GetHashIdStatus( self, hash_id, prefix = '' ):
         
         hash = self._GetHash( hash_id )
@@ -5546,7 +5542,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetJSONDumpNamed( self, dump_type, dump_name = None ):
+    def _GetJSONDumpNamed( self, dump_type, dump_name = None, timestamp = None ):
         
         if dump_name is None:
             
@@ -5565,7 +5561,14 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
+            if timestamp is None:
+                
+                ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp DESC;', ( dump_type, dump_name ) ).fetchone()
+                
+            else:
+                
+                ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
+                
             
             serialisable_info = json.loads( dump )
             
@@ -5575,9 +5578,26 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetJSONDumpNames( self, dump_type ):
         
-        names = [ name for ( name, ) in self._c.execute( 'SELECT dump_name FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ) ]
+        names = [ name for ( name, ) in self._c.execute( 'SELECT DISTINCT dump_name FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ) ]
         
         return names
+        
+    
+    def _GetJSONDumpNamesToBackupTimestamps( self, dump_type ):
+        
+        names_to_backup_timestamps = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT dump_name, timestamp FROM json_dumps_named WHERE dump_type = ? ORDER BY timestamp ASC;', ( dump_type, ) ) )
+        
+        for ( name, timestamp_list ) in list( names_to_backup_timestamps.items() ):
+            
+            timestamp_list.pop( -1 ) # remove the non backup timestamp
+            
+            if len( timestamp_list ) == 0:
+                
+                del names_to_backup_timestamps[ name ]
+                
+            
+        
+        return names_to_backup_timestamps
         
     
     def _GetJSONSimple( self, name ):
@@ -5614,9 +5634,9 @@ class DB( HydrusDB.HydrusDB ):
         
         # get first detailed results
         
-        hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
+        self._PopulateHashIdsToHashesCache( hash_ids )
         
-        hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
+        hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
         
         hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN %s;', hash_ids ) ) )
         
@@ -5695,7 +5715,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_raw_tag_data = HydrusData.BuildKeyToListDict( tag_data )
         
-        tag_ids_to_tags = self._GetTagIdsToTags( seen_tag_ids )
+        self._PopulateTagIdsToTagsCache( seen_tag_ids )
         
         # build it
         
@@ -5707,15 +5727,11 @@ class DB( HydrusDB.HydrusDB ):
         
         for hash_id in hash_ids:
             
-            hash = hash_ids_to_hashes[ hash_id ]
-            
-            #
-            
             # service_id, status, tag_id
             raw_tag_data = hash_ids_to_raw_tag_data[ hash_id ]
             
             # service_id -> ( status, tag )
-            service_ids_to_tag_data = HydrusData.BuildKeyToListDict( ( ( tag_service_id, ( status, tag_ids_to_tags[ tag_id ] ) ) for ( tag_service_id, status, tag_id ) in raw_tag_data ) )
+            service_ids_to_tag_data = HydrusData.BuildKeyToListDict( ( ( tag_service_id, ( status, self._tag_ids_to_tags_cache[ tag_id ] ) ) for ( tag_service_id, status, tag_id ) in raw_tag_data ) )
             
             service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
             
@@ -5760,6 +5776,8 @@ class DB( HydrusDB.HydrusDB ):
                 file_info_manager = hash_ids_to_info[ hash_id ]
                 
             else:
+                
+                hash = self._hash_ids_to_hashes_cache[ hash_id ]
                 
                 file_info_manager = ClientMedia.FileInfoManager( hash_id, hash )
                 
@@ -6066,9 +6084,9 @@ class DB( HydrusDB.HydrusDB ):
         
         sorted_recent_tag_ids = newest_first[ : num_we_want ]
         
-        tag_ids_to_tags = self._GetTagIdsToTags( sorted_recent_tag_ids )
+        self._PopulateTagIdsToTagsCache( sorted_recent_tag_ids )
         
-        sorted_recent_tags = [ tag_ids_to_tags[ tag_id ] for tag_id in sorted_recent_tag_ids ]
+        sorted_recent_tags = [ self._tag_ids_to_tags_cache[ tag_id ] for tag_id in sorted_recent_tag_ids ]
         
         return sorted_recent_tags
         
@@ -6552,38 +6570,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetTag( self, tag_id ):
         
-        result = self._c.execute( 'SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
+        self._PopulateTagIdsToTagsCache( ( tag_id, ) )
         
-        if result is None:
-            
-            HydrusData.ShowText( 'Database tag error: tag_id ' + str( tag_id ) + ' was missing! This is a serious error that likely needs a tag repository reset to fix! Think about contacting hydrus dev!' )
-            
-            return 'invalid namespace:invalid tag'
-            
-        
-        ( namespace, subtag ) = result
-        
-        tag = HydrusTags.CombineTag( namespace, subtag )
-        
-        return tag
-        
-    
-    def _GetTags( self, tag_ids ):
-        
-        select_statement = 'SELECT namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
-        
-        results = self._SelectFromListFetchAll( select_statement, tag_ids )
-        
-        if len( results ) != len( tag_ids ):
-            
-            HydrusData.ShowText( 'Database tag error: some tag_ids were missing! This is a serious error that likely needs a tag repository reset to fix! Think about contacting hydrus dev!' )
-            
-            return [ 'invalid namespace:invalid tag ' + str( i ) for i in range( len( tag_ids ) ) ]
-            
-        
-        tags = [ HydrusTags.CombineTag( namespace, subtag ) for ( namespace, subtag ) in results ]
-        
-        return tags
+        return self._tag_ids_to_tags_cache[ tag_id ]
         
     
     def _GetTagCensorship( self, service_key = None ):
@@ -6640,73 +6629,6 @@ class DB( HydrusDB.HydrusDB ):
         return tag_id
         
     
-    def _GetTagIdsToTags( self, tag_ids ):
-        
-        if len( self._tag_ids_to_tags_cache ) > 10000:
-            
-            self._tag_ids_to_tags_cache = {}
-            
-        
-        uncached_tag_ids = [ tag_id for tag_id in tag_ids if tag_id not in self._tag_ids_to_tags_cache ]
-        
-        if len( uncached_tag_ids ) > 0:
-            
-            select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
-            
-            uncached_tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, uncached_tag_ids ) }
-            
-            if len( uncached_tag_ids_to_tags ) < uncached_tag_ids:
-                
-                for tag_id in uncached_tag_ids:
-                    
-                    if tag_id not in uncached_tag_ids_to_tags:
-                        
-                        tag = 'unknown tag:' + HydrusData.GenerateKey().encode( 'hex' )
-                        
-                        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-                        
-                        namespace_id = self._GetNamespaceId( namespace )
-                        subtag_id = self._GetSubtagId( subtag )
-                        
-                        self._c.execute( 'REPLACE INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
-                        
-                        uncached_tag_ids_to_tags[ tag_id ] = tag
-                        
-                    
-                
-            
-            self._tag_ids_to_tags_cache.update( uncached_tag_ids_to_tags )
-            
-        
-        '''
-        # old method
-        select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
-        
-        tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, tag_ids ) }
-        
-        if len( tag_ids_to_tags ) < tag_ids:
-            
-            for tag_id in tag_ids:
-                
-                if tag_id not in tag_ids_to_tags:
-                    
-                    tag = 'unknown tag:' + HydrusData.GenerateKey().encode( 'hex' )
-                    
-                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-                    
-                    namespace_id = self._GetNamespaceId( namespace )
-                    subtag_id = self._GetSubtagId( subtag )
-                    
-                    self._c.execute( 'REPLACE INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
-                    
-                    tag_ids_to_tags[ tag_id ] = tag
-                    
-                
-            
-        '''
-        return self._tag_ids_to_tags_cache
-        
-    
     def _GetTagParents( self, service_key = None ):
         
         def convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids ):
@@ -6719,9 +6641,9 @@ class DB( HydrusDB.HydrusDB ):
                 all_tag_ids.add( parent_tag_id )
                 
             
-            tag_ids_to_tags = self._GetTagIdsToTags( all_tag_ids )
+            self._PopulateTagIdsToTagsCache( all_tag_ids )
             
-            statuses_to_pairs = HydrusData.BuildKeyToSetDict( ( ( status, ( tag_ids_to_tags[ child_tag_id ], tag_ids_to_tags[ parent_tag_id ] ) ) for ( status, child_tag_id, parent_tag_id ) in statuses_and_pair_ids ) )
+            statuses_to_pairs = HydrusData.BuildKeyToSetDict( ( ( status, ( self._tag_ids_to_tags_cache[ child_tag_id ], self._tag_ids_to_tags_cache[ parent_tag_id ] ) ) for ( status, child_tag_id, parent_tag_id ) in statuses_and_pair_ids ) )
             
             return statuses_to_pairs
             
@@ -6785,9 +6707,9 @@ class DB( HydrusDB.HydrusDB ):
                 all_tag_ids.add( good_tag_id )
                 
             
-            tag_ids_to_tags = self._GetTagIdsToTags( all_tag_ids )
+            self._PopulateTagIdsToTagsCache( all_tag_ids )
             
-            statuses_to_pairs = HydrusData.BuildKeyToSetDict( ( ( status, ( tag_ids_to_tags[ bad_tag_id ], tag_ids_to_tags[ good_tag_id ] ) ) for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids ) )
+            statuses_to_pairs = HydrusData.BuildKeyToSetDict( ( ( status, ( self._tag_ids_to_tags_cache[ bad_tag_id ], self._tag_ids_to_tags_cache[ good_tag_id ] ) ) for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids ) )
             
             return statuses_to_pairs
             
@@ -7494,6 +7416,88 @@ class DB( HydrusDB.HydrusDB ):
         for obj in objs:
             
             self._SetJSONDump( obj )
+            
+        
+    
+    def _PopulateHashIdsToHashesCache( self, hash_ids ):
+        
+        if len( self._hash_ids_to_hashes_cache ) > 25000:
+            
+            self._hash_ids_to_hashes_cache = {}
+            
+        
+        uncached_hash_ids = [ hash_id for hash_id in hash_ids if hash_id not in self._hash_ids_to_hashes_cache ]
+        
+        if len( uncached_hash_ids ) > 0:
+            
+            pubbed_error = False
+            
+            select_statement = 'SELECT hash_id, hash FROM hashes WHERE hash_id IN %s;'
+            
+            uncached_hash_ids_to_hashes = dict( self._SelectFromList( select_statement, uncached_hash_ids ) )
+            
+            if len( uncached_hash_ids_to_hashes ) < uncached_hash_ids:
+                
+                for hash_id in uncached_hash_ids:
+                    
+                    if hash_id not in uncached_hash_ids_to_hashes:
+                        
+                        HydrusData.DebugPrint( 'Database hash error: hash_id ' + str( hash_id ) + ' was missing!' )
+                        
+                        if not pubbed_error:
+                            
+                            HydrusData.ShowText( 'A file identifier was missing! This is a serious error that likely needs a repository reset to fix! Think about contacting hydrus dev!' )
+                            
+                            pubbed_error = True
+                            
+                        
+                        hash = 'aaaaaaaaaaaaaaaa'.decode( 'hex' ) + os.urandom( 16 )
+                        
+                        uncached_hash_ids_to_hashes[ hash_id ] = hash
+                        
+                    
+                
+            
+            self._hash_ids_to_hashes_cache.update( uncached_hash_ids_to_hashes )
+            
+        
+    
+    def _PopulateTagIdsToTagsCache( self, tag_ids ):
+        
+        if len( self._tag_ids_to_tags_cache ) > 25000:
+            
+            self._tag_ids_to_tags_cache = {}
+            
+        
+        uncached_tag_ids = [ tag_id for tag_id in tag_ids if tag_id not in self._tag_ids_to_tags_cache ]
+        
+        if len( uncached_tag_ids ) > 0:
+            
+            select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
+            
+            uncached_tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, uncached_tag_ids ) }
+            
+            if len( uncached_tag_ids_to_tags ) < uncached_tag_ids:
+                
+                for tag_id in uncached_tag_ids:
+                    
+                    if tag_id not in uncached_tag_ids_to_tags:
+                        
+                        tag = 'unknown tag:' + HydrusData.GenerateKey().encode( 'hex' )
+                        
+                        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                        
+                        namespace_id = self._GetNamespaceId( namespace )
+                        subtag_id = self._GetSubtagId( subtag )
+                        
+                        self._c.execute( 'REPLACE INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
+                        
+                        uncached_tag_ids_to_tags[ tag_id ] = tag
+                        
+                    
+                
+            
+            self._tag_ids_to_tags_cache.update( uncached_tag_ids_to_tags )
             
         
     
@@ -8764,6 +8768,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisable_simple': result = self._GetJSONSimple( *args, **kwargs )
         elif action == 'serialisable_named': result = self._GetJSONDumpNamed( *args, **kwargs )
         elif action == 'serialisable_names': result = self._GetJSONDumpNames( *args, **kwargs )
+        elif action == 'serialisable_names_to_backup_timestamps': result = self._GetJSONDumpNamesToBackupTimestamps( *args, **kwargs )
         elif action == 'service_directory': result = self._GetServiceDirectoryHashes( *args, **kwargs )
         elif action == 'service_directories': result = self._GetServiceDirectoriesInfo( *args, **kwargs )
         elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
@@ -9123,6 +9128,16 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _ReportOverupdatedDB( self, version ):
+        
+        def wx_code():
+            
+            wx.MessageBox( 'This client\'s database is version ' + HydrusData.ToHumanInt( version ) + ', but the software is version ' + HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) + '! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
+            
+        
+        self._controller.CallBlockingToWx( wx_code )
+        
+    
     def _ResetRepository( self, service ):
         
         self._Commit()
@@ -9216,9 +9231,33 @@ class DB( HydrusDB.HydrusDB ):
                 raise Exception( 'Trying to json dump the object ' + HydrusData.ToUnicode( obj ) + ' with name ' + dump_name + ' caused an error. Its serialisable info has been dumped to the log.' )
                 
             
-            self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+            store_backups = False
             
-            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, dump ) VALUES ( ?, ?, ?, ? );', ( dump_type, dump_name, version, sqlite3.Binary( dump ) ) )
+            if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION:
+                
+                store_backups = True
+                backup_depth = 10
+                
+            
+            if store_backups:
+                
+                existing_timestamps = self._STL( self._c.execute( 'SELECT timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) )
+                
+                existing_timestamps.sort()
+                
+                deletee_timestamps = existing_timestamps[ : - backup_depth ] # keep highest n values
+                
+                if len( deletee_timestamps ) > 0:
+                    
+                    self._c.executemany( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', [ ( dump_type, dump_name, timestamp ) for timestamp in deletee_timestamps ] )
+                    
+                
+            else:
+                
+                self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+                
+            
+            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, HydrusData.GetNow(), sqlite3.Binary( dump ) ) )
             
         else:
             
@@ -11217,8 +11256,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._SetJSONDump( login_manager )
                 
-                self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( 'pixiv_account', ) )
-                
             except Exception as e:
                 
                 HydrusData.PrintException( e )
@@ -11227,6 +11264,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 331:
+            
+            self._controller.pub( 'splash_set_status_subtext', 'updating some storage' )
+            
+            self._c.execute( 'ALTER TABLE json_dumps_named RENAME TO json_dumps_named_old;' )
+            
+            self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );' )
+            
+            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) SELECT dump_type, dump_name, version, ?, dump FROM json_dumps_named_old;', ( HydrusData.GetNow(), ) )
+            
+            self._c.execute( 'DROP TABLE json_dumps_named_old;' )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

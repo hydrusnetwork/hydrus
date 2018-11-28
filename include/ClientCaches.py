@@ -994,65 +994,66 @@ class ClientFilesManager( object ):
             
         
     
-    def DelayedDeleteFiles( self, hashes, time_to_delete ):
+    def DelayedDeleteFiles( self, hashes ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Delayed delete files call: ' + HydrusData.ToUnicode( ( len( hashes ), time_to_delete ) ) )
+            HydrusData.ShowText( 'Delayed delete files call: ' + HydrusData.ToUnicode( len( hashes ) ) )
             
         
-        while not HydrusData.TimeHasPassed( time_to_delete ):
-            
-            time.sleep( 0.5 )
-            
+        time.sleep( 2 )
         
         big_pauser = HydrusData.BigJobPauser( period = 1 )
         
-        with self._lock:
+        for hashes_chunk in HydrusData.SplitIteratorIntoChunks( hashes, 10 ):
             
-            for hash in hashes:
+            with self._lock:
                 
-                try:
+                for hash in hashes_chunk:
                     
-                    path = self._LookForFilePath( hash )
+                    try:
+                        
+                        path = self._LookForFilePath( hash )
+                        
+                    except HydrusExceptions.FileMissingException:
+                        
+                        continue
+                        
                     
-                except HydrusExceptions.FileMissingException:
+                    ClientPaths.DeletePath( path )
                     
-                    continue
-                    
-                
-                ClientPaths.DeletePath( path )
-                
-                big_pauser.Pause()
                 
             
+            big_pauser.Pause()
+            
+        
     
-    def DelayedDeleteThumbnails( self, hashes, time_to_delete ):
+    def DelayedDeleteThumbnails( self, hashes ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Delayed delete thumbs call: ' + HydrusData.ToUnicode( ( len( hashes ), time_to_delete ) ) )
+            HydrusData.ShowText( 'Delayed delete thumbs call: ' + HydrusData.ToUnicode( len( hashes ) ) )
             
         
-        while not HydrusData.TimeHasPassed( time_to_delete ):
-            
-            time.sleep( 0.5 )
-            
+        time.sleep( 2 )
         
-        with self._lock:
+        big_pauser = HydrusData.BigJobPauser( period = 1 )
+        
+        for hashes_chunk in HydrusData.SplitIteratorIntoChunks( hashes, 20 ):
             
-            big_pauser = HydrusData.BigJobPauser( period = 1 )
+            with self._lock:
+                
+                for hash in hashes_chunk:
+                    
+                    path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+                    resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
+                    
+                    ClientPaths.DeletePath( path, always_delete_fully = True )
+                    ClientPaths.DeletePath( resized_path, always_delete_fully = True )
+                    
+                
             
-            for hash in hashes:
-                
-                path = self._GenerateExpectedFullSizeThumbnailPath( hash )
-                resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
-                
-                ClientPaths.DeletePath( path, always_delete_fully = True )
-                ClientPaths.DeletePath( resized_path, always_delete_fully = True )
-                
-                big_pauser.Pause()
-                
+            big_pauser.Pause()
             
         
     

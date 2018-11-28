@@ -235,11 +235,16 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_NAME = 'Export Folder'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = None, period = 3600, phrase = None ):
+    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = None, period = 3600, phrase = None ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        if export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+            
+            delete_from_client_after_export = False
+            
         
         if file_search_context is None:
             
@@ -253,6 +258,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._path = path
         self._export_type = export_type
+        self._delete_from_client_after_export = delete_from_client_after_export
         self._file_search_context = file_search_context
         self._period = period
         self._phrase = phrase
@@ -263,12 +269,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         
-        return ( self._path, self._export_type, serialisable_file_search_context, self._period, self._phrase, self._last_checked )
+        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._period, self._phrase, self._last_checked )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._export_type, serialisable_file_search_context, self._period, self._phrase, self._last_checked ) = serialisable_info
+        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._period, self._phrase, self._last_checked ) = serialisable_info
+        
+        if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+            
+            self._delete_from_client_after_export = False
+            
         
         self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context )
         
@@ -284,6 +295,17 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, export_type, serialisable_file_search_context, period, phrase, last_checked )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( path, export_type, serialisable_file_search_context, period, phrase, last_checked ) = old_serialisable_info
+            
+            delete_from_client_after_export = False
+            
+            new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, period, phrase, last_checked )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -393,6 +415,20 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                         
                     
+                    if self._delete_from_client_after_export:
+                        
+                        deletee_hashes = { media_result.GetHash() for media_result in media_results }
+                        
+                        chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                        
+                        for content_update in content_updates:
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                            
+                        
+                    
                 
             
         except Exception as e:
@@ -411,7 +447,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._export_type, self._file_search_context, self._period, self._phrase )
+        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._file_search_context, self._period, self._phrase )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ] = ExportFolder
