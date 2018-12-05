@@ -26,6 +26,28 @@ except Exception as e: # ImportError wasn't enough here as Linux went up the sho
     
     pass
     
+def FrameIndexOutOfRange( index, range_start, range_end ):
+    
+    before_start = index < range_start
+    after_end = range_end < index
+    
+    if range_start < range_end:
+        
+        if before_start or after_end:
+            
+            return True
+            
+        
+    else:
+        
+        if after_end and before_start:
+            
+            return True
+            
+        
+    
+    return False
+    
 def GenerateHydrusBitmap( path, mime, compressed = True ):
     
     numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
@@ -256,35 +278,12 @@ class RasterContainerVideo( RasterContainer ):
     
     def _IndexInRange( self, index, range_start, range_end ):
         
-        return not self._IndexOutOfRange( index, range_start, range_end )
-        
-    
-    def _IndexOutOfRange( self, index, range_start, range_end ):
-        
-        before_start = index < range_start
-        after_end = range_end < index
-        
-        if range_start < range_end:
-            
-            if before_start or after_end:
-                
-                return True
-                
-            
-        else:
-            
-            if after_end and before_start:
-                
-                return True
-                
-            
-        
-        return False
+        return not FrameIndexOutOfRange( index, range_start, range_end )
         
     
     def _MaintainBuffer( self ):
         
-        deletees = [ index for index in self._frames.keys() if self._IndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
+        deletees = [ index for index in self._frames.keys() if FrameIndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
         
         for i in deletees:
             
@@ -332,7 +331,7 @@ class RasterContainerVideo( RasterContainer ):
                 
                 # lets see if we should move the renderer to a new position
                 
-                next_render_is_out_of_buffer = self._IndexOutOfRange( self._next_render_index, self._buffer_start_index, self._buffer_end_index )
+                next_render_is_out_of_buffer = FrameIndexOutOfRange( self._next_render_index, self._buffer_start_index, self._buffer_end_index )
                 buffer_not_fully_rendered = self._last_index_rendered != self._buffer_end_index
                 
                 currently_rendering_out_of_buffer = next_render_is_out_of_buffer and buffer_not_fully_rendered
@@ -504,7 +503,7 @@ class RasterContainerVideo( RasterContainer ):
         
         num_frames_in_video = self.GetNumFrames()
         
-        frame_request_is_impossible = self._IndexOutOfRange( next_index_to_expect, 0, num_frames_in_video - 1 )
+        frame_request_is_impossible = FrameIndexOutOfRange( next_index_to_expect, 0, num_frames_in_video - 1 )
         
         if frame_request_is_impossible:
             
@@ -519,7 +518,7 @@ class RasterContainerVideo( RasterContainer ):
             
             if video_is_bigger_than_buffer:
                 
-                current_ideal_is_out_of_buffer = self._buffer_start_index == -1 or self._IndexOutOfRange( self._ideal_next_frame, self._buffer_start_index, self._buffer_end_index )
+                current_ideal_is_out_of_buffer = self._buffer_start_index == -1 or FrameIndexOutOfRange( self._ideal_next_frame, self._buffer_start_index, self._buffer_end_index )
                 
                 ideal_buffer_start_index = max( 0, self._ideal_next_frame - self._num_frames_backwards )
                 

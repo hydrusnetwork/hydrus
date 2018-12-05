@@ -223,6 +223,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'subscription_other_error_delay' ] = 36 * 3600
         self._dictionary[ 'integers' ][ 'downloader_network_error_delay' ] = 90 * 60
         
+        self._dictionary[ 'integers' ][ 'file_viewing_stats_menu_display' ] = CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU
+        
         #
         
         self._dictionary[ 'keys' ] = {}

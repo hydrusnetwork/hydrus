@@ -7,7 +7,6 @@ import HydrusTags
 import os
 import random
 import threading
-import weakref
 import HydrusData
 import HydrusThreading
 import wx

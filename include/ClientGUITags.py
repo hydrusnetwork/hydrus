@@ -1642,14 +1642,12 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 hashes.update( m.GetHashes() )
                 
             
-            parent = self.GetTopLevelParent().GetParent()
-            
             self.OK()
             
             # do this because of the OK() call, which doesn't want to happen in the dialog event loop
             def do_it():
                 
-                with ClientGUITopLevelWindows.DialogNullipotent( parent, 'advanced content update' ) as dlg:
+                with ClientGUITopLevelWindows.DialogNullipotent( HG.client_controller.gui, 'advanced content update' ) as dlg:
                     
                     panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._tag_service_key, hashes )
                     

@@ -238,6 +238,11 @@ def TimeDeltaToPrettyTimeDelta( seconds ):
         return 'per month'
         
     
+    if seconds == 0:
+        
+        return '0 seconds'
+        
+    
     if seconds < 0:
         
         seconds = abs( seconds )
@@ -1437,6 +1442,12 @@ class ContentUpdate( object ):
                 
                 hashes = { hash }
                 
+            
+        elif self._data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
+            
+            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = self._row
+            
+            hashes = { hash }
             
         
         if not isinstance( hashes, set ):

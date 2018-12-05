@@ -1343,11 +1343,20 @@ class ChoiceSort( wx.Panel ):
         
         sort_types = ClientData.GetSortTypeChoices()
         
+        choice_tuples = []
+        
         for sort_type in sort_types:
             
             example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
             
-            self._sort_type_choice.Append( example_sort.GetSortTypeString(), sort_type )
+            choice_tuples.append( ( example_sort.GetSortTypeString(), sort_type ) )
+            
+        
+        choice_tuples.sort()
+        
+        for ( display_string, value ) in choice_tuples:
+            
+            self._sort_type_choice.Append( display_string, value )
             
         
         type_width = ConvertTextToPixelWidth( self._sort_type_choice, 10 )
@@ -1434,6 +1443,7 @@ class ChoiceSort( wx.Panel ):
         else:
             
             self._sort_asc_choice.Append( '', CC.SORT_ASC )
+            self._sort_asc_choice.Append( '', CC.SORT_DESC )
             
             self._sort_asc_choice.SelectClientData( CC.SORT_ASC )
             

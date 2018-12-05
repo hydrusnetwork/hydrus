@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 332
+SOFTWARE_VERSION = 333
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -111,6 +111,7 @@ CONTENT_TYPE_HASH = 15
 CONTENT_TYPE_TIMESTAMP = 16
 CONTENT_TYPE_TITLE = 17
 CONTENT_TYPE_NOTES = 18
+CONTENT_TYPE_FILE_VIEWING_STATS = 19
 
 content_type_string_lookup = {}
 
@@ -133,6 +134,7 @@ content_type_string_lookup[ CONTENT_TYPE_HASH ] = 'hash'
 content_type_string_lookup[ CONTENT_TYPE_TIMESTAMP ] = 'timestamp'
 content_type_string_lookup[ CONTENT_TYPE_TITLE ] = 'title'
 content_type_string_lookup[ CONTENT_TYPE_NOTES ] = 'notes'
+content_type_string_lookup[ CONTENT_TYPE_FILE_VIEWING_STATS ] = 'file viewing stats'
 
 REPOSITORY_CONTENT_TYPES = [ CONTENT_TYPE_FILES, CONTENT_TYPE_MAPPINGS, CONTENT_TYPE_TAG_PARENTS, CONTENT_TYPE_TAG_SIBLINGS ]
 

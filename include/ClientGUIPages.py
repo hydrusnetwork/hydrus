@@ -2068,6 +2068,11 @@ class PagesNotebook( wx.Notebook ):
         return False
         
     
+    def IsImporter( self ):
+        
+        return False
+        
+    
     def LoadGUISession( self, name ):
         
         if self.GetPageCount() > 0:

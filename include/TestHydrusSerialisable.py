@@ -188,13 +188,15 @@ class TestSerialisables( unittest.TestCase ):
         substantial_ratings_manager = ClientRatings.RatingsManager( { TC.LOCAL_RATING_LIKE_SERVICE_KEY : 1.0, TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY : 0.8 } )
         empty_ratings_manager = ClientRatings.RatingsManager( {} )
         
+        file_viewing_stats_manager = ClientMedia.FileViewingStatsManager.STATICGenerateEmptyManager()
+        
         #
         
         local_hash_has_values = HydrusData.GenerateKey()
         
         file_info_manager = ClientMedia.FileInfoManager( 1, local_hash_has_values, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, file_viewing_stats_manager )
         
         local_media_has_values = ClientMedia.MediaSingleton( media_result )
         
@@ -204,7 +206,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( 2, other_local_hash_has_values, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, file_viewing_stats_manager )
         
         other_local_media_has_values = ClientMedia.MediaSingleton( media_result )
         
@@ -214,7 +216,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( 3, local_hash_empty, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, local_locations_manager, empty_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, local_locations_manager, empty_ratings_manager, file_viewing_stats_manager )
         
         local_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -224,7 +226,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( 4, trashed_hash_empty, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, trash_locations_manager, empty_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, trash_locations_manager, empty_ratings_manager, file_viewing_stats_manager )
         
         trashed_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -234,7 +236,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( 5, deleted_hash_empty, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, deleted_locations_manager, empty_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, deleted_locations_manager, empty_ratings_manager, file_viewing_stats_manager )
         
         deleted_media_empty = ClientMedia.MediaSingleton( media_result )
         
@@ -244,7 +246,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( 6, one_hash, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, one_tags_manager, local_locations_manager, one_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, one_tags_manager, local_locations_manager, one_ratings_manager, file_viewing_stats_manager )
         
         one_media = ClientMedia.MediaSingleton( media_result )
         
@@ -254,7 +256,7 @@ class TestSerialisables( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( 7, two_hash, size, mime, width, height, duration, num_frames, num_words )
         
-        media_result = ClientMedia.MediaResult( file_info_manager, two_tags_manager, local_locations_manager, two_ratings_manager )
+        media_result = ClientMedia.MediaResult( file_info_manager, two_tags_manager, local_locations_manager, two_ratings_manager, file_viewing_stats_manager )
         
         two_media = ClientMedia.MediaSingleton( media_result )
         

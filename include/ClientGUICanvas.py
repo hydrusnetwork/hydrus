@@ -753,6 +753,11 @@ class AnimationBar( wx.Window ):
             
             ( start_index, rendered_to_index, end_index ) = buffer_indices
             
+            if ClientRendering.FrameIndexOutOfRange( rendered_to_index, start_index, end_index ):
+                
+                rendered_to_index = start_index
+                
+            
             start_x = self._GetXFromFrameIndex( start_index )
             rendered_to_x = self._GetXFromFrameIndex( rendered_to_index )
             end_x = self._GetXFromFrameIndex( end_index )
@@ -1018,6 +1023,8 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
             
         
+        self._canvas_window.CleanBeforeClose()
+        
         self.DestroyLater()
         
     
@@ -1097,6 +1104,8 @@ class Canvas( wx.Window ):
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
         
+        self._current_media_start_time = HydrusData.GetNow()
+        
         self._reserved_shortcut_names = []
         
         self._reserved_shortcut_names.append( 'media' )
@@ -1143,7 +1152,6 @@ class Canvas( wx.Window ):
         HG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         HG.client_controller.sub( self, 'OpenExternally', 'canvas_open_externally' )
         HG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
-        HG.client_controller.sub( self, 'EditMediaViewerCustomShortcuts', 'edit_media_viewer_custom_shortcuts' )
         HG.client_controller.sub( self, 'ProcessApplicationCommand', 'canvas_application_command' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         HG.client_controller.sub( self, '_SetDirty', 'notify_new_colourset' )
@@ -1787,6 +1795,33 @@ class Canvas( wx.Window ):
         self._last_drag_coordinates = None
         
     
+    def _SaveCurrentMediaViewTime( self, views_delta = 0 ):
+        
+        now = HydrusData.GetNow()
+        
+        viewtime_delta = now - self._current_media_start_time
+        
+        self._current_media_start_time = now
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        if self.PREVIEW_WINDOW:
+            
+            viewtype = 'preview'
+            
+        else:
+            
+            viewtype = 'media'
+            
+        
+        hash = self._current_media.GetHash()
+        
+        HG.client_controller.file_viewing_stats_manager.Update( viewtype, hash, views_delta, viewtime_delta )
+        
+    
     def _SetDirty( self ):
         
         self._dirty = True
@@ -2014,35 +2049,9 @@ class Canvas( wx.Window ):
             
         
     
-    def EditMediaViewerCustomShortcuts( self, canvas_key ):
+    def CleanBeforeClose( self ):
         
-        if canvas_key == self._canvas_key:
-            
-            all_shortcut_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
-            
-            custom_shortcuts_names = [ name for name in all_shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
-            
-            if len( custom_shortcuts_names ) == 0:
-                
-                wx.MessageBox( 'You have no custom shortcuts set up, so you cannot choose any!' )
-                
-                return
-                
-            
-            with ClientGUITopLevelWindows.DialogEdit( self, 'manage shortcuts' ) as dlg:
-                
-                choice_tuples = [ ( name, name, name in self._custom_shortcut_names ) for name in custom_shortcuts_names ]
-                
-                panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    self._custom_shortcut_names = panel.GetValue()
-                    
-                
-            
+        self._SaveCurrentMediaViewTime()
         
     
     def EventCharHook( self, event ):
@@ -2124,6 +2133,25 @@ class Canvas( wx.Window ):
             
         
         event.Skip()
+        
+    
+    def FlipActiveCustomShortcutName( self, name ):
+        
+        if name in self._custom_shortcut_names:
+            
+            self._custom_shortcut_names.remove( name )
+            
+        else:
+            
+            self._custom_shortcut_names.append( name )
+            
+            self._custom_shortcut_names.sort()
+            
+        
+    
+    def GetActiveCustomShortcutNames( self ):
+        
+        return self._custom_shortcut_names
         
     
     def KeepCursorAlive( self ):
@@ -2328,9 +2356,13 @@ class Canvas( wx.Window ):
             
             HG.client_controller.ResetIdleTimer()
             
+            self._SaveCurrentMediaViewTime()
+            
             previous_media = self._current_media
             
             self._current_media = media
+            
+            self._SaveCurrentMediaViewTime( views_delta = 1 )
             
             if not self._maintain_pan_and_zoom:
                 
@@ -2442,6 +2474,8 @@ class CanvasPanel( Canvas ):
                 ClientGUIMenus.AppendMenuLabel( menu, line, line )
                 
             
+            ClientGUIMedia.AddFileViewingStatsMenu( menu, self._current_media )
+            
             #
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -2456,6 +2490,7 @@ class CanvasPanel( Canvas ):
                 
             
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known URLs.', self._ManageURLs )
+            
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
@@ -2836,11 +2871,11 @@ class CanvasWithHovers( CanvasWithDetails ):
         CanvasWithDetails.__init__( self, parent )
         
         self._hover_commands = self._GenerateHoverTopFrame()
-        self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self._canvas_key )
+        self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self, self._canvas_key )
         
         ratings_services = HG.client_controller.services_manager.GetServices( ( HC.RATINGS_SERVICES ) )
         
-        self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self._canvas_key )
+        self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self, self._canvas_key )
         
         #
         
@@ -3248,7 +3283,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GenerateHoverTopFrame( self ):
         
-        return ClientGUIHoverFrames.FullscreenHoverFrameTopDuplicatesFilter( self, self._canvas_key )
+        return ClientGUIHoverFrames.FullscreenHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
         
     
     def _GetBackgroundColour( self ):
@@ -4181,7 +4216,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        return ClientGUIHoverFrames.FullscreenHoverFrameTopArchiveDeleteFilter( self, self._canvas_key )
+        return ClientGUIHoverFrames.FullscreenHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
         
     
     def _Keep( self ):
@@ -4413,7 +4448,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        return ClientGUIHoverFrames.FullscreenHoverFrameTopNavigableList( self, self._canvas_key )
+        return ClientGUIHoverFrames.FullscreenHoverFrameTopNavigableList( self, self, self._canvas_key )
         
     
     def Archive( self, canvas_key ):
@@ -4741,8 +4776,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             for line in self._current_media.GetPrettyInfoLines():
                 
-                ClientGUIMenus.AppendMenuLabel( menu, line )
+                ClientGUIMenus.AppendMenuLabel( menu, line, line )
                 
+            
+            ClientGUIMedia.AddFileViewingStatsMenu( menu, self._current_media )
             
             ClientGUIMenus.AppendSeparator( menu )
             

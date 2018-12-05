@@ -1546,7 +1546,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             columns = [ ( '#', 4 ), ( 'path', 40 ), ( 'tags', -1 ) ]
             
-            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 25, 40, columns, self._ConvertDataToListCtrlTuples )
+            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 10, 40, columns, self._ConvertDataToListCtrlTuples )
             
             self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -1564,7 +1564,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
             
             vbox.Add( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.Add( self._filename_tagging_panel, CC.FLAGS_EXPAND_PERPENDICULAR )

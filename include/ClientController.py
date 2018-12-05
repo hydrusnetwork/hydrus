@@ -687,6 +687,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         
+        self.file_viewing_stats_manager = ClientCaches.FileViewingStatsManager( self )
+        
         self.pub( 'splash_set_status_subtext', u'tag censorship' )
         
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
@@ -1198,6 +1200,8 @@ class Controller( HydrusController.HydrusController ):
     def ShutdownModel( self ):
         
         if not HG.emergency_exit:
+            
+            self.file_viewing_stats_manager.Flush()
             
             self.SaveDirtyObjects()
             

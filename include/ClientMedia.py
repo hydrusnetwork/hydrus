@@ -283,6 +283,57 @@ class FileInfoManager( object ):
         return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
         
     
+class FileViewingStatsManager( object ):
+    
+    def __init__( self, preview_views, preview_viewtime, media_views, media_viewtime ):
+        
+        self.preview_views = preview_views
+        self.preview_viewtime = preview_viewtime
+        self.media_views = media_views
+        self.media_viewtime = media_viewtime
+        
+    
+    def Duplicate( self ):
+        
+        return FileViewingStatsManager( self.preview_views, self.preview_viewtime, self.media_views, self.media_viewtime )
+        
+    
+    def GetPrettyCombinedLine( self ):
+        
+        return 'viewed ' + HydrusData.ToHumanInt( self.media_views + self.preview_views ) + ' times, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime + self.preview_viewtime )
+        
+    
+    def GetPrettyMediaLine( self ):
+        
+        return 'viewed ' + HydrusData.ToHumanInt( self.media_views ) + ' times in media viewer, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.media_viewtime )
+        
+    
+    def GetPrettyPreviewLine( self ):
+        
+        return 'viewed ' + HydrusData.ToHumanInt( self.preview_views ) + ' times in preview window, totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( self.preview_viewtime )
+        
+    
+    def ProcessContentUpdate( self, content_update ):
+        
+        ( data_type, action, row ) = content_update.ToTuple()
+        
+        if action == HC.CONTENT_UPDATE_ADD:
+            
+            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+            
+            self.preview_views += preview_views_delta
+            self.preview_viewtime += preview_viewtime_delta
+            self.media_views += media_views_delta
+            self.media_viewtime += media_viewtime_delta
+            
+        
+    
+    @staticmethod
+    def STATICGenerateEmptyManager():
+        
+        return FileViewingStatsManager( 0, 0, 0, 0 )
+        
+    
 class LocationsManager( object ):
     
     LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }
@@ -1261,15 +1312,11 @@ class ListeningMediaList( MediaList ):
         
         MediaList.__init__( self, file_service_key, media_results )
         
-        self._file_query_result = ClientSearch.FileQueryResult( media_results )
-        
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
     def AddMediaResults( self, media_results, append = True ):
-        
-        self._file_query_result.AddMediaResults( media_results )
         
         new_media = []
         
@@ -1743,12 +1790,13 @@ class MediaSingleton( Media ):
     
 class MediaResult( object ):
     
-    def __init__( self, file_info_manager, tags_manager, locations_manager, ratings_manager ):
+    def __init__( self, file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager ):
         
         self._file_info_manager = file_info_manager
         self._tags_manager = tags_manager
         self._locations_manager = locations_manager
         self._ratings_manager = ratings_manager
+        self._file_viewing_stats_manager = file_viewing_stats_manager
         
     
     def DeletePending( self, service_key ):
@@ -1773,8 +1821,9 @@ class MediaResult( object ):
         tags_manager = self._tags_manager.Duplicate()
         locations_manager = self._locations_manager.Duplicate()
         ratings_manager = self._ratings_manager.Duplicate()
+        file_viewing_stats_manager = self._file_viewing_stats_manager.Duplicate()
         
-        return MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager )
+        return MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
         
     
     def GetDuration( self ):
@@ -1787,9 +1836,19 @@ class MediaResult( object ):
         return self._file_info_manager
         
     
+    def GetFileViewingStatsManager( self ):
+        
+        return self._file_viewing_stats_manager
+        
+    
     def GetHash( self ):
         
         return self._file_info_manager.hash
+        
+    
+    def GetHashId( self ):
+        
+        return self._file_info_manager.hash_id
         
     
     def GetInbox( self ):
@@ -1856,7 +1915,14 @@ class MediaResult( object ):
             
         elif service_type in HC.FILE_SERVICES:
             
-            self._locations_manager.ProcessContentUpdate( service_key, content_update )
+            if content_update.GetDataType() == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
+                
+                self._file_viewing_stats_manager.ProcessContentUpdate( content_update )
+                
+            else:
+                
+                self._locations_manager.ProcessContentUpdate( service_key, content_update )
+                
             
         elif service_type in HC.RATINGS_SERVICES:
             
@@ -1880,6 +1946,11 @@ class MediaResult( object ):
         
         self._tags_manager.ResetService( service_key )
         self._locations_manager.ResetService( service_key )
+        
+    
+    def SetTagsManager( self, tags_manager ):
+        
+        self._tags_manager = tags_manager
         
     
     def ToTuple( self ):
@@ -2083,6 +2154,24 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return x.GetMime()
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWS:
+                
+                def sort_key( x ):
+                    
+                    fvsm = x.GetMediaResult().GetFileViewingStatsManager()
+                    
+                    return ( fvsm.media_views, fvsm.media_viewtime )
+                    
+                
+            elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
+                
+                def sort_key( x ):
+                    
+                    fvsm = x.GetMediaResult().GetFileViewingStatsManager()
+                    
+                    return ( fvsm.media_viewtime, fvsm.media_views )
+                    
+                
             
         elif sort_metadata == 'namespaces':
             
@@ -2132,6 +2221,8 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = 'resolution ratio'
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = 'number of pixels'
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = 'number of tags'
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = 'media views'
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = 'media viewtime'
             
             sort_string += sort_string_lookup[ sort_data ]
             
@@ -2139,7 +2230,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             namespaces = sort_data
             
-            sort_string += '-'.join( namespaces )
+            sort_string += 'tags: ' + '-'.join( namespaces )
             
         elif sort_metatype == 'rating':
             
@@ -2147,7 +2238,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             service = HG.client_controller.services_manager.GetService( service_key )
             
-            sort_string += service.GetName()
+            sort_string += 'rating: ' + service.GetName()
             
         
         return sort_string
@@ -2171,6 +2262,8 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first' )
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = ( 'ascending', 'descending' )
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = ( 'ascending', 'descending' )
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = ( 'ascending', 'descending' )
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = ( 'ascending', 'descending' )
             
             return sort_string_lookup[ sort_data ]
             
@@ -2464,8 +2557,6 @@ class TagsManager( TagsManagerSimple ):
         TagsManagerSimple.__init__( self, service_keys_to_statuses_to_tags )
         
         self._combined_is_calculated = False
-        
-        HG.client_controller.sub( self, 'NewSiblings', 'notify_new_siblings_data' )
         
     
     def _RecalcCombinedIfNeeded( self ):

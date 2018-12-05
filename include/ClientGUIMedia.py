@@ -85,6 +85,47 @@ def CopyMediaURLMatchURLs( medias, url_match ):
     
     HG.client_controller.pub( 'clipboard', 'text', urls_string )
     
+def AddFileViewingStatsMenu( menu, focus_media ):
+    
+    view_style = HG.client_controller.new_options.GetInteger( 'file_viewing_stats_menu_display' )
+    
+    if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_NONE:
+        
+        return
+        
+    
+    fvsm = focus_media.GetMediaResult().GetFileViewingStatsManager()
+    
+    if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED:
+        
+        combined_line = fvsm.GetPrettyCombinedLine()
+        
+        ClientGUIMenus.AppendMenuLabel( menu, combined_line )
+        
+    else:
+        
+        media_line = fvsm.GetPrettyMediaLine()
+        preview_line = fvsm.GetPrettyPreviewLine()
+        
+        if view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, media_line )
+            
+        elif view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU:
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuLabel( submenu, preview_line )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, media_line )
+            
+        elif view_style == CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_STACKED:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, media_line )
+            ClientGUIMenus.AppendMenuLabel( menu, preview_line )
+            
+        
+    
 def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
     
     # figure out which urls this focused file has
@@ -3425,8 +3466,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 for line in self._focussed_media.GetPrettyInfoLines():
                     
-                    ClientGUIMenus.AppendMenuLabel( menu, line )
+                    ClientGUIMenus.AppendMenuLabel( menu, line, line )
                     
+                
+                AddFileViewingStatsMenu( menu, self._focussed_media )
                 
             
             if len( disparate_current_file_service_keys ) > 0:

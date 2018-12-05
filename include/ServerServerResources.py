@@ -206,7 +206,18 @@ class HydrusResourceRestrictedAccountInfo( HydrusResourceRestricted ):
         
         subject_identifier = request.hydrus_args[ 'subject_identifier' ]
         
-        account_info = HG.server_controller.Read( 'account_info', self._service_key, request.hydrus_account, subject_identifier )
+        if subject_identifier.HasAccountKey():
+            
+            subject_account_key = subject_identifier.GetData()
+            
+        else:
+            
+            raise HydrusExceptions.PermissionException( 'I was expecting an account key, but did not get one!' )
+            
+        
+        subject_account = HG.server_controller.Read( 'account', self._service_key, subject_account_key )
+        
+        account_info = HG.server_controller.Read( 'account_info', self._service_key, request.hydrus_account, subject_account )
         
         body = HydrusNetwork.DumpToBodyString( { 'account_info' : account_info } )
         

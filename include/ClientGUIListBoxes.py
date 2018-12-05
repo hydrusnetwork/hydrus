@@ -1471,7 +1471,8 @@ class ListBoxTags( ListBox ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
         
-        HG.client_controller.sub( self, 'SiblingsHaveChanged', 'notify_new_siblings_gui' )
+        HG.client_controller.sub( self, 'ForceTagRecalc', 'notify_new_siblings_gui' )
+        HG.client_controller.sub( self, 'ForceTagRecalc', 'notify_new_force_refresh_tags_gui' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
     
@@ -1823,7 +1824,7 @@ class ListBoxTags( ListBox ):
         return set( self._selected_terms )
         
     
-    def SiblingsHaveChanged( self ):
+    def ForceTagRecalc( self ):
         
         pass
         
@@ -2524,7 +2525,7 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._RecalcTags()
         
     
-    def SiblingsHaveChanged( self ):
+    def ForceTagRecalc( self ):
         
         self._RecalcTags()
         
@@ -2917,7 +2918,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._DataHasChanged()
         
     
-    def SiblingsHaveChanged( self ):
+    def ForceTagRecalc( self ):
         
         self.SetTagsByMedia( self._last_media, force_reload = True )
         

@@ -1,3 +1,4 @@
+import ClientCaches
 import ClientData
 import ClientDefaults
 import ClientGUIShortcuts
@@ -369,16 +370,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_title', 'database maintenance - analyzing' )
                 
+                self._controller.pub( 'modal_message', job_key )
+                
                 random.shuffle( names_to_analyze )
                 
                 for name in names_to_analyze:
-                    
-                    if not key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
-                        
-                        self._controller.pub( 'modal_message', job_key )
-                        
-                        key_pubbed = True
-                        
                     
                     self._controller.pub( 'splash_set_status_text', 'analyzing ' + name )
                     job_key.SetVariable( 'popup_text_1', 'analyzing ' + name )
@@ -473,20 +469,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self, path ):
         
-        client_files_locations = self._GetClientFilesLocations()
-        
-        client_files_default = os.path.join( self._db_dir, 'client_files' )
-        
-        for location in client_files_locations.values():
-            
-            if not location.startswith( client_files_default ):
-                
-                HydrusData.ShowText( 'Some of your files are stored outside of ' + client_files_default + '. These files will not be backed up--please do this manually, yourself.' )
-                
-                break
-                
-            
-        
         self._CloseDBCursor()
         
         try:
@@ -525,6 +507,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_text_1', text )
                 
+            
+            client_files_default = os.path.join( self._db_dir, 'client_files' )
             
             if os.path.exists( client_files_default ):
                 
@@ -2895,6 +2879,12 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE vacuum_timestamps ( name TEXT, timestamp INTEGER );' )
         
+        self._c.execute( 'CREATE TABLE file_viewing_stats ( hash_id INTEGER PRIMARY KEY, preview_views INTEGER, preview_viewtime INTEGER, media_views INTEGER, media_viewtime INTEGER );' )
+        self._CreateIndex( 'file_viewing_stats', [ 'preview_views' ] )
+        self._CreateIndex( 'file_viewing_stats', [ 'preview_viewtime' ] )
+        self._CreateIndex( 'file_viewing_stats', [ 'media_views' ] )
+        self._CreateIndex( 'file_viewing_stats', [ 'media_viewtime' ] )
+        
         self._c.execute( 'CREATE TABLE version ( version INTEGER );' )
         
         self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
@@ -3950,7 +3940,14 @@ class DB( HydrusDB.HydrusDB ):
         num_archive = num_total - num_inbox
         size_archive = size_total - size_inbox
         
-        return ( num_inbox, num_archive, size_inbox, size_archive )
+        total_viewtime = self._c.execute( 'SELECT SUM( media_views ), SUM( media_viewtime ), SUM( preview_views ), SUM( preview_viewtime ) FROM file_viewing_stats;' ).fetchone()
+        
+        if total_viewtime is None:
+            
+            total_viewtime = ( 0, 0, 0, 0 )
+            
+        
+        return ( num_inbox, num_archive, size_inbox, size_archive, total_viewtime )
         
     
     def _GetClientFilesLocations( self ):
@@ -4105,6 +4102,106 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return predicates
+        
+    
+    def _GetForceRefreshTagsManagers( self, hash_ids, hash_ids_to_current_file_service_ids = None ):
+        
+        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        
+        #
+        
+        if hash_ids_to_current_file_service_ids is None:
+            
+            hash_ids_to_current_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM current_files WHERE hash_id IN %s;', hash_ids ) )
+            
+        
+        # Let's figure out if there is a common specific file service to this batch
+        
+        file_service_id_counter = collections.Counter()
+        
+        for file_service_ids in hash_ids_to_current_file_service_ids.values():
+            
+            for file_service_id in file_service_ids:
+                
+                file_service_id_counter[ file_service_id ] += 1
+                
+            
+        
+        common_file_service_id = None
+        
+        for ( file_service_id, count ) in file_service_id_counter.items():
+            
+            if count == len( hash_ids ): # i.e. every hash has this file service
+                
+                ( file_service_type, ) = self._c.execute( 'SELECT service_type FROM services WHERE service_id = ?;', ( file_service_id, ) ).fetchone()
+                
+                if file_service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
+                    
+                    common_file_service_id = file_service_id
+                    
+                    break
+                    
+                
+            
+        
+        #
+        
+        tag_data = []
+        
+        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+        
+        for tag_service_id in tag_service_ids:
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+            
+            if common_file_service_id is None:
+                
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                
+            else:
+                
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( common_file_service_id, tag_service_id )
+                
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                
+            
+            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            
+        
+        seen_tag_ids = { tag_id for ( hash_id, ( tag_service_id, status, tag_id ) ) in tag_data }
+        
+        hash_ids_to_raw_tag_data = HydrusData.BuildKeyToListDict( tag_data )
+        
+        self._PopulateTagIdsToTagsCache( seen_tag_ids )
+        
+        service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in self._c.execute( 'SELECT service_id, service_key FROM services;' ) }
+        
+        hash_ids_to_tag_managers = {}
+        
+        for hash_id in hash_ids:
+            
+            # service_id, status, tag_id
+            raw_tag_data = hash_ids_to_raw_tag_data[ hash_id ]
+            
+            # service_id -> ( status, tag )
+            service_ids_to_tag_data = HydrusData.BuildKeyToListDict( ( ( tag_service_id, ( status, self._tag_ids_to_tags_cache[ tag_id ] ) ) for ( tag_service_id, status, tag_id ) in raw_tag_data ) )
+            
+            service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+            
+            service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in service_ids_to_tag_data.items() } )
+            
+            service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
+            
+            tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+            
+            hash_ids_to_tag_managers[ hash_id ] = tags_manager
+            
+        
+        return hash_ids_to_tag_managers
         
     
     def _GetHash( self, hash_id ):
@@ -5632,158 +5729,111 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetMediaResults( self, hash_ids ):
         
-        # get first detailed results
+        ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
-        self._PopulateHashIdsToHashesCache( hash_ids )
-        
-        hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
-        
-        hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN %s;', hash_ids ) ) )
-        
-        hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN %s;', hash_ids ) )
-        
-        hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN %s;', hash_ids ) )
-        
-        hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN %s;', hash_ids ) )
-        
-        hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id IN %s;', hash_ids ) )
-        
-        hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._SelectFromList( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id IN %s;', hash_ids ) ) )
-        
-        hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._SelectFromList( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN %s;', hash_ids ) ) )
-        
-        #
-        
-        # Let's figure out if there is a common specific file service to this batch
-        
-        file_service_id_counter = collections.Counter()
-        
-        for file_service_ids_and_timestamps in hash_ids_to_current_file_service_ids_and_timestamps.values():
+        if len( missing_hash_ids ) > 0:
             
-            for ( file_service_id, timestamp ) in file_service_ids_and_timestamps:
-                
-                file_service_id_counter[ file_service_id ] += 1
-                
+            hash_ids = missing_hash_ids
             
-        
-        common_file_service_id = None
-        
-        for ( file_service_id, count ) in file_service_id_counter.items():
+            # get first detailed results
             
-            if count == len( hash_ids ): # i.e. every hash has this file service
-                
-                ( file_service_type, ) = self._c.execute( 'SELECT service_type FROM services WHERE service_id = ?;', ( file_service_id, ) ).fetchone()
-                
-                if file_service_type in HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES:
-                    
-                    common_file_service_id = file_service_id
-                    
-                    break
-                    
-                
+            self._PopulateHashIdsToHashesCache( hash_ids )
             
-        
-        #
-        
-        tag_data = []
-        
-        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
-        
-        for tag_service_id in tag_service_ids:
+            hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
             
-            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+            hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN %s;', hash_ids ) ) )
             
-            if common_file_service_id is None:
-                
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                
-            else:
-                
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( common_file_service_id, tag_service_id )
-                
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                
+            hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN %s;', hash_ids ) )
             
-            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN %s;', hash_ids ) )
             
-        
-        seen_tag_ids = { tag_id for ( hash_id, ( tag_service_id, status, tag_id ) ) in tag_data }
-        
-        hash_ids_to_raw_tag_data = HydrusData.BuildKeyToListDict( tag_data )
-        
-        self._PopulateTagIdsToTagsCache( seen_tag_ids )
-        
-        # build it
-        
-        service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in self._c.execute( 'SELECT service_id, service_key FROM services;' ) }
-        
-        media_results = []
-        
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
-        
-        for hash_id in hash_ids:
+            hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN %s;', hash_ids ) )
             
-            # service_id, status, tag_id
-            raw_tag_data = hash_ids_to_raw_tag_data[ hash_id ]
+            hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id IN %s;', hash_ids ) )
             
-            # service_id -> ( status, tag )
-            service_ids_to_tag_data = HydrusData.BuildKeyToListDict( ( ( tag_service_id, ( status, self._tag_ids_to_tags_cache[ tag_id ] ) ) for ( tag_service_id, status, tag_id ) in raw_tag_data ) )
+            hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._SelectFromList( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id IN %s;', hash_ids ) ) )
             
-            service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._SelectFromList( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN %s;', hash_ids ) ) )
             
-            service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in service_ids_to_tag_data.items() } )
-            
-            service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
-            
-            tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+            hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._SelectFromList( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats WHERE hash_id IN %s;', hash_ids ) }
             
             #
             
-            current_file_service_keys = { service_ids_to_service_keys[ service_id ] for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
+            hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in hash_ids_to_current_file_service_ids_and_timestamps.items() }
             
-            deleted_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_deleted_file_service_ids[ hash_id ] }
+            hash_ids_to_tags_managers = self._GetForceRefreshTagsManagers( hash_ids, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
             
-            pending_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_pending_file_service_ids[ hash_id ] }
+            # build it
             
-            petitioned_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_petitioned_file_service_ids[ hash_id ] }
+            service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in self._c.execute( 'SELECT service_id, service_key FROM services;' ) }
             
-            inbox = hash_id in self._inbox_hash_ids
+            missing_media_results = []
             
-            urls = hash_ids_to_urls[ hash_id ]
-            
-            service_ids_to_filenames = HydrusData.BuildKeyToListDict( hash_ids_to_service_ids_and_filenames[ hash_id ] )
-            
-            service_keys_to_filenames = { service_ids_to_service_keys[ service_id ] : filenames for ( service_id, filenames ) in service_ids_to_filenames.items() }
-            
-            current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
-            
-            locations_manager = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps )
-            
-            #
-            
-            local_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
-            
-            ratings_manager = ClientRatings.RatingsManager( local_ratings )
-            
-            #
-            
-            if hash_id in hash_ids_to_info:
+            for hash_id in hash_ids:
                 
-                file_info_manager = hash_ids_to_info[ hash_id ]
+                tags_manager = hash_ids_to_tags_managers[ hash_id ]
                 
-            else:
+                #
                 
-                hash = self._hash_ids_to_hashes_cache[ hash_id ]
+                current_file_service_keys = { service_ids_to_service_keys[ service_id ] for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
                 
-                file_info_manager = ClientMedia.FileInfoManager( hash_id, hash )
+                deleted_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_deleted_file_service_ids[ hash_id ] }
+                
+                pending_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_pending_file_service_ids[ hash_id ] }
+                
+                petitioned_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_petitioned_file_service_ids[ hash_id ] }
+                
+                inbox = hash_id in self._inbox_hash_ids
+                
+                urls = hash_ids_to_urls[ hash_id ]
+                
+                service_ids_to_filenames = HydrusData.BuildKeyToListDict( hash_ids_to_service_ids_and_filenames[ hash_id ] )
+                
+                service_keys_to_filenames = { service_ids_to_service_keys[ service_id ] : filenames for ( service_id, filenames ) in service_ids_to_filenames.items() }
+                
+                current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
+                
+                locations_manager = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps )
+                
+                #
+                
+                local_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
+                
+                ratings_manager = ClientRatings.RatingsManager( local_ratings )
+                
+                #
+                
+                if hash_id in hash_ids_to_file_viewing_stats_managers:
+                    
+                    file_viewing_stats_manager = hash_ids_to_file_viewing_stats_managers[ hash_id ]
+                    
+                else:
+                    
+                    file_viewing_stats_manager = ClientMedia.FileViewingStatsManager.STATICGenerateEmptyManager()
+                    
+                
+                #
+                
+                if hash_id in hash_ids_to_info:
+                    
+                    file_info_manager = hash_ids_to_info[ hash_id ]
+                    
+                else:
+                    
+                    hash = self._hash_ids_to_hashes_cache[ hash_id ]
+                    
+                    file_info_manager = ClientMedia.FileInfoManager( hash_id, hash )
+                    
+                
+                missing_media_results.append( ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager ) )
                 
             
-            media_results.append( ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager ) )
+            self._weakref_media_result_cache.AddMediaResults( missing_media_results )
             
+            cached_media_results.extend( missing_media_results )
+            
+        
+        media_results = cached_media_results
         
         return media_results
         
@@ -7143,6 +7193,7 @@ class DB( HydrusDB.HydrusDB ):
         self._subscriptions_cache = {}
         self._service_cache = {}
         
+        self._weakref_media_result_cache = ClientCaches.MediaResultCache()
         self._hash_ids_to_hashes_cache = {}
         self._tag_ids_to_tags_cache = {}
         
@@ -7507,6 +7558,7 @@ class DB( HydrusDB.HydrusDB ):
         notify_new_pending = False
         notify_new_parents = False
         notify_new_siblings = False
+        notify_new_force_refresh_tags = False
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
@@ -7701,12 +7753,27 @@ class DB( HydrusDB.HydrusDB ):
                             self._c.executemany( 'DELETE FROM url_map WHERE hash_id = ? AND url_id = ?;', itertools.product( hash_ids, url_ids ) )
                             
                         
+                    elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
+                        
+                        if action == HC.CONTENT_UPDATE_ADD:
+                            
+                            ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+                            
+                            hash_id = self._GetHashId( hash )
+                            
+                            self._c.execute( 'INSERT OR IGNORE INTO file_viewing_stats ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) VALUES ( ?, ?, ?, ?, ? );', ( hash_id, 0, 0, 0, 0 ) )
+                            
+                            self._c.execute( 'UPDATE file_viewing_stats SET preview_views = preview_views + ?, preview_viewtime = preview_viewtime + ?, media_views = media_views + ?, media_viewtime = media_viewtime + ? WHERE hash_id = ?;', ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta, hash_id ) )
+                            
+                        
                     
                 elif service_type in HC.TAG_SERVICES:
                     
                     if data_type == HC.CONTENT_TYPE_MAPPINGS:
                         
                         if action == HC.CONTENT_UPDATE_ADVANCED:
+                            
+                            notify_new_force_refresh_tags = True
                             
                             ( sub_action, sub_row ) = row
                             
@@ -8160,6 +8227,10 @@ class DB( HydrusDB.HydrusDB ):
             elif notify_new_parents:
                 
                 self.pub_after_job( 'notify_new_parents' )
+                
+            if notify_new_force_refresh_tags:
+                
+                self.pub_after_job( 'notify_new_force_refresh_tags_data' )
                 
             
             self.pub_content_updates_after_commit( service_keys_to_content_updates )
@@ -8744,6 +8815,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'filter_existing_tags': result = self._FilterExistingTags( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
+        elif action == 'force_refresh_tags_managers': result = self._GetForceRefreshTagsManagers( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'in_inbox': result = self._InInbox( *args, **kwargs )
@@ -11277,6 +11349,15 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) SELECT dump_type, dump_name, version, ?, dump FROM json_dumps_named_old;', ( HydrusData.GetNow(), ) )
             
             self._c.execute( 'DROP TABLE json_dumps_named_old;' )
+            
+        
+        if version == 332:
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS file_viewing_stats ( hash_id INTEGER PRIMARY KEY, preview_views INTEGER, preview_viewtime INTEGER, media_views INTEGER, media_viewtime INTEGER );' )
+            self._CreateIndex( 'file_viewing_stats', [ 'preview_views' ] )
+            self._CreateIndex( 'file_viewing_stats', [ 'preview_viewtime' ] )
+            self._CreateIndex( 'file_viewing_stats', [ 'media_views' ] )
+            self._CreateIndex( 'file_viewing_stats', [ 'media_viewtime' ] )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

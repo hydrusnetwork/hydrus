@@ -5,6 +5,7 @@ import ClientGUICanvas
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIListBoxes
+import ClientGUIMenus
 import ClientGUITopLevelWindows
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
@@ -19,7 +20,7 @@ import wx
 
 class FullscreenHoverFrame( wx.Frame ):
     
-    def __init__( self, parent, canvas_key ):
+    def __init__( self, parent, my_canvas, canvas_key ):
         
         if HC.PLATFORM_WINDOWS:
             
@@ -32,6 +33,7 @@ class FullscreenHoverFrame( wx.Frame ):
         
         wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | border_style )
         
+        self._my_canvas = my_canvas
         self._canvas_key = canvas_key
         self._current_media = None
         
@@ -222,9 +224,9 @@ class FullscreenHoverFrame( wx.Frame ):
     
 class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
-    def __init__( self, parent, canvas_key ):
+    def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         self._current_zoom = 1.0
         self._current_index_string = ''
@@ -341,13 +343,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ), self._canvas_key )
         zoom_switch.SetToolTip( 'zoom switch' )
         
-        menu_items = []
-        
-        menu_items.append( ( 'normal', 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts ) )
-        menu_items.append( ( 'normal', 'set current shortcuts', 'change which custom shortcuts are active on this media viewers', HydrusData.Call( HG.client_controller.pub, 'edit_media_viewer_custom_shortcuts', self._canvas_key ) ) )
-        menu_items.append( ( 'normal', 'set default shortcuts', 'change which custom shortcuts are typically active on new media viewers', self._SetDefaultShortcuts ) )
-        
-        shortcuts = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.keyboard, menu_items )
+        shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.keyboard, self._ShowShortcutMenu )
         shortcuts.SetToolTip( 'shortcuts' )
         
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
@@ -453,38 +449,61 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
         
     
-    def _SetDefaultShortcuts( self ):
+    def _FlipActiveDefaultCustomShortcut( self, name ):
         
         new_options = HG.client_controller.new_options
         
-        default_media_viewer_custom_shortcuts = new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
+        default_media_viewer_custom_shortcuts = list( new_options.GetStringList( 'default_media_viewer_custom_shortcuts' ) )
+        
+        if name in default_media_viewer_custom_shortcuts:
+            
+            default_media_viewer_custom_shortcuts.remove( name )
+            
+        else:
+            
+            default_media_viewer_custom_shortcuts.append( name )
+            
+            default_media_viewer_custom_shortcuts.sort()
+            
+        
+        new_options.SetStringList( 'default_media_viewer_custom_shortcuts', default_media_viewer_custom_shortcuts )
+        
+    
+    def _ShowShortcutMenu( self ):
         
         all_shortcut_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         custom_shortcuts_names = [ name for name in all_shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
         
-        if len( custom_shortcuts_names ) == 0:
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts )
+        
+        if len( custom_shortcuts_names ) > 0:
             
-            wx.MessageBox( 'You have no custom shortcuts set up, so you cannot choose any!' )
+            my_canvas_active_custom_shortcuts = self._my_canvas.GetActiveCustomShortcutNames()
+            default_media_viewer_custom_shortcuts = HG.client_controller.new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
             
-            return
+            current_menu = wx.Menu()
+            
+            for name in custom_shortcuts_names:
+                
+                ClientGUIMenus.AppendMenuCheckItem( self, current_menu, name, 'turn this shortcut set on/off', name in my_canvas_active_custom_shortcuts, self._my_canvas.FlipActiveCustomShortcutName, name )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, current_menu, 'set current shortcuts' )
+            
+            defaults_menu = wx.Menu()
+            
+            for name in custom_shortcuts_names:
+                
+                ClientGUIMenus.AppendMenuCheckItem( self, defaults_menu, name, 'turn this shortcut set on/off by default', name in default_media_viewer_custom_shortcuts, self._FlipActiveDefaultCustomShortcut, name )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, defaults_menu, 'set default shortcuts' )
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'choose shortcuts' ) as dlg:
-            
-            choice_tuples = [ ( name, name, name in default_media_viewer_custom_shortcuts ) for name in custom_shortcuts_names ]
-            
-            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                new_default_media_viewer_custom_shortcuts = panel.GetValue()
-                
-                new_options.SetStringList( 'default_media_viewer_custom_shortcuts', new_default_media_viewer_custom_shortcuts )
-                
-            
+        HG.client_controller.PopupMenu( self, menu )
         
     
     def EventDragButton( self, event ):
@@ -626,9 +645,9 @@ class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
     
 class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable ):
     
-    def __init__( self, parent, canvas_key ):
+    def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrameTopNavigable.__init__( self, parent, canvas_key )
+        FullscreenHoverFrameTopNavigable.__init__( self, parent, my_canvas, canvas_key )
         
         HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
         
@@ -771,9 +790,9 @@ class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):
     
 class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
     
-    def __init__( self, parent, canvas_key ):
+    def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -990,9 +1009,9 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
     
 class FullscreenHoverFrameTags( FullscreenHoverFrame ):
     
-    def __init__( self, parent, canvas_key ):
+    def __init__( self, parent, my_canvas, canvas_key ):
         
-        FullscreenHoverFrame.__init__( self, parent, canvas_key )
+        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

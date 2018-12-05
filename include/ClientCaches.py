@@ -29,6 +29,7 @@ import HydrusGlobals as HG
 import collections
 import HydrusTags
 import traceback
+import weakref
 
 # important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -729,9 +730,18 @@ class ClientFilesManager( object ):
             
         
     
-    def GetMissing( self ):
+    def AllLocationsAreDefault( self ):
         
-        return self._missing_locations
+        with self._lock:
+            
+            db_dir = self._controller.GetDBDir()
+            
+            client_files_default = os.path.join( db_dir, 'client_files' )
+            
+            all_locations = set( self._prefixes_to_locations.values() )
+            
+            return False not in ( location.startswith( client_files_default ) for location in all_locations )
+            
         
     
     def LocklessAddFileFromString( self, hash, mime, data ):
@@ -1063,6 +1073,11 @@ class ClientFilesManager( object ):
             
             return self.LocklessGetFilePath( hash, mime = mime, check_file_exists = check_file_exists )
             
+        
+    
+    def GetMissing( self ):
+        
+        return self._missing_locations
         
     
     def ImportFile( self, file_import_job ):
@@ -1551,6 +1566,95 @@ class DataCache( object ):
             
         
     
+class FileViewingStatsManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._lock = threading.Lock()
+        
+        self._pending_updates = {}
+        
+        self._last_update = HydrusData.GetNow()
+        
+        self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
+        
+    
+    def REPEATINGFlush( self ):
+        
+        self.Flush()
+        
+    
+    def Flush( self ):
+        
+        with self._lock:
+            
+            if len( self._pending_updates ) > 0:
+                
+                content_updates = []
+                
+                for ( hash, ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) ) in self._pending_updates.items():
+                    
+                    row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, row )
+                    
+                    content_updates.append( content_update )
+                    
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
+                
+                # non-synchronous
+                self._controller.Write( 'content_updates', service_keys_to_content_updates, do_pubsubs = False )
+                
+                self._pending_updates = {}
+                
+            
+        
+    
+    def Update( self, viewtype, hash, views_delta, viewtime_delta ):
+        
+        with self._lock:
+            
+            preview_views_delta = 0
+            preview_viewtime_delta = 0
+            media_views_delta = 0
+            media_viewtime_delta = 0
+            
+            if viewtype == 'preview':
+                
+                preview_views_delta = views_delta
+                preview_viewtime_delta = viewtime_delta
+                
+            elif viewtype == 'media':
+                
+                media_views_delta = views_delta
+                media_viewtime_delta = viewtime_delta
+                
+            
+            if hash not in self._pending_updates:
+                
+                self._pending_updates[ hash ] = ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+                
+            else:
+                
+                ( existing_preview_views_delta, existing_preview_viewtime_delta, existing_media_views_delta, existing_media_viewtime_delta ) = self._pending_updates[ hash ]
+                
+                self._pending_updates[ hash ] = ( existing_preview_views_delta + preview_views_delta, existing_preview_viewtime_delta + preview_viewtime_delta, existing_media_views_delta + media_views_delta, existing_media_viewtime_delta + media_viewtime_delta )
+                
+            
+        
+        row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, row )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        
+        HG.client_controller.pub( 'content_updates_data', service_keys_to_content_updates )
+        HG.client_controller.pub( 'content_updates_gui', service_keys_to_content_updates )
+        
+
 class LocalBooruCache( object ):
     
     def __init__( self, controller ):
@@ -1700,6 +1804,150 @@ class LocalBooruCache( object ):
             self._RefreshShares()
             
         
+    
+class MediaResultCache( object ):
+    
+    def __init__( self ):
+        
+        self._lock = threading.Lock()
+        
+        self._hash_ids_to_media_results = weakref.WeakValueDictionary()
+        self._hashes_to_media_results = weakref.WeakValueDictionary()
+        
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
+        HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        HG.client_controller.sub( self, 'NewForceRefreshTags', 'notify_new_force_refresh_tags_data' )
+        HG.client_controller.sub( self, 'NewSiblings', 'notify_new_siblings_data' )
+        
+    
+    def AddMediaResults( self, media_results ):
+        
+        with self._lock:
+            
+            for media_result in media_results:
+                
+                hash_id = media_result.GetHashId()
+                hash = media_result.GetHash()
+                
+                self._hash_ids_to_media_results[ hash_id ] = media_result
+                self._hashes_to_media_results[ hash ] = media_result
+                
+            
+        
+    
+    def GetMediaResultsAndMissing( self, hash_ids ):
+        
+        with self._lock:
+            
+            media_results = []
+            missing_hash_ids = []
+            
+            for hash_id in hash_ids:
+                
+                if hash_id in self._hash_ids_to_media_results:
+                    
+                    media_results.append( self._hash_ids_to_media_results[ hash_id ] )
+                    
+                else:
+                    
+                    missing_hash_ids.append( hash_id )
+                    
+                
+            
+            return ( media_results, missing_hash_ids )
+            
+        
+    
+    def NewForceRefreshTags( self ):
+        
+        # repo sync or advanced content update occurred, so we need complete refresh
+        
+        with self._lock:
+            
+            if len( self._hash_ids_to_media_results ) < 10000:
+                
+                hash_ids = list( self._hash_ids_to_media_results.keys() )
+                
+                for group_of_hash_ids in HydrusData.SplitListIntoChunks( hash_ids, 256 ):
+                    
+                    hash_ids_to_tags_managers = HG.client_controller.Read( 'force_refresh_tags_managers', group_of_hash_ids )
+                    
+                    for ( hash_id, tags_manager ) in hash_ids_to_tags_managers.items():
+                        
+                        if hash_id in self._hash_ids_to_media_results:
+                            
+                            self._hash_ids_to_media_results[ hash_id ].SetTagsManager( tags_manager )
+                            
+                        
+                    
+                
+                HG.client_controller.pub( 'notify_new_force_refresh_tags_gui' )
+                
+            
+        
+    
+    def NewSiblings( self ):
+        
+        with self._lock:
+            
+            for media_result in self._hash_ids_to_media_results.values():
+                
+                media_result.GetTagsManager().NewSiblings()
+                
+            
+        
+    
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        
+        with self._lock:
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    hashes = content_update.GetHashes()
+                    
+                    for hash in hashes:
+                        
+                        if hash in self._hashes_to_media_results:
+                            
+                            self._hashes_to_media_results[ hash ].ProcessContentUpdate( service_key, content_update )
+                            
+                        
+                    
+                
+            
+        
+    
+    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
+        
+        with self._lock:
+            
+            for ( service_key, service_updates ) in service_keys_to_service_updates.items():
+                
+                for service_update in service_updates:
+                    
+                    ( action, row ) = service_update.ToTuple()
+                    
+                    if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ):
+                        
+                        for media_result in self._hash_ids_to_media_results.values():
+                            
+                            if action == HC.SERVICE_UPDATE_DELETE_PENDING:
+                                
+                                media_result.DeletePending( service_key )
+                                
+                            elif action == HC.SERVICE_UPDATE_RESET:
+                                
+                                media_result.ResetService( service_key )
+                                
+                            
+                        
+                    
+                
+            
+        
+    
     
 class MenuEventIdToActionCache( object ):
     

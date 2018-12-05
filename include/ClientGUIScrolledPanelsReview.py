@@ -1889,7 +1889,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        ( num_inbox, num_archive, size_inbox, size_archive ) = stats
+        ( num_inbox, num_archive, size_inbox, size_archive, total_viewtime ) = stats
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1945,6 +1945,19 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
             vbox.Add( archive_st, CC.FLAGS_CENTER )
             vbox.Add( inbox_st, CC.FLAGS_CENTER )
+            
+            ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
+            
+            media_label = 'Total media views: ' + HydrusData.ToHumanInt( media_views ) + ', totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( media_viewtime )
+            
+            media_st = ClientGUICommon.BetterStaticText( self, label = media_label )
+            
+            preview_label = 'Total preview views: ' + HydrusData.ToHumanInt( preview_views ) + ', totalling ' + HydrusData.TimeDeltaToPrettyTimeDelta( preview_viewtime )
+            
+            preview_st = ClientGUICommon.BetterStaticText( self, label = preview_label )
+            
+            vbox.Add( media_st, CC.FLAGS_CENTER )
+            vbox.Add( preview_st, CC.FLAGS_CENTER )
             
         
         self.SetSizer( vbox )
@@ -2349,11 +2362,17 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Clear( self ):
         
+        with ClientGUIDialogs.DialogYesNo( self, 'Clear these sessions? This will delete them completely.' ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES:
+                
+                return
+                
+            
+        
         for network_context in self._listctrl.GetData( only_selected = True ):
             
             self._session_manager.ClearSession( network_context )
-            
-            self._AddNetworkContext( network_context )
             
         
         self._Update()

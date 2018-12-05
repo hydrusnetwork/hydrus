@@ -1622,23 +1622,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            backup_path = self._new_options.GetNoneableString( 'backup_path' )
-            
-            if backup_path is None:
+            if HG.client_controller.client_files_manager.AllLocationsAreDefault():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'set up a database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                backup_path = self._new_options.GetNoneableString( 'backup_path' )
                 
-            else:
+                if backup_path is None:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'set up a database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                    
+                else:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'update database backup', 'Back the database up to an external location.', self._BackupDatabase )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                    
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'update database backup', 'Back the database up to an external location.', self._BackupDatabase )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
                 
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
-            
-            ClientGUIMenus.AppendSeparator( menu )
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
             
@@ -3009,6 +3013,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             dlg.ShowModal()
             
         
+        self._DirtyMenu( 'database' )
+        
+        self._menu_updater.Update()
+        
     
     def _ModifyAccount( self, service_key ):
         
@@ -3253,7 +3261,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ReviewNetworkSessions( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review network sessions' )
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review session cookies' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewNetworkSessionsPanel( frame, self._controller.network_engine.session_manager )
         

@@ -1441,6 +1441,11 @@ class ServiceRepository( ServiceRestricted ):
                     
                     self._SetDirty()
                     
+                    if self._service_type == HC.TAG_REPOSITORY:
+                        
+                        HG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                        
+                    
                 
             
             if not did_everything:
