@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 333</h3></li>
+				<ul>
+					<li>added a first version of file viewing statistics! the client db now keeps track of how many times a file is loaded in the preview and full media viewers, and for how long!</li>
+					<li>you can see the media and preview stats on any single media right-click menu. there are multiple options for how this displays, including hiding it completely, under options->media</li>
+					<li>viewing stats update as they happen! (although viewtime typically only updates on the end of viewing. I'll likely make this more live, especially if I end up showing this info in the media media viewer)</li>
+					<li>you can now sort files by total media views/viewtime!</li>
+					<li>mr. bones's wild ride continues, as well</li>
+					<li>deleted the old 'file list' way of updating in-ui media objects in favour of a long-planned global media cache. there is now only ever one active copy of any particular media, and all data-level updates need only occur once on that single copy. this saves a bunch of CPU, memory, and overall hassle behind the scenes! various search results/lookups for media already loaded elsewhere now load super fast!</li>
+					<li>tag siblings refresh is quicker and less memory heavy thanks to this as well</li>
+					<li>furthermore, the complicated tag changes from tag repository processing and advanced content updates are now reflected immediately in the gui on the job's completion! (as long as you have fewer than 10k files open, ha ha) previously, these required a search refresh to show the results</li>
+					<li>the file sort choice dropdown on all pages is now sorted alphabetically. it has always been a mess picking what you want from here, so let's see if this helps!</li>
+					<li>tag and rating sort options are now listed as 'tag:' and 'rating:' respectively</li>
+					<li>fixed some misc file sort choice code, which was failing to keep certain defaults in certain situations</li>
+					<li>fixed the tag import options' new 'load from defaults' button to correctly load the tag blacklist</li>
+					<li>the keyboard icon on the media viewer's top hover window now permits activation of current/default shortcut sets under submenus. it now also omits these entries if no custom shortcut sets exist</li>
+					<li>cleaned up some of the hover_window-canvas interaction code</li>
+					<li>fixed some long-time sperg-out  buffer-drawing when changing position in a long video</li>
+					<li>the database->backup actions are now hidden if the current db has non-default file/thumbnail locations. for now, in these cases, only a custom backup is appropriate</li>
+					<li>fixed some ancient repository admin code that fetches summary account info given an account key</li>
+					<li>the filename tagging dialog now has a much shorter listctrl by default, so should fit better on smaller monitors</li>
+					<li>fixed the 'review session cookies' dialog's clear button, which was not deleting sessions after clear. it now also wraps the operation in a yes/no confirmation</li>
+				</ul>
 				<li><h3>version 332</h3></li>
 				<ul>
 					<li>the client serialisation system now supports multiple rolling backups!</li>
@@ -31,7 +53,7 @@
 					<li>improved the errors when a network job that cannot wait fails on an invalid login, and added a separate error when it refers to a hydrus service</li>
 					<li>fixed a small typo bug when trying to auto-add url classes and parsers</li>
 					<li>updated an old deprecated checkboxlist call</li>
-					<li>clarified the integrity section of 'help my db is broke.txt'.</li>
+					<li>clarified the integrity section of 'help my db is broke.txt'</li>
 					<li>misc fixes</li>
 				</ul>
 				<li><h3>version 331</h3></li>
