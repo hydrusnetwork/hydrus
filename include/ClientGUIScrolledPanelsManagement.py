@@ -1334,6 +1334,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook = ClientGUICommon.ListBook( self )
         
         self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
+        self._listbook.AddPage( 'gui pages', 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
@@ -2178,6 +2179,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
             
+            self._confirm_trash = wx.CheckBox( self )
+            self._confirm_archive = wx.CheckBox( self )
+            
             self._remove_filtered_files = wx.CheckBox( self, label = '' )
             self._remove_trashed_files = wx.CheckBox( self, label = '' )
             
@@ -2207,6 +2211,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
+            
+            self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
+            
+            self._confirm_archive.SetValue( HC.options[ 'confirm_archive' ] )
+            
             self._remove_filtered_files.SetValue( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
@@ -2245,12 +2254,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Default export directory: ', self._export_location ) )
+            rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
+            rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
             rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
+            rows.append( ( 'Default export directory: ', self._export_location ) )
             rows.append( ( 'BUGFIX: Temp folder override (set blank for OS default): ', self._temp_path_override ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -2352,6 +2363,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( HydrusData.ToUnicode( self._export_location.GetPath() ) )
             
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
+            HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
+            HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
             HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.GetValue()
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
@@ -2397,42 +2410,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._main_gui_title = wx.TextCtrl( self )
             
-            self._default_gui_session = wx.Choice( self )
-            
-            self._last_session_save_period_minutes = wx.SpinCtrl( self, min = 1, max = 1440 )
-            
-            self._only_save_last_session_during_idle = wx.CheckBox( self )
-            
-            self._only_save_last_session_during_idle.SetToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' )
-            
-            self._default_new_page_goes = ClientGUICommon.BetterChoice( self )
-            
-            for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
-                
-                self._default_new_page_goes.Append( CC.new_page_goes_string_lookup[ value ], value )
-                
-            
-            self._notebook_tabs_on_left = wx.CheckBox( self )
-            
             self._confirm_client_exit = wx.CheckBox( self )
-            self._confirm_trash = wx.CheckBox( self )
-            self._confirm_archive = wx.CheckBox( self )
-            
-            self._max_page_name_chars = wx.SpinCtrl( self, min = 1, max = 256 )
-            
-            self._page_file_count_display = ClientGUICommon.BetterChoice( self )
-            
-            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE ):
-                
-                self._page_file_count_display.Append( CC.page_file_count_display_string_lookup[ display_type ], display_type )
-                
-            
-            self._import_page_progress_display = wx.CheckBox( self )
-            
-            self._total_pages_warning = wx.SpinCtrl( self, min = 5, max = 200 )
-            
-            self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
-            self._reverse_page_shift_drag_behaviour.SetToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
             self._always_show_iso_time = wx.CheckBox( self )
             tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
@@ -2471,52 +2449,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._main_gui_title.SetValue( self._new_options.GetString( 'main_gui_title' ) )
             
-            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-            
-            if 'last session' not in gui_session_names:
-                
-                gui_session_names.insert( 0, 'last session' )
-                
-            
-            self._default_gui_session.Append( 'just a blank page', None )
-            
-            for name in gui_session_names:
-                
-                self._default_gui_session.Append( name, name )
-                
-            
-            try:
-                
-                self._default_gui_session.SetStringSelection( HC.options[ 'default_gui_session' ] )
-                
-            except:
-                
-                self._default_gui_session.SetSelection( 0 )
-                
-            
-            self._last_session_save_period_minutes.SetValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
-            
-            self._only_save_last_session_during_idle.SetValue( self._new_options.GetBoolean( 'only_save_last_session_during_idle' ) )
-            
-            self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
-            
-            self._notebook_tabs_on_left.SetValue( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
-            
             self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
-            
-            self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
-            
-            self._confirm_archive.SetValue( HC.options[ 'confirm_archive' ] )
-            
-            self._max_page_name_chars.SetValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
-            
-            self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
-            
-            self._import_page_progress_display.SetValue( self._new_options.GetBoolean( 'import_page_progress_display' ) )
-            
-            self._total_pages_warning.SetValue( self._new_options.GetInteger( 'total_pages_warning' ) )
-            
-            self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
             
             self._always_show_iso_time.SetValue( self._new_options.GetBoolean( 'always_show_iso_time' ) )
             
@@ -2551,19 +2484,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
-            rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
-            rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
-            rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
-            rows.append( ( 'By default, put page tabs on the left (requires restart): ', self._default_new_page_goes ) )
-            rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
-            rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
-            rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
-            rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
-            rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
-            rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
-            rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
-            rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
@@ -2636,16 +2557,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
             HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
-            HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
-            HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
             
             self._new_options.SetBoolean( 'always_show_iso_time', self._always_show_iso_time.GetValue() )
             
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
-            
-            self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.GetValue() )
             
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
             
@@ -2656,21 +2572,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             title = self._main_gui_title.GetValue()
             
             self._new_options.SetString( 'main_gui_title', title )
-            
-            self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.GetValue() )
-            
-            self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.GetValue() )
-            
-            self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
-            
-            self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
-            
-            self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
-            self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.GetValue() )
-            
-            self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.GetValue() )
-            
-            self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
             HG.client_controller.pub( 'main_gui_title', title )
             
@@ -2685,6 +2586,146 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._new_options.SetFrameLocation( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
                 
+            
+        
+    
+    class _GUIPagesPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            self._default_gui_session = wx.Choice( self )
+            
+            self._last_session_save_period_minutes = wx.SpinCtrl( self, min = 1, max = 1440 )
+            
+            self._only_save_last_session_during_idle = wx.CheckBox( self )
+            
+            self._only_save_last_session_during_idle.SetToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' )
+            
+            self._number_of_gui_session_backups = wx.SpinCtrl( self, min = 1, max = 32 )
+            
+            self._number_of_gui_session_backups.SetToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' )
+            
+            self._default_new_page_goes = ClientGUICommon.BetterChoice( self )
+            
+            for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
+                
+                self._default_new_page_goes.Append( CC.new_page_goes_string_lookup[ value ], value )
+                
+            
+            self._notebook_tabs_on_left = wx.CheckBox( self )
+            
+            self._max_page_name_chars = wx.SpinCtrl( self, min = 1, max = 256 )
+            
+            self._page_file_count_display = ClientGUICommon.BetterChoice( self )
+            
+            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE ):
+                
+                self._page_file_count_display.Append( CC.page_file_count_display_string_lookup[ display_type ], display_type )
+                
+            
+            self._import_page_progress_display = wx.CheckBox( self )
+            
+            self._total_pages_warning = wx.SpinCtrl( self, min = 5, max = 200 )
+            
+            self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
+            self._reverse_page_shift_drag_behaviour.SetToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
+            
+            #
+            
+            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            
+            if 'last session' not in gui_session_names:
+                
+                gui_session_names.insert( 0, 'last session' )
+                
+            
+            self._default_gui_session.Append( 'just a blank page', None )
+            
+            for name in gui_session_names:
+                
+                self._default_gui_session.Append( name, name )
+                
+            
+            try:
+                
+                self._default_gui_session.SetStringSelection( HC.options[ 'default_gui_session' ] )
+                
+            except:
+                
+                self._default_gui_session.SetSelection( 0 )
+                
+            
+            self._last_session_save_period_minutes.SetValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
+            
+            self._only_save_last_session_during_idle.SetValue( self._new_options.GetBoolean( 'only_save_last_session_during_idle' ) )
+            
+            self._number_of_gui_session_backups.SetValue( self._new_options.GetInteger( 'number_of_gui_session_backups' ) )
+            
+            self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
+            
+            self._notebook_tabs_on_left.SetValue( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
+            
+            self._max_page_name_chars.SetValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
+            
+            self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
+            
+            self._import_page_progress_display.SetValue( self._new_options.GetBoolean( 'import_page_progress_display' ) )
+            
+            self._total_pages_warning.SetValue( self._new_options.GetInteger( 'total_pages_warning' ) )
+            
+            self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
+            rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
+            rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
+            rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
+            rows.append( ( 'By default, put new page tabs on (requires restart): ', self._default_new_page_goes ) )
+            rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
+            rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
+            rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
+            rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
+            rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
+            rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
+            
+            self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.GetValue() )
+            
+            self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.GetValue() )
+            
+            self._new_options.SetInteger( 'number_of_gui_session_backups', self._number_of_gui_session_backups.GetValue() )
+            
+            self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.GetValue() )
+            
+            self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
+            
+            self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
+            
+            self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
+            self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.GetValue() )
+            
+            self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.GetValue() )
+            
+            self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
         
     

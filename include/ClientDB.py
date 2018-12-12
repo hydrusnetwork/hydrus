@@ -1108,6 +1108,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesGetHashIdsFromDuplicatePredicate( self, file_service_key, operator, num_relationships, dupe_type ):
         
+        # doesn't work for '= 0' or '< 1'
+        
         ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
         
         hash_ids_to_counts = collections.Counter()
@@ -3946,6 +3948,15 @@ class DB( HydrusDB.HydrusDB ):
             
             total_viewtime = ( 0, 0, 0, 0 )
             
+        else:
+            
+            ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
+            
+            if media_views is None:
+                
+                total_viewtime = ( 0, 0, 0, 0 )
+                
+            
         
         return ( num_inbox, num_archive, size_inbox, size_archive, total_viewtime )
         
@@ -4098,8 +4109,32 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
             
+        
+        def sys_preds_key( s ):
+            
+            t = s.GetType()
+            
+            if t == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING:
+                
+                return ( 0, 0 )
+                
+            elif t == HC.PREDICATE_TYPE_SYSTEM_INBOX:
+                
+                return ( 1, 0 )
+                
+            elif t == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE:
+                
+                return ( 2, 0 )
+                
+            else:
+                
+                return ( 3, s.GetUnicode() )
+                
+            
+        
+        predicates.sort( key = sys_preds_key )
         
         return predicates
         
@@ -4273,6 +4308,61 @@ class DB( HydrusDB.HydrusDB ):
                 hash_ids.add( hash_id )
                 
             
+        
+        return hash_ids
+        
+    
+    def _GetHashIdsFromFileViewingStatistics( self, view_type, viewing_locations, operator, viewing_value ):
+        
+        # only works for positive values like '> 5'. won't work for '= 0' or '< 1' since those are absent from the table
+        
+        include_media = 'media' in viewing_locations
+        include_preview = 'preview' in viewing_locations
+        
+        if include_media and include_preview:
+            
+            views_phrase = 'media_views + preview_views'
+            viewtime_phrase = 'media_viewtime + preview_viewtime'
+            
+        elif include_media:
+            
+            views_phrase = 'media_views'
+            viewtime_phrase = 'media_viewtime'
+            
+        elif include_preview:
+            
+            views_phrase = 'preview_views'
+            viewtime_phrase = 'preview_viewtime'
+            
+        else:
+            
+            return []
+            
+        
+        if view_type == 'views':
+            
+            content_phrase = views_phrase
+            
+        elif view_type == 'viewtime':
+            
+            content_phrase = viewtime_phrase
+            
+        
+        if operator == u'\u2248':
+            
+            lower_bound = int( 0.8 * viewing_value )
+            upper_bound = int( 1.2 * viewing_value )
+            
+            test_phrase = content_phrase + ' BETWEEN ' + str( lower_bound ) + ' AND ' + str( upper_bound )
+            
+        else:
+            
+            test_phrase = content_phrase + operator + str( viewing_value )
+            
+        
+        select_statement = 'SELECT hash_id FROM file_viewing_stats WHERE ' + test_phrase + ';'
+        
+        hash_ids = self._STS( self._c.execute( select_statement ) )
         
         return hash_ids
         
@@ -4582,6 +4672,27 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
+            
+            only_do_zero = ( operator in ( '=', u'\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            include_zero = operator == '<'
+            
+            if only_do_zero:
+                
+                continue
+                
+            elif include_zero:
+                
+                continue
+                
+            else:
+                
+                viewing_hash_ids = self._GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, operator, viewing_value )
+                
+                query_hash_ids = update_qhi( query_hash_ids, viewing_hash_ids )
+                
+            
+        
         # now the simple preds and typical ways to populate query_hash_ids
         
         if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
@@ -4855,6 +4966,31 @@ class DB( HydrusDB.HydrusDB ):
                 zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
                 
                 accurate_except_zero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type )
+                
+                hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
+                
+                query_hash_ids.intersection_update( hash_ids )
+                
+            
+        
+        for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
+            
+            only_do_zero = ( operator in ( '=', u'\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            include_zero = operator == '<'
+            
+            if only_do_zero:
+                
+                nonzero_hash_ids = self._GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, '>', 0 )
+                
+                query_hash_ids.difference_update( nonzero_hash_ids )
+                
+            elif include_zero:
+                
+                nonzero_hash_ids = self._GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, '>', 0 )
+                
+                zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
+                
+                accurate_except_zero_hash_ids = self._GetHashIdsFromFileViewingStatistics( view_type, viewing_locations, operator, viewing_value )
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
@@ -7755,7 +7891,16 @@ class DB( HydrusDB.HydrusDB ):
                         
                     elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
                         
-                        if action == HC.CONTENT_UPDATE_ADD:
+                        if action == HC.CONTENT_UPDATE_ADVANCED:
+                            
+                            action = row
+                            
+                            if action == 'clear':
+                                
+                                self._c.execute( 'DELETE FROM file_viewing_stats;' )
+                                
+                            
+                        elif action == HC.CONTENT_UPDATE_ADD:
                             
                             ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
                             
@@ -9308,7 +9453,7 @@ class DB( HydrusDB.HydrusDB ):
             if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION:
                 
                 store_backups = True
-                backup_depth = 10
+                backup_depth = HG.client_controller.new_options.GetInteger( 'number_of_gui_session_backups' )
                 
             
             if store_backups:

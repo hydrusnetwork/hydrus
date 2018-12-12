@@ -204,6 +204,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             return None
             
         
+        url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        
         with self._lock:
             
             for watcher in self._watchers:

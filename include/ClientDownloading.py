@@ -9,7 +9,6 @@ import HydrusSerialisable
 import HydrusTags
 import json
 import os
-import pafy
 import re
 import requests
 import threading
@@ -259,21 +258,6 @@ def ConvertGalleryIdentifierToGUGName( gallery_identifier ):
         
         return 'unknown site'
         
-    
-def GetYoutubeFormats( youtube_url ):
-    
-    try:
-        
-        p = pafy.new( youtube_url )
-        
-    except Exception as e:
-        
-        raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HydrusData.ToUnicode( e ) )
-        
-    
-    info = { ( s.extension, s.resolution ) : ( s.url, s.title ) for s in p.streams if s.extension in ( 'flv', 'mp4', 'webm' ) }
-    
-    return info
     
 class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     

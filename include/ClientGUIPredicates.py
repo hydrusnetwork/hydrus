@@ -5,6 +5,7 @@ import ClientGUIControls
 import ClientGUIOptionsPanels
 import ClientGUIScrolledPanels
 import ClientGUIShortcuts
+import ClientGUITime
 import ClientRatings
 import ClientSearch
 import datetime
@@ -99,6 +100,11 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
             
             pred_classes.append( PanelPredicateSystemDuplicateRelationships )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+            
+            pred_classes.append( PanelPredicateSystemFileViewingStatsViews )
+            pred_classes.append( PanelPredicateSystemFileViewingStatsViewtime )
             
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -424,6 +430,112 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
     def GetInfo( self ):
         
         info = ( self._sign.GetChoice(), self._current_pending.GetChoice(), self._file_service_key.GetChoice() )
+        
+        return info
+        
+    
+class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._viewing_locations = ClientGUICommon.BetterCheckListBox( self )
+        
+        self._viewing_locations.Append( 'media views', 'media' )
+        self._viewing_locations.Append( 'preview views', 'preview' )
+        
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
+        
+        self._value = wx.SpinCtrl( self, min = 0, max = 1000000 )
+        
+        #
+        
+        self._viewing_locations.Check( 0 )
+        
+        self._sign.Select( 3 )
+        
+        self._value.SetValue( 10 )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._viewing_locations, CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._value, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        viewing_locations = self._viewing_locations.GetChecked()
+        
+        if len( viewing_locations ) == 0:
+            
+            viewing_locations = [ 'media' ]
+            
+        
+        sign = self._sign.GetStringSelection()
+        
+        value = self._value.GetValue()
+        
+        info = ( 'views', tuple( viewing_locations ), sign, value )
+        
+        return info
+        
+    
+class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._viewing_locations = ClientGUICommon.BetterCheckListBox( self )
+        
+        self._viewing_locations.Append( 'media viewtime', 'media' )
+        self._viewing_locations.Append( 'preview viewtime', 'preview' )
+        
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
+        
+        self._time_delta = ClientGUITime.TimeDeltaCtrl( self, min = 0, days = True, hours = True, minutes = True, seconds = True )
+        
+        #
+        
+        self._viewing_locations.Check( 0 )
+        
+        self._sign.Select( 3 )
+        
+        self._time_delta.SetValue( 600 )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._viewing_locations, CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._time_delta, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        viewing_locations = self._viewing_locations.GetChecked()
+        
+        if len( viewing_locations ) == 0:
+            
+            viewing_locations = [ 'media' ]
+            
+        
+        sign = self._sign.GetStringSelection()
+        
+        time_delta = self._time_delta.GetValue()
+        
+        info = ( 'viewtime', tuple( viewing_locations ), sign, time_delta )
         
         return info
         

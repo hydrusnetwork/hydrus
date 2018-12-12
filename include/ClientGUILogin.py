@@ -690,7 +690,15 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_login_script = sort_login_script
         pretty_access = access
         pretty_active = sort_active
-        pretty_validity = sort_validity
+        
+        if active:
+            
+            pretty_validity = sort_validity
+            
+        else:
+            
+            pretty_validity = ''
+            
         
         if logged_in:
             

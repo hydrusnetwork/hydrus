@@ -1,5 +1,3 @@
-import ClientDefaults
-import ClientDownloading
 import ClientParsing
 import ClientPaths
 import ClientRendering
@@ -11,16 +9,12 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusPaths
 import HydrusSerialisable
-import HydrusSessions
 import HydrusThreading
-import itertools
 import json
 import os
 import random
-import requests
 import threading
 import time
-import urllib
 import wx
 import HydrusData
 import ClientData
@@ -1614,6 +1608,11 @@ class FileViewingStatsManager( object ):
         
     
     def Update( self, viewtype, hash, views_delta, viewtime_delta ):
+        
+        if not HG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
+            
+            return
+            
         
         with self._lock:
             

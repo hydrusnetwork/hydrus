@@ -3148,7 +3148,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'name/query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ]
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, columns, self._ConvertQueryToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditQuery )
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 10, 20, columns, self._ConvertQueryToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -3963,7 +3963,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         columns = [ ( 'name', -1 ), ( 'source', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'items', 13 ), ( 'paused', 8 ) ]
         
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 12, 20, columns, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
         
         subscriptions_panel.SetListCtrl( self._subscriptions )
         
@@ -4315,7 +4315,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         empty_subscription = ClientImportSubscriptions.Subscription( 'new subscription', gug_key_and_name = gug_key_and_name )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg_edit:
+        frame_key = 'edit_subscription_dialog'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription', frame_key ) as dlg_edit:
             
             panel = EditSubscriptionPanel( dlg_edit, empty_subscription )
             
@@ -4350,7 +4352,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for subscription in subs_to_edit:
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
+            frame_key = 'edit_subscription_dialog'
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
                 
                 original_name = subscription.GetName()
                 

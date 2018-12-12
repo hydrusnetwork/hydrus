@@ -6,35 +6,57 @@
 	</head>
 	<body>
 		<div class="content">
-			<h3 class="warning">This is out of date! I'll give it another pass soon!</h3>
 			<p class="warning">Do not try to create a subscription until you are comfortable with a normal gallery download page! Go <a href="getting_started_downloading.html">here</a>.</p>
-			<p>Let's say you found an artist you like. You downloaded everything of theirs from some site, but one or two pieces of new work is posted every week. You'd like to keep up with the new stuff, but you don't want to make a new download queue every week for every single artist you like.</p>
+			<p>Let's say you found an artist you like. You downloaded everything of theirs from some site, but one or two pieces of new work is posted every week. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.</p>
 			<h3>what are subs?</h3>
-			<p>Subscriptions are a way of telling the client to quietly repeat a gallery search. The client will 'sync' with the gallery and download any new files, just as if you were running the download yourself.</p>
+			<p>Subscriptions are a way of telling the client to regularly and quietly repeat a gallery search. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.</p>
 			<p>Here's the dialog, which is under <i>network->downloaders->manage subscriptions</i>:</p>
-			<p><img src="subs_dialog.png" /></p>
-			<p>Here the client is set to search gelbooru for 'blue_eyes' every seven days. It will keep fetching gallery pages, starting at the first page, generating new media urls, until:</p>
-			<ul class="bulletpoint">
-				<li>It has never run before and reaches the last page in the gallery.</li>
-				<li>It has never run before and has found as many files as the 'initial sync file limit'.</li>
-				<li>It has run before and discovers a url it has previously seen.</li>
-			</ul>
-			<p>Once it has finished adding urls, it will visit each new one in turn and strip out the file and any tags you have set it to parse. <b>Urls it has checked in previous runs will not be rechecked, and tags will not be retroactively fetched.</b></p>
-			<h3>when they run</h3>
-			<p>When a subscription runs, it will show a popup message:</p>
-			<p><img src="subs_popup.png" /></p>
-			<p>You don't really have to care about this all that much; it just lets you know what it is doing. The 'show x files' button is useful just to quickly make sure it is getting what you meant it to. Once it is done, it will collapse down and wait for you to dismiss it with a right click.</p>
-			<p>Serious errors, like server 404s, are recovered from as gracefully as possible. The client will retry those subscriptions the next day.</p>
-			<p>Here's the result of the subscription I set up above:</p>
-			<p><img src="subs_import_done.png" /></p>
-			<p>If I were to leave the subscription in place for seven days, it would recheck blue_eyes and download every single new file until it hit whichever of those ten is the newest.</p>
-			<h3>how could this possibly go wrong?</h3>
-			<p>This is quite a powerful tool, and if you are silly, you will end up spamming a server and likely upsetting someone or breaking something.</p>
-			<p>If you set a subscription to have no initial file limit on a simple query--say, blue_eyes on gelbooru--it will attempt to parse, at current count, 581,509 files. This would take a very long time and it would use a lot of gelbooru's bandwidth--enough that they probably have a system in place to ban your IP for it. Even if you set a reasonable initial file count, the sheer number of new blue_eyes files every week is probably a bit too large.</p>
-			<p><i>Remember: If you are going to scrape anything from a site, be polite about it!</i></p>
-			<p>So, I suggest you start with artist searches to begin with. These usually top out at about 1,000 files total and a handful of new files every week/month, and also hence don't take all that long. Once you are more confident, try doing multiple-tag queries. I suggest you leave simple single-tag queries for the manual download page, where you can hit 'that's enough' yourself.</p>
-			<h3>help! it won't stop!</h3>
-			<p>If you <i>do</i> put in a huge search, and the 'found x new files for subscription y' message is climbing terrifyingly higher and higher with no end in sight, just hit the pause button on the popup. You can also pause all current subscriptions from even starting at <i>services->pause->subscriptions synchronisation</i>. Then you can go back into the dialog and remove or edit at your own pace.</p>
+			<p><img src="subscriptions_edit_subscriptions.png" /></p>
+			<p>This is a very simple example--there is only one subscription, for safebooru. It has two 'queries' (i.e. searches to keep up with).</p>
+			<p>It is important to note that while subscriptions can have multiple queries (even hundreds!), they <i>generally</i> only work on one site. Expect to create one subscription for safebooru, one for artstation, one for paheal, and so on for every site you care about. Advanced users may be able to think of ways to get subscriptions to work on multiple sites at once, but I recommend against this as it throws off some of the internal check timing calculations.</p>
+			<p>Before we trip over the advanced buttons here, let's zoom in on the actual subscription:</p>
+			<p><a href="subscriptions_edit_subscription.png"><img src="subscriptions_edit_subscription.png" width="773px" height="553px" /></a></p>
+			<p>This is a big and powerful panel! I recommend you open the screenshot up in a new browser tab, or in the actual client, so you can refer to it.</p>
+			<p>Despite all the controls, the basic idea is simple: Up top, I have selected the 'safebooru tag search' download source, and then I have added two artists--"hong_soon-jae" and "houtengeki". These two queries have their own panels for reviewing what URLs they have worked on and further customising their behaviour, but all they <i>really</i> are is little bits of search text. When the subscription runs, it will put the given search text into the given download source just as if you were running the regular downloader.</p>
+			<p><b>For the most part, all you need to do to set up a good subscription is give it a name, select the download source, and use the 'paste queries' button to paste what you want to search. Subscriptions have great default options for almost all query types, so you don't have to go any deeper than that to get started.</b></p>
+			<h3><b class="warning">Do not change the 'file limits' options until you know <i>exactly</i> what they do and have a good reason to alter them!</b></h3>
+			<h3>how do subscriptions work?</h3>
+			<p>Once you hit ok on the main subscription dialog, the subscription system should immediately come alive. If any queries are due for a 'check', they will perform their search and look for new files (i.e. URLs it has not seen before). Once that is finished, the file download queue will be worked through as normal. Typically, the sub will make a popup like this while it works:</p>
+			<p><img src="subscriptions_popup.png" /></p>
+			<p>The initial sync can sometimes take a few minutes, but after that, each query usually only needs thirty seconds' work every few days. If you leave your client on in the background, you'll rarely see them. If they ever get in your way, don't be afraid to click their little cancel button or call a global halt with <i>network->pause->subscriptions</i>--the next time they run, they will resume from where they were before.</p>
+			<p>Similarly, the initial sync may produce a hundred files, but subsequent runs are likely to only produce one to ten. If a subscription comes across a lot of big files at once, it may not download them all in one go--but give it time, and it will catch back up before you know it.</p>
+			<p>When it is done, it leaves a little popup button that will open a new page for you:</p>
+			<p><img src="subscriptions_thumbnails.png" /></p>
+			<p>This can often be a nice surprise!</p>
+			<h3>what makes a good subscription?</h3>
+			<p>The same rules as for downloaders apply: <b>start slow, be hesitant, and plan for the long-term.</b> Artist queries make great subscriptions as they don't update reliably but not too often and have very stable quality. Pick the artists you like most, see where their stuff is posted, and set up your subs like that.</p>
+			<p>Series and character subscriptions are sometimes valuable, but they can be difficult to keep up with and have highly variable quality. It is not uncommon for users to only keep 15% of what a character sub produces. I do not recommend them for anything but your waifu.</p>
+			<p>Attribute subscriptions like 'blue_eyes' or 'smile' make for terrible subs as the quality is all over the place and you will be inundated by way too much content. The only exceptions are for specific, low-count searches that really matter to you, like 'contrapposto' or 'gothic trap thighhighs'.</p>
+			<p>If you end up subscribing to eight hundred things and get ten thousand new files a week, you made a mistake. Subscriptions are for <i>keeping up</i> with things you like. If you let them overwhelm you, you'll resent them.</p>
+			<p>It is a good idea to run a 'full' download for a search before you set up a subscription. As well as making sure you have the exact right query text and that you have everything ever posted (beyond the 100 files deep a sub will typically look), it saves the bulk of the work (and waiting on bandwidth) for the manual downloader, where it belongs. When a new subscription picks up off a freshly completed download queue, its initial subscription sync only takes thirty seconds since its initial URLs are those that were already processed by the manual downloader. I recommend you stack artist searches up in the manual downloader using 'no limit' file limit, and when they are all finished, select them in the list and <i>right-click->copy queries</i>, which will put the search texts in your clipboard, newline-separated. This list can be pasted into the subscription dialog in one go with the 'paste queries' button again!</p>
+			<p class="warning">The entire subscription system assumes the source is a typical 'newest first' booru-style search. If you dick around with some order_by:rating/random metatag, it won't work.</p>
+			<h3>how often do subscriptions check?</h3>
+			<p>Hydrus subscriptions use the same variable-rate checking system as its thread watchers, just on a larger timescale. If you subscribe to a busy feed, it might check for new files once a day, but if you enter an artist who rarely posts, it might only check once every month. You don't have to do anything. The fine details of this are governed by the 'checker options' button. <b>This is one of the things you should not mess with as you start out.</b></p>
+			<p>If a query goes too 'slow' (typically, this means no new files for 180 days), it will be marked DEAD in the same way a thread will, and it will not be checked again. You will get a little popup when this happens. This is all editable as you get a better feel for the system--if you wish, it is completely possible to set up a sub that never dies and only checks once a year.</p>
+			<p>I do not recommend setting up a sub that needs to check more than once a day. The system tends only to wake up a few times per day anyway, and any search that is producing that many files is probably a bad fit for a subscription. <b>Subscriptions are for lightweight searches that are updated every now and then.</b></p>
+			<hr />
+			<p><i>(you might like to come back to this point once you have tried subs for a week or so and want to refine your workflow)</i></p>
+			<hr />
+			<h3>ok, I set up three hundred queries, and now these popup buttons are a hassle</h3>
+			<p>One the edit subscription panel, the 'presentation' options let you publish files to a page. The page will have the subscription's name, just like the button makes, but it cuts out the middle-man and 'locks it in' more than the button, which will be forgotten if you restart the client. <b>Also, if a page with that name already exists, the new files will be appended to it, just like a normal import page!</b> I strongly recommend moving to this once you have several subs going. Make a 'page of pages' called 'subs' and put all your subscription landing pages in there, and then you can check it whenever is convenient.</p>
+			<p>If you discover your subscription workflow tends to be the same for each sub, you can also customise the publication 'label' used. If multiple subs all publish to the 'nsfw subs' label, they will all end up on the same 'nsfw subs' popup button or landing page. Sending multiple subscriptions' import streams into just one or two locations like this can be great.</p>
+			<p>You can also hide the main working popup. I don't recommend this unless you are really having a problem with it, since it is useful to have that 'active' feedback if something goes wrong.</p>
+			<p>Note that subscription file import options will, by default, only present 'new' files. Anything already in the db will still be recorded in the internal import cache and used to calculate next check times and so on, but it won't clutter your import stream. This is different to the default for all the other importers, but when you are ready to enter the ranks of the patricians, you will know to edit your 'loud' default file import options under <i>options->importing</i> to behave this way as well. Efficient workflows only care about new files.</p>
+			<h3>how exactly does the sync work?</h3>
+			<p>Figuring out when a repeating search has 'caught up' can be a tricky problem to solve. It sounds simple, but unusual situations like 'a file got tagged late, so it inserted deeper than it ideally should in the gallery search' or 'the website changed its URL format completely, help' can cause problems. Subscriptions are automatic systems, to they tend to be a bit more careful and paranoid about problems, lest they burn 10GB on 10,000 unexpected diaperfur images.</p>
+			<p>The initial sync is simple. It does a regular search, stopping if it reaches the 'initial file limit' or the last file in the gallery, whichever comes first. The default initial file sync is 100, which is a great number for almost all situations.</p>
+			<p>Subsequent syncs are more complicated. It ideally 'stops' searching when it reaches files it saw in a previous sync, but if it comes across new files mixed in with the old, it will search a bit deeper. It is not foolproof, and if a file gets tagged very late and ends up a hundred deep in the search, it will probably be missed. There is no good and computationally cheap way at present to resolve this problem, but thankfully it is very rare.</p>
+			<p>If the sub keeps finding apparently new URLs on a regular sync, it will stop upon hitting its 'periodic file limit', which is also usually 100. This is a safety stopgap, and usually happens when the site's URL format itself has changed, which may or may not require attention from you to figure out. If a user just went nuts and uploaded 500 new files to that tag in one day, you'll have a 'gap' in your sub sync, which you'll want to fill in with a manual download. If a sub hits its periodic file limit and thinks something like this happened, it will give you a popup explaining the situation.</p>
+			<p>Please note that subscriptions only keep up with new content. They cannot search backwards in time in order to 'fill out' a search, nor can they fill in gaps. <span class="warning">Do not change the file limits or check times to try to make this happen.</span> If you want to ensure complete sync with all existing content for a particular search, please use the manual downloader.</p>
+			<p>In practise, most subs only need to check the first page of a gallery since only the first two or three urls are new.</p>
+			<h3>I put character queries in my artist sub, and now things are all mixed up</h3>
+			<p>On the main subscription dialog, there are 'merge' and 'split' buttons. These are powerful, but they will walk you through the process of pulling queries out of a sub and merging them back into a different one. Only subs that use the same download source can be merged. Give them a go, and if it all goes wrong, just hit the cancel button.</p>
+			
 		</div>
 	</body>
 </html>

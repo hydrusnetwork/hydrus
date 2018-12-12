@@ -776,6 +776,25 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'notify_new_import_folders' )
         
     
+    def _ClearFileViewingStats( self ):
+        
+        text = 'Are you sure you want to delete _all_ file viewing records? This cannot be undone.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADVANCED, 'clear' )
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                
+                self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
+                wx.MessageBox( 'Delete done! Please restart the client to see the changes in the UI.')
+                
+            
+        
+    
     def _ClearOrphanFiles( self ):
         
         text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
@@ -1578,18 +1597,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
-            download_popup_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, download_popup_menu, 'a youtube video', 'Enter a YouTube URL and choose which formats you would like to download', self._StartYoutubeDownload )
-            
             has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
             
             if has_ipfs:
                 
+                download_popup_menu = wx.Menu()
+                
                 ClientGUIMenus.AppendMenuItem( self, download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
                 
-            
-            ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
+                ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
+                
             
             #
             
@@ -1647,6 +1664,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
             
             ClientGUIMenus.AppendSeparator( menu )
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'track file viewing', 'If activated, the client will record how frequently files are viewed in the preview and media viewers, and for how long.', self._controller.new_options.GetBoolean( 'file_viewing_statistics_active' ), self._controller.new_options.FlipBoolean, 'file_viewing_statistics_active' )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
             
             submenu = wx.Menu()
             
@@ -1981,7 +2005,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def help():
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'help', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
             
             links = wx.Menu()
             
@@ -2004,10 +2028,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
             
-            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
-                
+            ClientGUIMenus.AppendMenuItem( self, menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -2121,6 +2142,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
     
     def _HowBonedAmI( self ):
+        
+        self._controller.file_viewing_stats_manager.Flush()
         
         boned_stats = self._controller.Read( 'boned_stats' )
         
@@ -3483,23 +3506,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _StartYoutubeDownload( self ):
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter YouTube URL.' ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_OK:
-                
-                url = dlg.GetValue()
-                
-                info = ClientDownloading.GetYoutubeFormats( url )
-                
-                with ClientGUIDialogs.DialogSelectYoutubeURL( self, info ) as select_dlg: select_dlg.ShowModal()
-                
-            
-        
-    
     def _SwitchBoolean( self, name ):
         
         if name == 'callto_report_mode':
@@ -4250,7 +4256,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'input predicate', hide_buttons = True ) as dlg:
                     
@@ -4325,6 +4331,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def ImportURL( self, url ):
+        
+        url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
         ( url_type, match_name, can_parse ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
         

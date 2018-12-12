@@ -1898,7 +1898,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         if num_total < 1000:
             
-            get_more = ClientGUICommon.BetterStaticText( self, label = 'I hope you enjoy my software. You might like to check out the downloaders!' )
+            get_more = ClientGUICommon.BetterStaticText( self, label = 'I hope you enjoy my software. You might like to check out the downloaders! :^)' )
             
             vbox.Add( get_more, CC.FLAGS_CENTER )
             
@@ -1921,7 +1921,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         if num_total == 0:
             
-            nothing_label = 'You have yet to board the ride. Why don\'t you try importing some files? :^)'
+            nothing_label = 'You have yet to board the ride.'
             
             nothing_st = ClientGUICommon.BetterStaticText( self, label = nothing_label )
             

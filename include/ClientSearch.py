@@ -336,6 +336,8 @@ class FileSystemPredicates( object ):
         
         self._duplicate_predicates = []
         
+        self._file_viewing_stats_predicates = []
+        
         new_options = HG.client_controller.new_options
         
         forced_search_limit = new_options.GetNoneableInteger( 'forced_search_limit' )
@@ -638,6 +640,13 @@ class FileSystemPredicates( object ):
                 self._duplicate_predicates.append( ( operator, num_relationships, dupe_type ) )
                 
             
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+                
+                ( view_type, viewing_locations, operator, viewing_value ) = value
+                
+                self._file_viewing_stats_predicates.append( ( view_type, viewing_locations, operator, viewing_value ) )
+                
+            
         
     
     def GetDuplicateRelationshipsPredicates( self ):
@@ -645,7 +654,15 @@ class FileSystemPredicates( object ):
         return self._duplicate_predicates
         
     
-    def GetFileServiceInfo( self ): return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
+    def GetFileServiceInfo( self ):
+        
+        return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
+        
+    
+    def GetFileViewingStatsPredicates( self ):
+        
+        return self._file_viewing_stats_predicates
+        
     
     def GetSimpleInfo( self ):
         
@@ -797,6 +814,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             ( operator, age_type, age_value ) = serialisable_value
             
             self._value = ( operator, age_type, tuple( age_value ) )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+            
+            ( view_type, viewing_locations, operator, viewing_value ) = serialisable_value
+            
+            self._value = ( view_type, tuple( viewing_locations ), operator, viewing_value )
             
         else:
             
@@ -1345,6 +1368,46 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     
                     base += u' - has' + o_text + HydrusData.ToHumanInt( num_relationships ) + u' ' + HC.duplicate_type_string_lookup[ dupe_type ]
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
+                
+                base = 'file viewing statistics'
+                
+                if self._value is not None:
+                    
+                    ( view_type, viewing_locations, operator, viewing_value ) = self._value
+                    
+                    include_media = 'media' in viewing_locations
+                    include_previews = 'preview' in viewing_locations
+                    
+                    if include_media and include_previews:
+                        
+                        domain = 'all '
+                        
+                    elif include_media:
+                        
+                        domain = 'media '
+                        
+                    elif include_previews:
+                        
+                        domain = 'preview '
+                        
+                    else:
+                        
+                        domain = 'unknown '
+                        
+                    
+                    if view_type == 'views':
+                        
+                        value_string = HydrusData.ToHumanInt( viewing_value )
+                        
+                    elif view_type == 'viewtime':
+                        
+                        value_string = HydrusData.TimeDeltaToPrettyTimeDelta( viewing_value )
+                        
+                    
+                    base = domain + view_type + operator + value_string
                     
                 
             

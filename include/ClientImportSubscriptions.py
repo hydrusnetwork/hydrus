@@ -467,7 +467,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         queries = self._GetQueriesForProcessing()
         
-        for query in queries:
+        num_queries = len( queries )
+        
+        for ( i, query ) in enumerate( queries ):
             
             this_query_has_done_work = False
             
@@ -481,6 +483,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 text_1 += ' for "' + query_name + '"'
                 query_summary_name += ': ' + query_name
+                
+            
+            if num_queries > 1:
+                
+                text_1 += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
                 
             
             job_key.SetVariable( 'popup_text_1', text_1 )
@@ -532,7 +539,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 try:
                     
-                    x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_urls ) + ': '
+                    x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( num_done + 1, num_urls ) + ': '
                     
                     job_key.SetVariable( 'popup_gauge_2', ( num_done, num_urls ) )
                     
@@ -710,7 +717,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         queries = self._GetQueriesForProcessing()
         
-        for query in queries:
+        num_queries = len( queries )
+        
+        for ( i, query ) in enumerate( queries ):
             
             can_sync = query.CanSync()
             
@@ -754,6 +763,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             if query_name != self._name:
                 
                 prefix += ' "' + query_name + '"'
+                
+            
+            if num_queries > 1:
+                
+                prefix += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
                 
             
             job_key.SetVariable( 'popup_text_1', prefix )

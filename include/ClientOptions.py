@@ -117,6 +117,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'delete_files_after_export' ] = False
         
+        self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active' ] = True
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -224,6 +226,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'downloader_network_error_delay' ] = 90 * 60
         
         self._dictionary[ 'integers' ][ 'file_viewing_stats_menu_display' ] = CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU
+        
+        self._dictionary[ 'integers' ][ 'number_of_gui_session_backups' ] = 10
         
         #
         
@@ -403,6 +407,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 800, 600 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
         self._dictionary[ 'frame_locations' ][ 'manage_options_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_subscriptions_dialog' ] = ( True, True, None, None, ( 1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'edit_subscription_dialog' ] = ( True, True, None, None, ( 1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_tags_frame' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )

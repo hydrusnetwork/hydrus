@@ -267,10 +267,10 @@ NEW_PAGE_GOES_FAR_RIGHT = 3
 
 new_page_goes_string_lookup = {}
 
-new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_LEFT ] = 'go far left'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_LEFT_OF_CURRENT ] = 'go left of current page tab'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_RIGHT_OF_CURRENT ] = 'go right of current page tab'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_RIGHT ] = 'go far right'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_LEFT ] = 'the far left'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_LEFT_OF_CURRENT ] = 'left of current page tab'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_RIGHT_OF_CURRENT ] = 'right of current page tab'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_RIGHT ] = 'the far right'
 
 NETWORK_CONTEXT_GLOBAL = 0
 NETWORK_CONTEXT_HYDRUS = 1

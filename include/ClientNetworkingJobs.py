@@ -19,7 +19,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     
     if len( error_text ) > 1024:
         
-        large_chunk = error_text[:4096]
+        large_chunk = error_text[ : 512 * 1024 ]
         
         smaller_chunk = large_chunk[:256]
         
@@ -410,6 +410,13 @@ class NetworkJob( object ):
         
         self._error_exception = e
         self._error_text = error
+        
+        if HG.network_report_mode:
+            
+            HydrusData.ShowText( 'Network error should follow:' )
+            HydrusData.ShowException( e )
+            HydrusData.ShowText( error )
+            
         
         self._SetDone()
         

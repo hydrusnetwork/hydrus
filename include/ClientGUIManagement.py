@@ -4355,6 +4355,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         QUERY_CHUNK_SIZE = 256
         
+        HG.client_controller.file_viewing_stats_manager.Flush()
+        
         query_hash_ids = controller.Read( 'file_query_ids', search_context, query_job_key )
         
         if query_job_key.IsCancelled():
