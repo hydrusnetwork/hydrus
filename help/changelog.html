@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 334</h3></li>
+				<ul>
+					<li>wrote a system:file viewing stats to comprehensively search the new viewing stats--it _should_ also be synced with the exact current values</li>
+					<li>but for system:everything, inbox, and archive, which remain where they were, system predicates are now sorted alphabetically!</li>
+					<li>added a _database->file viewing stats_ menu that lets you suspend file view tracking and clear all records permanently</li>
+					<li>mr. bones now welcomes all users under the help menu</li>
+					<li>fixed mr. bones's confusion at those who have yet to board the ride</li>
+					<li>also mr. bones now makes sure to get the latest file viewing stats</li>
+					<li>moved confirm trash/archive from _options->gui_ to _options->files and trash_</li>
+					<li>moved a bunch of 'pages' related stuff from _options->gui_ to the new _options->gui pages_</li>
+					<li>added an option to options->gui pages to change the number of session rolling backups</li>
+					<li>subscription popups now provide an x/y query progress string in their popup text</li>
+					<li>the edit subs/sub panels are now a bit shorter by default and the edit sub has its own frame position data, under 'edit_subscription_dialog', and remembers its last size and position by default</li>
+					<li>fixed an issue where some dupe watcher urls (like url and url#12345) were not being correctly merged on a mouse drag and drop watcher-import</li>
+					<li>the client will now print up to 512KB of server error info to the log (previously 4KB)</li>
+					<li>removed the youtube download prototype--if it returns, we'll do a proper youtube-dl solution. as a result, pafy is no longer needed to run the client</li>
+					<li>network report mode now shows more network error information</li>
+					<li>gave the 'getting started with subscriptions' help page a complete pass. it now reflects the new system and has up-to-date advice based on my new experience</li>
+					<li>wrote a 'logins' section to the bottom of the 'getting started with downloading' help page</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 333</h3></li>
 				<ul>
 					<li>added a first version of file viewing statistics! the client db now keeps track of how many times a file is loaded in the preview and full media viewers, and for how long!</li>
