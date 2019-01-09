@@ -11,15 +11,16 @@
 			<p>You can get the latest release at <a href="https://github.com/hydrusnetwork/hydrus/releases">my github releases page</a>.</p>
 			<p>I try to release a new version every Wednesday by 8pm EST and write an accompanying post on <a href="http://hydrus.tumblr.com/">my tumblr</a> and a sticky on <a href="https://8ch.net/hydrus/index.html">my 8chan board</a>.</p>
 			<h3>installing</h3>
+			<p class="warning">The hydrus releases are 64-bit only. If you are a python expert, there is the slimmest chance you'll be able to get it running from source on a 32-bit machine, but it would be easier just to find a newer computer to run it on.</p>
 			<p>for Windows:</p>
 			<ul>
 				<li>If you want the easy solution, download the .exe installer. Run it, hit ok several times.</li>
 				<li>If you know what you are doing and want a little more control, get the .zip. Don't extract it to Program Files unless you are willing to run it as administrator every time (it stores all its user data inside its own folder). You probably want something like D:\hydrus.</li>
+				<li><i>Note if you run &lt;Win10, you may need <a href="https://www.microsoft.com/en-us/download/details.aspx?id=48145">Visual C++ Redistributable for Visual Studio 2015</a>, if you don't already have it for vidya.</i></li>
 			</ul>
 			<p>for OS X:</p>
 			<ul>
-				<li>If you want the easy solution, get the .dmg app. Open it and check the readme inside.</li>
-				<li>If you know what you are doing and want a little more control, get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like.</li>
+				<li>Get the .dmg App. Open it, drag it to Applications, and check the readme inside.</li>
 			</ul>
 			<p>for Linux:</p>
 			<ul>
@@ -32,8 +33,9 @@
 				<li>If you know Python, you can <a href="running_from_source.html">run from source</a>.</li>
 			</ul>
 			<p>Hydrus stores all its data&#x2014;options, files, subscriptions, <i>everything</i>&#x2014;entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.</p>
+			<p><span class="warning">However, for OS X users:</span> the Hydrus App is <b>non-portable</b> and puts your database in ~/Library/Hydrus (i.e. /Users/[You]/Library/Hydrus). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at ~/Library/Hydrus, not the App itself.</p>
 			<h3>updating</h3>
-			<p class="warning">Hydrus is imageboard-tier software, wild but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
+			<p class="warning">Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
 			<p>The update process:<p>
 			<ul>
 				<li>If the client is running, close it!</li>
@@ -53,13 +55,14 @@
 			<h3 id="backing_up">backing up</h3>
 			<p>You <i>do</i> backup, right? <i>Right</i>?</p>
 			<p>I run a backup every week so that if my computer blows up or anything else awful happens, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it sucked. I encourage backups so you might avoid what I felt. ;_;</p>
-			<p>I use <a href="http://www.abstractspoon.com/tdl_resources.html">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive. I recommend both highly.</p>
+			<p>I use <a href="http://www.abstractspoon.com/tdl_resources.html">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive. I recommend both highly. It isn't a huge expense to get a couple-TB usb drive either--it is <b>absolutely</b> worth it for the peace of mind.</p>
 			<p>By default, hydrus stores all your user data in one location, so backing up is simple:</p>
 			<ul>
 				<li>
 					<p><h3>the simple way - inside the client</h3></p>
 					<p>Go <i>database->set up a database backup location</i> in the client. This will tell the client where you want your backup to be stored. A fresh, empty directory on a different drive is ideal.</p>
 					<p>Once you have your location set up, you can thereafter hit <i>database->update database backup</i>. It will lock everything and mirror your files, showing its progress in a popup message. The first time you make this backup, it may take a little while (as it will have to fully copy your database and all its files), but after that, it will only have to copy new or altered files and should only ever take a couple of minutes.</p>
+					<p>Advanced users who have migrated their database across multiple locations will not have this option--use an external program in this case.</p>
 				</li>
 				<li>
 					<p><h3>the powerful way - using an external program</h3></p>

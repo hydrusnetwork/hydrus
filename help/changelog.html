@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 335</h3></li>
+				<ul>
+					<li class="dealwithit">important:</li>
+					<li>hydrus now runs completely and exclusively on python 3!</li>
+					<li>for users who are updating, the client has special install instructions for just this week:</li>
+					<li>if you are a windows or linux user who extracts to install, you will have to delete your old install's files (but keep your db folder!!!) before installing/extracting the new version so there are no 2/3 dll/so conflicts (don't delete your db folder!)</li>
+					<li>if you use the windows installer to install, this v335 installer will do the clean install for you! there is absolutely no way this could go wrong, so no need to make a backup beforehand :^)</li>
+					<li>if you are an os x user, I am now only releasing the client in the app. furthermore, the default app db location is now ~/Library/Hydrus (i.e. /Users/[you]/Library/Hydrus). you will have to move your existing db to this location to update, and thereafter you'll just be replacing the app in Applications!</li>
+					<li>if you try to boot a non-clean mixed 2/3 install, the client will try to recognise that and give an error and dump out</li>
+					<li>please check the release post for more detailed instructions here</li>
+					<li>.</li>
+					<li>semi-important:</li>
+					<li>the db password feature may be one-time broken for unusual keyboard languages, so failures this version will be forgiven with an appropriate error message explaining the situation. feedback from ???? ????? lads appreciated</li>
+					<li>I may have fixed the issue some linux/os x users were having launching external programs, including OS ffmpeg (it was a child process environment issue related to pyinstaller)</li>
+					<li>although I did most of my devving here on py 3.6, the client seems to run ok on 3.5. I doubt 3.4 will do it, if you mean to run from source</li>
+					<li>I moved from the old pycrypto to the new pycryptodome, so users who run from source will want to get this. I also dropped some libraries</li>
+					<li>.</li>
+					<li>misc bug fixes:</li>
+					<li>fixed the 'load one of the default options' button on manage tag import options when a set of default options is orphaned by a deleted url class</li>
+					<li>removed some popup flicker related to long error messages</li>
+					<li>fixed some parsing testing ui error handling</li>
+					<li>cleared up some bad text ctrl event handling that could sometimes cause a recursive loop</li>
+					<li>listctrls should now sort text that includes numbers in the human-friendly 2 < 10 fashion</li>
+					<li>cleaned up some bad external process calling code and improved how child process environment is set up</li>
+					<li>finally figured out the basic problem of a long-time nested dialog event handling error that could sometimes freeze the ui. I may have fixed it in one case and will keep working on this</li>
+					<li>.</li>
+					<li>boring details:</li>
+					<li>ran 2to3 to auto-convert what could be done</li>
+					<li>updated environment to python 3</li>
+					<li>went over a whole ton of unicode encoding/decoding manually to update it to python 3</li>
+					<li>removed all the old tobytestring/tounicode calls in favour of new python 3 handling</li>
+					<li>fixed all the file io to do bytes/str as appropriate</li>
+					<li>corrected a bunch of / vs // int/float stuff</li>
+					<li>fixed up twisted, which has some str/bytes stuff going on</li>
+					<li>fixed all the listctrls to deal with column sorting None values amongst ints/strs</li>
+					<li>fixed png export/import, which had some fun bytes/bytearray/int/str issues</li>
+					<li>updated the swf header parsing code to py3 (more str/bytes stuff)</li>
+					<li>misc float/int fixes</li>
+					<li>fixed up some http.cookies handling, which has changed in py3</li>
+					<li>improved some ancient loopback connection code that was only really checking to see if ports were in use</li>
+					<li>cleaned up a bunch of now-invalid parameter tuples that 2to3 helpfully marked</li>
+					<li>numerous misc other refactoring and so on</li>
+					<li>updated the new network engine to now decode non-utf-8 responses correctly based on actual response header</li>
+					<li>removed some old py2 manual http multipart code</li>
+					<li>removed the old py2 'matroska or webm' parsing py, replacing it with some direct ffmpeg format inspection</li>
+					<li>replaced all % formatting with the new .format system. I will slowly move to this rather than the current endless concatenation mess</li>
+					<li>deleted some more misc old code</li>
+					<li>tightened up some spammy network error reporting</li>
+					<li>converted all /r/n to /n in my environment project, ha ha ha</li>
+					<li>the ui seems to better support rarer unicode characters like ??</li>
+					<li>updated some of the install/update/backup help for all this, and some misc other stuff as well</li>
+					<li>fixed misc bugs</li>
+				</ul>
 				<li><h3>version 334</h3></li>
 				<ul>
 					<li>wrote a system:file viewing stats to comprehensively search the new viewing stats--it _should_ also be synced with the exact current values</li>
