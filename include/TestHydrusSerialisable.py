@@ -1,23 +1,23 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientDownloading
-import ClientDuplicates
-import ClientGUIShortcuts
-import ClientImporting
-import ClientImportOptions
-import ClientImportSubscriptions
-import ClientMedia
-import ClientNetworkingDomain
-import ClientRatings
-import ClientSearch
-import ClientTags
-import HydrusConstants as HC
-import HydrusData
-import HydrusNetwork
-import HydrusSerialisable
-import TestConstants as TC
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientDuplicates
+from . import ClientGUIShortcuts
+from . import ClientImporting
+from . import ClientImportOptions
+from . import ClientImportSubscriptions
+from . import ClientMedia
+from . import ClientNetworkingDomain
+from . import ClientRatings
+from . import ClientSearch
+from . import ClientTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusNetwork
+from . import HydrusSerialisable
+from . import TestConstants as TC
 import os
 import unittest
 import wx
@@ -62,11 +62,11 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        network_string = obj.DumpToNetworkString()
+        network_bytes = obj.DumpToNetworkBytes()
         
-        self.assertIsInstance( network_string, str )
+        self.assertIsInstance( network_bytes, bytes )
         
-        dupe_obj = HydrusSerialisable.CreateFromNetworkString( network_string )
+        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes )
         
         self.assertIsNot( obj, dupe_obj )
         
@@ -77,9 +77,9 @@ class TestSerialisables( unittest.TestCase ):
         
         def test( obj, dupe_obj ):
             
-            self.assertEqual( len( obj.items() ), len( dupe_obj.items() ) )
+            self.assertEqual( len( list(obj.items()) ), len( list(dupe_obj.items()) ) )
             
-            for ( key, value ) in obj.items():
+            for ( key, value ) in list(obj.items()):
                 
                 self.assertEqual( value, dupe_obj[ key ] )
                 
@@ -100,9 +100,9 @@ class TestSerialisables( unittest.TestCase ):
         
         d[ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test pred 2' ) ] = HydrusSerialisable.SerialisableList( [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test' + str( i ) ) for i in range( 10 ) ] )
         
-        self.assertEqual( len( d.keys() ), 7 )
+        self.assertEqual( len( list(d.keys()) ), 7 )
         
-        for ( key, value ) in d.items():
+        for ( key, value ) in list(d.items()):
             
             self.assertEqual( d[ key ], value )
             
@@ -118,9 +118,9 @@ class TestSerialisables( unittest.TestCase ):
         db[ 1 ] = HydrusData.GenerateKey()
         db[ 2 ] = [ HydrusData.GenerateKey() for i in range( 10 ) ]
         
-        self.assertEqual( len( db.keys() ), 4 )
+        self.assertEqual( len( list(db.keys()) ), 4 )
         
-        for ( key, value ) in db.items():
+        for ( key, value ) in list(db.items()):
             
             self.assertEqual( db[ key ], value )
             

@@ -1,16 +1,16 @@
 import collections
-import HydrusConstants as HC
-import HydrusExceptions
+from . import HydrusConstants as HC
+from . import HydrusExceptions
 import os
-import Queue
+import queue
 import re
 import sqlite3
 import sys
 import threading
 import time
 import traceback
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 
 HYDRUS_SESSION_LIFETIME = 30 * 86400
 
@@ -87,9 +87,9 @@ class HydrusSessionManagerServer( object ):
             
             service_keys_to_dirty_accounts = {}
             
-            for ( service_key, account_keys_to_accounts ) in self._service_keys_to_account_keys_to_accounts.items():
+            for ( service_key, account_keys_to_accounts ) in list(self._service_keys_to_account_keys_to_accounts.items()):
                 
-                dirty_accounts = [ account_key for account_key in account_keys_to_accounts.values() if account_key.IsDirty() ]
+                dirty_accounts = [ account_key for account_key in list(account_keys_to_accounts.values()) if account_key.IsDirty() ]
                 
                 if len( dirty_accounts ) > 0:
                     
@@ -109,7 +109,7 @@ class HydrusSessionManagerServer( object ):
             
             if account_keys is None:
                 
-                account_keys = account_keys_to_accounts.keys()
+                account_keys = list(account_keys_to_accounts.keys())
                 
             
             for account_key in account_keys:

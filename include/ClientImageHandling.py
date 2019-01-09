@@ -1,10 +1,11 @@
 import numpy.core.multiarray # important this comes before cv!
-import ClientConstants as CC
+from . import ClientConstants as CC
 import cv2
-import HydrusConstants as HC
-import HydrusData
-import HydrusImageHandling
-import HydrusGlobals as HG
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusImageHandling
+from . import HydrusGlobals as HG
+from functools import reduce
 
 if cv2.__version__.startswith( '2' ):
     
@@ -33,8 +34,9 @@ cv_interpolation_enum_lookup[ CC.ZOOM_AREA ] = cv2.INTER_AREA
 cv_interpolation_enum_lookup[ CC.ZOOM_CUBIC ] = cv2.INTER_CUBIC
 cv_interpolation_enum_lookup[ CC.ZOOM_LANCZOS4 ] = cv2.INTER_LANCZOS4
 
-def EfficientlyResizeNumpyImage( numpy_image, ( target_x, target_y ) ):
+def EfficientlyResizeNumpyImage( numpy_image, target_resolution ):
     
+    ( target_x, target_y ) = target_resolution
     ( im_y, im_x, depth ) = numpy_image.shape
     
     if target_x >= im_x and target_y >= im_y:
@@ -47,8 +49,9 @@ def EfficientlyResizeNumpyImage( numpy_image, ( target_x, target_y ) ):
     
     return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
     
-def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
+def EfficientlyThumbnailNumpyImage( numpy_image, target_resolution ):
     
+    ( target_x, target_y ) = target_resolution
     ( im_y, im_x, depth ) = numpy_image.shape
     
     if target_x >= im_x and target_y >= im_y:
@@ -114,7 +117,7 @@ def GenerateNumpyImage( path, mime ):
             
             if numpy_image.dtype == 'uint16':
                 
-                numpy_image /= 256
+                numpy_image //= 256
                 
                 numpy_image = numpy.array( numpy_image, dtype = 'uint8' )
                 
@@ -228,7 +231,7 @@ def GenerateShapePerceptualHashes( path, mime ):
         return ( a << 1 ) + int( b )
         
     
-    bytes = []
+    list_of_bytes = []
     
     for i in range( 8 ):
         
@@ -249,12 +252,13 @@ def GenerateShapePerceptualHashes( path, mime ):
             
         '''
         
+        # this is a 0-255 int
         byte = reduce( collapse_bools_to_binary_uint, dct_88_boolean[i], 0 )
         
-        bytes.append( byte )
+        list_of_bytes.append( byte )
         
     
-    phash = str( bytearray( bytes ) )
+    phash = bytes( list_of_bytes ) # this works!
     
     # now discard the blank hash, which is 1000000... and not useful
     
@@ -323,12 +327,13 @@ def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL
         return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions, mime )
         
     
-import HydrusFileHandling
+from . import HydrusFileHandling
 
 HydrusFileHandling.GenerateThumbnailFromStaticImage = GenerateThumbnailFromStaticImageCV
     
-def ResizeNumpyImage( mime, numpy_image, ( target_x, target_y ) ):
+def ResizeNumpyImage( mime, numpy_image, target_resolution ):
     
+    ( target_x, target_y ) = target_resolution
     new_options = HG.client_controller.new_options
     
     ( scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomQuality( mime )

@@ -1,21 +1,21 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListCtrl
-import ClientGUIMenus
-import ClientGUIScrolledPanels
-import ClientGUIShortcuts
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientParsing
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetworking
-import HydrusText
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListCtrl
+from . import ClientGUIMenus
+from . import ClientGUIScrolledPanels
+from . import ClientGUIShortcuts
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientParsing
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetworking
+from . import HydrusText
 import os
 import wx
 
@@ -77,14 +77,16 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
             
-            pretty_max_allowed = HydrusData.ConvertIntToBytes( max_allowed )
+            pretty_max_allowed = HydrusData.ToHumanBytes( max_allowed )
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
             pretty_max_allowed = HydrusData.ToHumanInt( max_allowed ) + ' requests'
             
         
-        sort_tuple = ( max_allowed, time_delta )
+        sort_time_delta = ClientGUIListCtrl.SafeNoneInt( time_delta )
+        
+        sort_tuple = ( max_allowed, sort_time_delta )
         display_tuple = ( pretty_max_allowed, pretty_time_delta )
         
         return ( display_tuple, sort_tuple )
@@ -301,7 +303,7 @@ class BytesControl( wx.Panel ):
         
         while value % 1024 == 0 and unit < max_unit:
             
-            value /= 1024
+            value //= 1024
             
             unit *= 1024
             
@@ -439,7 +441,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         ( number, transformation_type, data ) = transformation
         
         pretty_number = HydrusData.ToHumanInt( number )
-        pretty_transformation = ClientParsing.StringConverter.TransformationToUnicode( ( transformation_type, data ) )
+        pretty_transformation = ClientParsing.StringConverter.TransformationToString( ( transformation_type, data ) )
         
         string_converter = self._GetValue()
         
@@ -969,7 +971,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             self._min_chars.Disable()
             self._max_chars.Disable()
             
-            self._example_string.SetValue( self._match_value_text_input.GetValue() )
+            self._example_string.ChangeValue( self._match_value_text_input.GetValue() )
             
             self._example_string_matches.SetLabelText( '' )
             
@@ -989,7 +991,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.StringMatchException as e:
                 
-                reason = HydrusData.ToUnicode( e )
+                reason = str( e )
                 
                 self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
                 self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
@@ -1263,13 +1265,13 @@ class NetworkJobControl( wx.Panel ):
                         
                     else:
                         
-                        speed_text += HydrusData.ConvertIntToBytes( bytes_read )
+                        speed_text += HydrusData.ToHumanBytes( bytes_read )
                         
                     
                 
                 if current_speed != bytes_to_read: # if it is a real quick download, just say its size
                     
-                    speed_text += ' ' + HydrusData.ConvertIntToBytes( current_speed ) + '/s'
+                    speed_text += ' ' + HydrusData.ToHumanBytes( current_speed ) + '/s'
                     
                 
             
@@ -1458,7 +1460,7 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
     
     def _UpdateLabel( self ):
         
-        label = self._string_match.ToUnicode()
+        label = self._string_match.ToString()
         
         self.SetLabelText( label )
         
@@ -1497,7 +1499,7 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
         
         #
         
-        self._listctrl.AddDatas( initial_dict.items() )
+        self._listctrl.AddDatas( list(initial_dict.items()) )
         
         self._listctrl.Sort()
         
@@ -1514,8 +1516,8 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
         
         ( key_string_match, value_string_match ) = data
         
-        pretty_key = key_string_match.ToUnicode()
-        pretty_value = value_string_match.ToUnicode()
+        pretty_key = key_string_match.ToString()
+        pretty_value = value_string_match.ToString()
         
         display_tuple = ( pretty_key, pretty_value )
         sort_tuple = ( pretty_key, pretty_value )
@@ -1678,7 +1680,7 @@ class StringToStringDictControl( wx.Panel ):
         
         #
         
-        self._listctrl.AddDatas( initial_dict.items() )
+        self._listctrl.AddDatas( list(initial_dict.items()) )
         
         self._listctrl.Sort()
         
@@ -1812,7 +1814,7 @@ class StringToStringMatchDictControl( wx.Panel ):
         
         #
         
-        self._listctrl.AddDatas( initial_dict.items() )
+        self._listctrl.AddDatas( list(initial_dict.items()) )
         
         self._listctrl.Sort()
         
@@ -1829,7 +1831,7 @@ class StringToStringMatchDictControl( wx.Panel ):
         
         ( key, string_match ) = data
         
-        pretty_string_match = string_match.ToUnicode()
+        pretty_string_match = string_match.ToString()
         
         display_tuple = ( key, pretty_string_match )
         sort_tuple = ( key, pretty_string_match )

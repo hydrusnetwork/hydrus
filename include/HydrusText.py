@@ -1,13 +1,13 @@
 import json
 import re
 
-re_newlines = re.compile( '[\r\n]+', re.UNICODE )
-re_multiple_spaces = re.compile( '\\s+', re.UNICODE )
-re_trailing_space = re.compile( '\\s+$', re.UNICODE )
-re_leading_space = re.compile( '^\\s+', re.UNICODE )
-re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)+', re.UNICODE )
-re_leading_single_colon = re.compile( '^:(?!:)', re.UNICODE )
-re_leading_byte_order_mark = re.compile( u'^\ufeff', re.UNICODE ) # unicode .txt files prepend with this, wew
+re_newlines = re.compile( '[\r\n]+' )
+re_multiple_spaces = re.compile( '\\s+' )
+re_trailing_space = re.compile( '\\s+$' )
+re_leading_space = re.compile( '^\\s+' )
+re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)+' )
+re_leading_single_colon = re.compile( '^:(?!:)' )
+re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew
 
 def DeserialiseNewlinedTexts( text ):
     
@@ -24,11 +24,33 @@ def DeserialiseNewlinedTexts( text ):
 def LooksLikeHTML( file_data ):
     # this will false-positive if it is json that contains html, ha ha
     
-    return '<html' in file_data or '<HTML' in file_data
+    if isinstance( file_data, bytes ):
+        
+        search_elements = ( b'<html', b'<HTML' )
+        
+    else:
+        
+        search_elements = ( '<html', '<HTML' )
+        
+    
+    for s_e in search_elements:
+        
+        if s_e in file_data:
+            
+            return True
+            
+        
+    
+    return False
     
 def LooksLikeJSON( file_data ):
     
     try:
+        
+        if isinstance( file_data, bytes ):
+            
+            file_data = str( file_data, 'utf-8' )
+            
         
         json.loads( file_data )
         

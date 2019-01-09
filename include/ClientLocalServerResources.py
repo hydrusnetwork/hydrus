@@ -1,10 +1,10 @@
-import ClientConstants as CC
-import ClientFiles
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusServerResources
+from . import ClientConstants as CC
+from . import ClientFiles
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusServerResources
 import os
 from twisted.web.static import File as FileResource
 
@@ -120,8 +120,8 @@ class HydrusResourceBooruGallery( HydrusResourceBooru ):
             body += '''
             <span class="thumbnail">
                 <span class="thumbnail_container">
-                    <a href="page?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">
-                        <img src="thumbnail?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
+                    <a href="page?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''">
+                        <img src="thumbnail?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''" />
                     </a>
                 </span>
             </span>'''
@@ -192,28 +192,28 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
             ( width, height ) = media_result.GetResolution()
             
             body += '''
-            <img width="''' + str( width ) + '''" height="''' + str( height ) + '''" src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />'''
+            <img width="''' + str( width ) + '''" height="''' + str( height ) + '''" src="file?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''" />'''
             
         elif mime in HC.VIDEO:
             
             ( width, height ) = media_result.GetResolution()
             
             body += '''
-            <video width="''' + str( width ) + '''" height="''' + str( height ) + '''" controls="" loop="" autoplay="" src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
-            <p><a href="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
+            <video width="''' + str( width ) + '''" height="''' + str( height ) + '''" controls="" loop="" autoplay="" src="file?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''" />
+            <p><a href="file?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
             
         elif mime == HC.APPLICATION_FLASH:
             
             ( width, height ) = media_result.GetResolution()
             
             body += '''
-            <embed width="''' + str( width ) + '''" height="''' + str( height ) + '''" src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
-            <p><a href="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
+            <embed width="''' + str( width ) + '''" height="''' + str( height ) + '''" src="file?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''" />
+            <p><a href="file?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
             
         else:
             
             body += '''
-            <p><a href="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
+            <p><a href="file?share_key=''' + share_key.hex() + '''&hash=''' + hash.hex() + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
             
         
         body += '''

@@ -1,15 +1,15 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientDownloading
-import ClientThreading
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientThreading
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
 import threading
 import traceback
 import os
@@ -34,7 +34,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         trace = ''.join( trace_list )
         
-        pretty_value = HydrusData.ToUnicode( value )
+        pretty_value = str( value )
         
         if os.linesep in pretty_value:
             
@@ -47,8 +47,6 @@ def CatchExceptionClient( etype, value, tb ):
             first_line = pretty_value
             
         
-        trace = HydrusData.ToUnicode( trace )
-        
         job_key = ClientThreading.JobKey()
         
         if etype == HydrusExceptions.ShutdownException:
@@ -57,8 +55,8 @@ def CatchExceptionClient( etype, value, tb ):
             
         else:
             
-            try: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype.__name__ ) )
-            except: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype ) )
+            try: job_key.SetVariable( 'popup_title', str( etype.__name__ ) )
+            except: job_key.SetVariable( 'popup_title', str( etype ) )
             
             job_key.SetVariable( 'popup_text_1', first_line )
             job_key.SetVariable( 'popup_traceback', trace )
@@ -78,7 +76,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         text += os.linesep
         
-        text += HydrusData.ToUnicode( ( etype, value, tb ) )
+        text += str( ( etype, value, tb ) )
         
         try: text += traceback.format_exc()
         except: pass
@@ -114,7 +112,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
     
     extra_words = ''
     
-    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+    for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
         
         if len( content_updates ) > 0:
             
@@ -158,7 +156,7 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
     
     service_keys_to_content_updates = {}
     
-    for ( service_key, tags ) in service_keys_to_tags.items():
+    for ( service_key, tags ) in list(service_keys_to_tags.items()):
         
         if service_key == CC.LOCAL_TAG_SERVICE_KEY:
             
@@ -180,11 +178,11 @@ def ConvertZoomToPercentage( zoom ):
     
     zoom_percent = zoom * 100
     
-    pretty_zoom = '%.2f' % zoom_percent + '%'
+    pretty_zoom = '{:.2f}%'.format( zoom_percent )
     
     if pretty_zoom.endswith( '00%' ):
         
-        pretty_zoom = '%i' % zoom_percent + '%'
+        pretty_zoom = '{:.0f}%'.format( zoom_percent )
         
     
     return pretty_zoom
@@ -207,7 +205,7 @@ def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
             
         else:
             
-            colour = wx.Colour( int( g * ( 1 + 0.05 * intensity ) ) / 2, b, r )
+            colour = wx.Colour( int( g * ( 1 + 0.05 * intensity ) / 2 ), b, r )
             
         
     else:
@@ -356,7 +354,7 @@ def MergePredicates( predicates, add_namespaceless = False ):
         unnamespaced_predicate_dict = {}
         subtag_nonzero_instance_counter = collections.Counter()
         
-        for predicate in master_predicate_dict.values():
+        for predicate in list(master_predicate_dict.values()):
             
             if predicate.HasNonZeroCount():
                 
@@ -375,7 +373,7 @@ def MergePredicates( predicates, add_namespaceless = False ):
                 
             
         
-        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
+        for ( unnamespaced_predicate, count ) in list(subtag_nonzero_instance_counter.items()):
             
             # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
             
@@ -386,7 +384,7 @@ def MergePredicates( predicates, add_namespaceless = False ):
             
         
     
-    return master_predicate_dict.values()
+    return list(master_predicate_dict.values())
     
 def OrdIsSensibleASCII( o ):
     
@@ -426,7 +424,7 @@ def ShowExceptionClient( e, do_wait = True ):
     if etype is None:
         
         etype = type( e )
-        value = HydrusData.ToUnicode( e )
+        value = str( e )
         
         trace = 'No error trace--here is the stack:' + os.linesep + ''.join( traceback.format_stack() )
         
@@ -435,13 +433,11 @@ def ShowExceptionClient( e, do_wait = True ):
         trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
     
-    trace = HydrusData.ToUnicode( trace )
-    
-    pretty_value = HydrusData.ToUnicode( value )
+    pretty_value = str( value )
     
     if os.linesep in pretty_value:
         
-        ( first_line, anything_else ) = HydrusData.ToUnicode( value ).split( os.linesep, 1 )
+        ( first_line, anything_else ) = pretty_value.split( os.linesep, 1 )
         
         trace = trace + os.linesep + anything_else
         
@@ -458,8 +454,14 @@ def ShowExceptionClient( e, do_wait = True ):
         
     else:
         
-        if hasattr( etype, '__name__' ): title = HydrusData.ToUnicode( etype.__name__ )
-        else: title = HydrusData.ToUnicode( etype )
+        if hasattr( etype, '__name__' ):
+            
+            title = str( etype.__name__ )
+            
+        else:
+            
+            title = str( etype )
+            
         
         job_key.SetVariable( 'popup_title', title )
         
@@ -484,7 +486,7 @@ def ShowTextClient( text ):
     
     job_key = ClientThreading.JobKey()
     
-    job_key.SetVariable( 'popup_text_1', HydrusData.ToUnicode( text ) )
+    job_key.SetVariable( 'popup_text_1', str( text ) )
     
     text = job_key.ToString()
     
@@ -516,11 +518,6 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         self._data = data
         
     
-    def __cmp__( self, other ):
-        
-        return cmp( self.ToString(), other.ToString() )
-        
-    
     def __repr__( self ):
         
         return self.ToString()
@@ -536,7 +533,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             ( service_key, content_type, action, value ) = self._data
             
-            serialisable_data = ( service_key.encode( 'hex' ), content_type, action, value )
+            serialisable_data = ( service_key.hex(), content_type, action, value )
             
         
         return ( self._command_type, serialisable_data )
@@ -554,7 +551,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_service_key, content_type, action, value ) = serialisable_data
             
-            self._data = ( serialisable_service_key.decode( 'hex' ), content_type, action, value )
+            self._data = ( bytes.fromhex( serialisable_service_key ), content_type, action, value )
             
         
     
@@ -582,7 +579,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             components.append( HC.content_update_string_lookup[ action ] )
             components.append( HC.content_type_string_lookup[ content_type ] )
-            components.append( '"' + HydrusData.ToUnicode( value ) + '"' )
+            components.append( '"' + str( value ) + '"' )
             components.append( 'for' )
             
             services_manager = HG.client_controller.services_manager
@@ -606,7 +603,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class Booru( HydrusData.HydrusYAMLBase ):
     
-    yaml_tag = u'!Booru'
+    yaml_tag = '!Booru'
     
     def __init__( self, name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ):
         
@@ -626,13 +623,13 @@ class Booru( HydrusData.HydrusYAMLBase ):
     
     def GetName( self ): return self._name
     
-    def GetNamespaces( self ): return self._tag_classnames_to_namespaces.values()
+    def GetNamespaces( self ): return list(self._tag_classnames_to_namespaces.values())
     
 sqlite3.register_adapter( Booru, yaml.safe_dump )
 
 class Credentials( HydrusData.HydrusYAMLBase ):
     
-    yaml_tag = u'!Credentials'
+    yaml_tag = '!Credentials'
     
     def __init__( self, host, port, access_key = None ):
         
@@ -654,7 +651,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Credentials: ' + HydrusData.ToUnicode( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
+    def __repr__( self ): return 'Credentials: ' + str( ( self._host, self._port, self._access_key.hex() ) )
     
     def GetAccessKey( self ): return self._access_key
     
@@ -664,7 +661,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
         
         connection_string = ''
         
-        if self.HasAccessKey(): connection_string += self._access_key.encode( 'hex' ) + '@'
+        if self.HasAccessKey(): connection_string += self._access_key.hex() + '@'
         
         connection_string += self._host + ':' + str( self._port )
         
@@ -677,7 +674,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     
 class Imageboard( HydrusData.HydrusYAMLBase ):
     
-    yaml_tag = u'!Imageboard'
+    yaml_tag = '!Imageboard'
     
     def __init__( self, name, post_url, flood_time, form_fields, restrictions ):
         

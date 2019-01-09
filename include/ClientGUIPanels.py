@@ -1,17 +1,17 @@
-import ClientConstants as CC
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListCtrl
-import ClientGUIScrolledPanelsReview
-import ClientGUITopLevelWindows
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNATPunch
-import HydrusNetwork
-import HydrusPaths
+from . import ClientConstants as CC
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListCtrl
+from . import ClientGUIScrolledPanelsReview
+from . import ClientGUITopLevelWindows
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNATPunch
+from . import HydrusNetwork
+from . import HydrusPaths
 import os
 import time
 import wx
@@ -164,7 +164,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 it_took = HydrusData.GetNowPrecise() - precise_timestamp
                 
-                rows_s = weight / it_took
+                rows_s = int( weight / it_took )
                 
                 update_speed_string = ' at ' + HydrusData.ToHumanInt( rows_s ) + ' rows/s'
                 
@@ -336,7 +336,7 @@ class ReviewServicePanel( wx.Panel ):
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
             
-            text = HydrusData.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size )
+            text = HydrusData.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
             
             if service.GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
                 
@@ -482,7 +482,7 @@ class ReviewServicePanel( wx.Panel ):
             
             account_key = account.GetAccountKey()
             
-            account_key_hex = account_key.encode( 'hex' )
+            account_key_hex = account_key.hex()
             
             HG.client_controller.pub( 'clipboard', 'text', account_key_hex )
             
@@ -588,7 +588,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     HydrusData.ShowException( e )
                     
-                    wx.CallAfter( wx.MessageBox, HydrusData.ToUnicode( e ) )
+                    wx.CallAfter( wx.MessageBox, str( e ) )
                     
                 
                 wx.CallAfter( self._Refresh )
@@ -602,7 +602,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
             self._refresh_account_button.Disable()
-            self._refresh_account_button.SetLabelText( u'fetching\u2026' )
+            self._refresh_account_button.SetLabelText( 'fetching\u2026' )
             
             HG.client_controller.CallToThread( do_it )
             
@@ -721,7 +721,7 @@ class ReviewServicePanel( wx.Panel ):
                                     
                                     update_path = client_files_manager.GetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, check_file_exists = False )
                                     
-                                    dest_path = os.path.join( dest_dir, update_hash.encode( 'hex' ) )
+                                    dest_path = os.path.join( dest_dir, update_hash.hex() )
                                     
                                     HydrusPaths.MirrorFile( update_path, dest_path )
                                     
@@ -756,9 +756,9 @@ class ReviewServicePanel( wx.Panel ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    path = HydrusData.ToUnicode( dlg.GetPath() )
+                    path = dlg.GetPath()
                     
-                    self._export_updates_button.SetLabelText( u'exporting\u2026' )
+                    self._export_updates_button.SetLabelText( 'exporting\u2026' )
                     self._export_updates_button.Disable()
                     
                     HG.client_controller.CallToThread( do_it, path, self._service )
@@ -1017,7 +1017,7 @@ class ReviewServicePanel( wx.Panel ):
             
             pretty_multihash = multihash
             pretty_num_files = HydrusData.ToHumanInt( num_files )
-            pretty_total_size = HydrusData.ConvertIntToBytes( total_size )
+            pretty_total_size = HydrusData.ToHumanBytes( total_size )
             pretty_note = note
             
             return ( pretty_multihash, pretty_num_files, pretty_total_size, pretty_note )
@@ -1223,8 +1223,10 @@ class ReviewServicePanel( wx.Panel ):
             pretty_timeout = HydrusData.ConvertTimestampToPrettyExpires( timeout )
             pretty_hashes = HydrusData.ToHumanInt( num_hashes )
             
+            sort_timeout = ClientGUIListCtrl.SafeNoneInt( timeout )
+            
             display_tuple = ( pretty_name, pretty_text, pretty_timeout, pretty_hashes )
-            sort_tuple = ( name, text, timeout, num_hashes )
+            sort_tuple = ( name, text, sort_timeout, num_hashes )
             
             return ( display_tuple, sort_tuple )
             
@@ -1237,7 +1239,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                wx.MessageBox( str( e ) )
                 
                 return
                 
@@ -1260,7 +1262,7 @@ class ReviewServicePanel( wx.Panel ):
             
             for share_key in self._booru_shares.GetData( only_selected = True ):
                 
-                url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+                url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + share_key.hex()
                 
                 urls.append( url )
                 
@@ -1285,7 +1287,7 @@ class ReviewServicePanel( wx.Panel ):
             
             for share_key in self._booru_shares.GetData( only_selected = True ):
                 
-                url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+                url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.hex()
                 
                 urls.append( url )
                 
@@ -1404,7 +1406,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._share_key_info.update( booru_shares )
                 
-                self._booru_shares.SetData( booru_shares.keys() )
+                self._booru_shares.SetData( list(booru_shares.keys()) )
                 
                 self._booru_shares.Sort()
                 

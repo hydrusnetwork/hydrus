@@ -1,10 +1,10 @@
-import ClientConstants as CC
+from . import ClientConstants as CC
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 
 class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -44,8 +44,8 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             self._rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._rating_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
             
         
-        serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
-        serialisable_rating_service_actions = [ ( service_key.encode( 'hex' ), action ) for ( service_key, action ) in self._rating_service_actions ]
+        serialisable_tag_service_actions = [ ( service_key.hex(), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
+        serialisable_rating_service_actions = [ ( service_key.hex(), action ) for ( service_key, action ) in self._rating_service_actions ]
         
         return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action )
         
@@ -54,8 +54,8 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action ) = serialisable_info
         
-        self._tag_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
-        self._rating_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
+        self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
+        self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -71,9 +71,9 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             # So, let's just dupe and purge later on, in serialisation
             for ( service_key_encoded, action ) in serialisable_service_actions:
                 
-                service_key = service_key_encoded.decode( 'hex' )
+                service_key = bytes.fromhex( service_key_encoded )
                 
-                import ClientTags
+                from . import ClientTags
                 
                 tag_filter = ClientTags.TagFilter()
                 
@@ -82,8 +82,8 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 rating_service_actions.append( ( service_key, action ) )
                 
             
-            serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in tag_service_actions ]
-            serialisable_rating_service_actions = [ ( service_key.encode( 'hex' ), action ) for ( service_key, action ) in rating_service_actions ]
+            serialisable_tag_service_actions = [ ( service_key.hex(), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in tag_service_actions ]
+            serialisable_rating_service_actions = [ ( service_key.hex(), action ) for ( service_key, action ) in rating_service_actions ]
             
             sync_archive = delete_second_file
             delete_both_files = False

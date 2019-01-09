@@ -1,12 +1,12 @@
-import Cookie
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusSerialisable
-import HydrusServerResources
-import ServerFiles
+import http.cookies
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusSerialisable
+from . import HydrusServerResources
+from . import ServerFiles
 
 class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
     
@@ -35,7 +35,7 @@ class HydrusResourceAccessKey( HydrusServerResources.HydrusResource ):
         
         access_key = HG.server_controller.Read( 'access_key', self._service_key, registration_key )
         
-        body = HydrusNetwork.DumpToBodyString( { 'access_key' : access_key } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'access_key' : access_key } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -61,7 +61,7 @@ class HydrusResourceAccessKeyVerification( HydrusServerResources.HydrusResource 
         
         verified = HG.server_controller.Read( 'verify_access_key', self._service_key, access_key )
         
-        body = HydrusNetwork.DumpToBodyString( { 'verified' : verified } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'verified' : verified } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -80,7 +80,7 @@ class HydrusResourceSessionKey( HydrusServerResources.HydrusResource ):
         
         max_age = expires - now
         
-        cookies = [ ( 'session_key', session_key.encode( 'hex' ), { 'max_age' : max_age, 'path' : '/' } ) ]
+        cookies = [ ( 'session_key', session_key.hex(), { 'max_age' : max_age, 'path' : '/' } ) ]
         
         response_context = HydrusServerResources.ResponseContext( 200, cookies = cookies )
         
@@ -133,7 +133,7 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
         
         try:
             
-            cookies = Cookie.SimpleCookie( cookie_text )
+            cookies = http.cookies.SimpleCookie( cookie_text )
             
             if 'session_key' not in cookies:
                 
@@ -141,7 +141,12 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
                 
             else:
                 
-                session_key = cookies[ 'session_key' ].value.decode( 'hex' )
+                # Morsel, for real, ha ha ha
+                morsel = cookies[ 'session_key' ]
+                
+                session_key_hex = morsel.value
+                
+                session_key = bytes.fromhex( session_key_hex )
                 
             
         except:
@@ -193,7 +198,7 @@ class HydrusResourceRestrictedAccount( HydrusResourceRestricted ):
         
         account = request.hydrus_account
         
-        body = HydrusNetwork.DumpToBodyString( { 'account' : account } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'account' : account } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -219,7 +224,7 @@ class HydrusResourceRestrictedAccountInfo( HydrusResourceRestricted ):
         
         account_info = HG.server_controller.Read( 'account_info', self._service_key, request.hydrus_account, subject_account )
         
-        body = HydrusNetwork.DumpToBodyString( { 'account_info' : account_info } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'account_info' : account_info } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -254,7 +259,7 @@ class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
         
         account_types = HG.server_controller.Read( 'account_types', self._service_key, request.hydrus_account )
         
-        body = HydrusNetwork.DumpToBodyString( { 'account_types' : account_types } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'account_types' : account_types } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -297,7 +302,7 @@ class HydrusResourceRestrictedIP( HydrusResourceRestricted ):
         
         ( ip, timestamp ) = HG.server_controller.Read( 'ip', self._service_key, request.hydrus_account, hash )
         
-        body = HydrusNetwork.DumpToBodyString( { 'ip' : ip, 'timestamp' : timestamp } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'ip' : ip, 'timestamp' : timestamp } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -310,7 +315,7 @@ class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
         
         petition_count_info = HG.server_controller.Read( 'num_petitions', self._service_key, request.hydrus_account )
         
-        body = HydrusNetwork.DumpToBodyString( { 'num_petitions' : petition_count_info } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'num_petitions' : petition_count_info } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -326,7 +331,7 @@ class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
         
         petition = HG.server_controller.Read( 'petition', self._service_key, request.hydrus_account, content_type, status )
         
-        body = HydrusNetwork.DumpToBodyString( { 'petition' : petition } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'petition' : petition } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -351,7 +356,7 @@ class HydrusResourceRestrictedRegistrationKeys( HydrusResourceRestricted ):
         
         registration_keys = HG.server_controller.Read( 'registration_keys', self._service_key, request.hydrus_account, num, account_type_key, expires )
         
-        body = HydrusNetwork.DumpToBodyString( { 'registration_keys' : registration_keys } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'registration_keys' : registration_keys } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -438,7 +443,7 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
         
         services = HG.server_controller.Read( 'services_from_account', request.hydrus_account )
         
-        body = HydrusNetwork.DumpToBodyString( { 'services' : services } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'services' : services } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -456,11 +461,6 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
             raise HydrusExceptions.PermissionException( 'It looks like some of those services share ports! Please give them unique ports!' )
             
         
-        if len( unique_ports ) < services:
-            
-            pass
-            
-        
         with HG.dirty_object_lock:
             
             service_keys_to_access_keys = HG.server_controller.WriteSynchronous( 'services', request.hydrus_account, services )
@@ -468,7 +468,7 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
             HG.server_controller.SetServices( services )
             
         
-        body = HydrusNetwork.DumpToBodyString( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -516,7 +516,7 @@ class HydrusResourceRestrictedImmediateUpdate( HydrusResourceRestricted ):
         
         updates = HydrusSerialisable.SerialisableList( updates )
         
-        body = HydrusNetwork.DumpToBodyString( { 'updates' : updates } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'updates' : updates } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         
@@ -533,7 +533,7 @@ class HydrusResourceRestrictedMetadataUpdate( HydrusResourceRestricted ):
         
         metadata_slice = self._service.GetMetadataSlice( since )
         
-        body = HydrusNetwork.DumpToBodyString( { 'metadata_slice' : metadata_slice } )
+        body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'metadata_slice' : metadata_slice } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
         

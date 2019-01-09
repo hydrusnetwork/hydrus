@@ -1,6 +1,6 @@
-import ClientConstants as CC
-import HydrusConstants as HC
-import HydrusNATPunch
+from . import ClientConstants as CC
+from . import HydrusConstants as HC
+from . import HydrusNATPunch
 import os
 import random
 import time

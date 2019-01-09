@@ -1,34 +1,34 @@
-import ClientConstants as CC
-import ClientData
-import ClientDB
-import ClientDefaults
-import ClientDownloading
-import ClientExporting
-import ClientFiles
-import ClientGUIManagement
-import ClientGUIPages
-import ClientImporting
-import ClientImportLocal
-import ClientImportOptions
-import ClientImportFileSeeds
-import ClientRatings
-import ClientSearch
-import ClientServices
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDB
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientExporting
+from . import ClientFiles
+from . import ClientGUIManagement
+from . import ClientGUIPages
+from . import ClientImporting
+from . import ClientImportLocal
+from . import ClientImportOptions
+from . import ClientImportFileSeeds
+from . import ClientRatings
+from . import ClientSearch
+from . import ClientServices
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusVideoHandling
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusVideoHandling
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusSerialisable
 import itertools
 import os
-import ServerDB
+from . import ServerDB
 import shutil
 import sqlite3
 import stat
-import TestConstants
+from . import TestConstants
 import time
 import threading
 import unittest
@@ -55,7 +55,7 @@ class TestClientDB( unittest.TestCase ):
             time.sleep( 0.1 )
             
         
-        db_filenames = cls._db._db_filenames.values()
+        db_filenames = list(cls._db._db_filenames.values())
         
         for filename in db_filenames:
             
@@ -81,8 +81,8 @@ class TestClientDB( unittest.TestCase ):
         cls._delete_db()
         
     
-    def _read( self, action, *args, **kwargs ): return TestClientDB._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    def _write( self, action, *args, **kwargs ): return TestClientDB._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
+    def _read( self, action, *args, **kwargs ): return TestClientDB._db.Read( action, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestClientDB._db.Write( action, True, *args, **kwargs )
     
     def test_autocomplete( self ):
         
@@ -98,7 +98,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -266,7 +266,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -290,8 +290,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 1, 1, 1, ) ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 0, 0, 0, 0, ) ), 1 ) )
         
@@ -299,8 +299,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 100, ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 0, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( u'\u2248', 100, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( u'\u2248', 0, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '\u2248', 100, ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '\u2248', 0, ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 100, ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0, ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 100, ), 0 ) )
@@ -314,14 +314,14 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( hash, 'sha256' ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 'sha256' ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( bytes.fromhex( '0123456789abcdef' * 4 ), 'sha256' ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( u'\u2248', 200 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( u'\u2248', 60 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( u'\u2248', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 200 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 60 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '\u2248', 0 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 200 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 0 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 200 ), 0 ) )
@@ -347,8 +347,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 1 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( u'\u2248', 0 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( u'\u2248', 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '\u2248', 0 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '\u2248', 1 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 0 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 1 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 0 ), 0 ) )
@@ -356,20 +356,20 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( u'\u2248', 1, 1 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( u'\u2248', 200, 201 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( u'\u2248', 4, 1 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 1, 1 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 200, 201 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 4, 1 ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, 5 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 5 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( bytes.fromhex( '0123456789abcdef' * 4 ), 5 ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( u'\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( u'\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '\u2248', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '\u2248', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
@@ -380,9 +380,9 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 201 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 200 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 0 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( u'\u2248', 200 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( u'\u2248', 60 ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( u'\u2248', 0 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 200 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 60 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '\u2248', 0 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 200 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 0 ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 200 ), 0 ) )
@@ -551,7 +551,7 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -699,7 +699,7 @@ class TestClientDB( unittest.TestCase ):
                     
                 
             
-            self.assertEqual( page_names, [ u'gallery', u'watcher', u'import', u'simple downloader', u'example tag repo petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
+            self.assertEqual( page_names, [ 'gallery', 'watcher', 'import', 'simple downloader', 'example tag repo petitions', 'search', 'search', 'files', 'wew lad', 'files' ] )
             
         finally:
             
@@ -726,7 +726,7 @@ class TestClientDB( unittest.TestCase ):
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
-            hash = hex_hash.decode( 'hex' )
+            hash = bytes.fromhex( hex_hash )
             
             file_import_job = ClientImportFileSeeds.FileImportJob( path )
             
@@ -774,7 +774,7 @@ class TestClientDB( unittest.TestCase ):
             
             if duration == 'apng_duration': # diff ffmpeg versions report differently
                 
-                self.assertIn( mr_duration, ( 3133, 1880 ) )
+                self.assertIn( mr_duration, ( 3133, 1880, 1800 ) )
                 
             elif duration == 'mp4_duration':
                 
@@ -849,9 +849,9 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
-        md5 = 'fdadb2cae78f2dfeb629449cd005f2a2'.decode( 'hex' )
+        md5 = bytes.fromhex( 'fdadb2cae78f2dfeb629449cd005f2a2' )
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -982,7 +982,12 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'tag_censorship' )
         
-        self.assertItemsEqual( result, info )
+        self.assertEqual( len( result ), len( info ) )
+        
+        for row in result:
+            
+            self.assertIn( row, info )
+            
         
         result = self._read( 'tag_censorship', CC.LOCAL_TAG_SERVICE_KEY )
         
@@ -1059,7 +1064,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
         service_keys_to_content_updates = {}
         
@@ -1075,7 +1080,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
         service_keys_to_content_updates = {}
         
@@ -1096,7 +1101,7 @@ class TestClientDB( unittest.TestCase ):
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertItemsEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
+        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         
@@ -1104,7 +1109,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( type( result ), dict )
         
-        for ( k, v ) in result.items():
+        for ( k, v ) in list(result.items()):
             
             self.assertEqual( type( k ), int )
             self.assertEqual( type( v ), int )
@@ -1176,8 +1181,8 @@ class TestClientDB( unittest.TestCase ):
     
 class TestServerDB( unittest.TestCase ):
     
-    def _read( self, action, *args, **kwargs ): return TestServerDB._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    def _write( self, action, *args, **kwargs ): return TestServerDB._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
+    def _read( self, action, *args, **kwargs ): return TestServerDB._db.Read( action, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestServerDB._db.Write( action, True, *args, **kwargs )
     
     @classmethod
     def setUpClass( cls ):
@@ -1282,16 +1287,16 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_init_server_admin( self ):
         
-        result = self._read( 'access_key', HC.SERVER_ADMIN_KEY, 'init' )
+        result = self._read( 'access_key', HC.SERVER_ADMIN_KEY, b'init' )
         
-        self.assertEqual( type( result ), str )
+        self.assertEqual( type( result ), bytes )
         self.assertEqual( len( result ), 32 )
         
         self._admin_access_key = result
         
         result = self._read( 'account_key_from_access_key', HC.SERVER_ADMIN_KEY, self._admin_access_key )
         
-        self.assertEqual( type( result ), str )
+        self.assertEqual( type( result ), bytes )
         self.assertEqual( len( result ), 32 )
         
         self._admin_account_key = result
@@ -1316,14 +1321,14 @@ class TestServerDB( unittest.TestCase ):
         
         self._tag_service_admin_access_key = result[ self._tag_service_key ]
         
-        self.assertEqual( type( self._tag_service_admin_access_key ), str )
+        self.assertEqual( type( self._tag_service_admin_access_key ), bytes )
         self.assertEqual( len( self._tag_service_admin_access_key ), 32 )
         
         self.assertIn( self._file_service_key, result )
         
         self._file_service_admin_access_key = result[ self._file_service_key ]
         
-        self.assertEqual( type( self._tag_service_admin_access_key ), str )
+        self.assertEqual( type( self._tag_service_admin_access_key ), bytes )
         self.assertEqual( len( self._tag_service_admin_access_key ), 32 )
         
         #

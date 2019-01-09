@@ -1,12 +1,12 @@
-import cStringIO
-import ClientConstants as CC
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetworking
+import io
+from . import ClientConstants as CC
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetworking
 import os
 import requests
 import threading
@@ -15,7 +15,14 @@ import time
 
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
-    error_text = data
+    try:
+        
+        error_text = str( data, 'utf-8' )
+        
+    except UnicodeDecodeError:
+        
+        error_text = repr( data )
+        
     
     if len( error_text ) > 1024:
         
@@ -114,7 +121,9 @@ class NetworkJob( object ):
         
         self._content_type = None
         
-        self._stream_io = cStringIO.StringIO()
+        self._encoding = 'utf-8'
+        
+        self._stream_io = io.BytesIO()
         
         self._error_exception = Exception( 'Exception not initialised.' ) # PyLint hint, wew
         self._error_exception = None
@@ -133,7 +142,7 @@ class NetworkJob( object ):
         
         self._last_time_ongoing_bandwidth_failed = 0
         
-        self._status_text = u'initialising\u2026'
+        self._status_text = 'initialising\u2026'
         self._num_bytes_read = 0
         self._num_bytes_to_read = 1
         
@@ -214,15 +223,15 @@ class NetworkJob( object ):
             
             if self._referral_url is not None:
                 
-                headers[ 'referer' ] = HydrusData.ToByteString( self._referral_url )
+                headers[ 'referer' ] = self._referral_url
                 
             
-            for ( key, value ) in self._additional_headers.items():
+            for ( key, value ) in list(self._additional_headers.items()):
                 
-                headers[ key ] = HydrusData.ToByteString( value )
+                headers[ key ] = value
                 
             
-            self._status_text = u'sending request\u2026'
+            self._status_text = 'sending request\u2026'
             
             snc = self._session_network_context
             
@@ -333,7 +342,7 @@ class NetworkJob( object ):
                 
                 if max_allowed is not None and self._num_bytes_to_read > max_allowed:
                     
-                    raise HydrusExceptions.NetworkException( 'The url was apparently ' + HydrusData.ConvertIntToBytes( self._num_bytes_to_read ) + ' but the max network size for this type of job is ' + HydrusData.ConvertIntToBytes( max_allowed ) + '!' )
+                    raise HydrusExceptions.NetworkException( 'The url was apparently ' + HydrusData.ToHumanBytes( self._num_bytes_to_read ) + ' but the max network size for this type of job is ' + HydrusData.ToHumanBytes( max_allowed ) + '!' )
                     
                 
                 if self._file_import_options is not None:
@@ -366,7 +375,7 @@ class NetworkJob( object ):
                 
                 if max_allowed is not None and self._num_bytes_read > max_allowed:
                     
-                    raise HydrusExceptions.NetworkException( 'The url exceeded the max network size for this type of job, which is ' + HydrusData.ConvertIntToBytes( max_allowed ) + '!' )
+                    raise HydrusExceptions.NetworkException( 'The url exceeded the max network size for this type of job, which is ' + HydrusData.ToHumanBytes( max_allowed ) + '!' )
                     
                 
                 if self._file_import_options is not None:
@@ -388,7 +397,7 @@ class NetworkJob( object ):
         
         if self._num_bytes_to_read is not None and self._num_bytes_read < self._num_bytes_to_read * 0.8:
             
-            raise HydrusExceptions.ShouldReattemptNetworkException( 'Was expecting ' + HydrusData.ConvertIntToBytes( self._num_bytes_to_read ) + ' but only got ' + HydrusData.ConvertIntToBytes( self._num_bytes_read ) + '.' )
+            raise HydrusExceptions.ShouldReattemptNetworkException( 'Was expecting ' + HydrusData.ToHumanBytes( self._num_bytes_to_read ) + ' but only got ' + HydrusData.ToHumanBytes( self._num_bytes_read ) + '.' )
             
         
     
@@ -493,7 +502,7 @@ class NetworkJob( object ):
                         waiting_str = HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = 2 )
                         
                     
-                    self._status_text = prefix + waiting_str + u'\u2026'
+                    self._status_text = prefix + waiting_str + '\u2026'
                     
                     if waiting_duration > 1200:
                         
@@ -583,7 +592,7 @@ class NetworkJob( object ):
             
         
     
-    def GetContent( self ):
+    def GetContentBytes( self ):
         
         with self._lock:
             
@@ -591,6 +600,22 @@ class NetworkJob( object ):
             
             return self._stream_io.read()
             
+        
+    
+    def GetContentText( self ):
+        
+        data = self.GetContentBytes()
+        
+        try:
+            
+            text = str( data, self._encoding )
+            
+        except UnicodeDecodeError:
+            
+            raise Exception( 'Could not convert the downloaded data to unicode!' )
+            
+        
+        return text
         
     
     def GetContentType( self ):
@@ -863,7 +888,7 @@ class NetworkJob( object ):
             with self._lock:
                 
                 self._is_started = True
-                self._status_text = u'job started'
+                self._status_text = 'job started'
                 
             
             request_completed = False
@@ -891,7 +916,12 @@ class NetworkJob( object ):
                         
                         with self._lock:
                             
-                            self._status_text = u'downloading\u2026'
+                            self._status_text = 'downloading\u2026'
+                            
+                        
+                        if response.encoding is not None:
+                            
+                            self._encoding = response.encoding
                             
                         
                         if self._temp_path is None:
@@ -940,12 +970,12 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.NetworkException( 'Ran out of reattempts on this error: ' + HydrusData.ToUnicode( e ) )
+                        raise HydrusExceptions.NetworkException( 'Ran out of reattempts on this error: ' + str( e ) )
                         
                     
                     with self._lock:
                         
-                        self._status_text = HydrusData.ToUnicode( e ) + '--retrying'
+                        self._status_text = str( e ) + '--retrying'
                         
                     
                     time.sleep( 3 )
@@ -961,7 +991,7 @@ class NetworkJob( object ):
                     
                     with self._lock:
                         
-                        self._status_text = u'connection broke mid-request--retrying'
+                        self._status_text = 'connection broke mid-request--retrying'
                         
                     
                     time.sleep( 3 )
@@ -977,7 +1007,7 @@ class NetworkJob( object ):
                     
                     with self._lock:
                         
-                        self._status_text = u'connection failed--retrying'
+                        self._status_text = 'connection failed--retrying'
                         
                     
                     time.sleep( 3 )
@@ -993,7 +1023,7 @@ class NetworkJob( object ):
                     
                     with self._lock:
                         
-                        self._status_text = u'read timed out--retrying'
+                        self._status_text = 'read timed out--retrying'
                         
                     
                     time.sleep( 3 )
@@ -1004,11 +1034,14 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = 'unexpected error!'
-                
                 trace = traceback.format_exc()
                 
-                HydrusData.Print( trace )
+                if not isinstance( e, HydrusExceptions.ConnectionException ):
+                    
+                    HydrusData.Print( trace )
+                    
+                
+                self._status_text = 'Error: ' + str( e )
                 
                 self._SetError( e, trace )
                 

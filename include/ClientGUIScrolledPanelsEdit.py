@@ -1,39 +1,39 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientDownloading
-import ClientDuplicates
-import ClientImporting
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIImport
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIMenus
-import ClientGUIScrolledPanels
-import ClientGUIFileSeedCache
-import ClientGUIGallerySeedLog
-import ClientGUITags
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientImportFileSeeds
-import ClientImportOptions
-import ClientImportSubscriptions
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import ClientParsing
-import ClientPaths
-import ClientTags
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientDuplicates
+from . import ClientImporting
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIImport
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIMenus
+from . import ClientGUIScrolledPanels
+from . import ClientGUIFileSeedCache
+from . import ClientGUIGallerySeedLog
+from . import ClientGUITags
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientImportFileSeeds
+from . import ClientImportOptions
+from . import ClientImportSubscriptions
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientTags
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusSerialisable
-import HydrusTags
-import HydrusText
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusText
 import os
 import wx
 
@@ -632,7 +632,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         listctrl_data = []
         
-        for ( gug_key, gug ) in self._gug_keys_to_gugs.items():
+        for ( gug_key, gug ) in list(self._gug_keys_to_gugs.items()):
             
             display = gug_key in gug_keys_to_display
             
@@ -647,7 +647,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         listctrl_data = []
         
-        for ( url_match_key, url_match ) in self._url_match_keys_to_url_matches.items():
+        for ( url_match_key, url_match ) in list(self._url_match_keys_to_url_matches.items()):
             
             display = url_match_key in url_match_keys_to_display
             
@@ -1701,7 +1701,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except ( HydrusExceptions.GUGException, HydrusExceptions.URLMatchException ) as e:
             
-            reason = HydrusData.ToUnicode( e )
+            reason = str( e )
             
             self._example_url.SetValue( 'Could not generate - ' + reason )
             
@@ -2092,8 +2092,10 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_missing = ''
             
         
+        sort_gugs = len( gugs )
+        
         display_tuple = ( pretty_name, pretty_gugs, pretty_missing )
-        sort_tuple = ( name, gugs, missing )
+        sort_tuple = ( name, sort_gugs, missing )
         
         return ( display_tuple, sort_tuple )
         
@@ -2594,9 +2596,9 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        for ( network_context, custom_header_dict ) in network_contexts_to_custom_header_dicts.items():
+        for ( network_context, custom_header_dict ) in list(network_contexts_to_custom_header_dicts.items()):
             
-            for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+            for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
                 
                 data = ( network_context, ( key, value ), approved, reason )
                 
@@ -2642,7 +2644,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( network_context, ( key, value ), approved, reason ) = data
         
-        pretty_network_context = network_context.ToUnicode()
+        pretty_network_context = network_context.ToString()
         
         pretty_key_value = key + ': ' + value
         
@@ -3471,7 +3473,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         if num_total > 0:
             
-            sort_float = float( num_done ) / num_total
+            sort_float = num_done / num_total
             
         else:
             
@@ -3482,8 +3484,12 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         pretty_items = simple_status
         
+        sort_last_new_file_time = ClientGUIListCtrl.SafeNoneInt( last_new_file_time )
+        sort_last_check_time = ClientGUIListCtrl.SafeNoneInt( last_check_time )
+        sort_next_check_time = ClientGUIListCtrl.SafeNoneInt( next_check_time )
+        
         display_tuple = ( pretty_name, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_items )
-        sort_tuple = ( name, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, items )
+        sort_tuple = ( name, paused, status, sort_last_new_file_time, sort_last_check_time, sort_next_check_time, file_velocity, delay, items )
         
         return ( display_tuple, sort_tuple )
         
@@ -3597,7 +3603,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
             if num_archived + num_deleted > 0:
                 
-                data_string += ' | good ' + HydrusData.ConvertFloatToPercentage( float( num_archived ) / ( num_archived + num_deleted ) )
+                data_string += ' | good ' + HydrusData.ConvertFloatToPercentage( num_archived / ( num_archived + num_deleted ) )
                 
             
             data_strings.append( data_string )
@@ -4225,7 +4231,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if num_total > 0:
             
-            sort_float = float( num_done ) / num_total
+            sort_float = num_done / num_total
             
         else:
             
@@ -4245,8 +4251,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_paused = ''
             
         
+        sort_last_new_file_time = ClientGUIListCtrl.SafeNoneInt( last_new_file_time )
+        sort_last_checked = ClientGUIListCtrl.SafeNoneInt( last_checked )
+        
         display_tuple = ( name, pretty_site, pretty_status, pretty_last_new_file_time, pretty_last_checked, pretty_delay, pretty_items, pretty_paused )
-        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, items, paused )
+        sort_tuple = ( name, pretty_site, status, sort_last_new_file_time, sort_last_checked, delay, items, paused )
         
         return ( display_tuple, sort_tuple )
         
@@ -4970,7 +4979,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             url_match_keys_to_url_matches = { url_match.GetMatchKey() : url_match for url_match in url_matches }
             
-            url_match_names_and_default_tag_import_options = [ ( url_match_keys_to_url_matches[ url_match_key ].GetName(), url_match_keys_to_default_tag_import_options[ url_match_key ] ) for url_match_key in url_match_keys_to_default_tag_import_options.keys() ]
+            url_match_names_and_default_tag_import_options = [ ( url_match_keys_to_url_matches[ url_match_key ].GetName(), url_match_keys_to_default_tag_import_options[ url_match_key ] ) for url_match_key in list( url_match_keys_to_default_tag_import_options.keys() ) if url_match_key in url_match_keys_to_url_matches ]
             
             url_match_names_and_default_tag_import_options.sort()
             
@@ -5003,7 +5012,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
-        for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items():
+        for ( service_key, panel ) in list(self._service_keys_to_service_tag_import_options_panels.items()):
             
             service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
             
@@ -5059,7 +5068,7 @@ Please note that you can set up the 'default' values for these tag import option
             fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.GetValue()
             fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.GetValue()
             
-            service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items() }
+            service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in list(self._service_keys_to_service_tag_import_options_panels.items()) }
             
             tag_blacklist = self._tag_filter_button.GetValue()
             
@@ -5078,7 +5087,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list = wx.ListBox( self )
         self._list.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
         
-        max_width = max( ( label for ( label, value ) in choice_tuples ) )
+        max_width = max( ( len( label ) for ( label, value ) in choice_tuples ) )
         
         width_chars = min( 36, max_width )
         height_chars = max( 6, len( choice_tuples ) )
@@ -5685,7 +5694,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._path_components.AddDatas( path_components )
         
-        self._parameters.AddDatas( parameters.items() )
+        self._parameters.AddDatas( list(parameters.items()) )
         
         self._parameters.Sort()
         
@@ -5859,7 +5868,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         ( key, ( string_match, default ) ) = data
         
         pretty_key = key
-        pretty_string_match = string_match.ToUnicode()
+        pretty_string_match = string_match.ToString()
         
         if default is not None:
             
@@ -5879,7 +5888,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( string_match, default ) = row
         
-        s = string_match.ToUnicode()
+        s = string_match.ToString()
         
         if default is not None:
             
@@ -6182,7 +6191,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.StringConvertException as e:
                 
-                reason = HydrusData.ToUnicode( e )
+                reason = str( e )
                 
                 self._api_url.SetValue( 'Could not convert - ' + reason )
                 
@@ -6202,14 +6211,14 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except Exception as e:
                 
-                reason = HydrusData.ToUnicode( e )
+                reason = str( e )
                 
                 self._next_gallery_page_url.SetValue( 'Could not convert - ' + reason )
                 
             
         except HydrusExceptions.URLMatchException as e:
             
-            reason = HydrusData.ToUnicode( e )
+            reason = str( e )
             
             self._example_url_matches.SetLabelText( 'Example does not match - ' + reason )
             self._example_url_matches.SetForegroundColour( ( 128, 0, 0 ) )
@@ -6465,7 +6474,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.URLMatchException as e:
                 
-                text = HydrusData.ToUnicode( e )
+                text = str( e )
                 
             
         
@@ -6722,7 +6731,7 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._parser_list_ctrl.DeleteDatas( removees )
             
-            self._parser_list_ctrl.AddDatas( new_url_match_keys_to_parser_keys.items() )
+            self._parser_list_ctrl.AddDatas( list(new_url_match_keys_to_parser_keys.items()) )
             
             self._parser_list_ctrl.Sort()
             

@@ -1,33 +1,33 @@
-import ClientConstants as CC
-import ClientNetworking
-import ClientNetworkingBandwidth
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import ClientNetworkingJobs
-import ClientNetworkingLogin
-import ClientNetworkingSessions
-import ClientServices
+from . import ClientConstants as CC
+from . import ClientNetworking
+from . import ClientNetworkingBandwidth
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import ClientNetworkingJobs
+from . import ClientNetworkingLogin
+from . import ClientNetworkingSessions
+from . import ClientServices
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusNetworking
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusNetworking
 import os
-import TestConstants
+from . import TestConstants
 import threading
 import time
 import unittest
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 from httmock import all_requests, urlmatch, HTTMock, response
 from mock import patch
 
 # some gumpf
-GOOD_RESPONSE = ''.join( chr( i ) for i in range( 256 ) )
+GOOD_RESPONSE = bytes( range( 256 ) )
 
 # 256KB of gumpf
 LONG_GOOD_RESPONSE = GOOD_RESPONSE * 4 * 256
 
-BAD_RESPONSE = '500, it done broke'
+BAD_RESPONSE = b'500, it done broke'
 
 @all_requests
 def catch_all( url, request ):
@@ -492,7 +492,7 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 self.assertFalse( job.HasError() )
                 
-                self.assertEqual( job.GetContent(), GOOD_RESPONSE )
+                self.assertEqual( job.GetContentBytes(), GOOD_RESPONSE )
                 
                 self.assertEqual( job.GetStatus(), ( 'done!', 256, 256, None ) )
                 
@@ -511,7 +511,7 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 self.assertTrue( job.HasError() )
                 
-                self.assertEqual( job.GetContent(), BAD_RESPONSE )
+                self.assertEqual( job.GetContentBytes(), BAD_RESPONSE )
                 
                 self.assertEqual( type( job.GetErrorException() ), HydrusExceptions.ServerException )
                 
@@ -647,7 +647,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
                 
                 self.assertFalse( job.HasError() )
                 
-                self.assertEqual( job.GetContent(), GOOD_RESPONSE )
+                self.assertEqual( job.GetContentBytes(), GOOD_RESPONSE )
                 
                 self.assertEqual( job.GetStatus(), ( 'done!', 256, 256, None ) )
                 
@@ -666,7 +666,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
                 
                 self.assertTrue( job.HasError() )
                 
-                self.assertEqual( job.GetContent(), BAD_RESPONSE )
+                self.assertEqual( job.GetContentBytes(), BAD_RESPONSE )
                 
                 self.assertEqual( type( job.GetErrorException() ), HydrusExceptions.ServerException )
                 

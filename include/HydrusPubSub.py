@@ -1,11 +1,11 @@
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import Queue
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+import queue
 import threading
 import traceback
 import weakref
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 
 class HydrusPubSub( object ):
     

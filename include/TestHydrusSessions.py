@@ -1,14 +1,14 @@
-import ClientConstants as CC
+from . import ClientConstants as CC
 import collections
-import HydrusConstants as HC
-import HydrusExceptions
-import HydrusNetwork
-import HydrusSessions
+from . import HydrusConstants as HC
+from . import HydrusExceptions
+from . import HydrusNetwork
+from . import HydrusSessions
 import os
-import TestConstants
+from . import TestConstants
 import unittest
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 
 class TestSessions( unittest.TestCase ):
     

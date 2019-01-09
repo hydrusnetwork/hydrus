@@ -1,4 +1,4 @@
-import HydrusConstants as HC
+from . import HydrusConstants as HC
 import os
 import wx
 import wx.lib.newevent
@@ -14,7 +14,7 @@ ID_TIMER_UPDATES = wx.NewId()
 APPLICATION_COMMAND_TYPE_SIMPLE = 0
 APPLICATION_COMMAND_TYPE_CONTENT = 1
 
-BLANK_PHASH = '\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything else 0 means only significant part of dct was [0,0], which represents flat colour
+BLANK_PHASH = b'\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything else 0 means only significant part of dct was [0,0], which represents flat colour
 
 CAN_HIDE_MOUSE = True
 
@@ -587,26 +587,26 @@ class GlobalBMPs( object ):
         
         GlobalBMPs.first = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'first.png' ) )
         GlobalBMPs.previous = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )
-        GlobalBMPs.next = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'next.png' ) )
+        GlobalBMPs.next_bmp = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'next.png' ) )
         GlobalBMPs.last = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'last.png' ) )
         
 
-LOCAL_TAG_SERVICE_KEY = 'local tags'
+LOCAL_TAG_SERVICE_KEY = b'local tags'
 
-LOCAL_FILE_SERVICE_KEY = 'local files'
+LOCAL_FILE_SERVICE_KEY = b'local files'
 
-LOCAL_UPDATE_SERVICE_KEY = 'repository updates'
+LOCAL_UPDATE_SERVICE_KEY = b'repository updates'
 
-LOCAL_BOORU_SERVICE_KEY = 'local booru'
+LOCAL_BOORU_SERVICE_KEY = b'local booru'
 
-LOCAL_NOTES_SERVICE_KEY = 'local notes'
+LOCAL_NOTES_SERVICE_KEY = b'local notes'
 
-TRASH_SERVICE_KEY = 'trash'
+TRASH_SERVICE_KEY = b'trash'
 
-COMBINED_LOCAL_FILE_SERVICE_KEY = 'all local files'
+COMBINED_LOCAL_FILE_SERVICE_KEY = b'all local files'
 
-COMBINED_FILE_SERVICE_KEY = 'all known files'
+COMBINED_FILE_SERVICE_KEY = b'all known files'
 
-COMBINED_TAG_SERVICE_KEY = 'all known tags'
+COMBINED_TAG_SERVICE_KEY = b'all known tags'
 
-TEST_SERVICE_KEY = 'test service'
+TEST_SERVICE_KEY = b'test service'

@@ -1,9 +1,8 @@
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusText
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusText
 import os
-import shlex
 import socket
 import subprocess
 import threading
@@ -37,9 +36,11 @@ def GetExternalIP():
     
     if HydrusData.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
         
-        cmd = '"' + upnpc_path + '" -l'
+        cmd = [ upnpc_path, '-l' ]
         
-        p = subprocess.Popen( shlex.split( cmd ), stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+        sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        
+        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
         
         HydrusData.WaitForProcessToFinish( p, 30 )
         
@@ -47,7 +48,7 @@ def GetExternalIP():
         
         if error is not None and len( error ) > 0:
             
-            raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+            raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + str( error ) )
             
         else:
             
@@ -78,13 +79,17 @@ def GetExternalIP():
     
     return EXTERNAL_IP[ 'ip' ]
     
-def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
-
+def GetLocalIP():
+    
+    return socket.gethostbyname( socket.gethostname() )
+    
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     
-    cmd = '"' + upnpc_path + '" -e "' + description + '" -a ' + internal_client + ' ' + str( internal_port ) + ' ' + str( external_port ) + ' ' + protocol + ' ' + str( duration )
+    cmd = [ upnpc_path, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
-    p = subprocess.Popen( shlex.split( cmd ), stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -99,26 +104,28 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
         
         if 'UnknownError' in output:
             
-            raise HydrusExceptions.FirewallException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( output ) )
+            raise HydrusExceptions.FirewallException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + output )
             
         else:
             
-            raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( output ) )
+            raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + output )
             
         
     
     if error is not None and len( error ) > 0:
         
-        raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+        raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + error )
         
     
 def GetUPnPMappings():
     
     external_ip_address = GetExternalIP()
     
-    cmd = '"' + upnpc_path + '" -l'
+    cmd = [ upnpc_path, '-l' ]
     
-    p = subprocess.Popen( shlex.split( cmd ), stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -126,7 +133,7 @@ def GetUPnPMappings():
     
     if error is not None and len( error ) > 0:
         
-        raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+        raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + error )
         
     else:
         
@@ -184,19 +191,21 @@ def GetUPnPMappings():
             HydrusData.Print( 'Full response follows:' )
             HydrusData.Print( output )
             
-            raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( e ) )
+            raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + str( e ) )
             
         
     
 def RemoveUPnPMapping( external_port, protocol ):
     
-    cmd = '"' + upnpc_path + '" -d ' + str( external_port ) + ' ' + protocol
+    cmd = [ upnpc_path, '-d', str( external_port ), protocol ]
     
-    p = subprocess.Popen( shlex.split( cmd ), stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + error )
     

@@ -1,22 +1,22 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientImportSubscriptions
-import ClientNetworking
-import ClientNetworkingBandwidth
-import ClientNetworkingDomain
-import ClientNetworkingLogin
-import ClientNetworkingSessions
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientImportSubscriptions
+from . import ClientNetworking
+from . import ClientNetworkingBandwidth
+from . import ClientNetworkingDomain
+from . import ClientNetworkingLogin
+from . import ClientNetworkingSessions
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusNetworking
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusNetworking
 import os
-import TestConstants
+from . import TestConstants
 import threading
 import time
 import unittest
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 from httmock import all_requests, urlmatch, HTTMock, response
 from mock import patch
 

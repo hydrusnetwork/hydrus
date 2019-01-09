@@ -1,57 +1,56 @@
-import HydrusConstants as HC
-import ClientConstants as CC
-import ClientCaches
-import ClientData
-import ClientDragDrop
-import ClientExporting
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIDialogsManage
-import ClientGUIDialogsQuick
-import ClientGUIExport
-import ClientGUIFrames
-import ClientGUIImport
-import ClientGUILogin
-import ClientGUIManagement
-import ClientGUIMenus
-import ClientGUIPages
-import ClientGUIParsing
-import ClientGUIPopupMessages
-import ClientGUIPredicates
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsManagement
-import ClientGUIScrolledPanelsReview
-import ClientGUIShortcuts
-import ClientGUITags
-import ClientGUITopLevelWindows
-import ClientDownloading
-import ClientMedia
-import ClientNetworkingContexts
-import ClientNetworkingJobs
-import ClientParsing
-import ClientPaths
-import ClientRendering
-import ClientSearch
-import ClientServices
-import ClientThreading
+from . import HydrusConstants as HC
+from . import ClientConstants as CC
+from . import ClientCaches
+from . import ClientData
+from . import ClientDragDrop
+from . import ClientExporting
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsManage
+from . import ClientGUIDialogsQuick
+from . import ClientGUIExport
+from . import ClientGUIFrames
+from . import ClientGUIImport
+from . import ClientGUILogin
+from . import ClientGUIManagement
+from . import ClientGUIMenus
+from . import ClientGUIPages
+from . import ClientGUIParsing
+from . import ClientGUIPopupMessages
+from . import ClientGUIPredicates
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsManagement
+from . import ClientGUIScrolledPanelsReview
+from . import ClientGUIShortcuts
+from . import ClientGUITags
+from . import ClientGUITopLevelWindows
+from . import ClientDownloading
+from . import ClientMedia
+from . import ClientNetworkingContexts
+from . import ClientNetworkingJobs
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientRendering
+from . import ClientSearch
+from . import ClientServices
+from . import ClientThreading
 import collections
 import cv2
 import gc
 import hashlib
-import HydrusData
-import HydrusExceptions
-import HydrusPaths
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusNetworking
-import HydrusSerialisable
-import HydrusTagArchive
-import HydrusVideoHandling
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusPaths
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusNetworking
+from . import HydrusSerialisable
+from . import HydrusTagArchive
+from . import HydrusVideoHandling
 import os
 import PIL
 import re
-import shlex
 import sqlite3
 import ssl
 import subprocess
@@ -226,7 +225,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         l_string = locale.getlocale()[0]
         wxl_string = self._controller._app.locale.GetCanonicalName()
         
-        library_versions.append( ( 'locale strings', HydrusData.ToUnicode( ( l_string, wxl_string ) ) ) )
+        library_versions.append( ( 'locale strings', str( ( l_string, wxl_string ) ) ) )
         
         description = 'This client is the media management application of the hydrus software suite.'
         
@@ -234,7 +233,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         aboutinfo.SetDescription( description )
         
-        with open( HC.LICENSE_PATH, 'rb' ) as f: license = f.read()
+        with open( HC.LICENSE_PATH, 'r' ) as f:
+            
+            license = f.read()
+            
         
         aboutinfo.SetLicense( license )
         
@@ -250,7 +252,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                subject_account_key = dlg.GetValue().decode( 'hex' )
+                subject_account_key = bytes.fromhex( dlg.GetValue() )
                 
                 service = self._controller.services_manager.GetService( service_key )
                 
@@ -258,7 +260,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 account_info = response[ 'account_info' ]
                 
-                wx.MessageBox( HydrusData.ToUnicode( account_info ) )
+                wx.MessageBox( str( account_info ) )
                 
             
         
@@ -302,7 +304,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             host = 'hydrus.no-ip.org'
             port = 45871
-            access_key = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
+            access_key = bytes.fromhex( '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f' )
             
             credentials = HydrusNetwork.Credentials( host, port, access_key )
             
@@ -316,7 +318,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             host = 'hydrus.no-ip.org'
             port = 45872
-            access_key = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
+            access_key = bytes.fromhex( '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5' )
             
             credentials = HydrusNetwork.Credentials( host, port, access_key )
             
@@ -354,19 +356,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             host = '127.0.0.1'
             port = HC.DEFAULT_SERVER_ADMIN_PORT
             
-            try:
-                
-                connection = HydrusNetworking.GetLocalConnection( port )
-                connection.close()
-                
-                already_running = True
-                
-            except:
-                
-                already_running = False
-                
-            
-            if already_running:
+            if HydrusNetworking.LocalPortInUse( port ):
                 
                 HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
                 
@@ -376,7 +366,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 try:
                     
-                    HydrusData.ShowText( u'Starting server\u2026' )
+                    HydrusData.ShowText( 'Starting server\u2026' )
                     
                     db_param = '-d="' + self._controller.GetDBDir() + '"'
                     
@@ -391,7 +381,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if os.path.exists( server_frozen_path ):
                         
-                        cmd = '"' + server_frozen_path + '" ' + db_param
+                        cmd = [ server_frozen_path, db_param ]
                         
                     else:
                         
@@ -409,33 +399,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                         server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
                         
-                        cmd = '"' + python_executable + '" "' + server_script_path + '" ' + db_param
+                        cmd = [ python_executable, server_script_path, db_param ]
                         
                     
-                    subprocess.Popen( shlex.split( cmd ) )
+                    sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
+                    
+                    subprocess.Popen( cmd, **sbp_kwargs )
                     
                     time_waited = 0
                     
-                    while True:
+                    while not HydrusNetworking.LocalPortInUse( port ):
                         
                         time.sleep( 3 )
                         
                         time_waited += 3
                         
-                        try:
+                        if time_waited > 30:
                             
-                            connection = HydrusNetworking.GetLocalConnection( port )
-                            
-                            connection.close()
-                            
-                            break
-                            
-                        except:
-                            
-                            if time_waited > 30:
-                                
-                                raise
-                                
+                            raise Exception( 'The server\'s port did not appear!' )
                             
                         
                     
@@ -449,7 +430,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             time.sleep( 5 )
             
-            HydrusData.ShowText( u'Creating admin service\u2026' )
+            HydrusData.ShowText( 'Creating admin service\u2026' )
             
             admin_service_key = HydrusData.GenerateKey()
             service_type = HC.SERVER_ADMIN
@@ -473,7 +454,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             time.sleep( 1 )
             
-            response = admin_service.Request( HC.GET, 'access_key', { 'registration_key' : 'init' } )
+            response = admin_service.Request( HC.GET, 'access_key', { 'registration_key' : b'init' } )
             
             access_key = response[ 'access_key' ]
             
@@ -491,7 +472,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             time.sleep( 5 )
             
-            HydrusData.ShowText( u'Creating tag and file services\u2026' )
+            HydrusData.ShowText( 'Creating tag and file services\u2026' )
             
             response = admin_service.Request( HC.GET, 'services' )
             
@@ -682,7 +663,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                             if dlg_3.ShowModal() == wx.ID_OK:
                                 
-                                move_location = HydrusData.ToUnicode( dlg_3.GetPath() )
+                                move_location = dlg_3.GetPath()
                                 
                             else:
                                 
@@ -819,7 +800,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                             if dlg_3.ShowModal() == wx.ID_OK:
                                 
-                                path = HydrusData.ToUnicode( dlg_3.GetPath() )
+                                path = dlg_3.GetPath()
                                 
                                 self._controller.CallToThread( client_files_manager.ClearOrphans, path )
                                 
@@ -873,9 +854,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 return
                 
             
-            content = network_job.GetContent()
+            content = network_job.GetContentBytes()
             
-            text = 'Request complete. Length of response is ' + HydrusData.ConvertIntToBytes( len( content ) ) + '.'
+            text = 'Request complete. Length of response is ' + HydrusData.ToHumanBytes( len( content ) ) + '.'
             
             yes_tuples = []
             
@@ -894,7 +875,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                             if f_dlg.ShowModal() == wx.ID_OK:
                                 
-                                path = HydrusData.ToUnicode( f_dlg.GetPath() )
+                                path = f_dlg.GetPath()
                                 
                                 with open( path, 'wb' ) as f:
                                     
@@ -905,7 +886,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                     elif value == 'clipboard':
                         
-                        self._controller.pub( 'clipboard', 'text', content )
+                        text = network_job.GetContentText()
+                        
+                        self._controller.pub( 'clipboard', 'text', text )
                         
                     
                 
@@ -913,7 +896,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def thread_wait( url ):
             
-            import ClientNetworkingJobs
+            from . import ClientNetworkingJobs
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
@@ -927,9 +910,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             self._controller.network_engine.AddJob( network_job )
             
-            network_job.WaitUntilDone()
-            
-            job_key.Delete( seconds = 3 )
+            try:
+                
+                network_job.WaitUntilDone()
+                
+            finally:
+                
+                job_key.Delete( seconds = 3 )
+                
             
             wx.CallAfter( wx_code, network_job )
             
@@ -1009,10 +997,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_title', u'\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
+        job_key.SetVariable( 'popup_title', '\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
         
-        job_key.SetVariable( 'popup_text_1', u'\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
-        job_key.SetVariable( 'popup_text_2', u'p\u0250\u05df \u028d\u01dd\u028d' )
+        job_key.SetVariable( 'popup_text_1', '\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
+        job_key.SetVariable( 'popup_text_2', 'p\u0250\u05df \u028d\u01dd\u028d' )
         
         self._controller.pub( 'message', job_key )
         
@@ -1049,7 +1037,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         HydrusData.ShowText( 'Printing garbage to log' )
         
-        HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+        HydrusData.Print( 'uncollectable garbage: ' + str( gc.garbage ) )
         
         old_debug = gc.get_debug()
         
@@ -1057,7 +1045,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         gc.collect()
         
-        HydrusData.Print( 'all garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+        HydrusData.Print( 'all garbage: ' + str( gc.garbage ) )
         
         del gc.garbage[:]
         
@@ -1073,24 +1061,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             count[ type( o ) ] += 1
             
-            if isinstance( o, types.InstanceType ): class_count[ o.__class__.__name__ ] += 1
-            elif isinstance( o, types.BuiltinFunctionType ): class_count[ o.__name__ ] += 1
-            elif isinstance( o, types.BuiltinMethodType ): class_count[ o.__name__ ] += 1
-            
         
         HydrusData.Print( 'gc types:' )
         
-        for ( k, v ) in count.items():
-            
-            if v > 100:
-                
-                HydrusData.Print( ( k, v ) )
-                
-            
+        to_print = list( count.items() )
         
-        HydrusData.Print( 'gc classes:' )
+        to_print.sort( key = lambda pair: -pair[1] )
         
-        for ( k, v ) in class_count.items():
+        for ( k, v ) in list( count.items() ):
             
             if v > 100:
                 
@@ -1199,7 +1177,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                hash = dlg.GetValue().decode( 'hex' )
+                hash = bytes.fromhex( dlg.GetValue() )
                 
                 service = self._controller.services_manager.GetService( service_key )
                 
@@ -1211,7 +1189,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 gmt_time = HydrusData.ConvertTimestampToPrettyTime( timestamp, in_gmt = True )
                 local_time = HydrusData.ConvertTimestampToPrettyTime( timestamp )
                 
-                text = 'File Hash: ' + hash.encode( 'hex' )
+                text = 'File Hash: ' + hash.hex()
                 text += os.linesep
                 text += 'Uploader\'s IP: ' + ip
                 text += 'Upload Time (GMT): ' + gmt_time
@@ -1712,7 +1690,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             total_num_pending = 0
             
-            for ( service_key, info ) in nums_pending.items():
+            for ( service_key, info ) in list(nums_pending.items()):
                 
                 service = self._controller.services_manager.GetService( service_key )
                 
@@ -2183,7 +2161,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             update_paths = [ os.path.join( external_update_dir, filename ) for filename in filenames ]
             
-            update_paths = filter( os.path.isfile, update_paths )
+            update_paths = list(filter( os.path.isfile, update_paths ))
             
             num_to_do = len( update_paths )
             
@@ -2216,14 +2194,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                         with open( update_path, 'rb' ) as f:
                             
-                            update_network_string = f.read()
+                            update_network_bytes = f.read()
                             
                         
-                        update_network_string_hash = hashlib.sha256( update_network_string ).digest()
+                        update_network_string_hash = hashlib.sha256( update_network_bytes ).digest()
                         
                         try:
                             
-                            update = HydrusSerialisable.CreateFromNetworkString( update_network_string )
+                            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
                             
                         except:
                             
@@ -2251,7 +2229,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             continue
                             
                         
-                        self._controller.WriteSynchronous( 'import_update', update_network_string, update_network_string_hash, mime )
+                        self._controller.WriteSynchronous( 'import_update', update_network_bytes, update_network_string_hash, mime )
                         
                     finally:
                         
@@ -2285,7 +2263,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 self._controller.CallToThread( do_it, path )
                 
@@ -3055,7 +3033,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 try:
                     
-                    account_key = dlg.GetValue().decode( 'hex' )
+                    account_key = bytes.fromhex( dlg.GetValue() )
                     
                 except:
                     
@@ -3393,7 +3371,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 if path == '':
                     
@@ -3823,9 +3801,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             path = client_files_manager.GetFilePath( hash, mime )
                             
-                            with open( path, 'rb' ) as f: file = f.read()
+                            with open( path, 'rb' ) as f:
+                                
+                                file_bytes = f.read()
+                                
                             
-                            service.Request( HC.POST, 'file', { 'file' : file } )
+                            service.Request( HC.POST, 'file', { 'file' : file_bytes } )
                             
                             file_info_manager = media_result.GetFileInfoManager()
                             
@@ -3885,11 +3866,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         except Exception as e:
             
-            r = re.search( '[a-fA-F0-9]{64}', HydrusData.ToUnicode( e ), flags = re.UNICODE )
+            r = re.search( '[a-fA-F0-9]{64}', str( e ) )
             
             if r is not None:
                 
-                possible_hash = r.group().decode( 'hex' )
+                possible_hash = bytes.fromhex( r.group() )
                 
                 HydrusData.ShowText( 'Found a possible hash in that error message--trying to show it in a new page.' )
                 
@@ -3904,7 +3885,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', u'upload done!' )
+        job_key.SetVariable( 'popup_text_1', 'upload done!' )
         
         HydrusData.Print( job_key.ToString() )
         
@@ -4325,8 +4306,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         # if using existing, then load the panel without file import options
         # think about how to merge 'delete_after_success' or not--maybe this can be handled by file_seeds as well
         
-        paths = [ HydrusData.ToUnicode( path ) for path in paths ]
-        
         self._ImportFiles( paths )
         
     
@@ -4745,13 +4724,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_since_boot )
         
-        bandwidth_status = HydrusData.ConvertIntToBytes( usage_since_boot )
+        bandwidth_status = HydrusData.ToHumanBytes( usage_since_boot )
         
         current_usage = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         
         if current_usage > 0:
             
-            bandwidth_status += ' (' + HydrusData.ConvertIntToBytes( current_usage ) + '/s)'
+            bandwidth_status += ' (' + HydrusData.ToHumanBytes( current_usage ) + '/s)'
             
         
         self._statusbar.SetStatusText( bandwidth_status, 1 )
@@ -5001,7 +4980,7 @@ class FrameSplash( wx.Frame ):
         
         #
         
-        x = ( self.WIDTH - 124 ) / 2
+        x = ( self.WIDTH - 124 ) // 2
         y = 15
         
         dc.DrawBitmap( self._hydrus, x, y )
@@ -5014,9 +4993,9 @@ class FrameSplash( wx.Frame ):
         
         ( width, height ) = dc.GetTextExtent( title_text )
         
-        text_gap = ( self.HEIGHT - y - height * 3 ) / 4
+        text_gap = ( self.HEIGHT - y - height * 3 ) // 4
         
-        x = ( self.WIDTH - width ) / 2
+        x = ( self.WIDTH - width ) // 2
         y += text_gap
         
         dc.DrawText( title_text, x, y )
@@ -5027,7 +5006,7 @@ class FrameSplash( wx.Frame ):
         
         ( width, height ) = dc.GetTextExtent( status_text )
         
-        x = ( self.WIDTH - width ) / 2
+        x = ( self.WIDTH - width ) // 2
         
         dc.DrawText( status_text, x, y )
         
@@ -5037,7 +5016,7 @@ class FrameSplash( wx.Frame ):
         
         ( width, height ) = dc.GetTextExtent( status_subtext )
         
-        x = ( self.WIDTH - width ) / 2
+        x = ( self.WIDTH - width ) // 2
         
         dc.DrawText( status_subtext, x, y )
         

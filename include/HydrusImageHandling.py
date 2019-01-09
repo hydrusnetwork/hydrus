@@ -1,7 +1,6 @@
-import cStringIO
-import HydrusConstants as HC
-import HydrusExceptions
-import HydrusThreading
+from . import HydrusConstants as HC
+from . import HydrusExceptions
+from . import HydrusThreading
 import os
 from PIL import _imaging
 from PIL import ImageFile as PILImageFile
@@ -11,9 +10,9 @@ import struct
 import threading
 import time
 import traceback
-import HydrusData
-import HydrusGlobals as HG
-import HydrusPaths
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusPaths
 import warnings
 
 if hasattr( PILImageFile, 'LOAD_TRUNCATED_IMAGES' ):
@@ -44,7 +43,7 @@ def ConvertToPngIfBmp( path ):
         header = f.read( 2 )
         
     
-    if header == 'BM':
+    if header == b'BM':
         
         ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
@@ -72,7 +71,7 @@ def Dequantize( pil_image ):
     
     if pil_image.mode not in ( 'RGBA', 'RGB' ):
         
-        if pil_image.mode == 'LA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
+        if pil_image.mode == 'LA' or ( pil_image.mode == 'P' and 'transparency' in pil_image.info ):
             
             pil_image = pil_image.convert( 'RGBA' )
             
@@ -84,8 +83,9 @@ def Dequantize( pil_image ):
     
     return pil_image
     
-def EfficientlyResizePILImage( pil_image, ( target_x, target_y ) ):
+def EfficientlyResizePILImage( pil_image, target_resolution ):
     
+    ( target_x, target_y ) = target_resolution
     ( im_x, im_y ) = pil_image.size
     
     if target_x >= im_x and target_y >= im_y: return pil_image
@@ -97,8 +97,9 @@ def EfficientlyResizePILImage( pil_image, ( target_x, target_y ) ):
     
     return pil_image.resize( ( target_x, target_y ), PILImage.ANTIALIAS )
     
-def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
+def EfficientlyThumbnailPILImage( pil_image, target_resolution ):
     
+    ( target_x, target_y ) = target_resolution
     ( im_x, im_y ) = pil_image.size
     
     #if pil_image.mode == 'RGB': # low quality resize screws up alpha channel!
@@ -219,7 +220,7 @@ def GeneratePILImageFromNumpyImage( numpy_image ):
         format = 'RGBA'
         
     
-    pil_image = PILImage.frombytes( format, ( w, h ), numpy_image.data )
+    pil_image = PILImage.frombytes( format, ( w, h ), numpy_image.data.tobytes() )
     
     return pil_image
     
@@ -238,7 +239,7 @@ def GetGIFFrameDurations( path ):
         
         if 'duration' not in pil_image.info:
             
-            duration = 83 # Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+            duration = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
             
         else:
             
@@ -247,7 +248,7 @@ def GetGIFFrameDurations( path ):
             # In the gif frame header, 10 is stored as 1ms. This 1 is commonly as utterly wrong as 0.
             if duration in ( 0, 10 ):
                 
-                duration = 80
+                duration = 83
                 
             
         
@@ -313,18 +314,15 @@ def GetResolutionAndNumFrames( path, mime ):
     
     return ( ( x, y ), num_frames )
     
-def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
+def GetThumbnailResolution( image_resolution, target_resolution ):
+    
+    ( im_x, im_y ) = image_resolution
+    ( target_x, target_y ) = target_resolution
     
     if target_x >= im_x and target_y >= im_y:
         
         return ( im_x, im_y )
         
-    
-    im_x = float( im_x )
-    im_y = float( im_y )
-    
-    target_x = float( target_x )
-    target_y = float( target_y )
     
     x_ratio = im_x / target_x
     y_ratio = im_y / target_y

@@ -1,21 +1,21 @@
-import ClientConstants as CC
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListCtrl
-import ClientGUIMenus
-import ClientGUISerialisable
-import ClientGUIScrolledPanels
-import ClientGUITopLevelWindows
-import ClientImportGallerySeeds
-import ClientPaths
-import ClientSerialisable
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusText
+from . import ClientConstants as CC
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListCtrl
+from . import ClientGUIMenus
+from . import ClientGUISerialisable
+from . import ClientGUIScrolledPanels
+from . import ClientGUITopLevelWindows
+from . import ClientImportGallerySeeds
+from . import ClientPaths
+from . import ClientSerialisable
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusText
 import os
 import wx
 
@@ -328,8 +328,6 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
     def _GetURLsFromURLsString( self, urls_string ):
         
-        urls_string = HydrusData.ToUnicode( urls_string )
-        
         urls = HydrusText.DeserialiseNewlinedTexts( urls_string )
         
         return urls
@@ -359,7 +357,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 payload = ClientSerialisable.LoadFromPng( path )
                 
@@ -387,7 +385,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         urls_to_add = urls
         
-        if len( filtered_urls ) < urls:
+        if len( filtered_urls ) < len( urls ):
             
             num_urls = len( urls )
             num_removed = num_urls - len( filtered_urls )

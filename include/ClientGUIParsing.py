@@ -1,32 +1,32 @@
 import bs4
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIMenus
-import ClientGUIControls
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUISerialisable
-import ClientGUITopLevelWindows
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import ClientNetworkingJobs
-import ClientParsing
-import ClientPaths
-import ClientSerialisable
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
-import HydrusText
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIMenus
+from . import ClientGUIControls
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUISerialisable
+from . import ClientGUITopLevelWindows
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import ClientNetworkingJobs
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientSerialisable
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusText
 import itertools
 import json
 import os
@@ -58,7 +58,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         columns = [ ( 'name', -1 ), ( 'type', 40 ) ]
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'dowloader_export', 14, 36, columns, self._ConvertContentToListCtrlTuples, use_simple_delete = True )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'downloader_export', 14, 36, columns, self._ConvertContentToListCtrlTuples, use_simple_delete = True )
         
         self._listctrl.Sort( 1 )
         
@@ -537,11 +537,11 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._edit_formula = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
         
-        self._move_formula_up = ClientGUICommon.BetterButton( edit_panel, u'\u2191', self.MoveUp )
+        self._move_formula_up = ClientGUICommon.BetterButton( edit_panel, '\u2191', self.MoveUp )
         
         self._delete_formula = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
         
-        self._move_formula_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
+        self._move_formula_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
         
         self._sub_phrase = wx.TextCtrl( edit_panel )
         
@@ -1225,11 +1225,11 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._edit_rule = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
         
-        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, u'\u2191', self.MoveUp )
+        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, '\u2191', self.MoveUp )
         
         self._delete_rule = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
         
-        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
+        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
         
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
@@ -1586,11 +1586,11 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._edit_rule = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
         
-        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, u'\u2191', self.MoveUp )
+        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, '\u2191', self.MoveUp )
         
         self._delete_rule = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
         
-        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
+        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
         
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
@@ -2777,16 +2777,9 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             raise
             
         
-        example_data = network_job.GetContent()
+        example_text = network_job.GetContentText()
         
-        try:
-            
-            self._example_data.SetValue( example_data )
-            
-        except UnicodeDecodeError:
-            
-            self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
-            
+        self._example_data.SetValue( example_text )
         
     
     def EventTestParse( self, event ):
@@ -2925,7 +2918,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_urls_panel = ClientGUICommon.StaticBox( main_panel, 'example urls' )
         
-        self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, HydrusData.ToUnicode, self._AddExampleURL, self._EditExampleURL )
+        self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, str, self._AddExampleURL, self._EditExampleURL )
         
         #
         
@@ -3250,7 +3243,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 network_job.WaitUntilDone()
                 
-                example_data = network_job.GetContent()
+                example_data = network_job.GetContentText()
                 
             except HydrusExceptions.CancelledException:
                 
@@ -3258,7 +3251,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except Exception as e:
                 
-                example_data = 'fetch failed:' + os.linesep * 2 + HydrusData.ToUnicode( e )
+                example_data = 'fetch failed:' + os.linesep * 2 + str( e )
                 
                 HydrusData.ShowException( e )
                 
@@ -3647,7 +3640,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
         else:
             
-            file_identifier = test_arg.decode( 'hex' )
+            file_identifier = bytes.fromhex( test_arg )
             
         
         try:
@@ -3658,15 +3651,15 @@ And pass that html to a number of 'parsing children' that will each look through
             
             self._test_script_management.SetJobKey( job_key )
             
-            example_data = script.FetchData( job_key, file_identifier )
+            parsing_text = script.FetchParsingText( job_key, file_identifier )
             
             try:
                 
-                self._example_data.SetValue( example_data )
+                self._example_data.SetValue( parsing_text )
                 
             except UnicodeDecodeError:
                 
-                self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
+                self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ToHumanBytes( len( parsing_text ) ) + ', did not appear to be displayable text.' )
                 
             
         except Exception as e:
@@ -3675,7 +3668,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             message = 'Could not fetch data!'
             message += os.linesep * 2
-            message += HydrusData.ToUnicode( e )
+            message += str( e )
             
             wx.MessageBox( message )
             
@@ -4062,7 +4055,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 try:
                     
@@ -4070,14 +4063,14 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( HydrusData.ToUnicode( e ) )
+                    wx.MessageBox( str( e ) )
                     
                     return
                     
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
                     
                     self._ImportObject( obj )
                     
@@ -4103,7 +4096,7 @@ class ScriptManagementControl( wx.Panel ):
         
         main_panel = ClientGUICommon.StaticBox( self, 'script control' )
         
-        self._status = wx.StaticText( main_panel )
+        self._status = ClientGUICommon.BetterStaticText( main_panel )
         self._gauge = ClientGUICommon.Gauge( main_panel )
         
         self._link_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.link )
@@ -4164,10 +4157,7 @@ class ScriptManagementControl( wx.Panel ):
                 status = ''
                 
             
-            if status != self._status.GetLabelText():
-                
-                self._status.SetLabelText( status )
-                
+            self._status.SetLabelText( status )
             
             if self._job_key.HasVariable( 'script_gauge' ):
                 
@@ -4389,7 +4379,7 @@ class TestPanel( wx.Panel ):
                 
                 network_job.WaitUntilDone()
                 
-                example_data = network_job.GetContent()
+                example_data = network_job.GetContentText()
                 
             except HydrusExceptions.CancelledException:
                 
@@ -4397,7 +4387,7 @@ class TestPanel( wx.Panel ):
                 
             except Exception as e:
                 
-                example_data = 'fetch failed:' + os.linesep * 2 + HydrusData.ToUnicode( e )
+                example_data = 'fetch failed:' + os.linesep * 2 + str( e )
                 
                 HydrusData.ShowException( e )
                 
@@ -4445,11 +4435,11 @@ class TestPanel( wx.Panel ):
                 parse_phrase = 'looks like JSON'
                 
             
-            description = HydrusData.ConvertIntToBytes( len( example_data ) ) + ' total, ' + parse_phrase
+            description = HydrusData.ToHumanBytes( len( example_data ) ) + ' total, ' + parse_phrase
             
             if len( example_data ) > 1024:
                 
-                preview = 'PREVIEW:' + os.linesep + HydrusData.ToUnicode( example_data[:1024] )
+                preview = 'PREVIEW:' + os.linesep + str( example_data[:1024] )
                 
             else:
                 
@@ -4498,13 +4488,11 @@ class TestPanel( wx.Panel ):
             
             etype = type( e )
             
-            value = HydrusData.ToUnicode( e )
-            
             ( etype, value, tb ) = sys.exc_info()
             
             trace = ''.join( traceback.format_exception( etype, value, tb ) )
             
-            message = 'Exception:' + os.linesep + HydrusData.ToUnicode( etype.__name__ ) + ': ' + HydrusData.ToUnicode( value ) + os.linesep + HydrusData.ToUnicode( trace )
+            message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
             
             self._results.SetValue( message )
             
@@ -4577,11 +4565,11 @@ class TestPanelPageParser( TestPanel ):
             
             try:
                 
-                post_conversion_example_data = pre_parsing_conversion.Convert( self._example_data_raw )
+                post_conversion_example_data = ClientParsing.MakeParsedTextPretty( pre_parsing_conversion.Convert( self._example_data_raw ) )
                 
                 if len( post_conversion_example_data ) > 1024:
                     
-                    preview = 'PREVIEW:' + os.linesep + HydrusData.ToUnicode( post_conversion_example_data[:1024] )
+                    preview = 'PREVIEW:' + os.linesep + str( post_conversion_example_data[:1024] )
                     
                 else:
                     
@@ -4602,7 +4590,7 @@ class TestPanelPageParser( TestPanel ):
                     parse_phrase = 'looks like JSON'
                     
                 
-                description = HydrusData.ConvertIntToBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase
+                description = HydrusData.ToHumanBytes( len( post_conversion_example_data ) ) + ' total, ' + parse_phrase
                 
             except Exception as e:
                 
@@ -4610,13 +4598,11 @@ class TestPanelPageParser( TestPanel ):
                 
                 etype = type( e )
                 
-                value = HydrusData.ToUnicode( e )
-                
                 ( etype, value, tb ) = sys.exc_info()
                 
                 trace = ''.join( traceback.format_exception( etype, value, tb ) )
                 
-                message = 'Exception:' + os.linesep + HydrusData.ToUnicode( etype.__name__ ) + ': ' + HydrusData.ToUnicode( value ) + os.linesep + HydrusData.ToUnicode( trace )
+                message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
                 
                 preview = message
                 
@@ -4721,7 +4707,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 
                 if len( preview ) > 1024:
                     
-                    preview = 'PREVIEW:' + os.linesep + HydrusData.ToUnicode( preview[:1024] )
+                    preview = 'PREVIEW:' + os.linesep + str( preview[:1024] )
                     
                 
                 description = HydrusData.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
@@ -4732,13 +4718,11 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 
                 etype = type( e )
                 
-                value = HydrusData.ToUnicode( e )
-                
                 ( etype, value, tb ) = sys.exc_info()
                 
                 trace = ''.join( traceback.format_exception( etype, value, tb ) )
                 
-                message = 'Exception:' + os.linesep + HydrusData.ToUnicode( etype.__name__ ) + ': ' + HydrusData.ToUnicode( value ) + os.linesep + HydrusData.ToUnicode( trace )
+                message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
                 
                 preview = message
                 
@@ -4809,13 +4793,11 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
             
             etype = type( e )
             
-            value = HydrusData.ToUnicode( e )
-            
             ( etype, value, tb ) = sys.exc_info()
             
             trace = ''.join( traceback.format_exception( etype, value, tb ) )
             
-            message = 'Exception:' + os.linesep + HydrusData.ToUnicode( etype.__name__ ) + ': ' + HydrusData.ToUnicode( value ) + os.linesep + HydrusData.ToUnicode( trace )
+            message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
             
             self._results.SetValue( message )
             

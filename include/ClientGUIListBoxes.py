@@ -1,20 +1,20 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIMenus
-import ClientGUIShortcuts
-import ClientGUITopLevelWindows
-import ClientSearch
-import ClientSerialisable
-import ClientTags
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIMenus
+from . import ClientGUIShortcuts
+from . import ClientGUITopLevelWindows
+from . import ClientSearch
+from . import ClientSerialisable
+from . import ClientTags
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
 import os
 import wx
 
@@ -110,8 +110,8 @@ class AddEditDeleteListBox( wx.Panel ):
         
         choice_tuples = [ ( self._data_to_pretty_callable( default ), default, selected ) for default in defaults ]
         
-        import ClientGUITopLevelWindows
-        import ClientGUIScrolledPanelsEdit
+        from . import ClientGUITopLevelWindows
+        from . import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
             
@@ -142,7 +142,7 @@ class AddEditDeleteListBox( wx.Panel ):
         
         indices.sort( reverse = True )
         
-        import ClientGUIDialogs
+        from . import ClientGUIDialogs
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg_yn:
             
@@ -220,8 +220,8 @@ class AddEditDeleteListBox( wx.Panel ):
         
         if export_object is not None:
             
-            import ClientGUITopLevelWindows
-            import ClientGUISerialisable
+            from . import ClientGUITopLevelWindows
+            from . import ClientGUISerialisable
             
             with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
                 
@@ -250,8 +250,8 @@ class AddEditDeleteListBox( wx.Panel ):
             return
             
         
-        import ClientGUITopLevelWindows
-        import ClientGUISerialisable
+        from . import ClientGUITopLevelWindows
+        from . import ClientGUISerialisable
         
         with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
@@ -311,22 +311,20 @@ class AddEditDeleteListBox( wx.Panel ):
                 
                 for path in dlg.GetPaths():
                     
-                    path = HydrusData.ToUnicode( path )
-                    
                     try:
                         
                         payload = ClientSerialisable.LoadFromPng( path )
                         
                     except Exception as e:
                         
-                        wx.MessageBox( HydrusData.ToUnicode( e ) )
+                        wx.MessageBox( str( e ) )
                         
                         return
                         
                     
                     try:
                         
-                        obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
                         
                         self._ImportObject( obj )
                         
@@ -539,11 +537,11 @@ class QueueListBox( wx.Panel ):
         
         self._listbox = wx.ListBox( self, style = wx.LB_EXTENDED )
         
-        self._up_button = ClientGUICommon.BetterButton( self, u'\u2191', self._Up )
+        self._up_button = ClientGUICommon.BetterButton( self, '\u2191', self._Up )
         
         self._delete_button = ClientGUICommon.BetterButton( self, 'X', self._Delete )
         
-        self._down_button = ClientGUICommon.BetterButton( self, u'\u2193', self._Down )
+        self._down_button = ClientGUICommon.BetterButton( self, '\u2193', self._Down )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
@@ -627,7 +625,7 @@ class QueueListBox( wx.Panel ):
         
         indices.sort( reverse = True )
         
-        import ClientGUIDialogs
+        from . import ClientGUIDialogs
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg_yn:
             
@@ -939,7 +937,7 @@ class ListBox( wx.ScrolledWindow ):
         
         y = mouse_event.GetY() + y_offset
         
-        row_index = ( y / self._text_y )
+        row_index = y // self._text_y
         
         if row_index >= len( self._ordered_terms ):
             
@@ -1054,7 +1052,7 @@ class ListBox( wx.ScrolledWindow ):
                     lower = min( hit_index, self._last_hit_index )
                     upper = max( hit_index, self._last_hit_index )
                     
-                    to_select = range( lower, upper + 1 )
+                    to_select = list( range( lower, upper + 1) )
                     
                 else:
                     
@@ -1121,7 +1119,7 @@ class ListBox( wx.ScrolledWindow ):
             
             if y < start_y * y_unit:
                 
-                y_to_scroll_to = y / y_unit
+                y_to_scroll_to = y // y_unit
                 
                 #self.Scroll( -1, y_to_scroll_to )
                 
@@ -1129,7 +1127,7 @@ class ListBox( wx.ScrolledWindow ):
                 
             elif y > ( start_y * y_unit ) + height - self._text_y:
                 
-                y_to_scroll_to = ( y - height ) / y_unit
+                y_to_scroll_to = ( y - height ) // y_unit
                 
                 #self.Scroll( -1, y_to_scroll_to + 2 )
                 
@@ -1166,9 +1164,9 @@ class ListBox( wx.ScrolledWindow ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        first_visible_index = y_offset / self._text_y
+        first_visible_index = y_offset // self._text_y
         
-        last_visible_index = ( y_offset + my_height ) / self._text_y
+        last_visible_index = ( y_offset + my_height ) // self._text_y
         
         if ( y_offset + my_height ) % self._text_y != 0:
             
@@ -1414,7 +1412,7 @@ class ListBox( wx.ScrolledWindow ):
         
         ( my_x, my_y ) = self.GetClientSize()
         
-        self._num_rows_per_page = my_y / self._text_y
+        self._num_rows_per_page = my_y // self._text_y
         
         self._SetVirtualSize()
         
@@ -1533,7 +1531,7 @@ class ListBoxTags( ListBox ):
         
         if len( predicates ) > 0:
             
-            s = [ predicate.GetUnicode() for predicate in predicates ]
+            s = [ predicate.ToString() for predicate in predicates ]
             
             s.sort()
             
@@ -1563,7 +1561,7 @@ class ListBoxTags( ListBox ):
         
         for predicate in predicates:
             
-            page_name = predicate.GetUnicode()
+            page_name = predicate.ToString()
             
             HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = ( predicate, ), page_name = page_name )
             
@@ -1579,11 +1577,11 @@ class ListBoxTags( ListBox ):
                 
                 if isinstance( term, ClientSearch.Predicate ):
                     
-                    text = term.GetUnicode( with_count = False )
+                    text = term.ToString( with_count = False )
                     
                 else:
                     
-                    text = HydrusData.ToUnicode( term )
+                    text = str( term )
                     
                 
                 if command == 'copy_sub_terms':
@@ -1617,7 +1615,7 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuTagEvent( self, command ):
         
-        import ClientGUITags
+        from . import ClientGUITags
         
         if command == 'censorship':
             
@@ -1696,12 +1694,12 @@ class ListBoxTags( ListBox ):
                             
                         else:
                             
-                            selection_string = '"' + term.GetUnicode( with_count = False ) + '"'
+                            selection_string = '"' + term.ToString( with_count = False ) + '"'
                             
                         
                     else:
                         
-                        selection_string = '"' + HydrusData.ToUnicode( term ) + '"'
+                        selection_string = '"' + str( term ) + '"'
                         
                     
                 else:
@@ -1788,7 +1786,7 @@ class ListBoxTags( ListBox ):
                 
                 term_types = [ type( term ) for term in self._selected_terms ]
                 
-                if str in term_types or unicode in term_types:
+                if str in term_types or str in term_types:
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
@@ -1870,7 +1868,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
-        return [ term.GetUnicode( with_counts ) for term in self._terms ]
+        return [ term.ToString( with_counts ) for term in self._terms ]
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -1910,14 +1908,14 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         predicate = term
         
-        return predicate.GetUnicode( with_counts = False )
+        return predicate.ToString( with_counts = False )
         
     
     def _GetTextFromTerm( self, term ):
         
         predicate = term
         
-        return predicate.GetUnicode()
+        return predicate.ToString()
         
     
     def _HasPredicate( self, predicate ):
@@ -2057,7 +2055,7 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
         
         predicate = term
         
-        return predicate.GetUnicode( render_for_user = True )
+        return predicate.ToString( render_for_user = True )
         
     
     def _ProcessMenuPredicateEvent( self, command ):
@@ -2190,7 +2188,7 @@ class ListBoxTagsACRead( ListBoxTagsAC ):
         
         predicate = term
         
-        return predicate.GetUnicode( render_for_user = True )
+        return predicate.ToString( render_for_user = True )
         
     
 class ListBoxTagsACWrite( ListBoxTagsAC ):
@@ -2199,7 +2197,7 @@ class ListBoxTagsACWrite( ListBoxTagsAC ):
         
         predicate = term
         
-        return predicate.GetUnicode( sibling_service_key = self._service_key )
+        return predicate.ToString( sibling_service_key = self._service_key )
         
     
 class ListBoxTagsCensorship( ListBoxTags ):
@@ -2320,7 +2318,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         ListBoxTags.__init__( self, parent )
         
-        for ( namespace, colour ) in initial_namespace_colours.items():
+        for ( namespace, colour ) in list(initial_namespace_colours.items()):
             
             colour = tuple( colour ) # tuple to convert from list, for oooold users who have list colours
             
@@ -2338,7 +2336,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         if len( namespaces ) > 0:
             
-            import ClientGUIDialogs
+            from . import ClientGUIDialogs
             
             with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected colours?' ) as dlg:
                 
@@ -2465,7 +2463,7 @@ class ListBoxTagsStrings( ListBoxTags ):
         
         tag = term
         
-        return HydrusData.ToUnicode( tag )
+        return str( tag )
         
     
     def _GetTextFromTerm( self, term ):
@@ -2680,7 +2678,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         tag = term
         
-        return HydrusData.ToUnicode( tag )
+        return str( tag )
         
     
     def _GetTextFromTerm( self, term ):
@@ -2730,10 +2728,10 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             nonzero_tags = set()
             
-            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
-            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
-            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
-            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
+            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in list(self._current_tags_to_count.items()) if count > 0 ) )
+            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in list(self._deleted_tags_to_count.items()) if count > 0 ) )
+            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in list(self._pending_tags_to_count.items()) if count > 0 ) )
+            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in list(self._petitioned_tags_to_count.items()) if count > 0 ) )
             
             for tag in nonzero_tags:
                 
@@ -2754,10 +2752,10 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             nonzero_tags = set()
             
-            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
-            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
-            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
-            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_current: nonzero_tags.update( ( tag for ( tag, count ) in list(self._current_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_deleted: nonzero_tags.update( ( tag for ( tag, count ) in list(self._deleted_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in list(self._pending_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
+            if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in list(self._petitioned_tags_to_count.items()) if count > 0 and tag in limit_to_these_tags ) )
             
             for tag in nonzero_tags:
                 
@@ -2828,10 +2826,10 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         tags_changed = set()
         
-        if self._show_current: tags_changed.update( current_tags_to_count.keys() )
-        if self._show_deleted: tags_changed.update( deleted_tags_to_count.keys() )
-        if self._show_pending: tags_changed.update( pending_tags_to_count.keys() )
-        if self._show_petitioned: tags_changed.update( petitioned_tags_to_count.keys() )
+        if self._show_current: tags_changed.update( list(current_tags_to_count.keys()) )
+        if self._show_deleted: tags_changed.update( list(deleted_tags_to_count.keys()) )
+        if self._show_pending: tags_changed.update( list(pending_tags_to_count.keys()) )
+        if self._show_petitioned: tags_changed.update( list(petitioned_tags_to_count.keys()) )
         
         if len( tags_changed ) > 0:
             
@@ -2845,7 +2843,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         media = set( media )
         
-        if len( media ) < len( self._last_media ) / 10: # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
+        if len( media ) < len( self._last_media ) // 10: # if we are dropping to a much smaller selection (e.g. 5000 -> 1), we should just recalculate from scratch
             
             force_reload = True
             
@@ -2882,7 +2880,7 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
                 
-                tags = counter.keys()
+                tags = list(counter.keys())
                 
                 for tag in tags:
                     
@@ -2897,10 +2895,10 @@ class ListBoxTagsSelection( ListBoxTags ):
                 
                 tags_changed = set()
                 
-                if self._show_current: tags_changed.update( current_tags_to_count.keys() )
-                if self._show_deleted: tags_changed.update( deleted_tags_to_count.keys() )
-                if self._show_pending: tags_changed.update( pending_tags_to_count.keys() )
-                if self._show_petitioned: tags_changed.update( petitioned_tags_to_count.keys() )
+                if self._show_current: tags_changed.update( list(current_tags_to_count.keys()) )
+                if self._show_deleted: tags_changed.update( list(deleted_tags_to_count.keys()) )
+                if self._show_pending: tags_changed.update( list(pending_tags_to_count.keys()) )
+                if self._show_petitioned: tags_changed.update( list(petitioned_tags_to_count.keys()) )
                 
                 if len( tags_changed ) > 0:
                     

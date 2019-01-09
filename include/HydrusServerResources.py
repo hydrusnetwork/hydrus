@@ -1,10 +1,10 @@
-import HydrusConstants as HC
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusImageHandling
-import HydrusNetwork
-import HydrusPaths
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusImageHandling
+from . import HydrusNetwork
+from . import HydrusPaths
+from . import HydrusSerialisable
 import os
 import time
 import traceback
@@ -13,8 +13,8 @@ from twisted.internet.threads import deferToThread
 from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
 from twisted.web.static import File as FileResource, NoRangeStaticProducer
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 
 def GenerateEris( service, domain ):
     
@@ -220,7 +220,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
         
     except Exception as e:
         
-        raise HydrusExceptions.ForbiddenException( 'File ' + hash.encode( 'hex' ) + ' could not parse: ' + HydrusData.ToUnicode( e ) )
+        raise HydrusExceptions.ForbiddenException( 'File ' + hash.hex() + ' could not parse: ' + str( e ) )
         
     
     args = {}
@@ -394,7 +394,7 @@ class HydrusResource( Resource ):
                 
                 total_bytes_read += len( json_string )
                 
-                hydrus_args = HydrusNetwork.ParseBodyString( json_string )
+                hydrus_args = HydrusNetwork.ParseNetworkBytesToHydrusArgs( json_string )
                 
             else:
                 
@@ -463,7 +463,6 @@ class HydrusResource( Resource ):
             
             content_disposition = 'inline; filename="' + filename + '"'
             
-            # can't be unicode!
             request.setHeader( 'Content-Type', str( content_type ) )
             request.setHeader( 'Content-Length', str( content_length ) )
             request.setHeader( 'Content-Disposition', str( content_disposition ) )
@@ -483,11 +482,11 @@ class HydrusResource( Resource ):
             
             mime = response_context.GetMime()
             
-            body = response_context.GetBody()
+            body_bytes = response_context.GetBodyBytes()
             
             content_type = HC.mime_string_lookup[ mime ]
             
-            content_length = len( body )
+            content_length = len( body_bytes )
             
             content_disposition = 'inline'
             
@@ -495,7 +494,7 @@ class HydrusResource( Resource ):
             request.setHeader( 'Content-Length', str( content_length ) )
             request.setHeader( 'Content-Disposition', content_disposition )
             
-            request.write( HydrusData.ToByteString( body ) )
+            request.write( body_bytes )
             
         else:
             
@@ -584,7 +583,7 @@ class HydrusResource( Resource ):
         self._CleanUpTempFile( request )
         
         default_mime = HC.TEXT_HTML
-        default_encoding = HydrusData.ToByteString
+        default_encoding = str
         
         if failure.type == KeyError:
             
@@ -643,7 +642,7 @@ class HydrusResource( Resource ):
         
         try:
             
-            access_key = hex_key.decode( 'hex' )
+            access_key = bytes.fromhex( hex_key )
             
         except:
             
@@ -766,10 +765,27 @@ class ResponseContext( object ):
     
     def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None ):
         
-        if isinstance( body, HydrusSerialisable.SerialisableBase ):
+        if body is None:
             
-            body = body.DumpToNetworkString()
+            body_bytes = None
             
+        elif isinstance( body, HydrusSerialisable.SerialisableBase ):
+            
+            body_bytes = body.DumpToNetworkBytes()
+            
+        elif isinstance( body, str ):
+            
+            body_bytes = bytes( body, 'utf-8' )
+            
+        elif isinstance( body, bytes ):
+            
+            body_bytes = body
+            
+        else:
+            
+            raise Exception( 'Was given an incompatible object to respond with: ' + repr( body ) )
+            
+        
         
         if cookies is None:
             
@@ -778,19 +794,17 @@ class ResponseContext( object ):
         
         self._status_code = status_code
         self._mime = mime
-        self._body = body
+        self._body_bytes = body_bytes
         self._path = path
         self._cookies = cookies
         
     
-    def GetBody( self ):
+    def GetBodyBytes( self ):
         
-        return self._body
+        return self._body_bytes
         
     
     def GetCookies( self ): return self._cookies
-    
-    def GetLength( self ): return len( self._body )
     
     def GetMime( self ): return self._mime
     
@@ -798,7 +812,7 @@ class ResponseContext( object ):
     
     def GetStatusCode( self ): return self._status_code
     
-    def HasBody( self ): return self._body is not None
+    def HasBody( self ): return self._body_bytes is not None
     
     def HasPath( self ): return self._path is not None
     

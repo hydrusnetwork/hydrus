@@ -1,12 +1,12 @@
 import collections
-import ClientConstants as CC
-import ClientNetworkingContexts
-import HydrusConstants as HC
-import HydrusData
-import HydrusGlobals as HG
-import HydrusNetworking
-import HydrusThreading
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientNetworkingContexts
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusNetworking
+from . import HydrusThreading
+from . import HydrusSerialisable
 import threading
 
 class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
@@ -68,8 +68,8 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         # note this discards ephemeral network contexts, which have temporary identifiers that are generally invisible to the user
-        all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in self._network_contexts_to_bandwidth_trackers.items() if not network_context.IsEphemeral() ]
-        all_serialisable_rules = [ ( network_context.GetSerialisableTuple(), rules.GetSerialisableTuple() ) for ( network_context, rules ) in self._network_contexts_to_bandwidth_rules.items() ]
+        all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in list(self._network_contexts_to_bandwidth_trackers.items()) if not network_context.IsEphemeral() ]
+        all_serialisable_rules = [ ( network_context.GetSerialisableTuple(), rules.GetSerialisableTuple() ) for ( network_context, rules ) in list(self._network_contexts_to_bandwidth_rules.items()) ]
         
         return ( all_serialisable_trackers, all_serialisable_rules )
         
@@ -249,7 +249,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
             result = []
             
-            for ( network_context, bandwidth_rules ) in self._network_contexts_to_bandwidth_rules.items():
+            for ( network_context, bandwidth_rules ) in list(self._network_contexts_to_bandwidth_rules.items()):
                 
                 if network_context.IsDefault():
                     
@@ -289,7 +289,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
             result = set()
             
-            for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
+            for ( network_context, bandwidth_tracker ) in list(self._network_contexts_to_bandwidth_trackers.items()):
                 
                 if network_context.IsDefault() or network_context.IsEphemeral():
                     

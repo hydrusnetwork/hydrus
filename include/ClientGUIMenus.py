@@ -1,6 +1,6 @@
 import collections
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 import os
 import wx
 

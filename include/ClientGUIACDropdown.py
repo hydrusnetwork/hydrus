@@ -1,17 +1,17 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIListBoxes
-import ClientGUIMenus
-import ClientGUIShortcuts
-import ClientSearch
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIListBoxes
+from . import ClientGUIMenus
+from . import ClientGUIShortcuts
+from . import ClientSearch
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusTags
 import itertools
 import wx
 
@@ -1137,7 +1137,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         current_tags_to_count.update( current_tags_flat )
                         
-                        tags_to_do.update( current_tags_to_count.keys() )
+                        tags_to_do.update( list(current_tags_to_count.keys()) )
                         
                     
                     if self._file_search_context.IncludePendingTags():
@@ -1150,7 +1150,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         pending_tags_to_count.update( pending_tags_flat )
                         
-                        tags_to_do.update( pending_tags_to_count.keys() )
+                        tags_to_do.update( list(pending_tags_to_count.keys()) )
                         
                     
                     predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]

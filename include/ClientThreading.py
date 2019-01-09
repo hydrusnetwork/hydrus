@@ -1,11 +1,11 @@
-import HydrusExceptions
-import Queue
+from . import HydrusExceptions
+import queue
 import threading
 import time
 import traceback
-import HydrusData
-import HydrusGlobals as HG
-import HydrusThreading
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusThreading
 import os
 import wx
 
@@ -303,7 +303,7 @@ class JobKey( object ):
             if 'popup_traceback' in self._variables: stuff_to_print.append( self._variables[ 'popup_traceback' ] )
             
         
-        stuff_to_print = [ HydrusData.ToUnicode( s ) for s in stuff_to_print ]
+        stuff_to_print = [ str( s ) for s in stuff_to_print ]
         
         try:
             

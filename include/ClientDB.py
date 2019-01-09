@@ -1,39 +1,39 @@
-import ClientCaches
-import ClientData
-import ClientDefaults
-import ClientGUIShortcuts
-import ClientImageHandling
-import ClientMedia
-import ClientNetworkingBandwidth
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import ClientNetworkingLogin
-import ClientNetworkingSessions
-import ClientOptions
-import ClientRatings
-import ClientSearch
-import ClientServices
-import ClientThreading
+from . import ClientCaches
+from . import ClientData
+from . import ClientDefaults
+from . import ClientGUIShortcuts
+from . import ClientImageHandling
+from . import ClientMedia
+from . import ClientNetworkingBandwidth
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import ClientNetworkingLogin
+from . import ClientNetworkingSessions
+from . import ClientOptions
+from . import ClientRatings
+from . import ClientSearch
+from . import ClientServices
+from . import ClientThreading
 import collections
 import gc
 import hashlib
 import itertools
 import json
-import HydrusConstants as HC
-import HydrusData
-import HydrusDB
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusGlobals as HG
-import HydrusImageHandling
-import HydrusNetwork
-import HydrusNetworking
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTagArchive
-import HydrusTags
-import HydrusVideoHandling
-import ClientConstants as CC
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusDB
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusGlobals as HG
+from . import HydrusImageHandling
+from . import HydrusNetwork
+from . import HydrusNetworking
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTagArchive
+from . import HydrusTags
+from . import HydrusVideoHandling
+from . import ClientConstants as CC
 import os
 import psutil
 import random
@@ -120,7 +120,7 @@ def report_content_speed_to_job_key( job_key, rows_done, total_rows, precise_tim
     
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ToHumanInt( num_rows / it_took )
+    rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
     
     popup_message = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -131,7 +131,7 @@ def report_speed_to_job_key( job_key, precise_timestamp, num_rows, row_name ):
     
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ToHumanInt( num_rows / it_took )
+    rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
     
     popup_message = 'processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -142,7 +142,7 @@ def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ToHumanInt( num_rows / it_took )
+    rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
     
     summary = 'processed ' + HydrusData.ToHumanInt( num_rows ) + ' ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -158,7 +158,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name, no_wal = no_wal )
         
-        self._controller.pub( 'splash_set_title_text', u'booting db\u2026' )
+        self._controller.pub( 'splash_set_title_text', 'booting db\u2026' )
         
     
     def _AddFilesInfo( self, rows, overwrite = False ):
@@ -483,7 +483,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusPaths.MakeSureDirectoryExists( path )
             
-            for filename in self._db_filenames.values():
+            for filename in list(self._db_filenames.values()):
                 
                 if job_key.IsCancelled():
                     
@@ -584,7 +584,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 all_ids_seen = set( current_counter.keys() )
-                all_ids_seen.update( pending_counter.keys() )
+                all_ids_seen.update( list(pending_counter.keys()) )
                 
                 count_ids = [ ( tag_id, current_counter[ tag_id ], pending_counter[ tag_id ] ) for tag_id in all_ids_seen ]
                 
@@ -622,7 +622,7 @@ class DB( HydrusDB.HydrusDB ):
         
         inserts = []
         
-        for ( service_hash_id, hash ) in service_hash_ids_to_hashes.items():
+        for ( service_hash_id, hash ) in list(service_hash_ids_to_hashes.items()):
             
             hash_id = self._GetHashId( hash )
             
@@ -638,7 +638,7 @@ class DB( HydrusDB.HydrusDB ):
         
         inserts = []
         
-        for ( service_tag_id, tag ) in service_tag_ids_to_tags.items():
+        for ( service_tag_id, tag ) in list(service_tag_ids_to_tags.items()):
             
             tag_id = self._GetTagId( tag )
             
@@ -774,8 +774,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if not an_ancestor_is_unbalanced and ancestor_inner_population + ancestor_outer_population > 16:
                     
-                    larger = float( max( ancestor_inner_population, ancestor_outer_population ) )
-                    smaller = float( min( ancestor_inner_population, ancestor_outer_population ) )
+                    larger = max( ancestor_inner_population, ancestor_outer_population )
+                    smaller = min( ancestor_inner_population, ancestor_outer_population )
                     
                     if smaller / larger < 0.5:
                         
@@ -891,7 +891,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 children.sort()
                 
-                median_index = len( children ) / 2
+                median_index = len( children ) // 2
                 
                 median_radius = children[ median_index ][0]
                 
@@ -1148,39 +1148,47 @@ class DB( HydrusDB.HydrusDB ):
             hash_ids_to_counts[ hash_id ] += count
             
         
-        if operator == u'\u2248':
+        if operator == '\u2248':
             
             lower_bound = 0.8 * num_relationships
             upper_bound = 1.2 * num_relationships
             
-            def filter_func( ( hash_id, count ) ):
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
                 
                 return lower_bound < count and count < upper_bound
                 
             
         elif operator == '<':
             
-            def filter_func( ( hash_id, count ) ):
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
                 
                 return count < num_relationships
                 
             
         elif operator == '>':
             
-            def filter_func( ( hash_id, count ) ):
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
                 
                 return count > num_relationships
                 
             
         elif operator == '=':
             
-            def filter_func( ( hash_id, count ) ):
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
                 
                 return count == num_relationships
                 
             
         
-        hash_ids = { hash_id for ( hash_id, count ) in filter( filter_func, hash_ids_to_counts.items() ) }
+        hash_ids = { hash_id for ( hash_id, count ) in filter( filter_func, list(hash_ids_to_counts.items()) ) }
         
         return hash_ids
         
@@ -1668,13 +1676,13 @@ class DB( HydrusDB.HydrusDB ):
             
             # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discrete integer score
             
-            median_index = len( views ) / 2
+            median_index = len( views ) // 2
             
             radius = views[ median_index ]
             
-            num_left = float( len( [ 1 for view in views if view < radius ] ) )
-            num_radius = float( len( [ 1 for view in views if view == radius ] ) )
-            num_right = float( len( [ 1 for view in views if view > radius ] ) )
+            num_left = len( [ 1 for view in views if view < radius ] )
+            num_radius = len( [ 1 for view in views if view == radius ] )
+            num_right = len( [ 1 for view in views if view > radius ] )
             
             if num_left <= num_right:
                 
@@ -1694,7 +1702,7 @@ class DB( HydrusDB.HydrusDB ):
             
             # now let's calc the standard deviation--larger sd tends to mean less sphere overlap when searching
             
-            mean_view = sum( views ) / float( len( views ) )
+            mean_view = sum( views ) / len( views )
             squared_diffs = [ ( view - mean_view  ) ** 2 for view in views ]
             sd = ( sum( squared_diffs ) / len( squared_diffs ) ) ** 0.5
             
@@ -2172,8 +2180,8 @@ class DB( HydrusDB.HydrusDB ):
             pending_mapping_ids_dict = HydrusData.BuildKeyToSetDict( pending_mapping_ids_raw )
             
             all_ids_seen = set( current_mapping_ids_dict.keys() )
-            all_ids_seen.update( deleted_mapping_ids_dict.keys() )
-            all_ids_seen.update( pending_mapping_ids_dict.keys() )
+            all_ids_seen.update( list(deleted_mapping_ids_dict.keys()) )
+            all_ids_seen.update( list(pending_mapping_ids_dict.keys()) )
             
             for tag_id in all_ids_seen:
                 
@@ -2301,8 +2309,8 @@ class DB( HydrusDB.HydrusDB ):
             pending_mapping_ids_dict = HydrusData.BuildKeyToSetDict( pending_mapping_ids_raw )
             
             all_ids_seen = set( current_mapping_ids_dict.keys() )
-            all_ids_seen.update( deleted_mapping_ids_dict.keys() )
-            all_ids_seen.update( pending_mapping_ids_dict.keys() )
+            all_ids_seen.update( list(deleted_mapping_ids_dict.keys()) )
+            all_ids_seen.update( list(pending_mapping_ids_dict.keys()) )
             
             for tag_id in all_ids_seen:
                 
@@ -2581,7 +2589,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 except HydrusExceptions.FileMissingException:
                     
-                    HydrusData.Print( 'Could not find the file for ' + hash.encode( 'hex' ) + '!' )
+                    HydrusData.Print( 'Could not find the file for ' + hash.hex() + '!' )
                     
                     deletee_hash_ids.append( hash_id )
                     
@@ -2600,7 +2608,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if move_location is not None:
                             
-                            move_filename = 'believed ' + hash.encode( 'hex' ) + ' actually ' + actual_hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                            move_filename = 'believed ' + hash.hex() + ' actually ' + actual_hash.hex() + HC.mime_ext_lookup[ mime ]
                             
                             move_path = os.path.join( move_location, move_filename )
                             
@@ -2627,7 +2635,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if create_urls_txt:
                     
-                    with open( os.path.join( self._db_dir, 'missing filename urls.txt' ), 'wb' ) as f:
+                    with open( os.path.join( self._db_dir, 'missing filename urls.txt' ), 'w' ) as f:
                         
                         for hash_id in deletee_hash_ids:
                             
@@ -2635,7 +2643,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             for url in urls:
                                 
-                                f.write( HydrusData.ToByteString( url ) )
+                                f.write( url )
                                 f.write( os.linesep )
                                 
                             
@@ -2931,15 +2939,15 @@ class DB( HydrusDB.HydrusDB ):
         
         init_service_info = []
         
-        init_service_info.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        init_service_info.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'all local files' ) )
         init_service_info.append( ( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ) )
-        init_service_info.append( ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, CC.TRASH_SERVICE_KEY ) )
+        init_service_info.append( ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ) )
         init_service_info.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'repository updates' ) )
-        init_service_info.append( ( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, CC.LOCAL_TAG_SERVICE_KEY ) )
-        init_service_info.append( ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, CC.COMBINED_FILE_SERVICE_KEY ) )
-        init_service_info.append( ( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, CC.COMBINED_TAG_SERVICE_KEY ) )
-        init_service_info.append( ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, CC.LOCAL_BOORU_SERVICE_KEY ) )
-        init_service_info.append( ( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, CC.LOCAL_NOTES_SERVICE_KEY ) )
+        init_service_info.append( ( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'local tags' ) )
+        init_service_info.append( ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ) )
+        init_service_info.append( ( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, 'all known tags' ) )
+        init_service_info.append( ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' ) )
+        init_service_info.append( ( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, 'local notes' ) )
         
         for ( service_key, service_type, name ) in init_service_info:
             
@@ -3160,9 +3168,9 @@ class DB( HydrusDB.HydrusDB ):
             
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
             
-            pending_rescinded_mappings_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ';' ) ).items()
+            pending_rescinded_mappings_ids = list(HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ';' ) ).items())
             
-            petitioned_rescinded_mappings_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + petitioned_mappings_table_name + ';' ) ).items()
+            petitioned_rescinded_mappings_ids = list(HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + petitioned_mappings_table_name + ';' ) ).items())
             
             self._UpdateMappings( service_id, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
             
@@ -3323,7 +3331,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
+            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.hex()
             
             self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
@@ -3559,7 +3567,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tag_ids_to_tags = { self._GetTagId( tag ) : tag for tag in tags }
         
-        counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( service_id, tag_ids_to_tags.keys() )
+        counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( service_id, list(tag_ids_to_tags.keys()) )
         
         existing_tag_ids = [ tag_id for ( tag_id, current_count, pending_count ) in counts if current_count > 0 ]
         
@@ -3828,9 +3836,9 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._PopulateTagIdsToTagsCache( ids_to_count.keys() )
+            self._PopulateTagIdsToTagsCache( list(ids_to_count.keys()) )
             
-            tags_and_counts_generator = ( ( self._tag_ids_to_tags_cache[ id ], ids_to_count[ id ] ) for id in ids_to_count.keys() )
+            tags_and_counts_generator = ( ( self._tag_ids_to_tags_cache[ id ], ids_to_count[ id ] ) for id in list(ids_to_count.keys()) )
             
             predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
             
@@ -4130,7 +4138,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                return ( 3, s.GetUnicode() )
+                return ( 3, s.ToString() )
                 
             
         
@@ -4154,7 +4162,7 @@ class DB( HydrusDB.HydrusDB ):
         
         file_service_id_counter = collections.Counter()
         
-        for file_service_ids in hash_ids_to_current_file_service_ids.values():
+        for file_service_ids in list(hash_ids_to_current_file_service_ids.values()):
             
             for file_service_id in file_service_ids:
                 
@@ -4164,7 +4172,7 @@ class DB( HydrusDB.HydrusDB ):
         
         common_file_service_id = None
         
-        for ( file_service_id, count ) in file_service_id_counter.items():
+        for ( file_service_id, count ) in list(file_service_id_counter.items()):
             
             if count == len( hash_ids ): # i.e. every hash has this file service
                 
@@ -4227,7 +4235,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
             
-            service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in service_ids_to_tag_data.items() } )
+            service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in list(service_ids_to_tag_data.items()) } )
             
             service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
             
@@ -4348,7 +4356,7 @@ class DB( HydrusDB.HydrusDB ):
             content_phrase = viewtime_phrase
             
         
-        if operator == u'\u2248':
+        if operator == '\u2248':
             
             lower_bound = int( 0.8 * viewing_value )
             upper_bound = int( 1.2 * viewing_value )
@@ -4621,14 +4629,14 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                if isinstance( value, ( str, unicode ) ):
+                if isinstance( value, str ):
                     
                     value = float( value )
                     
                 
                 # floats are a pain!
                 
-                if operator == u'\u2248':
+                if operator == '\u2248':
                     
                     predicate = str( value * 0.8 ) + ' < rating AND rating < ' + str( value * 1.2 )
                     
@@ -4653,7 +4661,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipsPredicates():
             
-            only_do_zero = ( operator in ( '=', u'\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            only_do_zero = ( operator in ( '=', '\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -4674,7 +4682,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
-            only_do_zero = ( operator in ( '=', u'\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            only_do_zero = ( operator in ( '=', '\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -4950,7 +4958,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipsPredicates():
             
-            only_do_zero = ( operator in ( '=', u'\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            only_do_zero = ( operator in ( '=', '\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -4975,7 +4983,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
-            only_do_zero = ( operator in ( '=', u'\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            only_do_zero = ( operator in ( '=', '\u2248' ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -5769,7 +5777,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( version, dump ) = result
             
-            serialisable_info = json.loads( dump )
+            serialisable_info = json.loads( str( dump, 'utf-8' ) )
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
             
@@ -5785,7 +5793,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( dump_name, version, dump ) in results:
                 
-                serialisable_info = json.loads( dump )
+                serialisable_info = json.loads( str( dump, 'utf-8' ) )
                 
                 objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) ) )
                 
@@ -5803,7 +5811,7 @@ class DB( HydrusDB.HydrusDB ):
                 ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
                 
             
-            serialisable_info = json.loads( dump )
+            serialisable_info = json.loads( str( dump, 'utf-8' ) )
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )
             
@@ -5844,7 +5852,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( json_dump, ) = result
         
-        value = json.loads( json_dump )
+        value = json.loads( str( json_dump, 'utf-8' ) )
         
         return value
         
@@ -5895,7 +5903,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in hash_ids_to_current_file_service_ids_and_timestamps.items() }
+            hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in list(hash_ids_to_current_file_service_ids_and_timestamps.items()) }
             
             hash_ids_to_tags_managers = self._GetForceRefreshTagsManagers( hash_ids, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
             
@@ -5925,7 +5933,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_ids_to_filenames = HydrusData.BuildKeyToListDict( hash_ids_to_service_ids_and_filenames[ hash_id ] )
                 
-                service_keys_to_filenames = { service_ids_to_service_keys[ service_id ] : filenames for ( service_id, filenames ) in service_ids_to_filenames.items() }
+                service_keys_to_filenames = { service_ids_to_service_keys[ service_id ] : filenames for ( service_id, filenames ) in list(service_ids_to_filenames.items()) }
                 
                 current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
                 
@@ -6091,7 +6099,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 pending_dict = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' ORDER BY tag_id LIMIT 100;' ) )
                 
-                for ( tag_id, hash_ids ) in pending_dict.items():
+                for ( tag_id, hash_ids ) in list(pending_dict.items()):
                     
                     tag = self._GetTag( tag_id )
                     hashes = self._GetHashes( hash_ids )
@@ -6103,7 +6111,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 petitioned_dict = HydrusData.BuildKeyToListDict( [ ( ( tag_id, reason_id ), hash_id ) for ( tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT tag_id, hash_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY reason_id LIMIT 100;' ) ] )
                 
-                for ( ( tag_id, reason_id ), hash_ids ) in petitioned_dict.items():
+                for ( ( tag_id, reason_id ), hash_ids ) in list(petitioned_dict.items()):
                     
                     tag = self._GetTag( tag_id )
                     hashes = self._GetHashes( hash_ids )
@@ -6188,7 +6196,7 @@ class DB( HydrusDB.HydrusDB ):
                     return media_result
                     
                 
-                petitioned = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items()
+                petitioned = list(HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT reason_id, hash_id FROM file_petitions WHERE service_id = ? ORDER BY reason_id LIMIT 100;', ( service_id, ) ) ).items())
                 
                 for ( reason_id, hash_ids ) in petitioned:
                     
@@ -6250,7 +6258,7 @@ class DB( HydrusDB.HydrusDB ):
             return tag_ids_to_timestamp[ key ]
             
         
-        newest_first = tag_ids_to_timestamp.keys()
+        newest_first = list(tag_ids_to_timestamp.keys())
         
         newest_first.sort( key = sort_key, reverse = True )
         
@@ -6336,7 +6344,7 @@ class DB( HydrusDB.HydrusDB ):
         
         [ ( gumpf, largest_count ) ] = hash_ids_counter.most_common( 1 )
         
-        hash_ids = [ hash_id for ( hash_id, count ) in hash_ids_counter.items() if count > largest_count * 0.8 ]
+        hash_ids = [ hash_id for ( hash_id, count ) in list(hash_ids_counter.items()) if count > largest_count * 0.8 ]
         
         counter = collections.Counter()
         
@@ -6371,7 +6379,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tags_to_counts = siblings_manager.CollapseTagsToCount( service_key, tags_to_counts )
         
-        tags_to_do = tags_to_counts.keys()
+        tags_to_do = list(tags_to_counts.keys())
         
         tags_to_do = { tag for tag in tags_to_counts if tag not in search_tags }
         
@@ -6611,7 +6619,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( results ) != len( info_types ):
             
-            info_types_hit = results.keys()
+            info_types_hit = list(results.keys())
             
             info_types_missed = info_types.difference( info_types_hit )
             
@@ -6842,7 +6850,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
             
-            for ( service_id, statuses_and_pair_ids ) in service_ids_to_statuses_and_pair_ids.items():
+            for ( service_id, statuses_and_pair_ids ) in list(service_ids_to_statuses_and_pair_ids.items()):
                 
                 try:
                     
@@ -6908,7 +6916,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
             
-            for ( service_id, statuses_and_pair_ids ) in service_ids_to_statuses_and_pair_ids.items():
+            for ( service_id, statuses_and_pair_ids ) in list(service_ids_to_statuses_and_pair_ids.items()):
                 
                 try:
                     
@@ -7077,7 +7085,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                domain = HydrusData.ToUnicode( ClientNetworkingDomain.ConvertURLIntoDomain( url ) )
+                domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
                 
             except HydrusExceptions.URLMatchException:
                 
@@ -7122,12 +7130,12 @@ class DB( HydrusDB.HydrusDB ):
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
                 
-                result = { dump_name.decode( 'hex' ) : data for ( dump_name, data ) in result.items() }
+                result = { bytes.fromhex( dump_name ) : data for ( dump_name, data ) in list(result.items()) }
                 
             
         else:
             
-            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
+            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.hex()
             
             result = self._c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
             
@@ -7153,7 +7161,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
             
-            names = [ name.decode( 'hex' ) for name in names ]
+            names = [ bytes.fromhex( name ) for name in names ]
             
         
         return names
@@ -7239,7 +7247,7 @@ class DB( HydrusDB.HydrusDB ):
             
             tag_archive_sync = service.GetTagArchiveSync()
             
-            for ( portable_hta_path, namespaces ) in tag_archive_sync.items():
+            for ( portable_hta_path, namespaces ) in list(tag_archive_sync.items()):
                 
                 hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
                 
@@ -7259,11 +7267,11 @@ class DB( HydrusDB.HydrusDB ):
         return ( status, note )
         
     
-    def _ImportUpdate( self, update_network_string, update_hash, mime ):
+    def _ImportUpdate( self, update_network_bytes, update_hash, mime ):
         
         try:
             
-            update = HydrusSerialisable.CreateFromNetworkString( update_network_string )
+            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
             
         except:
             
@@ -7274,7 +7282,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self._GetHashId( update_hash )
         
-        size = len( update_network_string )
+        size = len( update_network_bytes )
         
         width = None
         height = None
@@ -7285,7 +7293,7 @@ class DB( HydrusDB.HydrusDB ):
         client_files_manager = self._controller.client_files_manager
         
         # lockless because this db call is made by the locked client files manager
-        client_files_manager.LocklessAddFileFromString( update_hash, mime, update_network_string )
+        client_files_manager.LocklessAddFileFromBytes( update_hash, mime, update_network_bytes )
         
         self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
         
@@ -7365,7 +7373,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _InInbox( self, hash_param ):
         
-        if isinstance( hash_param, str ):
+        if isinstance( hash_param, bytes ):
             
             hash = hash_param
             
@@ -7461,7 +7469,7 @@ class DB( HydrusDB.HydrusDB ):
             
             next_stop_time_presentation = 0
             
-            paths = [ os.path.join( self._db_dir, filename ) for filename in self._db_filenames.values() ]
+            paths = [ os.path.join( self._db_dir, filename ) for filename in list(self._db_filenames.values()) ]
             
             paths.sort( key = os.path.getsize )
             
@@ -7469,7 +7477,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with open( path, 'rb' ) as f:
                     
-                    while f.read( HC.READ_BLOCK_SIZE ) != '':
+                    while len( f.read( HC.READ_BLOCK_SIZE ) ) > 0:
                         
                         if stop_time is not None:
                             
@@ -7562,7 +7570,7 @@ class DB( HydrusDB.HydrusDB ):
             
             db_traceback = 'Database ' + tb
             
-            first_line = HydrusData.ToUnicode( type( e ).__name__ ) + ': ' + HydrusData.ToUnicode( e )
+            first_line = str( type( e ).__name__ ) + ': ' + str( e )
             
             new_e = HydrusExceptions.DBException( first_line, db_traceback )
             
@@ -7623,7 +7631,7 @@ class DB( HydrusDB.HydrusDB ):
             
             uncached_hash_ids_to_hashes = dict( self._SelectFromList( select_statement, uncached_hash_ids ) )
             
-            if len( uncached_hash_ids_to_hashes ) < uncached_hash_ids:
+            if len( uncached_hash_ids_to_hashes ) < len( uncached_hash_ids ):
                 
                 for hash_id in uncached_hash_ids:
                     
@@ -7638,7 +7646,7 @@ class DB( HydrusDB.HydrusDB ):
                             pubbed_error = True
                             
                         
-                        hash = 'aaaaaaaaaaaaaaaa'.decode( 'hex' ) + os.urandom( 16 )
+                        hash = bytes.fromhex( 'aaaaaaaaaaaaaaaa' ) + os.urandom( 16 )
                         
                         uncached_hash_ids_to_hashes[ hash_id ] = hash
                         
@@ -7664,13 +7672,13 @@ class DB( HydrusDB.HydrusDB ):
             
             uncached_tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, uncached_tag_ids ) }
             
-            if len( uncached_tag_ids_to_tags ) < uncached_tag_ids:
+            if len( uncached_tag_ids_to_tags ) < len( uncached_tag_ids ):
                 
                 for tag_id in uncached_tag_ids:
                     
                     if tag_id not in uncached_tag_ids_to_tags:
                         
-                        tag = 'unknown tag:' + HydrusData.GenerateKey().encode( 'hex' )
+                        tag = 'unknown tag:' + HydrusData.GenerateKey().hex()
                         
                         ( namespace, subtag ) = HydrusTags.SplitTag( tag )
                         
@@ -7696,7 +7704,7 @@ class DB( HydrusDB.HydrusDB ):
         notify_new_siblings = False
         notify_new_force_refresh_tags = False
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
             
             try:
                 
@@ -8024,7 +8032,7 @@ class DB( HydrusDB.HydrusDB ):
                                     
                                     advanced_mappings_ids_flat = self._c.execute( 'SELECT tag_id, hash_id FROM temp_operation WHERE job_id BETWEEN ? AND ?;', ( i, i + block_size - 1 ) )
                                     
-                                    advanced_mappings_ids = HydrusData.BuildKeyToListDict( advanced_mappings_ids_flat ).items()
+                                    advanced_mappings_ids = list(HydrusData.BuildKeyToListDict( advanced_mappings_ids_flat ).items())
                                     
                                     if sub_action == 'copy':
                                         
@@ -8724,7 +8732,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_i_can_process = set()
         
-        update_indices = update_indices_to_unprocessed_hash_ids.keys()
+        update_indices = list(update_indices_to_unprocessed_hash_ids.keys())
         
         update_indices.sort()
         
@@ -8807,10 +8815,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             with open( update_path, 'rb' ) as f:
                                 
-                                update_network_string = f.read()
+                                update_network_bytes = f.read()
                                 
                             
-                            definition_update = HydrusSerialisable.CreateFromNetworkString( update_network_string )
+                            definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
                             
                             precise_timestamp = HydrusData.GetNowPrecise()
                             
@@ -8876,10 +8884,10 @@ class DB( HydrusDB.HydrusDB ):
                             
                             with open( update_path, 'rb' ) as f:
                                 
-                                update_network_string = f.read()
+                                update_network_bytes = f.read()
                                 
                             
-                            content_update = HydrusSerialisable.CreateFromNetworkString( update_network_string )
+                            content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
                             
                             did_whole_update = self._ProcessRepositoryContentUpdate( job_key, service_id, content_update )
                             
@@ -9307,7 +9315,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime, percentage_in = percentage_in )
                         
-                        client_files_manager.LocklessAddFullSizeThumbnail( hash, thumbnail )
+                        client_files_manager.LocklessAddFullSizeThumbnailFromBytes( hash, thumbnail )
                         
                     
                     result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
@@ -9327,7 +9335,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     message = 'There was a problem reparsing or re-thumbnailing file ' + path + '! A full traceback of this error should be written to the log!'
                     message += os.linesep * 2
-                    message += HydrusData.ToUnicode( e )
+                    message += str( e )
                     
                     HydrusData.ShowText( message )
                     
@@ -9445,7 +9453,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.Print( obj )
                 HydrusData.Print( serialisable_info )
                 
-                raise Exception( 'Trying to json dump the object ' + HydrusData.ToUnicode( obj ) + ' with name ' + dump_name + ' caused an error. Its serialisable info has been dumped to the log.' )
+                raise Exception( 'Trying to json dump the object ' + str( obj ) + ' with name ' + dump_name + ' caused an error. Its serialisable info has been dumped to the log.' )
                 
             
             store_backups = False
@@ -9474,7 +9482,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
                 
             
-            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, HydrusData.GetNow(), sqlite3.Binary( dump ) ) )
+            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, HydrusData.GetNow(), sqlite3.Binary( bytes( dump, 'utf-8' ) ) ) )
             
         else:
             
@@ -9490,12 +9498,12 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.Print( obj )
                 HydrusData.Print( serialisable_info )
                 
-                raise Exception( 'Trying to json dump the object ' + HydrusData.ToUnicode( obj ) + ' caused an error. Its serialisable info has been dumped to the log.' )
+                raise Exception( 'Trying to json dump the object ' + str( obj ) + ' caused an error. Its serialisable info has been dumped to the log.' )
                 
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             
-            self._c.execute( 'INSERT INTO json_dumps ( dump_type, version, dump ) VALUES ( ?, ?, ? );', ( dump_type, version, sqlite3.Binary( dump ) ) )
+            self._c.execute( 'INSERT INTO json_dumps ( dump_type, version, dump ) VALUES ( ?, ?, ? );', ( dump_type, version, sqlite3.Binary( bytes( dump, 'utf-8' ) ) ) )
             
         
     
@@ -9509,7 +9517,7 @@ class DB( HydrusDB.HydrusDB ):
             
             json_dump = json.dumps( value )
             
-            self._c.execute( 'REPLACE INTO json_dict ( name, dump ) VALUES ( ?, ? );', ( name, sqlite3.Binary( json_dump ) ) )
+            self._c.execute( 'REPLACE INTO json_dict ( name, dump ) VALUES ( ?, ? );', ( name, sqlite3.Binary( bytes( json_dump, 'utf-8' ) ) ) )
             
         
     
@@ -9524,8 +9532,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if password is not None:
             
-            # to convert from unusual unicode types
-            password_bytes = HydrusData.ToByteString( password )
+            password_bytes = bytes( password, 'utf-8' )
             
             password = hashlib.sha256( password_bytes ).digest()
             
@@ -9582,7 +9589,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SetYAMLDump( self, dump_type, dump_name, data ):
         
-        if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
+        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
+            
+            dump_name = dump_name.hex()
+            
         
         self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
         
@@ -10460,7 +10470,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     try:
                         
-                        domain = HydrusData.ToUnicode( ClientNetworkingDomain.ConvertURLIntoDomain( url ) )
+                        domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
                         
                     except HydrusExceptions.URLMatchException:
                         
@@ -10833,7 +10843,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                import urlparse
+                import urllib.parse
                 
                 self._controller.pub( 'splash_set_status_subtext', 'normalising some urls: initialising' )
                 
@@ -10845,7 +10855,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     ( url, ) = self._c.execute( 'SELECT url FROM urls WHERE url_id = ?;', ( url_id, ) ).fetchone()
                     
-                    p = urlparse.urlparse( url )
+                    p = urllib.parse.urlparse( url )
                     
                     scheme = p.scheme
                     netloc = p.netloc
@@ -10854,7 +10864,7 @@ class DB( HydrusDB.HydrusDB ):
                     query = ClientNetworkingDomain.AlphabetiseQueryText( p.query )
                     fragment = p.fragment
                     
-                    r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+                    r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
                     
                     normalised_url = r.geturl()
                     
@@ -11004,7 +11014,7 @@ class DB( HydrusDB.HydrusDB ):
                 new_gugs = []
                 new_parsers = []
                 
-                import ClientDownloading
+                from . import ClientDownloading
                 
                 for booru in boorus:
                     
@@ -11677,8 +11687,8 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        combined_files_seen_ids = set( ( key for ( key, value ) in combined_files_current_counter.items() if value != 0 ) )
-        combined_files_seen_ids.update( ( key for ( key, value ) in combined_files_pending_counter.items() if value != 0 ) )
+        combined_files_seen_ids = set( ( key for ( key, value ) in list(combined_files_current_counter.items()) if value != 0 ) )
+        combined_files_seen_ids.update( ( key for ( key, value ) in list(combined_files_pending_counter.items()) if value != 0 ) )
         
         combined_files_counts = [ ( tag_id, combined_files_current_counter[ tag_id ], combined_files_pending_counter[ tag_id ] ) for tag_id in combined_files_seen_ids ]
         
@@ -11843,7 +11853,7 @@ class DB( HydrusDB.HydrusDB ):
             old_tag_archive_sync = dict( old_dictionary[ 'tag_archive_sync' ] )
             new_tag_archive_sync = dict( dictionary[ 'tag_archive_sync' ] )
             
-            for portable_hta_path in new_tag_archive_sync.keys():
+            for portable_hta_path in list(new_tag_archive_sync.keys()):
                 
                 namespaces = set( new_tag_archive_sync[ portable_hta_path ] )
                 
@@ -12070,51 +12080,53 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Write( self, action, *args, **kwargs ):
         
-        if action == 'analyze': result = self._AnalyzeStaleBigTables( *args, **kwargs )
-        elif action == 'associate_repository_update_hashes': result = self._AssociateRepositoryUpdateHashes( *args, **kwargs )
-        elif action == 'backup': result = self._Backup( *args, **kwargs )
-        elif action == 'clear_orphan_file_records': result = self._ClearOrphanFileRecords( *args, **kwargs )
-        elif action == 'clear_orphan_tables': result = self._ClearOrphanTables( *args, **kwargs )
-        elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
-        elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
-        elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
-        elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-        elif action == 'delete_pending': result = self._DeletePending( *args, **kwargs )
-        elif action == 'delete_serialisable_named': result = self._DeleteJSONDumpNamed( *args, **kwargs )
-        elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
-        elif action == 'delete_unknown_duplicate_pairs': result = self._CacheSimilarFilesDeleteUnknownDuplicatePairs( *args, **kwargs )
-        elif action == 'dirty_services': result = self._SaveDirtyServices( *args, **kwargs )
-        elif action == 'duplicate_pair_status': result = self._CacheSimilarFilesSetDuplicatePairStatus( *args, **kwargs )
-        elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
-        elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
-        elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+        result = None
+        
+        if action == 'analyze': self._AnalyzeStaleBigTables( *args, **kwargs )
+        elif action == 'associate_repository_update_hashes': self._AssociateRepositoryUpdateHashes( *args, **kwargs )
+        elif action == 'backup': self._Backup( *args, **kwargs )
+        elif action == 'clear_orphan_file_records': self._ClearOrphanFileRecords( *args, **kwargs )
+        elif action == 'clear_orphan_tables': self._ClearOrphanTables( *args, **kwargs )
+        elif action == 'content_updates': self._ProcessContentUpdates( *args, **kwargs )
+        elif action == 'db_integrity': self._CheckDBIntegrity( *args, **kwargs )
+        elif action == 'delete_imageboard': self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+        elif action == 'delete_local_booru_share': self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
+        elif action == 'delete_serialisable_named': self._DeleteJSONDumpNamed( *args, **kwargs )
+        elif action == 'delete_service_info': self._DeleteServiceInfo( *args, **kwargs )
+        elif action == 'delete_unknown_duplicate_pairs': self._CacheSimilarFilesDeleteUnknownDuplicatePairs( *args, **kwargs )
+        elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
+        elif action == 'duplicate_pair_status': self._CacheSimilarFilesSetDuplicatePairStatus( *args, **kwargs )
+        elif action == 'export_mappings': self._ExportToTagArchive( *args, **kwargs )
+        elif action == 'file_integrity': self._CheckFileIntegrity( *args, **kwargs )
+        elif action == 'imageboard': self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
-        elif action == 'import_update': result = self._ImportUpdate( *args, **kwargs )
-        elif action == 'last_shutdown_work_time': result = self._SetLastShutdownWorkTime( *args, **kwargs )
-        elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-        elif action == 'maintain_file_reparsing': result = self._MaintainReparseFiles( *args, **kwargs )
-        elif action == 'maintain_similar_files_duplicate_pairs': result = self._CacheSimilarFilesMaintainDuplicatePairs( *args, **kwargs )
-        elif action == 'maintain_similar_files_phashes': result = self._CacheSimilarFilesMaintainFiles( *args, **kwargs )
-        elif action == 'maintain_similar_files_tree': result = self._CacheSimilarFilesMaintainTree( *args, **kwargs )
+        elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
+        elif action == 'last_shutdown_work_time': self._SetLastShutdownWorkTime( *args, **kwargs )
+        elif action == 'local_booru_share': self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+        elif action == 'maintain_file_reparsing': self._MaintainReparseFiles( *args, **kwargs )
+        elif action == 'maintain_similar_files_duplicate_pairs': self._CacheSimilarFilesMaintainDuplicatePairs( *args, **kwargs )
+        elif action == 'maintain_similar_files_phashes': self._CacheSimilarFilesMaintainFiles( *args, **kwargs )
+        elif action == 'maintain_similar_files_tree': self._CacheSimilarFilesMaintainTree( *args, **kwargs )
         elif action == 'process_repository': result = self._ProcessRepositoryUpdates( *args, **kwargs )
-        elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
-        elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )
-        elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
-        elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
-        elif action == 'repair_client_files': result = self._RepairClientFiles( *args, **kwargs )
-        elif action == 'reparse_files': result = self._ReparseFiles( *args, **kwargs )
-        elif action == 'reset_repository': result = self._ResetRepository( *args, **kwargs )
-        elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
-        elif action == 'schedule_full_phash_regen': result = self._CacheSimilarFilesSchedulePHashRegeneration()
-        elif action == 'serialisable_simple': result = self._SetJSONSimple( *args, **kwargs )
-        elif action == 'serialisable': result = self._SetJSONDump( *args, **kwargs )
-        elif action == 'serialisables_overwrite': result = self._OverwriteJSONDumps( *args, **kwargs )
-        elif action == 'set_password': result = self._SetPassword( *args, **kwargs )
-        elif action == 'sync_hashes_to_tag_archive': result = self._SyncHashesToTagArchive( *args, **kwargs )
-        elif action == 'tag_censorship': result = self._SetTagCensorship( *args, **kwargs )
-        elif action == 'update_server_services': result = self._UpdateServerServices( *args, **kwargs )
-        elif action == 'update_services': result = self._UpdateServices( *args, **kwargs )
-        elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
+        elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
+        elif action == 'regenerate_ac_cache': self._RegenerateACCache( *args, **kwargs )
+        elif action == 'regenerate_similar_files': self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
+        elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
+        elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
+        elif action == 'reparse_files': self._ReparseFiles( *args, **kwargs )
+        elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
+        elif action == 'save_options': self._SaveOptions( *args, **kwargs )
+        elif action == 'schedule_full_phash_regen': self._CacheSimilarFilesSchedulePHashRegeneration()
+        elif action == 'serialisable_simple': self._SetJSONSimple( *args, **kwargs )
+        elif action == 'serialisable': self._SetJSONDump( *args, **kwargs )
+        elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )
+        elif action == 'set_password': self._SetPassword( *args, **kwargs )
+        elif action == 'sync_hashes_to_tag_archive': self._SyncHashesToTagArchive( *args, **kwargs )
+        elif action == 'tag_censorship': self._SetTagCensorship( *args, **kwargs )
+        elif action == 'update_server_services': self._UpdateServerServices( *args, **kwargs )
+        elif action == 'update_services': self._UpdateServices( *args, **kwargs )
+        elif action == 'vacuum': self._Vacuum( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result
@@ -12149,7 +12161,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def RestoreBackup( self, path ):
         
-        for filename in self._db_filenames.values():
+        for filename in list(self._db_filenames.values()):
             
             source = os.path.join( path, filename )
             dest = os.path.join( self._db_dir, filename )

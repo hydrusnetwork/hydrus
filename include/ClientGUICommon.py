@@ -1,17 +1,17 @@
-import ClientCaches
-import ClientData
-import ClientConstants as CC
-import ClientGUIMenus
-import ClientGUITopLevelWindows
-import ClientMedia
-import ClientPaths
-import ClientRatings
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusText
+from . import ClientCaches
+from . import ClientData
+from . import ClientConstants as CC
+from . import ClientGUIMenus
+from . import ClientGUITopLevelWindows
+from . import ClientMedia
+from . import ClientPaths
+from . import ClientRatings
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusText
 import os
 import re
 import sys
@@ -158,7 +158,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
                 message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
                 
-                import ClientGUIDialogs
+                from . import ClientGUIDialogs
                 
                 with ClientGUIDialogs.DialogTextEntry( parent, message ) as dlg:
                     
@@ -252,7 +252,9 @@ def ClientToScreen( win, pos ):
 
 MAGIC_TEXT_PADDING = 1.1
 
-def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
+def ConvertTextToPixels( window, char_dimensions ):
+    
+    ( char_cols, char_rows ) = char_dimensions
     
     dc = wx.ClientDC( window )
     
@@ -591,7 +593,7 @@ class BetterBoxSizer( wx.BoxSizer ):
         
         i_am_too_small = ( my_orientation == wx.HORIZONTAL and extra_width < 0 ) or ( my_orientation == wx.VERTICAL and extra_height < 0 )
         
-        total_proportion = float( sum( ( sizer_item.GetProportion() for sizer_item in self.GetChildren() if sizer_item.IsShown() ) ) )
+        total_proportion = sum( ( sizer_item.GetProportion() for sizer_item in self.GetChildren() if sizer_item.IsShown() ) )
         
         for sizer_item in self.GetChildren():
             
@@ -772,7 +774,7 @@ class BetterColourControl( wx.ColourPickerCtrl ):
             
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToUnicode( e ) )
+            wx.MessageBox( str( e ) )
             
             return
             
@@ -797,7 +799,7 @@ class BetterColourControl( wx.ColourPickerCtrl ):
             
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToUnicode( e ) )
+            wx.MessageBox( str( e ) )
             
             HydrusData.ShowException( e )
             
@@ -1563,11 +1565,11 @@ class ExportPatternButton( BetterButton ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, u'all instances of a particular namespace - [\u2026]', u'copy "[\u2026]" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'[\u2026]' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'all instances of a particular namespace - [\u2026]', 'copy "[\u2026]" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[\u2026]' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, u'a particular tag, if the file has it - (\u2026)', u'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'a particular tag, if the file has it - (\u2026)', 'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(\u2026)' )
         
         HG.client_controller.PopupMenu( self, menu )
         
@@ -1646,7 +1648,7 @@ class Gauge( wx.Gauge ):
                 
                 if self._actual_range is not None:
                     
-                    value = min( int( 1000 * ( float( value ) / self._actual_range ) ), 1000 )
+                    value = min( int( 1000 * ( value / self._actual_range ) ), 1000 )
                     
                 
                 value = min( value, self.GetRange() )
@@ -1967,7 +1969,7 @@ class ListBook( wx.Panel ):
     
     def GetActivePages( self ):
         
-        return self._keys_to_active_pages.values()
+        return list(self._keys_to_active_pages.values())
         
     
     def GetPage( self, key ):
@@ -2044,7 +2046,7 @@ class ListBook( wx.Panel ):
     
     def SelectPage( self, page_to_select ):
         
-        for ( key, page ) in self._keys_to_active_pages.items():
+        for ( key, page ) in list(self._keys_to_active_pages.items()):
             
             if page == page_to_select:
                 
@@ -2167,7 +2169,7 @@ class NetworkContextButton( BetterButton ):
     
     def __init__( self, parent, network_context, limited_types = None, allow_default = True ):
         
-        BetterButton.__init__( self, parent, network_context.ToUnicode(), self._Edit )
+        BetterButton.__init__( self, parent, network_context.ToString(), self._Edit )
         
         self._network_context = network_context
         self._limited_types = limited_types
@@ -2176,8 +2178,8 @@ class NetworkContextButton( BetterButton ):
     
     def _Edit( self ):
         
-        import ClientGUITopLevelWindows
-        import ClientGUIScrolledPanelsEdit
+        from . import ClientGUITopLevelWindows
+        from . import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit network context' ) as dlg:
             
@@ -2196,7 +2198,7 @@ class NetworkContextButton( BetterButton ):
     
     def _Update( self ):
         
-        self.SetLabelText( self._network_context.ToUnicode() )
+        self.SetLabelText( self._network_context.ToString() )
         
     
     def GetValue( self ):
@@ -2347,12 +2349,12 @@ class NoneableSpinCtrl( wx.Panel ):
                 
                 ( value, y ) = value
                 
-                self._two.SetValue( y / self._multiplier )
+                self._two.SetValue( y // self._multiplier )
                 
             
             self._one.Enable()
             
-            self._one.SetValue( value / self._multiplier )
+            self._one.SetValue( value // self._multiplier )
             
         
     
@@ -2669,7 +2671,7 @@ class RatingLikeCanvas( RatingLike ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 for content_update in content_updates:
                     
@@ -2768,15 +2770,15 @@ class RatingNumerical( wx.Window ):
             
             if 0 <= x and x <= my_active_width:
             
-                proportion_filled = float( x_adjusted ) / my_active_width
+                proportion_filled = x_adjusted / my_active_width
                 
                 if self._allow_zero:
                     
-                    rating = round( proportion_filled * self._num_stars ) / self._num_stars
+                    rating = round( proportion_filled * self._num_stars ) // self._num_stars
                     
                 else:
                     
-                    rating = float( int( proportion_filled * self._num_stars ) ) / ( self._num_stars - 1 )
+                    rating = int( proportion_filled * self._num_stars ) // ( self._num_stars - 1 )
                     
                 
                 return rating
@@ -2955,7 +2957,7 @@ class RatingNumericalCanvas( RatingNumerical ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 for content_update in content_updates:
                     
@@ -3024,8 +3026,8 @@ class RegexButton( BetterButton ):
         ClientGUIMenus.AppendMenuItem( self, submenu, r'backslash character - \\', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\\' )
         ClientGUIMenus.AppendMenuItem( self, submenu, r'beginning of line - ^', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'^' )
         ClientGUIMenus.AppendMenuItem( self, submenu, r'end of line - $', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'$' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, u'any of these - [\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'[\u2026]' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, u'anything other than these - [^\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'[^\u2026]' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'any of these - [\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[\u2026]' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'anything other than these - [^\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[^\u2026]' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
@@ -3041,15 +3043,15 @@ class RegexButton( BetterButton ):
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( self, submenu, u'the next characters are: (non-consuming) - (?=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?=\u2026)' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, u'the next characters are not: (non-consuming) - (?!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?!\u2026)' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, u'the previous characters are: (non-consuming) - (?<=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?<=\u2026)' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, u'the previous characters are not: (non-consuming) - (?<!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?<!\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'the next characters are: (non-consuming) - (?=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?=\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'the next characters are not: (non-consuming) - (?!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?!\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'the previous characters are: (non-consuming) - (?<=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'the previous characters are not: (non-consuming) - (?<!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<!\u2026)' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
         ClientGUIMenus.AppendMenuItem( self, submenu, r'0074 -> 74 - [1-9]+\d*', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'[1-9]+\d*' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'filename - (?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)' )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'regex components' )
         
@@ -3075,7 +3077,7 @@ class RegexButton( BetterButton ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'manage regex favourites' ) as dlg:
             
-            import ClientGUIScrolledPanelsEdit
+            from . import ClientGUIScrolledPanelsEdit
             
             panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( dlg, regex_favourites )
             
@@ -3247,7 +3249,7 @@ class RadioBox( StaticBox ):
     
     def GetSelectedClientData( self ):
         
-        for radio_button in self._radio_buttons_to_data.keys():
+        for radio_button in list(self._radio_buttons_to_data.keys()):
             
             if radio_button.GetValue() == True: return self._radio_buttons_to_data[ radio_button ]
             
@@ -3287,10 +3289,7 @@ class TextAndGauge( wx.Panel ):
             return
             
         
-        if text != self._st.GetLabelText():
-            
-            self._st.SetLabelText( text )
-            
+        self._st.SetLabelText( text )
         
         self._gauge.SetRange( range )
         self._gauge.SetValue( value )

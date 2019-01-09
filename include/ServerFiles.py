@@ -1,19 +1,19 @@
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
 import itertools
 import os
 
 def GetAllHashes( file_type ):
     
-    return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
+    return { bytes.fromhex( os.path.split( path )[1] ) for path in IterateAllPaths( file_type ) }
     
 def GetExpectedFilePath( hash ):
     
     files_dir = HG.server_controller.GetFilesDir()
     
-    hash_encoded = hash.encode( 'hex' )
+    hash_encoded = hash.hex()
     
     first_two_chars = hash_encoded[:2]
     
@@ -25,7 +25,7 @@ def GetExpectedThumbnailPath( hash ):
     
     files_dir = HG.server_controller.GetFilesDir()
     
-    hash_encoded = hash.encode( 'hex' )
+    hash_encoded = hash.hex()
     
     first_two_chars = hash_encoded[:2]
     

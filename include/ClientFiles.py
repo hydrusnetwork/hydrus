@@ -1,7 +1,7 @@
 import gc
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
 import os
 
 def GetAllPaths( raw_paths, do_human_sort = True ):

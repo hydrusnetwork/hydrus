@@ -1,24 +1,18 @@
 import struct
 import zlib
 
-LZMA_OK = True
-
 try:
     
-    import pylzma as lzma
+    import pylzma
+    
+    PYLZMA_OK = True
     
 except:
     
-    try:
-        
-        import lzma
-        
-    except:
-        
-        LZMA_OK = False
-        
-
+    PYLZMA_OK = False
+    
 # hydrus_dev added ZWS support
+# hydrus_dev mangled this to work on py3
 
 def parse(input):
     """Parses the header information from an SWF file."""
@@ -39,12 +33,17 @@ def parse(input):
     header = {}
 
     # Read the 3-byte signature field
-    signature = ''.join(struct.unpack('<3c', input.read(3)))
-    if signature not in ('FWS', 'CWS', 'ZWS'):
-        raise ValueError('Invalid SWF signature: %s' % signature)
+    signature = b''.join(struct.unpack('<3c', input.read(3)))
+    
+    signature = str( signature, 'utf-8' )
+    
+    if signature not in ( 'FWS', 'CWS', 'ZWS' ):
+        
+        raise ValueError( 'Invalid SWF signature: {}'.format( signature ) )
+        
 
     # Compression
-    header['compressed'] = signature.startswith('C') or signature.startswith( 'Z' )
+    header['compressed'] = signature.startswith( 'C' ) or signature.startswith( 'Z' )
 
     # Version
     header['version'] = read_ui8(input.read(1))
@@ -65,23 +64,21 @@ def parse(input):
         
         uncompressed_size = input.read( 4 )
         
-        if LZMA_OK:
+        if not PYLZMA_OK:
             
-            buffer = lzma.decompress( input.read() )
+            raise Exception( 'Cannot parse ZWS swf files without pylzma!' )
             
-        else:
-            
-            raise Exception( 'LZMA library not available, so ZWS flash files cannot be parsed.' )
-            
+        
+        buffer = pylzma.decompress( input.read() )
         
 
     # Containing rectangle (struct RECT)
 
     # The number of bits used to store the each of the RECT values are
     # stored in first five bits of the first byte.
-    nbits = read_ui8(buffer[0]) >> 3
+    nbits = read_ui8(buffer[:1]) >> 3
 
-    current_byte, buffer = read_ui8(buffer[0]), buffer[1:]
+    current_byte, buffer = read_ui8(buffer[:1]), buffer[1:]
     bit_cursor = 5
 
     for item in 'xmin', 'xmax', 'ymin', 'ymax':
@@ -95,11 +92,11 @@ def parse(input):
             if bit_cursor > 7:
                 # We've exhausted the current byte, consume the next one
                 # from the buffer.
-                current_byte, buffer = read_ui8(buffer[0]), buffer[1:]
+                current_byte, buffer = read_ui8(buffer[:1]), buffer[1:]
                 bit_cursor = 0
 
         # Convert value from TWIPS to a pixel value
-        header[item] = value / 20
+        header[item] = value // 20
 
     header['width'] = header['xmax'] - header['xmin']
     header['height'] = header['ymax'] - header['ymin']
@@ -117,25 +114,4 @@ def parse(input):
 
     input.close()
     return header
-
-
-def main():
-    import sys
-
-    if len(sys.argv) < 2:
-        print 'Usage: %s [SWF file]' % sys.argv[0]
-        sys.exit(1)
-
-    header = parse(sys.argv[1])
-    print 'SWF header'
-    print '----------'
-    print 'Version:      %s' % header['version']
-    print 'Compression:  %s' % header['compressed']
-    print 'Dimensions:   %s x %s' % (header['width'], header['height'])
-    print 'Bounding box: (%s, %s, %s, %s)' % (header['xmin'], header['xmax'], header['ymin'], header['ymax'])
-    print 'Frames:       %s' % header['frames']
-    print 'FPS:          %s' % header['fps']
-
-
-if __name__ == '__main__':
-    main()
+    

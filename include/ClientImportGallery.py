@@ -1,17 +1,17 @@
-import ClientConstants as CC
-import ClientDownloading
-import ClientImportFileSeeds
-import ClientImportGallerySeeds
-import ClientImporting
-import ClientImportOptions
-import ClientNetworkingJobs
-import ClientPaths
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientDownloading
+from . import ClientImportFileSeeds
+from . import ClientImportGallerySeeds
+from . import ClientImporting
+from . import ClientImportOptions
+from . import ClientNetworkingJobs
+from . import ClientPaths
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusSerialisable
 import threading
 import time
 import traceback
@@ -111,7 +111,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_gallery_import_key = self._gallery_import_key.encode( 'hex' )
+        serialisable_gallery_import_key = self._gallery_import_key.hex()
         
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
@@ -126,7 +126,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         ( serialisable_gallery_import_key, self._creation_time, self._query, self._source_name, self._current_page_index, self._num_urls_found, self._num_new_urls_found, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache, self._no_work_until, self._no_work_until_reason ) = serialisable_info
         
-        self._gallery_import_key = serialisable_gallery_import_key.decode( 'hex' )
+        self._gallery_import_key = bytes.fromhex( serialisable_gallery_import_key )
         
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
@@ -241,7 +241,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             status = CC.STATUS_VETOED
             
-            note = HydrusData.ToUnicode( e )
+            note = str( e )
             
             file_seed.SetStatus( status, note = note )
             
@@ -358,7 +358,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 delay = HG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
                 
-                self._DelayWork( delay, HydrusData.ToUnicode( e ) )
+                self._DelayWork( delay, str( e ) )
                 
             
             return
@@ -366,7 +366,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         except Exception as e:
             
             gallery_seed_status = CC.STATUS_ERROR
-            gallery_seed_note = HydrusData.ToUnicode( e )
+            gallery_seed_note = str( e )
             
             gallery_seed.SetStatus( gallery_seed_status, note = gallery_seed_note )
             
@@ -900,7 +900,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         ( gug_key, gug_name ) = self._gug_key_and_name
         
-        serialisable_gug_key_and_name = ( gug_key.encode( 'hex' ), gug_name )
+        serialisable_gug_key_and_name = ( gug_key.hex(), gug_name )
         
         if self._highlighted_gallery_import_key is None:
             
@@ -908,7 +908,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            serialisable_highlighted_gallery_import_key = self._highlighted_gallery_import_key.encode( 'hex' )
+            serialisable_highlighted_gallery_import_key = self._highlighted_gallery_import_key.hex()
             
         
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
@@ -925,7 +925,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         ( serialisable_gug_key, gug_name ) = serialisable_gug_key_and_name
         
-        self._gug_key_and_name = ( serialisable_gug_key.decode( 'hex' ), gug_name )
+        self._gug_key_and_name = ( bytes.fromhex( serialisable_gug_key ), gug_name )
         
         if serialisable_highlighted_gallery_import_key is None:
             
@@ -933,7 +933,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            self._highlighted_gallery_import_key = serialisable_highlighted_gallery_import_key.decode( 'hex' )
+            self._highlighted_gallery_import_key = bytes.fromhex( serialisable_highlighted_gallery_import_key )
             
         
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
@@ -1055,7 +1055,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             ( gug_key, gug_name ) = ClientDownloading.ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier )
             
-            serialisable_gug_key_and_name = ( HydrusData.GenerateKey().encode( 'hex' ), gug_name )
+            serialisable_gug_key_and_name = ( HydrusData.GenerateKey().hex(), gug_name )
             
             new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, file_limit, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports )
             

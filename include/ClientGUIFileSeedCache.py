@@ -1,21 +1,21 @@
-import ClientConstants as CC
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListCtrl
-import ClientGUIMenus
-import ClientGUISerialisable
-import ClientGUIScrolledPanels
-import ClientGUITopLevelWindows
-import ClientImportFileSeeds
-import ClientPaths
-import ClientSerialisable
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusText
+from . import ClientConstants as CC
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListCtrl
+from . import ClientGUIMenus
+from . import ClientGUISerialisable
+from . import ClientGUIScrolledPanels
+from . import ClientGUITopLevelWindows
+from . import ClientImportFileSeeds
+from . import ClientPaths
+from . import ClientSerialisable
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusText
 import os
 import wx
 
@@ -80,7 +80,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         source_time = file_seed.source_time
         note = file_seed.note
         
-        pretty_file_seed_data = HydrusData.ToUnicode( file_seed_data )
+        pretty_file_seed_data = str( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
         pretty_modified = HydrusData.TimestampToPrettyTimeDelta( modified )
@@ -94,10 +94,12 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_source_time = HydrusData.TimestampToPrettyTimeDelta( source_time )
             
         
+        sort_source_time = ClientGUIListCtrl.SafeNoneInt( source_time )
+        
         pretty_note = note.split( os.linesep )[0]
         
         display_tuple = ( pretty_file_seed_index, pretty_file_seed_data, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
-        sort_tuple = ( file_seed_index, file_seed_data, status, added, modified, source_time, note )
+        sort_tuple = ( file_seed_index, file_seed_data, status, added, modified, sort_source_time, note )
         
         return ( display_tuple, sort_tuple )
         
@@ -231,7 +233,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( HydrusData.ToUnicode( e ) )
+                    wx.MessageBox( str( e ) )
                     
                 
             
@@ -402,8 +404,6 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def _GetSourcesFromSourcesString( self, sources_string ):
         
-        sources_string = HydrusData.ToUnicode( sources_string )
-        
         sources = HydrusText.DeserialiseNewlinedTexts( sources_string )
         
         return sources
@@ -433,7 +433,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 payload = ClientSerialisable.LoadFromPng( path )
                 

@@ -1,14 +1,14 @@
 import collections
 import gc
-import HydrusConstants as HC
-import HydrusDaemons
-import HydrusData
-import HydrusDB
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusPubSub
-import HydrusThreading
+from . import HydrusConstants as HC
+from . import HydrusDaemons
+from . import HydrusData
+from . import HydrusDB
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusPubSub
+from . import HydrusThreading
 import os
 import random
 import sys
@@ -169,15 +169,15 @@ class HydrusController( object ):
                     
                 
             
-            self._call_to_threads = filter( filter_call_to_threads, self._call_to_threads )
+            self._call_to_threads = list(filter( filter_call_to_threads, self._call_to_threads ))
             
-            self._long_running_call_to_threads = filter( filter_call_to_threads, self._long_running_call_to_threads )
+            self._long_running_call_to_threads = list(filter( filter_call_to_threads, self._long_running_call_to_threads ))
             
         
     
     def _Read( self, action, *args, **kwargs ):
         
-        result = self.db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        result = self.db.Read( action, *args, **kwargs )
         
         return result
         
@@ -204,9 +204,9 @@ class HydrusController( object ):
         self._daemons = []
         
     
-    def _Write( self, action, priority, synchronous, *args, **kwargs ):
+    def _Write( self, action, synchronous, *args, **kwargs ):
         
-        result = self.db.Write( action, priority, synchronous, *args, **kwargs )
+        result = self.db.Write( action, synchronous, *args, **kwargs )
         
         return result
         
@@ -309,12 +309,12 @@ class HydrusController( object ):
     
     def ClearCaches( self ):
         
-        for cache in self._caches.values(): cache.Clear()
+        for cache in list(self._caches.values()): cache.Clear()
         
     
     def CreateNoWALFile( self ):
         
-        with open( self._no_wal_path, 'wb' ) as f:
+        with open( self._no_wal_path, 'w' ) as f:
             
             f.write( 'This file was created because the database failed to set WAL journalling. It will not reattempt WAL as long as this file exists.' )
             
@@ -692,17 +692,12 @@ class HydrusController( object ):
     
     def Write( self, action, *args, **kwargs ):
         
-        return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
-        
-    
-    def WriteInterruptable( self, action, *args, **kwargs ):
-        
-        return self._Write( action, HC.INTERRUPTABLE_PRIORITY, True, *args, **kwargs )
+        return self._Write( action, False, *args, **kwargs )
         
     
     def WriteSynchronous( self, action, *args, **kwargs ):
         
-        return self._Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
+        return self._Write( action, True, *args, **kwargs )
         
     
     def DAEMONPubSub( self ):

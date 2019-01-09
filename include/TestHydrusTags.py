@@ -1,15 +1,15 @@
 import collections
-import HydrusConstants as HC
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusTags
 import os
-import TestConstants
+from . import TestConstants
 import unittest
-import HydrusData
-import ClientCaches
-import ClientConstants as CC
-import ClientMedia
-import ClientSearch
-import HydrusGlobals as HG
+from . import HydrusData
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientMedia
+from . import ClientSearch
+from . import HydrusGlobals as HG
 
 class TestMergeTagsManagers( unittest.TestCase ):
     
@@ -84,10 +84,10 @@ class TestTagsManager( unittest.TestCase ):
         
         service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
-        service_keys_to_statuses_to_tags[ cls._first_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
+        service_keys_to_statuses_to_tags[ cls._first_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'current', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
         service_keys_to_statuses_to_tags[ cls._first_key ][ HC.CONTENT_STATUS_DELETED ] = { 'deleted' }
         
-        service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'deleted', u'\u2835' }
+        service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'deleted', '\u2835' }
         service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_DELETED ] = { 'current' }
         service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
         service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'petitioned' }
@@ -140,11 +140,11 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_current( self ):
         
-        self.assertEqual( self._tags_manager.GetCurrent( self._first_key ), { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
-        self.assertEqual( self._tags_manager.GetCurrent( self._second_key ), { 'deleted', u'\u2835' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._first_key ), { 'current', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._second_key ), { 'deleted', '\u2835' } )
         self.assertEqual( self._tags_manager.GetCurrent( self._third_key ), { 'petitioned' } )
         
-        self.assertEqual( self._tags_manager.GetCurrent(), { 'current', 'deleted', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned' } )
+        self.assertEqual( self._tags_manager.GetCurrent(), { 'current', 'deleted', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned' } )
         
     
     def test_get_deleted( self ):
@@ -221,7 +221,7 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_has_tag( self ):
         
-        self.assertTrue( self._tags_manager.HasTag( u'\u2835' ) )
+        self.assertTrue( self._tags_manager.HasTag( '\u2835' ) )
         self.assertFalse( self._tags_manager.HasTag( 'not_exist' ) )
         
     
@@ -387,149 +387,149 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
         
-        self.assertEqual( p.GetUnicode(), u'tag' )
+        self.assertEqual( p.ToString(), 'tag' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 2 )
         
-        self.assertEqual( p.GetUnicode( with_count = False ), u'tag' )
-        self.assertEqual( p.GetUnicode( with_count = True ), u'tag (1) (+2)' )
+        self.assertEqual( p.ToString( with_count = False ), 'tag' )
+        self.assertEqual( p.ToString( with_count = True ), 'tag (1) (+2)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False )
         
-        self.assertEqual( p.GetUnicode(), u'-tag' )
+        self.assertEqual( p.ToString(), '-tag' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False, 1, 2 )
         
-        self.assertEqual( p.GetUnicode( with_count = False ), u'-tag' )
-        self.assertEqual( p.GetUnicode( with_count = True ), u'-tag (1) (+2)' )
+        self.assertEqual( p.ToString( with_count = False ), '-tag' )
+        self.assertEqual( p.ToString( with_count = True ), '-tag (1) (+2)' )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:time imported: since 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:time imported: since 1 year 2 months ago' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:time imported: around 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:time imported: around 1 year 2 months ago' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:time imported: before 1 year 2 months ago' )
+        self.assertEqual( p.ToString(), 'system:time imported: before 1 year 2 months ago' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
         
-        self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
+        self.assertEqual( p.ToString(), 'system:archive (1,000)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 200 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:duration < 200 milliseconds' )
+        self.assertEqual( p.ToString(), 'system:duration < 200 milliseconds' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 2000 )
         
-        self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
+        self.assertEqual( p.ToString(), 'system:everything (2,000)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:is currently in local files' )
+        self.assertEqual( p.ToString(), 'system:is currently in my files' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
+        self.assertEqual( p.ToString(), 'system:is not pending to my files' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, ( 'abcd'.decode( 'hex' ), 'sha256' ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, ( bytes.fromhex( 'abcd' ), 'sha256' ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:sha256 hash is abcd' )
+        self.assertEqual( p.ToString(), 'system:sha256 hash is abcd' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:height < 2,000' )
+        self.assertEqual( p.ToString(), 'system:height < 2,000' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1000 )
         
-        self.assertEqual( p.GetUnicode(), u'system:inbox (1,000)' )
+        self.assertEqual( p.ToString(), 'system:inbox (1,000)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
         
-        self.assertEqual( p.GetUnicode(), u'system:limit is 2,000' )
+        self.assertEqual( p.ToString(), 'system:limit is 2,000' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = 100 )
         
-        self.assertEqual( p.GetUnicode(), u'system:local (100)' )
+        self.assertEqual( p.ToString(), 'system:local (100)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:mime is image' )
+        self.assertEqual( p.ToString(), 'system:mime is image' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:mime is video/webm' )
+        self.assertEqual( p.ToString(), 'system:mime is video/webm' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:mime is video/webm, image/gif' )
+        self.assertEqual( p.ToString(), 'system:mime is video/webm, image/gif' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = 100 )
         
-        self.assertEqual( p.GetUnicode(), u'system:not local (100)' )
+        self.assertEqual( p.ToString(), 'system:not local (100)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:number of tags < 2' )
+        self.assertEqual( p.ToString(), 'system:number of tags < 2' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:number of words < 5,000' )
+        self.assertEqual( p.ToString(), 'system:number of words < 5,000' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:rating for local files > 0.2' )
+        self.assertEqual( p.ToString(), 'system:rating for my files > 0.2' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:ratio = 16:9' )
+        self.assertEqual( p.ToString(), 'system:ratio = 16:9' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( bytes.fromhex( 'abcd' ), 5 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:similar to abcd using max hamming of 5' )
+        self.assertEqual( p.ToString(), 'system:similar to abcd using max hamming of 5' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:size > 5MB' )
+        self.assertEqual( p.ToString(), 'system:size > 5MB' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.IMAGES )
         
-        self.assertEqual( p.GetUnicode(), u'system:untagged' )
+        self.assertEqual( p.ToString(), 'system:untagged' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:width = 1,920' )
+        self.assertEqual( p.ToString(), 'system:width = 1,920' )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
         
-        self.assertEqual( p.GetUnicode(), u'series:*anything*' )
+        self.assertEqual( p.ToString(), 'series:*anything*' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series', False )
         
-        self.assertEqual( p.GetUnicode(), u'-series' )
+        self.assertEqual( p.ToString(), '-series' )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
-        self.assertEqual( p.GetUnicode(), u'a*i:o*' )
+        self.assertEqual( p.ToString(), 'a*i:o*' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', False )
         
-        self.assertEqual( p.GetUnicode(), u'-a*i:o*' )
+        self.assertEqual( p.ToString(), '-a*i:o*' )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
         
-        self.assertEqual( p.GetUnicode(), u'    series:game of thrones' )
+        self.assertEqual( p.ToString(), '    series:game of thrones' )
         
     
 class TestTagParents( unittest.TestCase ):
@@ -728,7 +728,7 @@ class TestTagSiblings( unittest.TestCase ):
         ( result, ) = self._tag_siblings_manager.CollapsePredicates( self._first_key, predicates )
         
         self.assertEqual( result.GetCount(), 20 )
-        self.assertEqual( result.GetUnicode(), u'chain_c (20-35)' )
+        self.assertEqual( result.ToString(), 'chain_c (20-35)' )
         
     
     def test_chain( self ):

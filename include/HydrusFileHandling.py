@@ -1,51 +1,51 @@
 import gc
 import hashlib
-import HydrusAudioHandling
-import HydrusConstants as HC
-import HydrusData
-import HydrusDocumentHandling
-import HydrusExceptions
-import HydrusFlashHandling
-import HydrusImageHandling
-import HydrusPaths
-import HydrusText
-import HydrusVideoHandling
+from . import HydrusAudioHandling
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusDocumentHandling
+from . import HydrusExceptions
+from . import HydrusFlashHandling
+from . import HydrusImageHandling
+from . import HydrusPaths
+from . import HydrusText
+from . import HydrusVideoHandling
 import os
 import threading
 import traceback
-import cStringIO
+import io
 
 # Mime
 
 header_and_mime = [
-    ( 0, '\xff\xd8', HC.IMAGE_JPEG ),
-    ( 0, 'GIF87a', HC.IMAGE_GIF ),
-    ( 0, 'GIF89a', HC.IMAGE_GIF ),
-    ( 0, '\x89PNG', HC.UNDETERMINED_PNG ),
-    ( 0, 'BM', HC.IMAGE_BMP ),
-    ( 0, 'CWS', HC.APPLICATION_FLASH ),
-    ( 0, 'FWS', HC.APPLICATION_FLASH ),
-    ( 0, 'ZWS', HC.APPLICATION_FLASH ),
-    ( 0, 'FLV', HC.VIDEO_FLV ),
-    ( 0, '%PDF', HC.APPLICATION_PDF ),
-    ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),
-    ( 0, 'PK\x05\x06', HC.APPLICATION_ZIP ),
-    ( 0, 'PK\x07\x08', HC.APPLICATION_ZIP ),
-    ( 0, '7z\xBC\xAF\x27\x1C', HC.APPLICATION_7Z ),
-    ( 0, '\x52\x61\x72\x21\x1A\x07\x00', HC.APPLICATION_RAR ),
-    ( 0, '\x52\x61\x72\x21\x1A\x07\x01\x00', HC.APPLICATION_RAR ),
-    ( 0, 'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
-    ( 4, 'ftypisom', HC.VIDEO_MP4 ),
-    ( 4, 'ftypM4V', HC.VIDEO_MP4 ),
-    ( 4, 'ftypMSNV', HC.VIDEO_MP4 ),
-    ( 4, 'ftypavc1', HC.VIDEO_MP4 ),
-    ( 4, 'ftypFACE', HC.VIDEO_MP4 ),
-    ( 4, 'ftypdash', HC.VIDEO_MP4 ),
-    ( 4, 'ftypqt', HC.VIDEO_MOV ),
-    ( 0, 'fLaC', HC.AUDIO_FLAC ),
-    ( 8, 'AVI ', HC.VIDEO_AVI ),
-    ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
+    ( 0, b'\xff\xd8', HC.IMAGE_JPEG ),
+    ( 0, b'GIF87a', HC.IMAGE_GIF ),
+    ( 0, b'GIF89a', HC.IMAGE_GIF ),
+    ( 0, b'\x89PNG', HC.UNDETERMINED_PNG ),
+    ( 0, b'BM', HC.IMAGE_BMP ),
+    ( 0, b'CWS', HC.APPLICATION_FLASH ),
+    ( 0, b'FWS', HC.APPLICATION_FLASH ),
+    ( 0, b'ZWS', HC.APPLICATION_FLASH ),
+    ( 0, b'FLV', HC.VIDEO_FLV ),
+    ( 0, b'%PDF', HC.APPLICATION_PDF ),
+    ( 0, b'PK\x03\x04', HC.APPLICATION_ZIP ),
+    ( 0, b'PK\x05\x06', HC.APPLICATION_ZIP ),
+    ( 0, b'PK\x07\x08', HC.APPLICATION_ZIP ),
+    ( 0, b'7z\xBC\xAF\x27\x1C', HC.APPLICATION_7Z ),
+    ( 0, b'\x52\x61\x72\x21\x1A\x07\x00', HC.APPLICATION_RAR ),
+    ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00', HC.APPLICATION_RAR ),
+    ( 0, b'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( 4, b'ftypmp4', HC.VIDEO_MP4 ),
+    ( 4, b'ftypisom', HC.VIDEO_MP4 ),
+    ( 4, b'ftypM4V', HC.VIDEO_MP4 ),
+    ( 4, b'ftypMSNV', HC.VIDEO_MP4 ),
+    ( 4, b'ftypavc1', HC.VIDEO_MP4 ),
+    ( 4, b'ftypFACE', HC.VIDEO_MP4 ),
+    ( 4, b'ftypdash', HC.VIDEO_MP4 ),
+    ( 4, b'ftypqt', HC.VIDEO_MOV ),
+    ( 0, b'fLaC', HC.AUDIO_FLAC ),
+    ( 8, b'AVI ', HC.VIDEO_AVI ),
+    ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]
 
 def SaveThumbnailToStreamPIL( pil_image, dimensions, f ):
@@ -75,7 +75,7 @@ def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS
         
     else:
         
-        f = cStringIO.StringIO()
+        f = io.BytesIO()
         
         if mime == HC.APPLICATION_FLASH:
             
@@ -141,7 +141,7 @@ def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS
     
 def GenerateThumbnailFromStaticImagePIL( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
     
-    f = cStringIO.StringIO()
+    f = io.BytesIO()
     
     pil_image = HydrusImageHandling.GeneratePILImage( path )
     

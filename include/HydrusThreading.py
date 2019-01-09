@@ -1,13 +1,13 @@
 import bisect
 import collections
-import HydrusExceptions
-import Queue
+from . import HydrusExceptions
+import queue
 import random
 import threading
 import time
 import traceback
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 import os
 
 NEXT_THREAD_CLEAROUT = 0
@@ -172,7 +172,7 @@ class DAEMONWorker( DAEMON ):
     def _PreCallWaitIsDone( self, time_started_waiting ):
         
         # just shave a bit off so things that don't have any wait won't somehow have to wait a single accidentaly cycle
-        time_to_start = ( float( time_started_waiting ) - 0.1 ) + self._pre_call_wait
+        time_to_start = ( time_started_waiting - 0.1 ) + self._pre_call_wait
         
         return HydrusData.TimeHasPassed( time_to_start )
         
@@ -256,7 +256,7 @@ class THREADCallToThread( DAEMON ):
         
         self._callable = None
         
-        self._queue = Queue.Queue()
+        self._queue = queue.Queue()
         
         self._currently_working = True # start off true so new threads aren't used twice by two quick successive calls
         

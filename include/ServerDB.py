@@ -1,21 +1,21 @@
 import collections
 import hashlib
-import HydrusConstants as HC
-import HydrusDB
-import HydrusEncryption
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusNATPunch
-import HydrusNetwork
-import HydrusNetworking
-import HydrusPaths
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusDB
+from . import HydrusEncryption
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusNATPunch
+from . import HydrusNetwork
+from . import HydrusNetworking
+from . import HydrusPaths
+from . import HydrusSerialisable
 import itertools
 import json
 import os
-import Queue
+import queue
 import random
-import ServerFiles
+from . import ServerFiles
 import shutil
 import sqlite3
 import stat
@@ -23,9 +23,9 @@ import sys
 import threading
 import time
 import traceback
-import HydrusData
-import HydrusTags
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusTags
+from . import HydrusGlobals as HG
 
 def GenerateRepositoryMasterMapTableNames( service_id ):
     
@@ -187,7 +187,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type == HC.SERVER_ADMIN:
             
-            force_registration_key = 'init'
+            force_registration_key = b'init'
             
         else:
             
@@ -279,7 +279,7 @@ class DB( HydrusDB.HydrusDB ):
             
             stop_time = HydrusData.GetNow() + 300
             
-            for filename in self._db_filenames.values():
+            for filename in list(self._db_filenames.values()):
                 
                 db_path = os.path.join( self._db_dir, filename )
                 
@@ -295,7 +295,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusPaths.MakeSureDirectoryExists( backup_path )
             
-            for filename in self._db_filenames.values():
+            for filename in list(self._db_filenames.values()):
                 
                 HydrusData.Print( 'backing up: copying ' + filename )
                 
@@ -763,19 +763,7 @@ class DB( HydrusDB.HydrusDB ):
             self._RefreshAccountTypeCache( service_id )
             
         
-        return self._account_type_cache[ service_id ].values()
-        
-    
-    def _GetFile( self, hash ):
-        
-        path = ServerFiles.GetFilePath( hash )
-        
-        with open( path, 'rb' ) as f:
-            
-            data = f.read()
-            
-        
-        return data
+        return list(self._account_type_cache[ service_id ].values())
         
     
     def _GetHash( self, master_hash_id ):
@@ -1050,15 +1038,6 @@ class DB( HydrusDB.HydrusDB ):
         ( tag, ) = result
         
         return tag
-        
-    
-    def _GetThumbnail( self, hash ):
-        
-        path = ServerFiles.GetThumbnailPath( hash )
-        
-        with open( path, 'rb' ) as f: thumbnail = f.read()
-        
-        return thumbnail
         
     
     def _InitCaches( self ):
@@ -1560,7 +1539,7 @@ class DB( HydrusDB.HydrusDB ):
                     total_content_rows += num_rows
                     
                 
-                update_bytes = update.DumpToNetworkString()
+                update_bytes = update.DumpToNetworkBytes()
                 
                 update_hash = hashlib.sha256( update_bytes ).digest()
                 
@@ -1798,7 +1777,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_tag_ids_to_service_hash_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT service_tag_id, service_hash_id FROM ' + current_mappings_table_name + ' WHERE mapping_timestamp BETWEEN ? AND ?;', ( begin, end ) ) )
         
-        for ( service_tag_id, service_hash_ids ) in service_tag_ids_to_service_hash_ids.items():
+        for ( service_tag_id, service_hash_ids ) in list(service_tag_ids_to_service_hash_ids.items()):
             
             for block_of_service_hash_ids in HydrusData.SplitListIntoChunks( service_hash_ids, MAX_CONTENT_CHUNK ):
                 
@@ -1810,7 +1789,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_tag_ids_to_service_hash_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT service_tag_id, service_hash_id FROM ' + deleted_mappings_table_name + ' WHERE mapping_timestamp BETWEEN ? AND ?;', ( begin, end ) ) )
         
-        for ( service_tag_id, service_hash_ids ) in service_tag_ids_to_service_hash_ids.items():
+        for ( service_tag_id, service_hash_ids ) in list(service_tag_ids_to_service_hash_ids.items()):
             
             for block_of_service_hash_ids in HydrusData.SplitListIntoChunks( service_hash_ids, MAX_CONTENT_CHUNK ):
                 
@@ -3048,7 +3027,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( mappings_dict ) > 0:
             
-            for ( service_tag_id, service_hash_ids ) in mappings_dict.items():
+            for ( service_tag_id, service_hash_ids ) in list(mappings_dict.items()):
                 
                 self._RepositoryDeleteMappings( service_id, admin_account_id, service_tag_id, service_hash_ids )
                 
@@ -3110,7 +3089,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SaveDirtyAccounts( self, service_keys_to_dirty_accounts ):
         
-        for ( service_key, dirty_accounts ) in service_keys_to_dirty_accounts.items():
+        for ( service_key, dirty_accounts ) in list(service_keys_to_dirty_accounts.items()):
             
             service_id = self._GetServiceId( service_key )
             
@@ -3182,18 +3161,20 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Write( self, action, *args, **kwargs ):
         
-        if action == 'accounts': result = self._ModifyAccounts( *args, **kwargs )
-        elif action == 'account_types': result = self._ModifyAccountTypes( *args, **kwargs )
-        elif action == 'analyze': result = self._Analyze( *args, **kwargs )
-        elif action == 'backup': result = self._Backup( *args, **kwargs )
+        result = None
+        
+        if action == 'accounts': self._ModifyAccounts( *args, **kwargs )
+        elif action == 'account_types': self._ModifyAccountTypes( *args, **kwargs )
+        elif action == 'analyze': self._Analyze( *args, **kwargs )
+        elif action == 'backup': self._Backup( *args, **kwargs )
         elif action == 'create_update': result = self._RepositoryCreateUpdate( *args, **kwargs )
-        elif action == 'delete_orphans': result = self._DeleteOrphans( *args, **kwargs )
-        elif action == 'dirty_accounts': result = self._SaveDirtyAccounts( *args, **kwargs )
-        elif action == 'dirty_services': result = self._SaveDirtyServices( *args, **kwargs )
-        elif action == 'file': result = self._RepositoryProcessAddFile( *args, **kwargs )
+        elif action == 'delete_orphans': self._DeleteOrphans( *args, **kwargs )
+        elif action == 'dirty_accounts': self._SaveDirtyAccounts( *args, **kwargs )
+        elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
+        elif action == 'file': self._RepositoryProcessAddFile( *args, **kwargs )
         elif action == 'services': result = self._ModifyServices( *args, **kwargs )
-        elif action == 'session': result = self._AddSession( *args, **kwargs )
-        elif action == 'update': result = self._RepositoryProcessClientToServerUpdate( *args, **kwargs )
+        elif action == 'session': self._AddSession( *args, **kwargs )
+        elif action == 'update': self._RepositoryProcessClientToServerUpdate( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result

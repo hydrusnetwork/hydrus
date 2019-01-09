@@ -1,8 +1,8 @@
-import ClientImageHandling
+from . import ClientImageHandling
 import collections
-import HydrusConstants as HC
+from . import HydrusConstants as HC
 import os
-import TestConstants
+from . import TestConstants
 import unittest
 
 class TestImageHandling( unittest.TestCase ):
@@ -11,5 +11,5 @@ class TestImageHandling( unittest.TestCase ):
         
         phashes = ClientImageHandling.GenerateShapePerceptualHashes( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), HC.IMAGE_PNG )
         
-        self.assertEqual( phashes, set( [ '\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
+        self.assertEqual( phashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
         

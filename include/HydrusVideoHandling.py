@@ -1,10 +1,9 @@
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusImageHandling
-import HydrusPaths
-import HydrusThreading
-import matroska
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusImageHandling
+from . import HydrusPaths
+from . import HydrusThreading
 import numpy
 import os
 import re
@@ -45,29 +44,26 @@ def CheckFFMPEGError( lines ):
     
 def GetFFMPEGVersion():
     
-    # open the file in a pipe, provoke an error, read output
-    
     cmd = [ FFMPEG_PATH, '-version' ]
     
     try:
         
-        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+        sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        
+        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+        
+    except FileNotFoundError:
+        
+        return 'no ffmpeg found'
         
     except Exception as e:
         
-        if not os.path.exists( FFMPEG_PATH ):
-            
-            return 'no ffmpeg found'
-            
-        else:
-            
-            HydrusData.ShowException( e )
-            
-            return 'unable to execute ffmpeg'
-            
+        HydrusData.ShowException( e )
+        
+        return 'unable to execute ffmpeg'
         
     
-    infos = proc.stdout.read().decode( 'utf8' )
+    infos = proc.stdout.read()
     
     proc.terminate()
     
@@ -100,32 +96,6 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     # open the file in a pipe, provoke an error, read output
     
-    try:
-        
-        path.encode( 'ascii' ) # throwing unicode at the console is a mess best left for Python 3
-        
-    except UnicodeEncodeError:
-        
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-        
-        with open( path, 'rb' ) as source:
-            
-            with open( temp_path, 'wb' ) as dest:
-                
-                HydrusPaths.CopyFileLikeToFileLike( source, dest )
-                
-            
-        
-        try:
-            
-            return GetFFMPEGInfoLines( temp_path, count_frames_manually )
-            
-        finally:
-            
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-            
-        
-    
     cmd = [ FFMPEG_PATH, "-i", path ]
     
     if count_frames_manually:
@@ -140,32 +110,11 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
             
         
     
-    try:
-        
-        proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
-        
-    except:
-        
-        if not os.path.exists( FFMPEG_PATH ):
-            
-            raise Exception( 'FFMPEG was not found!' )
-            
-        else:
-            
-            raise
-            
-        
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
-    raw_info = proc.stderr.read()
+    proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
     
-    try:
-        
-        info = raw_info.decode( 'utf8' )
-        
-    except UnicodeDecodeError:
-        
-        info = raw_info
-        
+    info = proc.stderr.read()
     
     proc.wait()
     
@@ -219,7 +168,7 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
         
         num_frames = ParseFFMPEGNumFramesManually( lines )
         
-        duration = num_frames / float( fps )
+        duration = num_frames / fps
         
     else:
         
@@ -273,57 +222,6 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
     
     return ( resolution, duration_in_ms, num_frames )
     
-def GetMatroskaOrWebm( path ):
-    
-    try:
-        
-        # a whole bunch of otherwise good webms aren't parseable by this, so default to 'I guess it is a webm, then.'
-        
-        tags = matroska.parse( path )
-        
-        ebml = tags[ 'EBML' ][0]
-        
-        if ebml[ 'DocType' ][0] == 'matroska':
-            
-            return HC.VIDEO_MKV
-            
-        
-    except:
-        
-        pass
-        
-    
-    return HC.VIDEO_WEBM
-    
-def GetMatroskaOrWebMProperties( path ):
-    
-    tags = matroska.parse( path )
-    
-    segment = tags['Segment'][0]
-    
-    info = segment['Info'][0]
-    duration = int( ( info['Duration'][0] * info['TimecodeScale'][0] / 1e9 ) * 1000 )
-    
-    tracks = segment['Tracks'][0]
-    trackentries = tracks['TrackEntry']
-    
-    for trackentry in trackentries:
-        
-        if 'Video' in trackentry:
-            
-            video = trackentry['Video'][0]
-            
-            width = video[ 'PixelWidth' ][0]
-            height = video[ 'PixelHeight' ][0]
-            
-            break
-            
-        
-    
-    num_frames = 0
-    
-    return ( ( width, height ), duration, num_frames )
-    
 def GetMime( path ):
     
     lines = GetFFMPEGInfoLines( path )
@@ -339,9 +237,35 @@ def GetMime( path ):
     
     if 'matroska' in mime_text or 'webm' in mime_text:
         
-        # typically it is 'matroska,webm'
+        # a webm has at least vp8/vp9 video and optionally vorbis audio
         
-        return GetMatroskaOrWebm( path )
+        has_webm_video = False
+        has_webm_audio = True
+        
+        if ParseFFMPEGHasVideo( lines ):
+            
+            video_format = ParseFFMPEGVideoFormat( lines )
+            
+            webm_video_formats = ( 'vp8', 'vp9' )
+            
+            has_webm_video = True in ( webm_video_format in video_format for webm_video_format in webm_video_formats )
+            
+        
+        ( has_audio, audio_format ) = ParseFFMPEGAudio( lines )
+        
+        if has_audio and 'vorbis' not in audio_format:
+            
+            has_webm_audio = False
+            
+        
+        if has_webm_video and has_webm_audio:
+            
+            return HC.VIDEO_WEBM
+            
+        else:
+            
+            return HC.VIDEO_MKV
+            
         
     elif mime_text in ( 'mpeg', 'mpegvideo', 'mpegts' ):
         
@@ -390,14 +314,36 @@ def ParseFFMPEGAudio( lines ):
     lines_audio = [l for l in lines if 'Audio: ' in l]
     
     audio_found = lines_audio != []
+    audio_format = None
     
     if audio_found:
+        
         line = lines_audio[0]
+        
         try:
+            
             match = re.search(" [0-9]* Hz", line)
+            
             audio_fps = int(line[match.start()+1:match.end()])
+            
         except:
+            
             audio_fps = 'unknown'
+            
+        
+        try:
+            
+            match = re.search( '(?<=Audio\:\s).+?(?=,)', line )
+            
+            audio_format = match.group()
+            
+        except:
+            
+            audio_format = 'unknown'
+            
+        
+    
+    return ( audio_found, audio_format )
     
 def ParseFFMPEGDuration( lines ):
     
@@ -429,7 +375,7 @@ def ParseFFMPEGDuration( lines ):
             
         
         match = re.search("[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
-        hms = map(float, line[match.start()+1:match.end()].split(':'))
+        hms = list(map(float, line[match.start()+1:match.end()].split(':')))
         
         if len( hms ) == 1:
             
@@ -564,6 +510,23 @@ def ParseFFMPEGNumFramesManually( lines ):
         raise HydrusExceptions.MimeException( 'Error counting number of frames!' )
         
     
+def ParseFFMPEGVideoFormat( lines ):
+    
+    line = ParseFFMPEGVideoLine( lines )
+    
+    try:
+        
+        match = re.search( '(?<=Video\:\s).+?(?=,)', line )
+        
+        video_format = match.group()
+        
+    except:
+        
+        video_format = 'unknown'
+        
+    
+    return video_format
+    
 def ParseFFMPEGVideoLine( lines ):
     
     # get the output line that speaks about video
@@ -625,13 +588,13 @@ class VideoRendererFFMPEG( object ):
         
         self._path = path
         self._mime = mime
-        self._duration = float( duration ) / 1000.0
+        self._duration = duration / 1000.0
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
         self.lastread = None
         
-        self.fps = float( self._num_frames ) / self._duration
+        self.fps = self._num_frames / self._duration
         
         if self.fps == 0:
             
@@ -694,7 +657,7 @@ class VideoRendererFFMPEG( object ):
                 do_ss = True
                 
             
-            ss = float( start_index ) / self.fps
+            ss = start_index / self.fps
             self.pos = start_index
             skip_frames = 0
             
@@ -717,21 +680,9 @@ class VideoRendererFFMPEG( object ):
             '-vcodec', 'rawvideo', '-' ] )
             
         
-        try:
-            
-            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
-            
-        except:
-            
-            if not os.path.exists( FFMPEG_PATH ):
-                
-                raise Exception( 'FFMPEG was not found!' )
-                
-            else:
-                
-                raise
-                
-            
+        sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        
+        self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
         
         if skip_frames > 0:
             

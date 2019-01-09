@@ -1,11 +1,11 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientGUIMenus
-import ClientGUIShortcuts
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientGUIMenus
+from . import ClientGUIShortcuts
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
 import os
 import wx
 
@@ -635,7 +635,7 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = HydrusData.ToUnicode( e )
+            message = str( e )
             
             if len( message ) > 0:
                 
@@ -703,7 +703,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = HydrusData.ToUnicode( e )
+            message = str( e )
             
             if len( message ) > 0:
                 
@@ -738,7 +738,7 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = HydrusData.ToUnicode( e )
+            message = str( e )
             
             if len( message ) > 0:
                 

@@ -1,22 +1,22 @@
 import bisect
 import collections
-import ClientConstants as CC
-import ClientFiles
-import ClientRatings
-import ClientSearch
-import ClientTags
-import HydrusConstants as HC
-import HydrusTags
+from . import ClientConstants as CC
+from . import ClientFiles
+from . import ClientRatings
+from . import ClientSearch
+from . import ClientTags
+from . import HydrusConstants as HC
+from . import HydrusTags
 import os
 import random
 import time
 import traceback
 import wx
-import HydrusData
-import HydrusFileHandling
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import HydrusData
+from . import HydrusFileHandling
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import itertools
 
 def FlattenMedia( media_list ):
@@ -58,7 +58,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_size = shown_media.GetSize()
     c_size = comparison_media.GetSize()
     
-    size_ratio = float( s_size ) / float( c_size )
+    size_ratio = s_size / c_size
     
     if size_ratio > 2.0:
         
@@ -95,7 +95,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         ( s_w, s_h ) = shown_media.GetResolution()
         ( c_w, c_h ) = comparison_media.GetResolution()
         
-        resolution_ratio = float( s_w * s_h ) / float( c_w * c_h )
+        resolution_ratio = ( s_w * s_h ) / ( c_w * c_h )
         
         if resolution_ratio == 1.0:
             
@@ -198,14 +198,14 @@ def MergeTagsManagers( tags_managers ):
         
         for ( service_key, statuses_to_tags ) in items:
             
-            filtered = { status : tags for ( status, tags ) in statuses_to_tags.items() if status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) }
+            filtered = { status : tags for ( status, tags ) in list(statuses_to_tags.items()) if status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) }
             
             yield ( service_key, filtered )
             
         
     
     # [[( service_key, statuses_to_tags )]]
-    s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags().items() ) for tags_manager in tags_managers )
+    s_k_s_t_t_tupled = ( CurrentAndPendingFilter( list(tags_manager.GetServiceKeysToStatusesToTags().items()) ) for tags_manager in tags_managers )
     
     # [(service_key, statuses_to_tags)]
     flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
@@ -217,10 +217,10 @@ def MergeTagsManagers( tags_managers ):
     
     merged_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
     
-    for ( service_key, several_statuses_to_tags ) in s_k_s_t_t_dict.items():
+    for ( service_key, several_statuses_to_tags ) in list(s_k_s_t_t_dict.items()):
         
         # [[( status, tags )]]
-        s_t_t_tupled = ( s_t_t.items() for s_t_t in several_statuses_to_tags )
+        s_t_t_tupled = ( list(s_t_t.items()) for s_t_t in several_statuses_to_tags )
         
         # [( status, tags )]
         flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
@@ -890,7 +890,7 @@ class MediaList( object ):
                 
                 new_media = []
                 
-                for ( key, medias ) in keys_to_medias.items():
+                for ( key, medias ) in list(keys_to_medias.items()):
                     
                     if key in self._collect_map_singletons:
                         
@@ -975,8 +975,8 @@ class MediaList( object ):
             
             keys_to_medias = self._CalculateCollectionKeysToMedias( collect_by, self._singleton_media )
             
-            self._collect_map_singletons = { key : medias[0] for ( key, medias ) in keys_to_medias.items() if len( medias ) == 1 }
-            self._collect_map_collected = { key : self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for ( key, medias ) in keys_to_medias.items() if len( medias ) > 1 }
+            self._collect_map_singletons = { key : medias[0] for ( key, medias ) in list(keys_to_medias.items()) if len( medias ) == 1 }
+            self._collect_map_collected = { key : self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for ( key, medias ) in list(keys_to_medias.items()) if len( medias ) > 1 }
             
             self._singleton_media = set( self._collect_map_singletons.values() )
             self._collected_media = set( self._collect_map_collected.values() )
@@ -1213,7 +1213,7 @@ class MediaList( object ):
             m.ProcessContentUpdates( service_keys_to_content_updates )
             
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
             
             for content_update in content_updates:
                 
@@ -1249,7 +1249,7 @@ class MediaList( object ):
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
-        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
+        for ( service_key, service_updates ) in list(service_keys_to_service_updates.items()):
             
             for service_update in service_updates:
                 
@@ -1437,7 +1437,7 @@ class MediaCollection( MediaList, Media ):
     
     def GetPrettyInfoLines( self ):
         
-        size = HydrusData.ConvertIntToBytes( self._size )
+        size = HydrusData.ToHumanBytes( self._size )
         
         mime = HC.mime_string_lookup[ HC.APPLICATION_HYDRUS_CLIENT_COLLECTION ]
         
@@ -1595,7 +1595,7 @@ class MediaSingleton( Media ):
         
         ( hash_id, hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
         
-        info_string = HydrusData.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
+        info_string = HydrusData.ToHumanBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
         if width is not None and height is not None: info_string += ' (' + HydrusData.ToHumanInt( width ) + 'x' + HydrusData.ToHumanInt( height ) + ')'
         
@@ -1996,7 +1996,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             service_key = sort_data
             
-            serialisable_sort_data = service_key.encode( 'hex' )
+            serialisable_sort_data = service_key.hex()
             
         
         return ( sort_metatype, serialisable_sort_data, self.sort_asc )
@@ -2016,7 +2016,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
         elif sort_metatype == 'rating':
             
-            sort_data = serialisable_sort_data.decode( 'hex' )
+            sort_data = bytes.fromhex( serialisable_sort_data )
             
         
         self.sort_type = ( sort_metatype, sort_data )
@@ -2118,7 +2118,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        return float( width ) / float( height )
+                        return width / height
                         
                     
                 
@@ -2421,11 +2421,11 @@ class TagsManagerSimple( object ):
         
         dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
-        for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+        for ( service_key, statuses_to_tags ) in list(self._service_keys_to_statuses_to_tags.items()):
             
             dupe_statuses_to_tags = HydrusData.default_dict_set()
             
-            for ( status, tags ) in statuses_to_tags.items():
+            for ( status, tags ) in list(statuses_to_tags.items()):
                 
                 dupe_statuses_to_tags[ status ] = set( tags )
                 
@@ -2569,7 +2569,7 @@ class TagsManager( TagsManagerSimple ):
             
             combined_statuses_to_tags = collections.defaultdict( set )
             
-            for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+            for ( service_key, statuses_to_tags ) in list(self._service_keys_to_statuses_to_tags.items()):
                 
                 if service_key == CC.COMBINED_TAG_SERVICE_KEY:
                     
@@ -2609,11 +2609,11 @@ class TagsManager( TagsManagerSimple ):
         
         dupe_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
-        for ( service_key, statuses_to_tags ) in self._service_keys_to_statuses_to_tags.items():
+        for ( service_key, statuses_to_tags ) in list(self._service_keys_to_statuses_to_tags.items()):
             
             dupe_statuses_to_tags = HydrusData.default_dict_set()
             
-            for ( status, tags ) in statuses_to_tags.items():
+            for ( status, tags ) in list(statuses_to_tags.items()):
                 
                 dupe_statuses_to_tags[ status ] = set( tags )
                 

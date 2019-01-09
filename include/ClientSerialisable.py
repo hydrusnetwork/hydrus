@@ -1,14 +1,14 @@
-import ClientConstants as CC
-import ClientImageHandling
-import ClientImporting
-import ClientParsing
-import ClientPaths
+from . import ClientConstants as CC
+from . import ClientImageHandling
+from . import ClientImporting
+from . import ClientParsing
+from . import ClientPaths
 import collections
 import cv2
-import HydrusConstants as HC
-import HydrusData
-import HydrusPaths
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusPaths
+from . import HydrusSerialisable
 import numpy
 import os
 import shutil
@@ -98,7 +98,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     ( t_width, t_height ) = dc.GetTextExtent( title )
     
-    dc.DrawText( title, ( width - t_width ) / 2, current_y )
+    dc.DrawText( title, ( width - t_width ) // 2, current_y )
     
     current_y += t_height + 10
     
@@ -106,7 +106,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     ( t_width, t_height ) = dc.GetTextExtent( payload_description )
     
-    dc.DrawText( payload_description, ( width - t_width ) / 2, current_y )
+    dc.DrawText( payload_description, ( width - t_width ) // 2, current_y )
     
     current_y += t_height + 10
     
@@ -116,18 +116,18 @@ def CreateTopImage( width, title, payload_description, text ):
         
         ( t_width, t_height ) = dc.GetTextExtent( text_line )
         
-        dc.DrawText( text_line, ( width - t_width ) / 2, current_y )
+        dc.DrawText( text_line, ( width - t_width ) // 2, current_y )
         
         current_y += t_height + 4
         
     
     del dc
     
-    data = top_bmp.ConvertToImage().GetData()
+    data_bytearray = top_bmp.ConvertToImage().GetData()
     
-    data = buffer( data ) # wx phoenix thing--bmp now delivers a bytearray, but numpy wants a buffer, wew
+    data_bytes = bytes( data_bytearray )
     
-    top_image_rgb = numpy.fromstring( data, dtype = 'uint8' ).reshape( ( top_height, width, 3 ) )
+    top_image_rgb = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( top_height, width, 3 ) )
     
     top_bmp.Destroy()
     
@@ -135,35 +135,36 @@ def CreateTopImage( width, title, payload_description, text ):
     
     top_height_header = struct.pack( '!H', top_height )
     
-    ( byte0, byte1 ) = top_height_header
+    byte0 = top_height_header[0:1]
+    byte1 = top_height_header[1:2]
     
     top_image[0][0] = ord( byte0 )
     top_image[0][1] = ord( byte1 )
     
     return top_image
     
-def DumpToPng( width, payload, title, payload_description, text, path ):
+def DumpToPng( width, payload_bytes, title, payload_description, text, path ):
     
-    payload_length = len( payload )
+    payload_bytes_length = len( payload_bytes )
     
-    payload_string_length = payload_length + 4
+    header_and_payload_bytes_length = payload_bytes_length + 4
     
-    payload_height = int( float( payload_string_length ) / width )
+    payload_height = int( header_and_payload_bytes_length / width )
     
-    if float( payload_string_length ) / width % 1.0 > 0:
+    if ( header_and_payload_bytes_length / width ) % 1.0 > 0:
         
         payload_height += 1
         
     
     top_image = CreateTopImage( width, title, payload_description, text )
     
-    payload_length_header = struct.pack( '!I', payload_length )
+    payload_length_header = struct.pack( '!I', payload_bytes_length )
     
-    num_empty_bytes = payload_height * width - payload_string_length
+    num_empty_bytes = payload_height * width - header_and_payload_bytes_length
     
-    full_payload_string = payload_length_header + payload + '\x00' * num_empty_bytes
+    header_and_payload_bytes = payload_length_header + payload_bytes + b'\x00' * num_empty_bytes
     
-    payload_image = numpy.fromstring( full_payload_string, dtype = 'uint8' ).reshape( ( payload_height, width ) )
+    payload_image = numpy.fromstring( header_and_payload_bytes, dtype = 'uint8' ).reshape( ( payload_height, width ) )
     
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
@@ -187,20 +188,28 @@ def DumpToPng( width, payload, title, payload_description, text, path ):
         HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
         
     
-def GetPayloadString( payload_obj ):
+def GetPayloadBytes( payload_obj ):
     
-    if isinstance( payload_obj, ( str, unicode ) ):
+    if isinstance( payload_obj, bytes ):
         
-        return HydrusData.ToByteString( payload_obj )
+        return payload_obj
+        
+    elif isinstance( payload_obj, str ):
+        
+        return bytes( payload_obj, 'utf-8' )
         
     else:
         
-        return payload_obj.DumpToNetworkString()
+        return payload_obj.DumpToNetworkBytes()
         
     
 def GetPayloadTypeString( payload_obj ):
     
-    if isinstance( payload_obj, ( str, unicode ) ):
+    if isinstance( payload_obj, bytes ):
+        
+        return 'Bytes'
+        
+    elif isinstance( payload_obj, str ):
         
         return 'String'
         
@@ -213,7 +222,7 @@ def GetPayloadTypeString( payload_obj ):
             type_string_counts[ GetPayloadTypeString( o ) ] += 1
             
         
-        type_string = ', '.join( ( HydrusData.ToHumanInt( count ) + ' ' + s for ( s, count ) in type_string_counts.items() ) )
+        type_string = ', '.join( ( HydrusData.ToHumanInt( count ) + ' ' + s for ( s, count ) in list(type_string_counts.items()) ) )
         
         return 'A list of ' + type_string
         
@@ -226,13 +235,13 @@ def GetPayloadTypeString( payload_obj ):
         return repr( type( payload_obj ) )
         
     
-def GetPayloadDescriptionAndString( payload_obj ):
+def GetPayloadDescriptionAndBytes( payload_obj ):
     
-    payload_string = GetPayloadString( payload_obj )
+    payload_bytes = GetPayloadBytes( payload_obj )
     
-    payload_description = GetPayloadTypeString( payload_obj ) + ' - ' + HydrusData.ConvertIntToBytes( len( payload_string ) )
+    payload_description = GetPayloadTypeString( payload_obj ) + ' - ' + HydrusData.ToHumanBytes( len( payload_bytes ) )
     
-    return ( payload_description, payload_string )
+    return ( payload_description, payload_bytes )
     
 def LoadFromPng( path ):
     
@@ -266,13 +275,13 @@ def LoadFromPng( path ):
         
         ( top_height, ) = struct.unpack( '!H', top_height_header )
         
-        full_payload_string = complete_data[ width * top_height : ]
+        payload_and_header_bytes = complete_data[ width * top_height : ]
         
-        payload_length_header = full_payload_string[:4]
+        payload_length_header = payload_and_header_bytes[:4]
         
-        ( payload_length, ) = struct.unpack( '!I', payload_length_header )
+        ( payload_bytes_length, ) = struct.unpack( '!I', payload_length_header )
         
-        payload = full_payload_string[ 4 : 4 + payload_length ]
+        payload_bytes = payload_and_header_bytes[ 4 : 4 + payload_bytes_length ]
         
     except Exception as e:
         
@@ -281,7 +290,7 @@ def LoadFromPng( path ):
         raise Exception( 'The image loaded, but it did not seem to be a hydrus serialised png!' )
         
     
-    return payload
+    return payload_bytes
     
 def TextExceedsWidth( text, width, size, thickness ):
     

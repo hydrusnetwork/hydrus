@@ -1,15 +1,15 @@
 import collections
-import HydrusConstants as HC
+from . import HydrusConstants as HC
 import itertools
 import os
 import threading
 import time
 import traceback
-import HydrusData
-import HydrusExceptions
+from . import HydrusData
+from . import HydrusExceptions
 import re
-import HydrusGlobals as HG
-import HydrusText
+from . import HydrusGlobals as HG
+from . import HydrusText
 
 def CensorshipMatch( tag, censorships ):
     
@@ -101,7 +101,7 @@ def ConvertTagToSortable( tag ):
     
     convert = lambda text: int( text ) if text.isdecimal() else text
     
-    return tuple( [ convert( c ) for c in re.split( '([0-9]+)', tag.lower(), flags = re.UNICODE ) ] )
+    return tuple( [ convert( c ) for c in re.split( '([0-9]+)', tag.lower() ) ] )
     
     # old method
     
@@ -199,8 +199,6 @@ def CleanTag( tag ):
         
         tag = tag.lower()
         
-        tag = HydrusData.ToUnicode( tag )
-        
         tag = HydrusText.re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
         
         if ':' in tag:
@@ -221,9 +219,9 @@ def CleanTag( tag ):
         
     except Exception as e:
         
-        text = 'Was unable to parse the tag: ' + HydrusData.ToUnicode( tag )
+        text = 'Was unable to parse the tag: ' + str( tag )
         text += os.linesep * 2
-        text += HydrusData.ToUnicode( e )
+        text += str( e )
         
         raise Exception( text )
         
@@ -283,7 +281,7 @@ def SplitTag( tag ):
         
     else:
         
-        return ( u'', tag )
+        return ( '', tag )
         
     
 def StripTextOfGumpf( t ):

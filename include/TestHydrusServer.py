@@ -1,29 +1,29 @@
-import ClientLocalServer
-import ClientMedia
-import ClientRatings
-import ClientServices
+from . import ClientLocalServer
+from . import ClientMedia
+from . import ClientRatings
+from . import ClientServices
 import hashlib
-import httplib
-import HydrusConstants as HC
-import HydrusEncryption
-import HydrusNetwork
-import HydrusPaths
-import HydrusServer
-import HydrusServerResources
+import http.client
+from . import HydrusConstants as HC
+from . import HydrusEncryption
+from . import HydrusNetwork
+from . import HydrusPaths
+from . import HydrusServer
+from . import HydrusServerResources
 import os
 import random
-import ServerFiles
-import ServerServer
+from . import ServerFiles
+from . import ServerServer
 import ssl
-import TestConstants
+from . import TestConstants
 import time
 import unittest
 from twisted.internet import reactor
-from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
+#from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 from twisted.internet.defer import deferredGenerator, waitForDeferred
 import twisted.internet.ssl
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 
 with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
     
@@ -106,11 +106,11 @@ class TestServer( unittest.TestCase ):
             context.options |= ssl.OP_NO_SSLv2
             context.options |= ssl.OP_NO_SSLv3
             
-            connection = httplib.HTTPSConnection( host, port, timeout = 10, context = context )
+            connection = http.client.HTTPSConnection( host, port, timeout = 10, context = context )
             
         else:
             
-            connection = httplib.HTTPConnection( host, port, timeout = 10 )
+            connection = http.client.HTTPConnection( host, port, timeout = 10 )
             
         
         #
@@ -125,7 +125,10 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f: favicon = f.read()
+        with open( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), 'rb' ) as f:
+            
+            favicon = f.read()
+            
         
         connection.request( 'GET', '/favicon.ico' )
         
@@ -144,9 +147,12 @@ class TestServer( unittest.TestCase ):
         
         HydrusPaths.MakeSureDirectoryExists( os.path.dirname( path ) )
         
-        with open( path, 'wb' ) as f: f.write( EXAMPLE_FILE )
+        with open( path, 'wb' ) as f:
+            
+            f.write( EXAMPLE_FILE )
+            
         
-        response = service.Request( HC.GET, 'file', { 'hash' : self._file_hash.encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'file', { 'hash' : self._file_hash } )
         
         self.assertEqual( response, EXAMPLE_FILE )
         
@@ -155,9 +161,12 @@ class TestServer( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
 
-        with open( path, 'rb' ) as f: file = f.read()
+        with open( path, 'rb' ) as f:
+            
+            file_bytes = f.read()
+            
         
-        service.Request( HC.POST, 'file', { 'file' : file } )
+        service.Request( HC.POST, 'file', { 'file' : file_bytes } )
         
         written = HG.test_controller.GetWrite( 'file' )
         
@@ -165,7 +174,7 @@ class TestServer( unittest.TestCase ):
         
         ( written_service_key, written_account, written_file_dict ) = args
         
-        self.assertEqual( written_file_dict[ 'hash' ], '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3' )
+        self.assertEqual( written_file_dict[ 'hash' ], b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3' )
         self.assertEqual( written_file_dict[ 'ip' ], '127.0.0.1' )
         self.assertEqual( written_file_dict[ 'height' ], 200 )
         self.assertEqual( written_file_dict[ 'width' ], 200 )
@@ -178,7 +187,7 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'ip', ( ip, timestamp ) )
         
-        response = service.Request( HC.GET, 'ip', { 'hash' : self._file_hash.encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'ip', { 'hash' : self._file_hash } )
         
         self.assertEqual( response[ 'ip' ], ip )
         self.assertEqual( response[ 'timestamp' ], timestamp )
@@ -189,9 +198,12 @@ class TestServer( unittest.TestCase ):
         
         HydrusPaths.MakeSureDirectoryExists( os.path.dirname( path ) )
         
-        with open( path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
+        with open( path, 'wb' ) as f:
+            
+            f.write( EXAMPLE_THUMBNAIL )
+            
         
-        response = service.Request( HC.GET, 'thumbnail', { 'hash' : self._file_hash.encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'thumbnail', { 'hash' : self._file_hash } )
         
         self.assertEqual( response, EXAMPLE_THUMBNAIL )
         
@@ -203,7 +215,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        connection = httplib.HTTPConnection( host, port, timeout = 10 )
+        connection = http.client.HTTPConnection( host, port, timeout = 10 )
         
         #
         
@@ -227,15 +239,22 @@ class TestServer( unittest.TestCase ):
         
         client_files_default = os.path.join( TestConstants.DB_DIR, 'client_files' )
         
-        hash_encoded = hashes[0].encode( 'hex' )
+        hash_encoded = hashes[0].hex()
         
         prefix = hash_encoded[:2]
         
         file_path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
         thumbnail_path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
         
-        with open( file_path, 'wb' ) as f: f.write( EXAMPLE_FILE )
-        with open( thumbnail_path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
+        with open( file_path, 'wb' ) as f:
+            
+            f.write( EXAMPLE_FILE )
+            
+        
+        with open( thumbnail_path, 'wb' ) as f:
+            
+            f.write( EXAMPLE_THUMBNAIL )
+            
         
         local_booru_manager = HG.client_controller.local_booru_manager
         
@@ -293,10 +312,10 @@ class TestServer( unittest.TestCase ):
         
         requests = []
         
-        requests.append( '/gallery?share_key=' + share_key.encode( 'hex' ) )
-        requests.append( '/page?share_key=' + share_key.encode( 'hex' ) + '&hash=' + hash.encode( 'hex' ) )
-        requests.append( '/file?share_key=' + share_key.encode( 'hex' ) + '&hash=' + hash.encode( 'hex' ) )
-        requests.append( '/thumbnail?share_key=' + share_key.encode( 'hex' ) + '&hash=' + hash.encode( 'hex' ) )
+        requests.append( '/gallery?share_key=' + share_key.hex() )
+        requests.append( '/page?share_key=' + share_key.hex() + '&hash=' + hash.hex() )
+        requests.append( '/file?share_key=' + share_key.hex() + '&hash=' + hash.hex() )
+        requests.append( '/thumbnail?share_key=' + share_key.hex() + '&hash=' + hash.hex() )
         
         for request in requests:
             
@@ -343,15 +362,15 @@ class TestServer( unittest.TestCase ):
         
         definitions_update = HydrusNetwork.DefinitionsUpdate()
         
-        if i in range( 100, 200 ):
+        for i in range( 100, 200 ):
             
             definitions_update.AddRow( ( HC.DEFINITIONS_TYPE_TAGS, i, 'series:test ' + str( i ) ) )
             definitions_update.AddRow( ( HC.DEFINITIONS_TYPE_HASHES, i + 500, HydrusData.GenerateKey() ) )
             
         
-        definitions_update_network_string = definitions_update.DumpToNetworkString()
+        definitions_update_network_bytes = definitions_update.DumpToNetworkBytes()
         
-        definitions_update_hash = hashlib.sha256( definitions_update_network_string ).digest()
+        definitions_update_hash = hashlib.sha256( definitions_update_network_bytes ).digest()
         
         path = ServerFiles.GetExpectedFilePath( definitions_update_hash )
         
@@ -359,7 +378,7 @@ class TestServer( unittest.TestCase ):
         
         with open( path, 'wb' ) as f:
             
-            f.write( definitions_update_network_string )
+            f.write( definitions_update_network_bytes )
             
         
         response = service.Request( HC.GET, 'update', { 'update_hash' : definitions_update_hash } )
@@ -367,7 +386,7 @@ class TestServer( unittest.TestCase ):
         try: os.remove( path )
         except: pass
         
-        self.assertEqual( response, definitions_update_network_string )
+        self.assertEqual( response, definitions_update_network_bytes )
         
         # content
         
@@ -380,20 +399,23 @@ class TestServer( unittest.TestCase ):
             content_update.AddRow( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) )
             
         
-        content_update_network_string = content_update.DumpToNetworkString()
+        content_update_network_bytes = content_update.DumpToNetworkBytes()
         
-        content_update_hash = hashlib.sha256( content_update_network_string ).digest()
+        content_update_hash = hashlib.sha256( content_update_network_bytes ).digest()
         
         path = ServerFiles.GetExpectedFilePath( content_update_hash )
         
-        with open( path, 'wb' ) as f: f.write( content_update_network_string )
+        with open( path, 'wb' ) as f:
+            
+            f.write( content_update_network_bytes )
+            
         
         response = service.Request( HC.GET, 'update', { 'update_hash' : content_update_hash } )
         
         try: os.remove( path )
         except: pass
         
-        self.assertEqual( response, content_update_network_string )
+        self.assertEqual( response, content_update_network_bytes )
         
         # metadata
         
@@ -460,17 +482,17 @@ class TestServer( unittest.TestCase ):
         HG.test_controller.SetRead( 'account_info', account_info )
         HG.test_controller.SetRead( 'account_key_from_identifier', HydrusData.GenerateKey() )
         
-        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : HydrusData.GenerateKey().encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : HydrusData.GenerateKey() } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
         # this not working for now, screw it m8
         
-        #response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey().encode( 'hex' ) } )
+        #response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey() } )
         
         #self.assertEqual( response[ 'account_info' ], account_info )
         
-        #response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey().encode( 'hex' ), 'subject_tag' : 'hello'.encode( 'hex' ) } )
+        #response = service.Request( HC.GET, 'account_info', { 'subject_hash' : HydrusData.GenerateKey(), 'subject_tag' : 'hello' } )
         
         #self.assertEqual( response[ 'account_info' ], account_info )
         
@@ -501,7 +523,7 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'registration_keys', [ registration_key ] )
         
-        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'account_type_key' : os.urandom( 32 ).encode( 'hex' ), 'expires' : HydrusData.GetNow() + 1200 } )
+        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'account_type_key' : os.urandom( 32 ), 'expires' : HydrusData.GetNow() + 1200 } )
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         
@@ -514,7 +536,7 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'access_key', access_key )
         
-        response = service.Request( HC.GET, 'access_key', { 'registration_key' : 'init' } )
+        response = service.Request( HC.GET, 'access_key', { 'registration_key' : b'init' } )
         
         self.assertEqual( response[ 'access_key' ], access_key )
         

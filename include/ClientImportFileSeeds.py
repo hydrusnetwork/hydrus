@@ -1,24 +1,24 @@
-import ClientConstants as CC
-import ClientImageHandling
-import ClientImporting
-import ClientNetworkingDomain
-import ClientParsing
-import ClientPaths
+from . import ClientConstants as CC
+from . import ClientImageHandling
+from . import ClientImporting
+from . import ClientNetworkingDomain
+from . import ClientParsing
+from . import ClientPaths
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusImageHandling
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusImageHandling
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
 import os
 import threading
 import time
 import traceback
-import urlparse
+import urllib.parse
 
 def GenerateFileSeedCacheStatus( file_seed_cache ):
     
@@ -360,7 +360,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         serialisable_urls = list( self._urls )
         serialisable_tags = list( self._tags )
-        serialisable_hashes = [ ( hash_type, hash.encode( 'hex' ) ) for ( hash_type, hash ) in self._hashes.items() if hash is not None ]
+        serialisable_hashes = [ ( hash_type, hash.hex() ) for ( hash_type, hash ) in list(self._hashes.items()) if hash is not None ]
         
         return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
         
@@ -371,7 +371,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self._urls = set( serialisable_urls )
         self._tags = set( serialisable_tags )
-        self._hashes = { hash_type : encoded_hash.decode( 'hex' ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
+        self._hashes = { hash_type : bytes.fromhex( encoded_hash ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
         
     
     def _NormaliseAndFilterAssociableURLs( self, urls ):
@@ -473,9 +473,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         source_timestamp = ClientParsing.GetTimestampFromParseResults( parse_results, HC.TIMESTAMP_TYPE_SOURCE )
         
-        source_timestamp = min( HydrusData.GetNow() - 30, source_timestamp )
-        
         if source_timestamp is not None:
+            
+            source_timestamp = min( HydrusData.GetNow() - 30, source_timestamp )
             
             self.source_time = source_timestamp
             
@@ -597,7 +597,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if status == CC.STATUS_UNKNOWN:
             
-            for ( hash_type, found_hash ) in self._hashes.items():
+            for ( hash_type, found_hash ) in list(self._hashes.items()):
                 
                 ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash )
                 
@@ -816,7 +816,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.VetoException as e:
             
-            self.SetStatus( CC.STATUS_VETOED, note = HydrusData.ToUnicode( e ) )
+            self.SetStatus( CC.STATUS_VETOED, note = str( e ) )
             
         except Exception as e:
             
@@ -937,11 +937,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if exception is not None:
             
-            first_line = HydrusData.ToUnicode( exception ).split( os.linesep )[0]
+            first_line = str( exception ).split( os.linesep )[0]
             
-            note = first_line + u'\u2026 (Copy note to see full error)'
+            note = first_line + '\u2026 (Copy note to see full error)'
             note += os.linesep
-            note += HydrusData.ToUnicode( traceback.format_exc() )
+            note += traceback.format_exc()
             
             HydrusData.Print( 'Error when processing ' + self.file_seed_data + ' !' )
             HydrusData.Print( traceback.format_exc() )
@@ -1067,18 +1067,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         network_job.WaitUntilDone()
                         
                     
-                    data = network_job.GetContent()
+                    parsing_text = network_job.GetContentText()
                     
                     parsing_context = {}
                     
                     parsing_context[ 'post_url' ] = post_url
                     parsing_context[ 'url' ] = url_to_check
                     
-                    all_parse_results = parser.Parse( parsing_context, data )
+                    all_parse_results = parser.Parse( parsing_context, parsing_text )
                     
                     if len( all_parse_results ) == 0:
                         
-                        raise HydrusExceptions.VetoException( 'No data found in document!' )
+                        raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
                         
                     elif len( all_parse_results ) > 1:
                         
@@ -1222,7 +1222,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             status = CC.STATUS_VETOED
             
-            note = HydrusData.ToUnicode( e )
+            note = str( e )
             
             self.SetStatus( status, note = note )
             
@@ -1314,7 +1314,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             in_inbox = HG.client_controller.Read( 'in_inbox', hash )
             
-            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, in_inbox, hash, set( self._tags ) ).items():
+            for ( service_key, content_updates ) in list(tag_import_options.GetServiceKeysToContentUpdates( self.status, in_inbox, hash, set( self._tags ) ).items()):
                 
                 service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
@@ -1452,7 +1452,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 if 'note' in file_seed_info:
                     
-                    file_seed_info[ 'note' ] = HydrusData.ToUnicode( file_seed_info[ 'note' ] )
+                    file_seed_info[ 'note' ] = str( file_seed_info[ 'note' ] )
                     
                 
                 new_serialisable_info.append( ( file_seed, file_seed_info ) )
@@ -1541,7 +1541,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    parse = urlparse.urlparse( file_seed )
+                    parse = urllib.parse.urlparse( file_seed )
                     
                     if 'media.tumblr.com' in parse.netloc:
                         

@@ -1,20 +1,19 @@
-import ClientConstants as CC
-import ClientNetworkingContexts
-import ClientParsing
-import ClientThreading
+from . import ClientConstants as CC
+from . import ClientNetworkingContexts
+from . import ClientParsing
+from . import ClientThreading
 import collections
-import HydrusConstants as HC
-import HydrusGlobals as HG
-import HydrusData
-import HydrusExceptions
-import HydrusNetworking
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusNetworking
+from . import HydrusSerialisable
 import os
 import re
 import threading
 import time
-import urllib
-import urlparse
+import urllib.parse
 
 def AlphabetiseQueryText( query_text ):
     
@@ -94,23 +93,20 @@ def ConvertHTTPToHTTPS( url ):
     
 def ConvertQueryDictToText( query_dict ):
     
-    # we now do everything with requests, which does all the unicode -> ascii -> %20 business naturally, phew
-    # so lets just stick with unicode, which we still want to call explicitly to coerce integers and so on that'll slip in here and there
+    # we now do everything with requests, which does all the unicode -> %20 business naturally, phew
+    # we still want to call str explicitly to coerce integers and so on that'll slip in here and there
     
     param_pairs = list( query_dict.items() )
     
     param_pairs.sort()
     
-    query_text = u'&'.join( ( HydrusData.ToUnicode( key ) + u'=' + HydrusData.ToUnicode( value ) for ( key, value ) in param_pairs ) )
+    query_text = '&'.join( ( str( key ) + '=' + str( value ) for ( key, value ) in param_pairs ) )
     
     return query_text
     
 def ConvertQueryTextToDict( query_text ):
     
-    # we generally do not want quote characters %20 stuff, in our urls. we would prefer regular ascii and even unicode
-    
-    # first we will decode all unicode, which allows urllib to work
-    query_text = HydrusData.ToByteString( query_text )
+    # we generally do not want quote characters, %20 stuff, in our urls. we would prefer properly formatted unicode
     
     query_dict = {}
     
@@ -130,19 +126,17 @@ def ConvertQueryTextToDict( query_text ):
             # odd situations like '6+girls+skirt', which comes here encoded as '6%2Bgirls+skirt', shouldn't turn into '6+girls+skirt'
             # so if there are a mix of encoded and non-encoded, we won't touch it here m8
             
-            # we convert to unicode afterwards so %E5%B0%BB%E7%A5%9E%E6%A7%98 -> \xe5\xb0\xbb\xe7\xa5\x9e\xe6\xa7\x98 -> \u5c3b\u795e\u69d8
-            
             ( key, value ) = result
             
             try:
                 
-                unquoted_key = urllib.unquote( key )
+                unquoted_key = urllib.parse.unquote( key )
                 
-                requoted_key = urllib.quote( unquoted_key )
+                requoted_key = urllib.parse.quote( unquoted_key )
                 
-                if key == requoted_key:
+                if requoted_key == key:
                     
-                    key = HydrusData.ToUnicode( unquoted_key )
+                    key = unquoted_key
                     
                 
             except:
@@ -152,13 +146,13 @@ def ConvertQueryTextToDict( query_text ):
             
             try:
                 
-                unquoted_value = urllib.unquote( value )
+                unquoted_value = urllib.parse.unquote( value )
                 
-                requoted_value = urllib.quote( unquoted_value )
+                requoted_value = urllib.parse.quote( unquoted_value )
                 
-                if value == requoted_value:
+                if requoted_value == value:
                     
-                    value = HydrusData.ToUnicode( unquoted_value )
+                    value = unquoted_value
                     
                 
             except:
@@ -209,7 +203,7 @@ def ConvertURLMatchesIntoAPIPairs( url_matches ):
     
 def ConvertURLIntoDomain( url ):
     
-    parser_result = urlparse.urlparse( url )
+    parser_result = urllib.parse.urlparse( url )
     
     if parser_result.scheme == '':
         
@@ -221,7 +215,7 @@ def ConvertURLIntoDomain( url ):
         raise HydrusExceptions.URLMatchException( 'URL "' + url + '" was not recognised--is it missing a domain?' )
         
     
-    domain = HydrusData.ToByteString( parser_result.netloc )
+    domain = parser_result.netloc
     
     return domain
     
@@ -263,7 +257,7 @@ def GetCookie( cookies, search_domain, cookie_name_string_match ):
             
         
     
-    raise HydrusExceptions.DataMissing( 'Cookie "' + cookie_name_string_match.ToUnicode() + '" not found for domain ' + search_domain + '!' )
+    raise HydrusExceptions.DataMissing( 'Cookie "' + cookie_name_string_match.ToString() + '" not found for domain ' + search_domain + '!' )
     
 def GetSearchURLs( url ):
     
@@ -289,7 +283,7 @@ def GetSearchURLs( url ):
     
     for url in list( search_urls ):
         
-        p = urlparse.urlparse( url )
+        p = urllib.parse.urlparse( url )
         
         scheme = p.scheme
         netloc = p.netloc
@@ -314,7 +308,7 @@ def GetSearchURLs( url ):
             netloc = 'www.' + netloc
             
         
-        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
         
         search_urls.add( r.geturl() )
         
@@ -357,7 +351,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._domains_to_url_matches = collections.defaultdict( list )
         
-        import ClientImportOptions
+        from . import ClientImportOptions
         
         self._file_post_default_tag_import_options = ClientImportOptions.TagImportOptions()
         self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
@@ -500,7 +494,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.URLMatchException as e:
             
-            raise HydrusExceptions.URLMatchException( 'Could not find a parser for ' + url + '!' + os.linesep * 2 + HydrusData.ToUnicode( e ) )
+            raise HydrusExceptions.URLMatchException( 'Could not find a parser for ' + url + '!' + os.linesep * 2 + str( e ) )
             
         
         url_match_key = parser_url_match.GetMatchKey()
@@ -521,20 +515,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_gugs = self._gugs.GetSerialisableTuple()
-        serialisable_gug_keys_to_display = [ gug_key.encode( 'hex' ) for gug_key in self._gug_keys_to_display ]
+        serialisable_gug_keys_to_display = [ gug_key.hex() for gug_key in self._gug_keys_to_display ]
         
         serialisable_url_matches = self._url_matches.GetSerialisableTuple()
-        serialisable_url_match_keys_to_display = [ url_match_key.encode( 'hex' ) for url_match_key in self._url_match_keys_to_display ]
+        serialisable_url_match_keys_to_display = [ url_match_key.hex() for url_match_key in self._url_match_keys_to_display ]
         serialisable_url_match_keys_to_parser_keys = self._url_match_keys_to_parser_keys.GetSerialisableTuple()
         
         serialisable_file_post_default_tag_import_options = self._file_post_default_tag_import_options.GetSerialisableTuple()
         serialisable_watchable_default_tag_import_options = self._watchable_default_tag_import_options.GetSerialisableTuple()
-        serialisable_url_match_keys_to_default_tag_import_options = [ ( url_match_key.encode( 'hex' ), tag_import_options.GetSerialisableTuple() ) for ( url_match_key, tag_import_options ) in self._url_match_keys_to_default_tag_import_options.items() ]
+        serialisable_url_match_keys_to_default_tag_import_options = [ ( url_match_key.hex(), tag_import_options.GetSerialisableTuple() ) for ( url_match_key, tag_import_options ) in list(self._url_match_keys_to_default_tag_import_options.items()) ]
         
         serialisable_default_tag_import_options_tuple = ( serialisable_file_post_default_tag_import_options, serialisable_watchable_default_tag_import_options, serialisable_url_match_keys_to_default_tag_import_options )
         
         serialisable_parsers = self._parsers.GetSerialisableTuple()
-        serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), custom_header_dict.items() ) for ( network_context, custom_header_dict ) in self._network_contexts_to_custom_header_dicts.items() ]
+        serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), list(custom_header_dict.items()) ) for ( network_context, custom_header_dict ) in list(self._network_contexts_to_custom_header_dicts.items()) ]
         
         return ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts )
         
@@ -571,11 +565,11 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._gugs = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gugs )
         
-        self._gug_keys_to_display = { serialisable_gug_key.decode( 'hex' ) for serialisable_gug_key in serialisable_gug_keys_to_display }
+        self._gug_keys_to_display = { bytes.fromhex( serialisable_gug_key ) for serialisable_gug_key in serialisable_gug_keys_to_display }
         
         self._url_matches = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_matches )
         
-        self._url_match_keys_to_display = { serialisable_url_match_key.decode( 'hex' ) for serialisable_url_match_key in serialisable_url_match_keys_to_display }
+        self._url_match_keys_to_display = { bytes.fromhex( serialisable_url_match_key ) for serialisable_url_match_key in serialisable_url_match_keys_to_display }
         self._url_match_keys_to_parser_keys = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_match_keys_to_parser_keys )
         
         ( serialisable_file_post_default_tag_import_options, serialisable_watchable_default_tag_import_options, serialisable_url_match_keys_to_default_tag_import_options ) = serialisable_default_tag_import_options_tuple
@@ -583,7 +577,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._file_post_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_post_default_tag_import_options )
         self._watchable_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_tag_import_options )
         
-        self._url_match_keys_to_default_tag_import_options = { serialisable_url_match_key.decode( 'hex' ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options ) for ( serialisable_url_match_key, serialisable_tag_import_options ) in serialisable_url_match_keys_to_default_tag_import_options }
+        self._url_match_keys_to_default_tag_import_options = { bytes.fromhex( serialisable_url_match_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options ) for ( serialisable_url_match_key, serialisable_tag_import_options ) in serialisable_url_match_keys_to_default_tag_import_options }
         
         self._parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parsers )
         
@@ -609,7 +603,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._domains_to_url_matches[ domain ].append( url_match )
             
         
-        for url_matches in self._domains_to_url_matches.values():
+        for url_matches in list(self._domains_to_url_matches.values()):
             
             NetworkDomainManager.STATICSortURLMatchesDescendingComplexity( url_matches )
             
@@ -665,7 +659,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            serialisable_url_match_names_to_display = url_match_names_to_display.items()
+            serialisable_url_match_names_to_display = list(url_match_names_to_display.items())
             serialisable_url_match_names_to_page_parser_keys = url_match_names_to_page_parser_keys.GetSerialisableTuple()
             serialisable_url_match_names_to_gallery_parser_keys = url_match_names_to_gallery_parser_keys.GetSerialisableTuple()
             
@@ -707,7 +701,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             serialisable_url_matches = url_matches.GetSerialisableTuple() # added random key this week, so save these changes back again!
             
-            serialisable_url_match_keys_to_display = [ url_match_key.encode( 'hex' ) for url_match_key in url_match_keys_to_display ]
+            serialisable_url_match_keys_to_display = [ url_match_key.hex() for url_match_key in url_match_keys_to_display ]
             
             serialisable_url_match_keys_to_parser_keys = url_match_keys_to_parser_keys.GetSerialisableTuple()
             
@@ -720,7 +714,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            import ClientImportOptions
+            from . import ClientImportOptions
             
             self._file_post_default_tag_import_options = ClientImportOptions.TagImportOptions()
             self._watchable_default_tag_import_options = ClientImportOptions.TagImportOptions()
@@ -729,7 +723,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             serialisable_file_post_default_tag_import_options = self._file_post_default_tag_import_options.GetSerialisableTuple()
             serialisable_watchable_default_tag_import_options = self._watchable_default_tag_import_options.GetSerialisableTuple()
-            serialisable_url_match_keys_to_default_tag_import_options = [ ( url_match_key.encode( 'hex' ), tag_import_options.GetSerialisableTuple() ) for ( url_match_key, tag_import_options ) in self._url_match_keys_to_default_tag_import_options.items() ]
+            serialisable_url_match_keys_to_default_tag_import_options = [ ( url_match_key.hex(), tag_import_options.GetSerialisableTuple() ) for ( url_match_key, tag_import_options ) in list(self._url_match_keys_to_default_tag_import_options.items()) ]
             
             serialisable_default_tag_import_options_tuple = ( serialisable_file_post_default_tag_import_options, serialisable_watchable_default_tag_import_options, serialisable_url_match_keys_to_default_tag_import_options )
             
@@ -759,7 +753,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             gug_keys_to_display = [ gug.GetGUGKey() for gug in gugs if 'ugoira' not in gug.GetName() ]
             
-            serialisable_gug_keys_to_display = [ gug_key.encode( 'hex' ) for gug_key in gug_keys_to_display ]
+            serialisable_gug_keys_to_display = [ gug_key.hex() for gug_key in gug_keys_to_display ]
             
             new_serialisable_info = ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_matches, serialisable_url_match_keys_to_display, serialisable_url_match_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts )
             
@@ -1127,7 +1121,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                     custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                     
-                    for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                    for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
                         
                         if approved == VALID_UNKNOWN:
                             
@@ -1227,7 +1221,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                     custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                     
-                    for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                    for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
                         
                         if approved == VALID_APPROVED:
                             
@@ -1308,7 +1302,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                 
-                for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
                     
                     headers_list.append( ( key, value, reason ) )
                     
@@ -1427,7 +1421,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                 
-                for ( value, approved, reason ) in custom_header_dict.values():
+                for ( value, approved, reason ) in list(custom_header_dict.values()):
                     
                     if approved == VALID_UNKNOWN:
                         
@@ -1448,7 +1442,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if url_match is None:
                 
-                p = urlparse.urlparse( url )
+                p = urllib.parse.urlparse( url )
                 
                 scheme = p.scheme
                 netloc = p.netloc
@@ -1457,7 +1451,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 query = AlphabetiseQueryText( p.query )
                 fragment = p.fragment
                 
-                r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+                r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
                 
                 normalised_url = r.geturl()
                 
@@ -1474,7 +1468,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            import ClientDefaults
+            from . import ClientDefaults
             
             default_gugs = ClientDefaults.GetDefaultGUGs()
             
@@ -1496,7 +1490,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            import ClientDefaults
+            from . import ClientDefaults
             
             default_parsers = ClientDefaults.GetDefaultParsers()
             
@@ -1518,7 +1512,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            import ClientDefaults
+            from . import ClientDefaults
             
             default_url_matches = ClientDefaults.GetDefaultURLMatches()
             
@@ -1660,7 +1654,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             deletee_url_match_keys = set()
             
-            for ( url_match_key, parser_key ) in self._url_match_keys_to_parser_keys.items():
+            for ( url_match_key, parser_key ) in list(self._url_match_keys_to_parser_keys.items()):
                 
                 if parser_key not in parser_keys:
                     
@@ -2099,7 +2093,7 @@ class DomainValidationPopupProcess( object ):
                 
                 # generate question
                 
-                question = 'For the network context ' + network_context.ToUnicode() + ', can the client set this header?'
+                question = 'For the network context ' + network_context.ToString() + ', can the client set this header?'
                 question += os.linesep * 2
                 question += key + ': ' + value
                 question += os.linesep * 2
@@ -2194,7 +2188,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_gallery_url_generator_key = self._gallery_url_generator_key.encode( 'hex' )
+        serialisable_gallery_url_generator_key = self._gallery_url_generator_key.hex()
         
         return ( serialisable_gallery_url_generator_key, self._url_template, self._replacement_phrase, self._search_terms_separator, self._initial_search_text, self._example_search_text )
         
@@ -2203,7 +2197,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( serialisable_gallery_url_generator_key, self._url_template, self._replacement_phrase, self._search_terms_separator, self._initial_search_text, self._example_search_text ) = serialisable_info
         
-        self._gallery_url_generator_key = serialisable_gallery_url_generator_key.decode( 'hex' )
+        self._gallery_url_generator_key = bytes.fromhex( serialisable_gallery_url_generator_key )
         
     
     def GenerateGalleryURL( self, query_text ):
@@ -2226,23 +2220,22 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         if search_phrase_seems_to_go_in_path:
             
-            # encode this gubbins since requests won't be able to do it
+            # encode all this gubbins since requests won't be able to do it
             # this basically fixes e621 searches for 'male/female', which through some httpconf trickery are embedded in path but end up in a query, so need to be encoded right beforehand
-            # we need ToByteString as urllib.quote can't handle unicode hiragana etc...
             
-            encoded_search_terms = [ urllib.quote( HydrusData.ToByteString( search_term ), safe = '' ) for search_term in search_terms ]
+            encoded_search_terms = [ urllib.parse.quote( search_term, safe = '' ) for search_term in search_terms ]
             
         else:
-            
-            # when the separator is '+' but the permitted tags might be '6+girls', we run into fun internet land
             
             encoded_search_terms = []
             
             for search_term in search_terms:
                 
+                # when the tags separator is '+' but the tags include '6+girls', we run into fun internet land
+                
                 if self._search_terms_separator in search_term:
                     
-                    search_term = urllib.quote( HydrusData.ToByteString( search_term ), safe = '' )
+                    search_term = urllib.parse.quote( search_term, safe = '' )
                     
                 
                 encoded_search_terms.append( search_term )
@@ -2257,7 +2250,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
         except Exception as e:
             
-            raise HydrusExceptions.GUGException( unicode( e ) )
+            raise HydrusExceptions.GUGException( str( e ) )
             
         
         return gallery_url
@@ -2366,8 +2359,8 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_gug_key = self._gallery_url_generator_key.encode( 'hex' )
-        serialisable_gug_keys_and_names = [ ( gug_key.encode( 'hex' ), gug_name ) for ( gug_key, gug_name ) in self._gug_keys_and_names ]
+        serialisable_gug_key = self._gallery_url_generator_key.hex()
+        serialisable_gug_keys_and_names = [ ( gug_key.hex(), gug_name ) for ( gug_key, gug_name ) in self._gug_keys_and_names ]
         
         return ( serialisable_gug_key, self._initial_search_text, serialisable_gug_keys_and_names )
         
@@ -2376,8 +2369,8 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( serialisable_gug_key, self._initial_search_text, serialisable_gug_keys_and_names ) = serialisable_info
         
-        self._gallery_url_generator_key = serialisable_gug_key.decode( 'hex' )
-        self._gug_keys_and_names = [ ( gug_key.decode( 'hex' ), gug_name ) for ( gug_key, gug_name ) in serialisable_gug_keys_and_names ]
+        self._gallery_url_generator_key = bytes.fromhex( serialisable_gug_key )
+        self._gug_keys_and_names = [ ( bytes.fromhex( gug_key ), gug_name ) for ( gug_key, gug_name ) in serialisable_gug_keys_and_names ]
         
     
     def GenerateGalleryURLs( self, query_text ):
@@ -2655,10 +2648,10 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         if allow_clip:
             
-            query_dict = { key : value for ( key, value ) in query_dict.items() if key in self._parameters }
+            query_dict = { key : value for ( key, value ) in list(query_dict.items()) if key in self._parameters }
             
         
-        for ( key, ( string_match, default ) ) in self._parameters.items():
+        for ( key, ( string_match, default ) ) in list(self._parameters.items()):
             
             if key not in query_dict:
                 
@@ -2680,9 +2673,9 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_url_match_key = self._url_match_key.encode( 'hex' )
+        serialisable_url_match_key = self._url_match_key.hex()
         serialisable_path_components = [ ( string_match.GetSerialisableTuple(), default ) for ( string_match, default ) in self._path_components ]
-        serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in self._parameters.items() ]
+        serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in list(self._parameters.items()) ]
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         
         return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
@@ -2692,7 +2685,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
         
-        self._url_match_key = serialisable_url_match_key.decode( 'hex' )
+        self._url_match_key = bytes.fromhex( serialisable_url_match_key )
         self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
         self._parameters = { key : ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( key, ( serialisable_string_match, default ) ) in serialisable_parameters }
         self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
@@ -2706,7 +2699,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             url_match_key = HydrusData.GenerateKey()
             
-            serialisable_url_match_key = url_match_key.encode( 'hex' )
+            serialisable_url_match_key = url_match_key.hex()
             
             api_lookup_converter = ClientParsing.StringConverter( example_string = example_url )
             
@@ -2767,10 +2760,10 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters )
             
             path_components = [ ( value, None ) for value in path_components ]
-            parameters = { key : ( value, None ) for ( key, value ) in parameters.items() }
+            parameters = { key : ( value, None ) for ( key, value ) in list(parameters.items()) }
             
             serialisable_path_components = [ ( string_match.GetSerialisableTuple(), default ) for ( string_match, default ) in path_components ]
-            serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in parameters.items() ]
+            serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in list(parameters.items()) ]
             
             new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
             
@@ -2819,7 +2812,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetDomain( self ):
         
-        return ConvertDomainIntoSecondLevelDomain( HydrusData.ToByteString( self._netloc ) )
+        return ConvertDomainIntoSecondLevelDomain( self._netloc )
         
     
     def GetExampleURL( self ):
@@ -2841,7 +2834,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         url = self.Normalise( url )
         
-        p = urlparse.urlparse( url )
+        p = urllib.parse.urlparse( url )
         
         scheme = p.scheme
         netloc = p.netloc
@@ -2914,7 +2907,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             raise NotImplementedError( 'Did not understand the next gallery page rules!' )
             
         
-        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
         
         return r.geturl()
         
@@ -2965,7 +2958,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Normalise( self, url ):
         
-        p = urlparse.urlparse( url )
+        p = urllib.parse.urlparse( url )
         
         scheme = self._preferred_scheme
         params = ''
@@ -2984,7 +2977,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             query = self._ClipAndFleshOutQuery( p.query, allow_clip = False )
             
         
-        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
         
         return r.geturl()
         
@@ -3020,7 +3013,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Test( self, url ):
         
-        p = urlparse.urlparse( url )
+        p = urllib.parse.urlparse( url )
         
         if self._match_subdomains:
             
@@ -3058,7 +3051,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 except HydrusExceptions.StringMatchException as e:
                     
-                    raise HydrusExceptions.URLMatchException( HydrusData.ToUnicode( e ) )
+                    raise HydrusExceptions.URLMatchException( str( e ) )
                     
                 
             elif default is None:
@@ -3069,7 +3062,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         url_parameters = ConvertQueryTextToDict( p.query )
         
-        for ( key, ( string_match, default ) ) in self._parameters.items():
+        for ( key, ( string_match, default ) ) in list(self._parameters.items()):
             
             if key not in url_parameters:
                 
@@ -3091,7 +3084,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.StringMatchException as e:
                 
-                raise HydrusExceptions.URLMatchException( HydrusData.ToUnicode( e ) )
+                raise HydrusExceptions.URLMatchException( str( e ) )
                 
             
         

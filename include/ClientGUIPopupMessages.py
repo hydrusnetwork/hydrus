@@ -1,15 +1,15 @@
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIScrolledPanels
-import ClientGUITopLevelWindows
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIScrolledPanels
+from . import ClientGUITopLevelWindows
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
 import os
 import sys
 import traceback
@@ -199,6 +199,8 @@ class PopupMessage( PopupWindow ):
     
     def _ProcessText( self, text ):
         
+        text = str( text )
+        
         if len( text ) > self.TEXT_CUTOFF:
             
             new_text = 'The text is too long to display here. Here is the start of it (the rest is printed to the log):'
@@ -383,7 +385,7 @@ class PopupMessage( PopupWindow ):
             
             text = popup_text_2
             
-            self._text_2.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+            self._text_2.SetLabelText( self._ProcessText( text ) )
             
             self._text_2.Show()
             
@@ -414,10 +416,7 @@ class PopupMessage( PopupWindow ):
             
             text = popup_yes_no_question
             
-            if self._text_yes_no.GetLabelText() != text:
-                
-                self._text_yes_no.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
-                
+            self._text_yes_no.SetLabelText( self._ProcessText( text ) )
             
             self._text_yes_no.Show()
             
@@ -503,10 +502,7 @@ class PopupMessage( PopupWindow ):
             
             text = popup_traceback
             
-            if self._tb_text.GetLabelText() != text:
-                
-                self._tb_text.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
-                
+            self._tb_text.SetLabelText( self._ProcessText( text ) )
             
             self._show_tb_button.Show()
             
@@ -575,7 +571,7 @@ class PopupMessageManager( wx.Frame ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetVariable( 'popup_text_1', u'initialising popup message manager\u2026' )
+        job_key.SetVariable( 'popup_text_1', 'initialising popup message manager\u2026' )
         
         self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
         
@@ -1123,7 +1119,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                 continue
                 
             
-            import ClientGUI
+            from . import ClientGUI
             
             if isinstance( tlw, ClientGUI.FrameGUI ):
                 

@@ -1,7 +1,7 @@
-import ClientConstants as CC
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
+from . import ClientConstants as CC
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
 import threading
 
 def ConvertTagSliceToString( tag_slice ):
@@ -110,7 +110,7 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         
         if namespace == '':
             
-            namespace = u'{' # '{' is above 'z' in ascii, so this works for most situations
+            namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
             
         
         return namespace
@@ -232,7 +232,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        return self._tag_slices_to_rules.items()
+        return list(self._tag_slices_to_rules.items())
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -302,7 +302,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         blacklist = []
         whitelist = []
         
-        for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
+        for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
             
             if rule == CC.FILTER_BLACKLIST:
                 
@@ -346,7 +346,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         blacklist = []
         whitelist = []
         
-        for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
+        for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
             
             if rule == CC.FILTER_BLACKLIST:
                 
@@ -390,7 +390,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         blacklist = []
         whitelist = []
         
-        for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
+        for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
             
             if rule == CC.FILTER_BLACKLIST:
                 

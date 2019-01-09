@@ -92,23 +92,25 @@ SERIALISABLE_TYPE_LOGIN_STEP = 74
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
-def CreateFromNetworkString( network_string ):
+def CreateFromNetworkBytes( network_string ):
     
     try:
         
-        obj_string = zlib.decompress( network_string )
+        obj_bytes = zlib.decompress( network_string )
         
     except zlib.error:
         
         if LZ4_OK:
             
-            obj_string = lz4.block.decompress( network_string )
+            obj_bytes = lz4.block.decompress( network_string )
             
         else:
             
             raise
             
         
+    
+    obj_string = str( obj_bytes, 'utf-8' )
     
     return CreateFromString( obj_string )
     
@@ -179,11 +181,13 @@ class SerialisableBase( object ):
         return old_serialisable_info
         
     
-    def DumpToNetworkString( self ):
+    def DumpToNetworkBytes( self ):
         
         obj_string = self.DumpToString()
         
-        return zlib.compress( obj_string, 9 )
+        obj_bytes = bytes( obj_string, 'utf-8' )
+        
+        return zlib.compress( obj_bytes, 9 )
         
     
     def DumpToString( self ):
@@ -258,7 +262,7 @@ class SerialisableDictionary( SerialisableBase, dict ):
         serialisable_key_simple_value_pairs = []
         serialisable_key_serialisable_value_pairs = []
         
-        for ( key, value ) in self.items():
+        for ( key, value ) in list(self.items()):
             
             if isinstance( key, SerialisableBase ):
                 
@@ -350,7 +354,7 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
         
         pairs = []
         
-        for ( key, value ) in self.items():
+        for ( key, value ) in list(self.items()):
             
             if isinstance( key, int ):
                 
@@ -358,12 +362,12 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
                 
             else:
                 
-                encoded_key = key.encode( 'hex' )
+                encoded_key = key.hex()
                 
             
             if isinstance( value, ( list, tuple, set ) ):
                 
-                encoded_value = [ item.encode( 'hex' ) for item in value ]
+                encoded_value = [ item.hex() for item in value ]
                 
             elif value is None:
                 
@@ -371,7 +375,7 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
                 
             else:
                 
-                encoded_value = value.encode( 'hex' )
+                encoded_value = value.hex()
                 
             
             pairs.append( ( encoded_key, encoded_value ) )
@@ -390,12 +394,12 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
                 
             else:
                 
-                key = encoded_key.decode( 'hex' )
+                key = bytes.fromhex( encoded_key )
                 
             
             if isinstance( encoded_value, ( list, tuple, set ) ):
                 
-                value = [ encoded_item.decode( 'hex' ) for encoded_item in encoded_value ]
+                value = [ bytes.fromhex( encoded_item ) for encoded_item in encoded_value ]
                 
             elif encoded_value is None:
                 
@@ -403,7 +407,7 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
                 
             else:
                 
-                value = encoded_value.decode( 'hex' )
+                value = bytes.fromhex( encoded_value )
                 
             
             self[ key ] = value

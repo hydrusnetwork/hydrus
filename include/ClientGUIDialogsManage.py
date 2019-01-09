@@ -1,45 +1,45 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientDownloading
-import ClientDragDrop
-import ClientExporting
-import ClientFiles
-import ClientGUIACDropdown
-import ClientGUICommon
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIDialogs
-import ClientGUIImport
-import ClientGUIOptionsPanels
-import ClientGUIPredicates
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIShortcuts
-import ClientGUIFileSeedCache
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientImporting
-import ClientImportLocal
-import ClientImportOptions
-import ClientMedia
-import ClientRatings
-import ClientSearch
-import ClientServices
-import ClientThreading
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientDragDrop
+from . import ClientExporting
+from . import ClientFiles
+from . import ClientGUIACDropdown
+from . import ClientGUICommon
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIDialogs
+from . import ClientGUIImport
+from . import ClientGUIOptionsPanels
+from . import ClientGUIPredicates
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIShortcuts
+from . import ClientGUIFileSeedCache
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientImporting
+from . import ClientImportLocal
+from . import ClientImportOptions
+from . import ClientMedia
+from . import ClientRatings
+from . import ClientSearch
+from . import ClientServices
+from . import ClientThreading
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNATPunch
-import HydrusNetwork
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTagArchive
-import HydrusTags
-import HydrusText
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNATPunch
+from . import HydrusNetwork
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTagArchive
+from . import HydrusTags
+from . import HydrusText
 import itertools
 import os
 import random
@@ -239,7 +239,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
             
-            for ( service_key, control ) in self._service_keys_to_controls.items():
+            for ( service_key, control ) in list(self._service_keys_to_controls.items()):
                 
                 original_rating_state = self._service_keys_to_original_ratings_states[ service_key ]
                 
@@ -312,7 +312,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
             
-            for ( service_key, control ) in self._service_keys_to_controls.items():
+            for ( service_key, control ) in list(self._service_keys_to_controls.items()):
                 
                 ( original_rating_state, original_rating ) = self._service_keys_to_original_ratings_states[ service_key ]
                 

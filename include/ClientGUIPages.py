@@ -1,29 +1,29 @@
-import HydrusConstants as HC
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIManagement
-import ClientGUIMedia
-import ClientGUIMenus
-import ClientGUICanvas
-import ClientDownloading
-import ClientSearch
-import ClientGUIShortcuts
-import ClientThreading
+from . import HydrusConstants as HC
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIManagement
+from . import ClientGUIMedia
+from . import ClientGUIMenus
+from . import ClientGUICanvas
+from . import ClientDownloading
+from . import ClientSearch
+from . import ClientGUIShortcuts
+from . import ClientThreading
 import collections
 import hashlib
-import HydrusData
-import HydrusExceptions
-import HydrusSerialisable
-import HydrusThreading
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusSerialisable
+from . import HydrusThreading
 import inspect
 import os
 import sys
 import time
 import traceback
 import wx
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 
 USER_PAGE_NAME_PREFIX = '[USER]'
 RESERVED_SESSION_NAMES = { '', 'just a blank page', 'last session', 'exit session' }
@@ -727,7 +727,7 @@ class Page( wx.SplitterWindow ):
             
         except HydrusExceptions.VetoException as e:
             
-            reason = HydrusData.ToUnicode( e )
+            reason = str( e )
             
             with ClientGUIDialogs.DialogYesNo( self, reason + ' Are you sure you want to close it?' ) as dlg:
                 
@@ -769,7 +769,7 @@ class Page( wx.SplitterWindow ):
             
             initial_media_results.extend( more_media_results )
             
-            status = u'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
+            status = 'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
             
             wx.CallAfter( wx_code_status, status )
             
@@ -1241,7 +1241,7 @@ class PagesNotebook( wx.Notebook ):
         
         if len( page_name ) > max_page_name_chars:
             
-            page_name = page_name[ : max_page_name_chars ] + u'\u2026'
+            page_name = page_name[ : max_page_name_chars ] + '\u2026'
             
         
         num_string = ''
@@ -2760,7 +2760,7 @@ class PagesNotebook( wx.Notebook ):
         
         if name == 'last session':
             
-            session_hash = hashlib.sha256( session.DumpToString() ).digest()
+            session_hash = hashlib.sha256( bytes( session.DumpToString(), 'utf-8' ) ).digest()
             
             if session_hash == self._last_last_session_hash:
                 
@@ -2818,7 +2818,7 @@ class PagesNotebook( wx.Notebook ):
                 
             except HydrusExceptions.VetoException as e:
                 
-                reason = HydrusData.ToUnicode( e )
+                reason = str( e )
                 
                 count[ reason ] += 1
                 
@@ -2830,7 +2830,7 @@ class PagesNotebook( wx.Notebook ):
             
             message = ''
             
-            for ( reason, c ) in count.items():
+            for ( reason, c ) in list(count.items()):
                 
                 if c == 1:
                     
@@ -2944,7 +2944,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 serialisable_management_controller = management_controller.GetSerialisableTuple()
                 
-                serialisable_hashes = [ hash.encode( 'hex' ) for hash in hashes ]
+                serialisable_hashes = [ hash.hex() for hash in hashes ]
                 
                 serialisable_page_data = ( serialisable_management_controller, serialisable_hashes )
                 
@@ -3014,7 +3014,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
                 
-                hashes = [ hash.decode( 'hex' ) for hash in serialisable_hashes ]
+                hashes = [ bytes.fromhex( hash ) for hash in serialisable_hashes ]
                 
                 page_data = ( management_controller, hashes )
                 

@@ -33,13 +33,13 @@ class BarChartBandwidthHistory( FigureCanvasWxAgg ):
         
         ( r, g, b, a ) = wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ).Get()
         
-        facecolor = '#' + chr( r ).encode( 'hex' ) + chr( g ).encode( 'hex' ) + chr( b ).encode( 'hex' )
+        facecolor = '#{:0>2x}{:0>2x}{:0>2x}'.format( r, g, b )
         
         figure = Figure( figsize = ( 6.4, 4.8 ), dpi = 80, facecolor = facecolor, edgecolor = facecolor )
         
         axes = figure.add_subplot( 111 )
         
-        x_indices = range( len( monthly_usage ) )
+        x_indices = list( range( len( monthly_usage ) ) )
         
         axes.bar( x_indices, [ i[1] for i in monthly_usage ] )
         

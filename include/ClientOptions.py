@@ -1,14 +1,14 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientDownloading
-import ClientDuplicates
-import ClientImporting
-import HydrusConstants as HC
-import HydrusGlobals as HG
-import HydrusData
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientDuplicates
+from . import ClientImporting
+from . import HydrusConstants as HC
+from . import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
 import os
 import threading
 import wx
@@ -159,7 +159,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
-        import ClientTags
+        from . import ClientTags
         
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], True, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], False, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
@@ -233,8 +233,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'keys' ] = {}
         
-        self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.encode( 'hex' )
-        self._dictionary[ 'keys' ][ 'default_gug_key' ] = HydrusData.GenerateKey().encode( 'hex' )
+        self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.hex()
+        self._dictionary[ 'keys' ][ 'default_gug_key' ] = HydrusData.GenerateKey().hex()
         
         self._dictionary[ 'key_list' ] = {}
         
@@ -283,8 +283,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
         self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
         self._dictionary[ 'strings' ][ 'thumbnail_scroll_rate' ] = '1.0'
-        self._dictionary[ 'strings' ][ 'pause_character' ] = u'\u23F8'
-        self._dictionary[ 'strings' ][ 'stop_character' ] = u'\u23F9'
+        self._dictionary[ 'strings' ][ 'pause_character' ] = '\u23F8'
+        self._dictionary[ 'strings' ][ 'stop_character' ] = '\u23F9'
         self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'artstation artist lookup'
         
         self._dictionary[ 'string_list' ] = {}
@@ -308,7 +308,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title' ] )
         
-        import ClientGUITags
+        from . import ClientGUITags
         
         tsg = ClientGUITags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
         
@@ -374,7 +374,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         present_already_in_inbox_files = False
         present_already_in_archive_files = False
         
-        import ClientImportOptions
+        from . import ClientImportOptions
         
         quiet_file_import_options = ClientImportOptions.FileImportOptions()
         
@@ -487,7 +487,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        import ClientMedia
+        from . import ClientMedia
         
         self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
@@ -497,7 +497,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
         
-        for ( key, value ) in loaded_dictionary.items():
+        for ( key, value ) in list(loaded_dictionary.items()):
             
             if key in self._dictionary and isinstance( self._dictionary[ key ], dict ) and isinstance( value, dict ):
                 
@@ -518,7 +518,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             if 'media_view' in loaded_dictionary:
                 
-                mimes = loaded_dictionary[ 'media_view' ].keys()
+                mimes = list(loaded_dictionary[ 'media_view' ].keys())
                 
                 for mime in mimes:
                     
@@ -750,7 +750,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._dictionary[ 'frame_locations' ].items()
+            return list(self._dictionary[ 'frame_locations' ].items())
             
         
     
@@ -766,7 +766,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._dictionary[ 'keys' ][ name ].decode( 'hex' )
+            return bytes.fromhex( self._dictionary[ 'keys' ][ name ] )
             
         
     
@@ -774,7 +774,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return [ key.decode( 'hex' ) for key in self._dictionary[ 'key_list' ][ name ] ]
+            return [ bytes.fromhex( hex_key ) for hex_key in self._dictionary[ 'key_list' ][ name ] ]
             
         
     
@@ -901,7 +901,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            service_key_hex = service_key.encode( 'hex' )
+            service_key_hex = service_key.hex()
             
             stf = self._dictionary[ 'suggested_tags' ][ 'favourites' ]
             
@@ -1061,7 +1061,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._dictionary[ 'keys' ][ name ] = value.encode( 'hex' )
+            self._dictionary[ 'keys' ][ name ] = value.hex()
             
         
     
@@ -1069,7 +1069,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._dictionary[ 'key_list' ][ name ] = [ key.encode( 'hex' ) for key in value ]
+            self._dictionary[ 'key_list' ][ name ] = [ key.hex() for key in value ]
             
         
     
@@ -1159,7 +1159,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            service_key_hex = service_key.encode( 'hex' )
+            service_key_hex = service_key.hex()
             
             self._dictionary[ 'suggested_tags' ][ 'favourites' ][ service_key_hex ] = list( tags )
             

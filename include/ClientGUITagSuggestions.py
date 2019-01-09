@@ -1,17 +1,17 @@
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListBoxes
-import ClientGUIParsing
-import ClientParsing
-import ClientSearch
-import ClientThreading
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListBoxes
+from . import ClientGUIParsing
+from . import ClientParsing
+from . import ClientSearch
+from . import ClientThreading
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import wx
 
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
@@ -72,7 +72,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         predicate = term
         
-        return predicate.GetUnicode( with_count = False )
+        return predicate.ToString( with_count = False )
         
     
     def SetPredicates( self, predicates ):
@@ -327,7 +327,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
                 
                 script_names_to_scripts = { script.GetName() : script for script in scripts }
                 
-                for ( name, script ) in script_names_to_scripts.items():
+                for ( name, script ) in list(script_names_to_scripts.items()):
                     
                     self._script_choice.Append( script.GetName(), script )
                     

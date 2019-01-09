@@ -1,34 +1,34 @@
-import HydrusConstants as HC
-import ClientConstants as CC
-import ClientCaches
-import ClientData
-import ClientDragDrop
-import ClientFiles
-import ClientGUICanvas
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIDialogsManage
-import ClientGUIDialogsQuick
-import ClientGUIExport
-import ClientGUIMenus
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsManagement
-import ClientGUIScrolledPanelsReview
-import ClientGUIShortcuts
-import ClientGUITags
-import ClientGUITopLevelWindows
-import ClientMedia
-import ClientPaths
-import ClientSearch
-import ClientTags
+from . import HydrusConstants as HC
+from . import ClientConstants as CC
+from . import ClientCaches
+from . import ClientData
+from . import ClientDragDrop
+from . import ClientFiles
+from . import ClientGUICanvas
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsManage
+from . import ClientGUIDialogsQuick
+from . import ClientGUIExport
+from . import ClientGUIMenus
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsManagement
+from . import ClientGUIScrolledPanelsReview
+from . import ClientGUIShortcuts
+from . import ClientGUITags
+from . import ClientGUITopLevelWindows
+from . import ClientMedia
+from . import ClientPaths
+from . import ClientSearch
+from . import ClientTags
 import collections
-import HydrusExceptions
-import HydrusNetwork
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
-import HydrusThreading
+from . import HydrusExceptions
+from . import HydrusNetwork
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusThreading
 import itertools
 import json
 import os
@@ -38,8 +38,8 @@ import time
 import traceback
 import wx
 import yaml
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 
 def CopyMediaURLs( medias ):
     
@@ -322,7 +322,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
             ClientGUIMenus.AppendMenuLabel( submenu, name )
             
         
-        ClientGUIMenus.AppendMenu( menu, submenu, phrase + u'\u2026' )
+        ClientGUIMenus.AppendMenu( menu, submenu, phrase + '\u2026' )
         
     
 def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description, callable ):
@@ -350,7 +350,7 @@ def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description
             ClientGUIMenus.AppendMenuItem( event_handler, submenu, name, description, callable, service_key )
             
         
-        ClientGUIMenus.AppendMenu( menu, submenu, phrase + u'\u2026' )
+        ClientGUIMenus.AppendMenu( menu, submenu, phrase + '\u2026' )
         
     
 class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
@@ -473,7 +473,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if hash_type == 'sha256':
             
-            hex_hash = sha256_hash.encode( 'hex' )
+            hex_hash = sha256_hash.hex()
             
         else:
             
@@ -481,7 +481,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
-                hex_hash = other_hash.encode( 'hex' )
+                hex_hash = other_hash.hex()
                 
             else:
                 
@@ -498,7 +498,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if hash_type == 'sha256':
             
-            hex_hashes = os.linesep.join( [ hash.encode( 'hex' ) for hash in self._GetSelectedHashes( ordered = True ) ] )
+            hex_hashes = os.linesep.join( [ hash.hex() for hash in self._GetSelectedHashes( ordered = True ) ] )
             
         else:
             
@@ -508,7 +508,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 other_hashes = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
                 
-                hex_hashes = os.linesep.join( [ other_hash.encode( 'hex' ) for other_hash in other_hashes ] )
+                hex_hashes = os.linesep.join( [ other_hash.hex() for other_hash in other_hashes ] )
                 
             else:
                 
@@ -958,18 +958,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
             else:
                 
-                return HydrusData.ConvertIntToBytes( 0 )
+                return HydrusData.ToHumanBytes( 0 )
                 
             
         else:
             
             if unknown_size:
                 
-                return HydrusData.ConvertIntToBytes( total_size ) + ' + some unknown size'
+                return HydrusData.ToHumanBytes( total_size ) + ' + some unknown size'
                 
             else:
                 
-                return HydrusData.ConvertIntToBytes( total_size )
+                return HydrusData.ToHumanBytes( total_size )
                 
             
         
@@ -2177,7 +2177,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         we_were_file_or_tag_affected = False
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
             
             for content_update in content_updates:
                 
@@ -2212,7 +2212,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         ClientMedia.ListeningMediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
         
-        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
+        for ( service_key, service_updates ) in list(service_keys_to_service_updates.items()):
             
             for service_update in service_updates:
                 
@@ -2272,15 +2272,15 @@ class MediaPanelLoading( MediaPanel ):
     
     def _GetPrettyStatus( self ):
         
-        s = u'Loading\u2026'
+        s = 'Loading\u2026'
         
         if self._current is not None:
             
-            s += u' ' + HydrusData.ToHumanInt( self._current )
+            s += ' ' + HydrusData.ToHumanInt( self._current )
             
             if self._max is not None:
                 
-                s += u' of ' + HydrusData.ToHumanInt( self._max )
+                s += ' of ' + HydrusData.ToHumanInt( self._max )
                 
             
         
@@ -2396,7 +2396,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _DirtyAllPages( self ):
         
-        clean_indices = self._clean_canvas_pages.keys()
+        clean_indices = list(self._clean_canvas_pages.keys())
         
         for clean_index in clean_indices:
             
@@ -2458,7 +2458,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 thumbnail_col = thumbnail_index % self._num_columns
                 
-                thumbnail_row = thumbnail_index / self._num_columns
+                thumbnail_row = thumbnail_index // self._num_columns
                 
                 x = thumbnail_col * thumbnail_span_width + thumbnail_margin
                 
@@ -2549,7 +2549,7 @@ class MediaPanelThumbnails( MediaPanel ):
         try: index = self._sorted_media.index( media )
         except: return ( -1, -1 )
         
-        row = index / self._num_columns
+        row = index // self._num_columns
         column = index % self._num_columns
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
@@ -2565,7 +2565,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
         
-        page_index = thumbnail_index / thumbnails_per_page
+        page_index = thumbnail_index // thumbnails_per_page
         
         return page_index
         
@@ -2601,8 +2601,8 @@ class MediaPanelThumbnails( MediaPanel ):
             return None
             
         
-        column_index = ( x / t_span_x )
-        row_index = ( y / t_span_y )
+        column_index = x // t_span_x
+        row_index = y // t_span_y
         
         if column_index >= self._num_columns: return None
         
@@ -2641,7 +2641,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
         
-        max_y = ( my_virtual_height - my_height ) / yUnit
+        max_y = ( my_virtual_height - my_height ) // yUnit
         
         if ( my_virtual_height - my_height ) % yUnit > 0:
             
@@ -2715,7 +2715,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             num_media = len( self._sorted_media )
             
-            num_rows = max( 1, num_media / self._num_columns )
+            num_rows = max( 1, num_media // self._num_columns )
             
             if num_media % self._num_columns > 0:
                 
@@ -2789,11 +2789,11 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        num_rows = ( client_height // thumbnail_span_height ) / 2 # roughly half a client_height's worth of thumbs
+        num_rows = ( client_height // thumbnail_span_height ) // 2 # roughly half a client_height's worth of thumbs
         
         self._num_rows_per_canvas_page = max( 1, num_rows )
         
-        self._num_columns = max( 1, client_width / thumbnail_span_width )
+        self._num_columns = max( 1, client_width // thumbnail_span_width )
         
         client_dimensions_changed = old_client_width != client_width or old_client_height != client_height
         thumb_layout_changed = old_num_columns != self._num_columns or old_num_rows != self._num_rows_per_canvas_page
@@ -2881,7 +2881,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             new_options = HG.client_controller.new_options
             
-            percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / float( 100 )
+            percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
             
             if y < start_y * y_unit:
                 
@@ -2893,7 +2893,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             elif y > ( start_y * y_unit ) + height - ( thumbnail_span_height * percent_visible ):
                 
-                y_to_scroll_to = ( y - height ) / y_unit
+                y_to_scroll_to = ( y - height ) // y_unit
                 
                 self.Scroll( -1, y_to_scroll_to )
                 
@@ -3132,7 +3132,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         page_indices_to_draw.sort()
         
-        potential_clean_indices_to_steal = [ page_index for page_index in self._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
+        potential_clean_indices_to_steal = [ page_index for page_index in list(self._clean_canvas_pages.keys()) if page_index not in page_indices_to_draw ]
         
         random.shuffle( potential_clean_indices_to_steal )
         
@@ -3932,7 +3932,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     num_files = self._GetNumSelected()
                     
-                    num_pairs = num_files * ( num_files - 1 ) / 2 # combinations -- n!/2(n-2)!
+                    num_pairs = num_files * ( num_files - 1 ) / 2 # com // ations -- n!/2(n-2)!
                     
                     num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
                     
@@ -4238,7 +4238,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 thumbnail_col = thumbnail_index % self._num_columns
                 
-                thumbnail_row = thumbnail_index / self._num_columns
+                thumbnail_row = thumbnail_index // self._num_columns
                 
                 x = thumbnail_col * thumbnail_span_width + thumbnail_margin
                 
@@ -4327,13 +4327,13 @@ class Thumbnail( Selectable ):
         
         # we want to expand the image so that the smallest dimension fills everything
         
-        scale_factor = max( scale_up_width / float( thumb_width ), scale_up_height / float( thumb_height ) )
+        scale_factor = max( scale_up_width / thumb_width, scale_up_height / thumb_height )
         
         destination_width = int( round( thumb_width * scale_factor ) )
         destination_height = int( round( thumb_height * scale_factor ) )
         
-        offset_x = ( scale_up_width - destination_width ) / 2
-        offset_y = ( scale_up_height - destination_height ) / 2
+        offset_x = ( scale_up_width - destination_width ) // 2
+        offset_y = ( scale_up_height - destination_height ) // 2
         
         offset_position = ( offset_x, offset_y )
         destination_dimensions = ( destination_width, destination_height )
@@ -4422,9 +4422,9 @@ class Thumbnail( Selectable ):
             
             wx_bmp = thumbnail_hydrus_bmp.GetWxBitmap()
             
-            x_offset = ( width - thumb_width ) / 2
+            x_offset = ( width - thumb_width ) // 2
             
-            y_offset = ( height - thumb_height ) / 2
+            y_offset = ( height - thumb_height ) // 2
             
         
         dc.DrawBitmap( wx_bmp, x_offset, y_offset )
@@ -4472,7 +4472,7 @@ class Thumbnail( Selectable ):
                     
                     ( text_x, text_y ) = gc.GetTextExtent( upper_summary )
                     
-                    top_left_x = int( ( width - text_x ) / 2 )
+                    top_left_x = int( ( width - text_x ) // 2 )
                     top_left_y = thumbnail_border
                     
                     gc.DrawRectangle( thumbnail_border, top_left_y, width - ( thumbnail_border * 2 ), text_y + 1 )

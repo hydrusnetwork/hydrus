@@ -1,54 +1,53 @@
-import HydrusConstants as HC
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientDownloading
-import ClientDragDrop
-import ClientExporting
-import ClientCaches
-import ClientFiles
-import ClientGUIACDropdown
-import ClientGUIFrames
-import ClientGUICommon
-import ClientGUIDialogsQuick
-import ClientGUIImport
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIPredicates
-import ClientGUIShortcuts
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientImporting
-import ClientThreading
+from . import HydrusConstants as HC
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientDragDrop
+from . import ClientExporting
+from . import ClientCaches
+from . import ClientFiles
+from . import ClientGUIACDropdown
+from . import ClientGUIFrames
+from . import ClientGUICommon
+from . import ClientGUIDialogsQuick
+from . import ClientGUIImport
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIPredicates
+from . import ClientGUIShortcuts
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientImporting
+from . import ClientThreading
 import collections
 import gc
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusNATPunch
-import HydrusNetwork
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTagArchive
-import HydrusTags
-import HydrusThreading
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusNATPunch
+from . import HydrusNetwork
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTagArchive
+from . import HydrusTags
+from . import HydrusThreading
 import itertools
 import os
 import random
 import re
-import Queue
+import queue
 import shutil
 import stat
 import string
 import threading
 import time
 import traceback
-import urllib
 import wx
 import wx.lib.agw.customtreectrl
 import yaml
-import HydrusData
-import ClientSearch
-import HydrusGlobals as HG
+from . import HydrusData
+from . import ClientSearch
+from . import HydrusGlobals as HG
 
 # Option Enums
 
@@ -153,7 +152,9 @@ class Dialog( wx.Dialog ):
             
         
     
-    def SetInitialSize( self, ( width, height ) ):
+    def SetInitialSize( self, size ):
+        
+        ( width, height ) = size
         
         ( display_width, display_height ) = ClientGUITopLevelWindows.GetDisplaySize( self )
         
@@ -177,21 +178,15 @@ class DialogButtonChoice( Dialog ):
         self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
         self._buttons = []
-        self._ids_to_data = {}
-        
-        i = 0
+        self._data = None
         
         for ( text, data, tooltip ) in choices:
             
-            button = wx.Button( self, label = text, id = i )
+            button = ClientGUICommon.BetterButton( self, text, self._ButtonChoice, data )
             
             button.SetToolTip( tooltip )
             
             self._buttons.append( button )
-            
-            self._ids_to_data[ i ] = data
-            
-            i += 1
             
         
         self._always_do_checkbox = wx.CheckBox( self, label = 'do this for all' )
@@ -218,25 +213,17 @@ class DialogButtonChoice( Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
-        
         if len( self._buttons ) > 0:
             
             wx.CallAfter( self._buttons[0].SetFocus )
             
         
     
-    def EventButton( self, event ):
+    def _ButtonChoice( self, data ):
         
-        id = event.GetId()
+        self._data = data
         
-        if id == wx.ID_CANCEL: self.EndModal( wx.ID_CANCEL )
-        else:
-            
-            self._data = self._ids_to_data[ id ]
-            
-            self.EndModal( wx.ID_OK )
-            
+        self.EndModal( wx.ID_OK )
         
     
     def GetData( self ):
@@ -517,7 +504,7 @@ class DialogInputLocalBooruShare( Dialog ):
             elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 
             else: time_value = 60 * 60 * 24
             
-            self._timeout_number.SetValue( time_left / time_value )
+            self._timeout_number.SetValue( time_left // time_value )
             
             self._timeout_multiplier.SelectClientData( time_value )
             
@@ -592,7 +579,7 @@ class DialogInputLocalBooruShare( Dialog ):
             external_port = self._service.GetPort()
             
         
-        url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
+        url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.hex()
         
         HG.client_controller.pub( 'clipboard', 'text', url )
         
@@ -605,7 +592,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         internal_port = self._service.GetPort()
         
-        url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
+        url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.hex()
         
         HG.client_controller.pub( 'clipboard', 'text', url )
         
@@ -741,10 +728,10 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self._job_key = ClientThreading.JobKey()
         
-        self._unparsed_paths_queue = Queue.Queue()
+        self._unparsed_paths_queue = queue.Queue()
         self._currently_parsing = threading.Event()
         self._work_to_do = threading.Event()
-        self._parsed_path_queue = Queue.Queue()
+        self._parsed_path_queue = queue.Queue()
         self._pause_event = threading.Event()
         self._cancel_event = threading.Event()
         
@@ -773,8 +760,6 @@ class FrameInputLocalFiles( wx.Frame ):
             return
             
         
-        paths = [ HydrusData.ToUnicode( path ) for path in paths ]
-        
         self._unparsed_paths_queue.put( paths )
         
     
@@ -789,7 +774,7 @@ class FrameInputLocalFiles( wx.Frame ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 self._AddPathsToList( ( path, ) )
                 
@@ -802,7 +787,7 @@ class FrameInputLocalFiles( wx.Frame ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                paths = [ HydrusData.ToUnicode( path ) for path in dlg.GetPaths() ]
+                paths = dlg.GetPaths()
                 
                 self._AddPathsToList( paths )
                 
@@ -997,7 +982,7 @@ class FrameInputLocalFiles( wx.Frame ):
                         
                         unparsed_paths_queue.get( block = False )
                         
-                    except Queue.Empty:
+                    except queue.Empty:
                         
                         pass
                         
@@ -1034,7 +1019,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                     unparsed_paths.extend( paths )
                     
-                except Queue.Empty:
+                except queue.Empty:
                     
                     pass
                     
@@ -1052,7 +1037,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                     unparsed_paths.extend( paths )
                     
-                except Queue.Empty:
+                except queue.Empty:
                     
                     pass
                     
@@ -1119,7 +1104,7 @@ class FrameInputLocalFiles( wx.Frame ):
             ( path, mime, size ) = self._parsed_path_queue.get()
             
             pretty_mime = HC.mime_string_lookup[ mime ]
-            pretty_size = HydrusData.ConvertIntToBytes( size )
+            pretty_size = HydrusData.ToHumanBytes( size )
             
             if path not in self._current_paths_set:
                 
@@ -1242,13 +1227,13 @@ class DialogInputNamespaceRegex( Dialog ):
         
         try:
             
-            re.compile( regex, flags = re.UNICODE )
+            re.compile( regex )
             
         except Exception as e:
             
             text = 'That regex would not compile!'
             text += os.linesep * 2
-            text += HydrusData.ToUnicode( e )
+            text += str( e )
             
             wx.MessageBox( text )
             
@@ -1564,9 +1549,12 @@ class DialogModifyAccounts( Dialog ):
             
             response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
             
-            subject_string = HydrusData.ToUnicode( response[ 'account_info' ] )
+            subject_string = str( response[ 'account_info' ] )
             
-        else: subject_string = 'modifying ' + HydrusData.ToHumanInt( len( self._subject_identifiers ) ) + ' accounts'
+        else:
+            
+            subject_string = 'modifying ' + HydrusData.ToHumanInt( len( self._subject_identifiers ) ) + ' accounts'
+            
         
         self._subject_text.SetLabelText( subject_string )
         
@@ -1655,7 +1643,7 @@ class DialogModifyAccounts( Dialog ):
             
             account_info = response[ 'account_info' ]
             
-            self._subject_text.SetLabelText( HydrusData.ToUnicode( account_info ) )
+            self._subject_text.SetLabelText( str( account_info ) )
             
         
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
@@ -1812,7 +1800,7 @@ class DialogSelectFromURLTree( Dialog ):
     
     def _RenderItemName( self, name, size ):
         
-        return name + ' - ' + HydrusData.ConvertIntToBytes( size )
+        return name + ' - ' + HydrusData.ToHumanBytes( size )
         
     
     def GetURLs( self ):
@@ -1842,7 +1830,7 @@ class DialogSelectImageboard( Dialog ):
         
         root_item = self._tree.AddRoot( 'all sites' )
         
-        for ( site, imageboards ) in all_imageboards.items():
+        for ( site, imageboards ) in list(all_imageboards.items()):
             
             site_item = self._tree.AppendItem( root_item, site )
             

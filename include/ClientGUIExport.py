@@ -1,20 +1,20 @@
-import ClientConstants as CC
-import ClientExporting
-import ClientGUIACDropdown
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientSearch
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
+from . import ClientConstants as CC
+from . import ClientExporting
+from . import ClientGUIACDropdown
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientSearch
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
 import os
 import stat
 import time
@@ -103,7 +103,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_export_type += ' and deleting from the client!'
             
         
-        pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
+        pretty_file_search_context = ', '.join( predicate.ToString( with_count = False ) for predicate in file_search_context.GetPredicates() )
         
         pretty_period = HydrusData.TimeDeltaToPrettyTimeDelta( period )
         
@@ -340,7 +340,7 @@ If you select synchronise, be careful!'''
         
         name = self._name.GetValue()
         
-        path = HydrusData.ToUnicode( self._path.GetPath() )
+        path = self._path.GetPath()
         
         export_type = self._type.GetChoice()
         
@@ -369,7 +369,7 @@ If you select synchronise, be careful!'''
             
         except Exception as e:
             
-            raise HydrusExceptions.VetoException( 'Could not parse that export phrase! ' + HydrusData.ToUnicode( e ) )
+            raise HydrusExceptions.VetoException( 'Could not parse that export phrase! ' + str( e ) )
             
         
         export_folder = ClientExporting.ExportFolder( name, path = path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
@@ -516,7 +516,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         except Exception as e:
             
-            path = HydrusData.ToUnicode( e )
+            path = str( e )
             
         
         pretty_number = HydrusData.ToHumanInt( ordering_index + 1 )
@@ -588,7 +588,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         except Exception as e:
             
-            wx.MessageBox( HydrusData.ToUnicode( e ) )
+            wx.MessageBox( str( e ) )
             
             return
             
@@ -670,9 +670,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         txt_path = path + '.txt'
                         
-                        with open( txt_path, 'wb' ) as f:
+                        with open( txt_path, 'w' ) as f:
                             
-                            f.write( HydrusData.ToByteString( os.linesep.join( tags ) ) )
+                            f.write( os.linesep.join( tags ) )
                             
                         
                     
@@ -726,7 +726,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return self._media_to_paths[ media ]
             
         
-        directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
+        directory = self._directory_picker.GetPath()
         
         pattern = self._pattern.GetValue()
         

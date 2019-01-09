@@ -1,14 +1,15 @@
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetworking
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetworking
+from . import HydrusSerialisable
 import threading
 
 INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
-BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'subject_tag', 'share_key', 'update_hash' }
+BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'share_key', 'update_hash' }
+STRING_PARAMS = { 'subject_tag' }
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -74,11 +75,13 @@ def GenerateService( service_key, service_type, name, port, dictionary = None ):
     
     return cl( service_key, service_type, name, port, dictionary )
     
-def GenerateServiceFromSerialisableTuple( ( service_key_encoded, service_type, name, port, dictionary_string ) ):
+def GenerateServiceFromSerialisableTuple( serialisable_info ):
+    
+    ( service_key_encoded, service_type, name, port, dictionary_string ) = serialisable_info
     
     try:
         
-        service_key = service_key_encoded.decode( 'hex' )
+        service_key = bytes.fromhex( service_key_encoded )
         
     except TypeError:
         
@@ -113,7 +116,7 @@ def GetPossiblePermissions( service_type ):
     
     return permissions
     
-def DumpToBodyString( args ):
+def DumpHydrusArgsToNetworkBytes( args ):
     
     if not isinstance( args, HydrusSerialisable.SerialisableBase ):
         
@@ -122,7 +125,7 @@ def DumpToBodyString( args ):
     
     if 'access_key' in args:
         
-        args[ 'access_key' ] = args[ 'access_key' ].encode( 'hex' )
+        args[ 'access_key' ] = args[ 'access_key' ].hex()
         
     
     if 'account' in args:
@@ -132,7 +135,7 @@ def DumpToBodyString( args ):
     
     if 'accounts' in args:
         
-        args[ 'accounts' ] = map( Account.GenerateSerialisableTupleFromAccount, args[ 'accounts' ] )
+        args[ 'accounts' ] = list(map( Account.GenerateSerialisableTupleFromAccount, args[ 'accounts' ] ))
         
     
     if 'account_types' in args:
@@ -142,12 +145,12 @@ def DumpToBodyString( args ):
     
     if 'registration_keys' in args:
         
-        args[ 'registration_keys' ] = [ registration_key.encode( 'hex' ) for registration_key in args[ 'registration_keys' ] ]
+        args[ 'registration_keys' ] = [ registration_key.hex() for registration_key in args[ 'registration_keys' ] ]
         
     
     if 'service_keys_to_access_keys' in args:
         
-        args[ 'service_keys_to_access_keys' ] = [ ( service_key.encode( 'hex' ), access_key.encode( 'hex' ) ) for ( service_key, access_key ) in args[ 'service_keys_to_access_keys' ].items() ]
+        args[ 'service_keys_to_access_keys' ] = [ ( service_key.hex(), access_key.hex() ) for ( service_key, access_key ) in list(args[ 'service_keys_to_access_keys' ].items()) ]
         
     
     if 'services' in args:
@@ -155,11 +158,13 @@ def DumpToBodyString( args ):
         args[ 'services' ] = [ service.ToSerialisableTuple() for service in args[ 'services' ] ]
         
     
-    body = args.DumpToNetworkString()
+    network_bytes = args.DumpToNetworkBytes()
     
-    return body
+    return network_bytes
     
 def DumpToGETQuery( args ):
+    
+    args = dict( args )
     
     if 'subject_identifier' in args:
         
@@ -196,30 +201,46 @@ def DumpToGETQuery( args ):
             
         
     
+    for name in INT_PARAMS:
+        
+        if name in args:
+            
+            args[ name ] = str( args[ name ] )
+            
+        
+    
     for name in BYTE_PARAMS:
         
         if name in args:
             
-            args[ name ] = args[ name ].encode( 'hex' )
+            args[ name ] = args[ name ].hex()
             
         
     
-    query = '&'.join( [ key + '=' + HydrusData.ToByteString( value ) for ( key, value ) in args.items() ] )
+    for name in STRING_PARAMS:
+        
+        if name in args:
+            
+            args[ name ] = bytes( args[ name ], 'utf-8' ).hex()
+            
+        
+    
+    query = '&'.join( [ key + '=' + value for ( key, value ) in args.items() ] )
     
     return query
     
-def ParseBodyString( json_string ):
+def ParseNetworkBytesToHydrusArgs( network_bytes ):
     
-    if json_string == '':
+    if len( network_bytes ) == 0:
         
         return HydrusSerialisable.SerialisableDictionary()
         
     
-    args = HydrusSerialisable.CreateFromNetworkString( json_string )
+    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes )
     
     if 'access_key' in args:
         
-        args[ 'access_key' ] = args[ 'access_key' ].decode( 'hex' )
+        args[ 'access_key' ] = bytes.fromhex( args[ 'access_key' ] )
         
     
     if 'account' in args:
@@ -231,31 +252,31 @@ def ParseBodyString( json_string ):
         
         account_tuples = args[ 'accounts' ]
         
-        args[ 'accounts' ] = map( Account.GenerateAccountFromSerialisableTuple, account_tuples )
+        args[ 'accounts' ] = list(map( Account.GenerateAccountFromSerialisableTuple, account_tuples ))
         
     
     if 'account_types' in args:
         
         account_type_tuples = args[ 'account_types' ]
         
-        args[ 'account_types' ] = map( AccountType.GenerateAccountTypeFromSerialisableTuple, account_type_tuples )
+        args[ 'account_types' ] = list(map( AccountType.GenerateAccountTypeFromSerialisableTuple, account_type_tuples ))
         
     
     if 'registration_keys' in args:
         
-        args[ 'registration_keys' ] = [ encoded_registration_key.decode( 'hex' ) for encoded_registration_key in args[ 'registration_keys' ] ]
+        args[ 'registration_keys' ] = [ bytes.fromhex( encoded_registration_key ) for encoded_registration_key in args[ 'registration_keys' ] ]
         
     
     if 'service_keys_to_access_keys' in args:
         
-        args[ 'service_keys_to_access_keys' ] = { encoded_service_key.decode( 'hex' ) : encoded_access_key.decode( 'hex' ) for ( encoded_service_key, encoded_access_key ) in args[ 'service_keys_to_access_keys' ] }
+        args[ 'service_keys_to_access_keys' ] = { bytes.fromhex( encoded_service_key ) : bytes.fromhex( encoded_access_key ) for ( encoded_service_key, encoded_access_key ) in args[ 'service_keys_to_access_keys' ] }
         
     
     if 'services' in args:
         
         service_tuples = args[ 'services' ]
         
-        args[ 'services' ] = map( GenerateServiceFromSerialisableTuple, service_tuples )
+        args[ 'services' ] = list(map( GenerateServiceFromSerialisableTuple, service_tuples ))
         
     
     return args
@@ -264,11 +285,29 @@ def ParseGETArgs( requests_args ):
     
     args = {}
     
-    for name in requests_args:
+    for name_bytes in requests_args:
         
-        values = requests_args[ name ]
+        values_bytes = requests_args[ name_bytes ]
         
-        value = values[0]
+        try:
+            
+            name = str( name_bytes, 'utf-8' )
+            
+        except UnicodeDecodeError:
+            
+            continue
+            
+        
+        value_bytes = values_bytes[0]
+        
+        try:
+            
+            value = str( value_bytes, 'utf-8' )
+            
+        except UnicodeDecodeError:
+            
+            continue
+            
         
         if name in INT_PARAMS:
             
@@ -285,7 +324,18 @@ def ParseGETArgs( requests_args ):
             
             try:
                 
-                args[ name ] = value.decode( 'hex' )
+                args[ name ] = bytes.fromhex( value )
+                
+            except:
+                
+                raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
+                
+            
+        elif name in STRING_PARAMS:
+            
+            try:
+                
+                args[ name ] = str( bytes.fromhex( value ), 'utf-8' )
                 
             except:
                 
@@ -536,7 +586,7 @@ class Account( object ):
                 
             except Exception as e:
                 
-                return HydrusData.ToUnicode( e )
+                return str( e )
                 
             
         
@@ -639,9 +689,11 @@ class Account( object ):
         
     
     @staticmethod
-    def GenerateAccountFromSerialisableTuple( ( account_key_encoded, account_type_serialisable_tuple, created, expires, dictionary_string ) ):
+    def GenerateAccountFromSerialisableTuple( serialisable_info ):
         
-        account_key = account_key_encoded.decode( 'hex' )
+        ( account_key_encoded, account_type_serialisable_tuple, created, expires, dictionary_string ) = serialisable_info
+        
+        account_key = bytes.fromhex( account_key_encoded )
         account_type = AccountType.GenerateAccountTypeFromSerialisableTuple( account_type_serialisable_tuple )
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
         
@@ -649,7 +701,9 @@ class Account( object ):
         
     
     @staticmethod
-    def GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) ):
+    def GenerateAccountFromTuple( serialisable_info ):
+        
+        ( account_key, account_type, created, expires, dictionary ) = serialisable_info
         
         banned_info = dictionary[ 'banned_info' ]
         bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
@@ -662,7 +716,7 @@ class Account( object ):
         
         ( account_key, account_type, created, expires, dictionary ) = Account.GenerateTupleFromAccount( account )
         
-        account_key_encoded = account_key.encode( 'hex' )
+        account_key_encoded = account_key.hex()
         
         serialisable_account_type = account_type.ToSerialisableTuple()
         
@@ -688,7 +742,7 @@ class Account( object ):
         
     
     @staticmethod
-    def GenerateUnknownAccount( account_key = '' ):
+    def GenerateUnknownAccount( account_key = b'' ):
         
         account_type = AccountType.GenerateUnknownAccountType()
         created = 0
@@ -725,7 +779,7 @@ class AccountType( object ):
         
         dictionary = HydrusSerialisable.SerialisableDictionary()
         
-        dictionary[ 'permissions' ] = self._permissions.items()
+        dictionary[ 'permissions' ] = list(self._permissions.items())
         
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         
@@ -783,7 +837,7 @@ class AccountType( object ):
         
         s = []
         
-        for ( content_type, action ) in self._permissions.items():
+        for ( content_type, action ) in list(self._permissions.items()):
             
             s.append( HC.permission_pair_string_lookup[ ( content_type, action ) ] )
             
@@ -809,7 +863,7 @@ class AccountType( object ):
         
         dictionary_string = dictionary.DumpToString()
         
-        return ( self._account_type_key.encode( 'hex' ), self._title, dictionary_string )
+        return ( self._account_type_key.hex(), self._title, dictionary_string )
         
     
     def ToTuple( self ):
@@ -822,18 +876,20 @@ class AccountType( object ):
         
         dictionary = HydrusSerialisable.SerialisableDictionary()
         
-        dictionary[ 'permissions' ] = permissions.items()
+        dictionary[ 'permissions' ] = list(permissions.items())
         dictionary[ 'bandwidth_rules' ] = bandwidth_rules
         
         return AccountType( account_type_key, title, dictionary )
         
     
     @staticmethod
-    def GenerateAccountTypeFromSerialisableTuple( ( account_type_key_encoded, title, dictionary_string ) ):
+    def GenerateAccountTypeFromSerialisableTuple( serialisable_info ):
+        
+        ( account_type_key_encoded, title, dictionary_string ) = serialisable_info
         
         try:
             
-            account_type_key = account_type_key_encoded.decode( 'hex' )
+            account_type_key = bytes.fromhex( account_type_key_encoded )
             
         except TypeError:
             
@@ -915,7 +971,7 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
         
         serialisable_info = []
         
-        for ( action, contents_and_reasons ) in self._actions_to_contents_and_reasons.items():
+        for ( action, contents_and_reasons ) in list(self._actions_to_contents_and_reasons.items()):
             
             serialisable_contents_and_reasons = [ ( content.GetSerialisableTuple(), reason ) for ( content, reason ) in contents_and_reasons ]
             
@@ -982,7 +1038,7 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
         
         hashes = set()
         
-        for contents_and_reasons in self._actions_to_contents_and_reasons.values():
+        for contents_and_reasons in list(self._actions_to_contents_and_reasons.values()):
             
             for ( content, reason ) in contents_and_reasons:
                 
@@ -1026,7 +1082,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
         
         def EncodeHashes( hs ):
             
-            return [ h.encode( 'hex' ) for h in hs ]
+            return [ h.hex() for h in hs ]
             
         
         if self._content_type == HC.CONTENT_TYPE_FILES:
@@ -1039,7 +1095,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             ( tag, hash ) = self._content_data
             
-            serialisable_content = ( tag, hash.encode( 'hex' ) )
+            serialisable_content = ( tag, hash.hex() )
             
         elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
             
@@ -1061,7 +1117,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
         
         def DecodeHashes( hs ):
             
-            return [ h.decode( 'hex' ) for h in hs ]
+            return [ bytes.fromhex( h ) for h in hs ]
             
         
         ( self._content_type, serialisable_content ) = serialisable_info
@@ -1076,7 +1132,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             ( tag, serialisable_hash ) = serialisable_content
             
-            self._content_data = ( tag, serialisable_hash.decode( 'hex' ) )
+            self._content_data = ( tag, bytes.fromhex( serialisable_hash ) )
             
         elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
             
@@ -1163,7 +1219,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             ( tag, hash ) = self._content_data
             
-            text = 'MAPPING: ' + tag + ' for ' + hash.encode( 'hex' )
+            text = 'MAPPING: ' + tag + ' for ' + hash.hex()
             
         elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
             
@@ -1219,9 +1275,9 @@ class ContentUpdate( HydrusSerialisable.SerialisableBase ):
         
         serialisable_info = []
         
-        for ( content_type, actions_to_datas ) in self._content_data.items():
+        for ( content_type, actions_to_datas ) in list(self._content_data.items()):
             
-            serialisable_actions_to_datas = actions_to_datas.items()
+            serialisable_actions_to_datas = list(actions_to_datas.items())
             
             serialisable_info.append( ( content_type, serialisable_actions_to_datas ) )
             
@@ -1356,7 +1412,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Credentials: ' + HydrusData.ToUnicode( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
+        return 'Credentials: ' + str( ( self._host, self._port, self._access_key.hex() ) )
         
     
     def _GetSerialisableInfo( self ):
@@ -1367,7 +1423,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            serialisable_access_key = self._access_key.encode( 'hex' )
+            serialisable_access_key = self._access_key.hex()
             
         
         return ( self._host, self._port, serialisable_access_key )
@@ -1383,7 +1439,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            self._access_key = serialisable_access_key.decode( 'hex' )
+            self._access_key = bytes.fromhex( serialisable_access_key )
             
         
     
@@ -1403,7 +1459,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
         
         if self.HasAccessKey():
             
-            connection_string += self._access_key.encode( 'hex' ) + '@'
+            connection_string += self._access_key.hex() + '@'
             
         
         connection_string += self._host + ':' + str( self._port )
@@ -1454,7 +1510,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                access_key = access_key_encoded.decode( 'hex' )
+                access_key = bytes.fromhex( access_key_encoded )
                 
             except TypeError:
                 
@@ -1520,12 +1576,12 @@ class DefinitionsUpdate( HydrusSerialisable.SerialisableBase ):
         
         if len( self._hash_ids_to_hashes ) > 0:
             
-            serialisable_info.append( ( HC.DEFINITIONS_TYPE_HASHES, [ ( hash_id, hash.encode( 'hex' ) ) for ( hash_id, hash ) in self._hash_ids_to_hashes.items() ] ) )
+            serialisable_info.append( ( HC.DEFINITIONS_TYPE_HASHES, [ ( hash_id, hash.hex() ) for ( hash_id, hash ) in list(self._hash_ids_to_hashes.items()) ] ) )
             
         
         if len( self._tag_ids_to_tags ) > 0:
             
-            serialisable_info.append( ( HC.DEFINITIONS_TYPE_TAGS, self._tag_ids_to_tags.items() ) )
+            serialisable_info.append( ( HC.DEFINITIONS_TYPE_TAGS, list(self._tag_ids_to_tags.items()) ) )
             
         
         return serialisable_info
@@ -1537,7 +1593,7 @@ class DefinitionsUpdate( HydrusSerialisable.SerialisableBase ):
             
             if definition_type == HC.DEFINITIONS_TYPE_HASHES:
                 
-                self._hash_ids_to_hashes = { hash_id : encoded_hash.decode( 'hex' ) for ( hash_id, encoded_hash ) in definitions }
+                self._hash_ids_to_hashes = { hash_id : bytes.fromhex( encoded_hash ) for ( hash_id, encoded_hash ) in definitions }
                 
             elif definition_type == HC.DEFINITIONS_TYPE_TAGS:
                 
@@ -1623,7 +1679,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_metadata = [ ( update_index, [ update_hash.encode( 'hex' ) for update_hash in update_hashes ], begin, end ) for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items() ]
+        serialisable_metadata = [ ( update_index, [ update_hash.hex() for update_hash in update_hashes ], begin, end ) for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()) ]
         
         return ( serialisable_metadata, self._next_update_due )
         
@@ -1653,7 +1709,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         for ( update_index, encoded_update_hashes, begin, end ) in serialisable_metadata:
             
-            update_hashes = [ encoded_update_hash.decode( 'hex' ) for encoded_update_hash in encoded_update_hashes ]
+            update_hashes = [ bytes.fromhex( encoded_update_hash ) for encoded_update_hash in encoded_update_hashes ]
             
             self._metadata[ update_index ] = ( update_hashes, begin, end )
             
@@ -1725,7 +1781,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in self._metadata.values() ) )
+            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in list(self._metadata.values()) ) )
             
             return num_update_hashes
             
@@ -1735,7 +1791,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            metadata = { update_index : row for ( update_index, row ) in self._metadata.items() if update_index >= from_update_index }
+            metadata = { update_index : row for ( update_index, row ) in list(self._metadata.items()) if update_index >= from_update_index }
             
             return Metadata( metadata, self._next_update_due )
             
@@ -1749,7 +1805,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 all_update_hashes = set()
                 
-                for ( update_hashes, begin, end ) in self._metadata.values():
+                for ( update_hashes, begin, end ) in list(self._metadata.values()):
                     
                     all_update_hashes.update( update_hashes )
                     
@@ -1771,7 +1827,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             result = []
             
-            for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items():
+            for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()):
                 
                 result.append( ( update_index, update_hashes ) )
                 
@@ -1784,7 +1840,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in self._metadata.values() ) )
+            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in list(self._metadata.values()) ) )
             
             if len( self._metadata ) == 0:
                 
@@ -1792,7 +1848,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                biggest_end = max( ( end for ( update_hashes, begin, end ) in self._metadata.values() ) )
+                biggest_end = max( ( end for ( update_hashes, begin, end ) in list(self._metadata.values()) ) )
                 
                 delay = 0
                 
@@ -1823,7 +1879,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            update_timestamps = [ ( update_index, begin, end ) for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items() ]
+            update_timestamps = [ ( update_index, begin, end ) for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()) ]
             
             return update_timestamps
             
@@ -2140,7 +2196,7 @@ class ServerService( object ):
             
             dictionary_string = dictionary.DumpToString()
             
-            return ( self._service_key.encode( 'hex' ), self._service_type, self._name, self._port, dictionary_string )
+            return ( self._service_key.hex(), self._service_type, self._name, self._port, dictionary_string )
             
         
     

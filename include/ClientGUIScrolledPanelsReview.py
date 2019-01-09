@@ -1,41 +1,41 @@
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientDragDrop
-import ClientExporting
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIFrames
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIPanels
-import ClientGUIPopupMessages
-import ClientGUITags
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientNetworking
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import ClientNetworkingLogin
-import ClientParsing
-import ClientPaths
-import ClientRendering
-import ClientSerialisable
-import ClientTags
-import ClientThreading
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientDragDrop
+from . import ClientExporting
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIFrames
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIPanels
+from . import ClientGUIPopupMessages
+from . import ClientGUITags
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientNetworking
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import ClientNetworkingLogin
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientRendering
+from . import ClientSerialisable
+from . import ClientTags
+from . import ClientThreading
 import collections
-import cookielib
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNATPunch
-import HydrusPaths
-import HydrusSerialisable
+import http.cookiejar
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNATPunch
+from . import HydrusPaths
+from . import HydrusSerialisable
 import os
 import stat
 import sys
@@ -46,7 +46,7 @@ import wx
 
 try:
     
-    import ClientGUIMatPlotLib
+    from . import ClientGUIMatPlotLib
     
     MATPLOTLIB_OK = True
     
@@ -310,7 +310,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if dlg_file.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg_file.GetPath() )
+                path = dlg_file.GetPath()
                 
                 ClientGUITags.ImportFromHTA( self, path, self._service_key, self._hashes )
                 
@@ -608,7 +608,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         try:
             
             free_space = HydrusPaths.GetFreeSpace( location )
-            pretty_free_space = HydrusData.ConvertIntToBytes( free_space )
+            pretty_free_space = HydrusData.ToHumanBytes( free_space )
             
         except Exception as e:
             
@@ -657,7 +657,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 usages = [ p( fp ) + ' everything' ]
                 
             
-            pretty_current_usage = HydrusData.ConvertIntToBytes( current_bytes ) + ' - ' + ','.join( usages )
+            pretty_current_usage = HydrusData.ToHumanBytes( current_bytes ) + ' - ' + ','.join( usages )
             
         else:
             
@@ -690,7 +690,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             total_ideal_weight = sum( locations_to_ideal_weights.values() )
             
-            ideal_fp = locations_to_ideal_weights[ location ] / float( total_ideal_weight )
+            ideal_fp = locations_to_ideal_weights[ location ] / total_ideal_weight
             
         else:
             
@@ -757,7 +757,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 usages = [ p( ideal_fp ) + ' everything' ]
                 
             
-            pretty_ideal_usage = HydrusData.ConvertIntToBytes( ideal_bytes ) + ' - ' + ','.join( usages )
+            pretty_ideal_usage = HydrusData.ToHumanBytes( ideal_bytes ) + ' - ' + ','.join( usages )
             
         else:
             
@@ -783,7 +783,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         locations_to_fs_thumb_weights = collections.Counter()
         locations_to_r_thumb_weights = collections.Counter()
         
-        for ( prefix, location ) in prefixes_to_locations.items():
+        for ( prefix, location ) in list(prefixes_to_locations.items()):
             
             if prefix.startswith( 'f' ):
                 
@@ -816,7 +816,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         all_locations = set()
         
-        all_locations.update( locations_to_ideal_weights.keys() )
+        all_locations.update( list(locations_to_ideal_weights.keys()) )
         
         if resized_thumbnail_override is not None:
             
@@ -828,9 +828,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             all_locations.add( full_size_thumbnail_override )
             
         
-        all_locations.update( locations_to_file_weights.keys() )
-        all_locations.update( locations_to_fs_thumb_weights.keys() )
-        all_locations.update( locations_to_r_thumb_weights.keys() )
+        all_locations.update( list(locations_to_file_weights.keys()) )
+        all_locations.update( list(locations_to_fs_thumb_weights.keys()) )
+        all_locations.update( list(locations_to_r_thumb_weights.keys()) )
         
         all_locations = list( all_locations )
         
@@ -997,7 +997,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 self._AddPath( path )
                 
@@ -1066,7 +1066,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
         
-        self._current_db_path_st.SetLabelText( 'database (about ' + HydrusData.ConvertIntToBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
+        self._current_db_path_st.SetLabelText( 'database (about ' + HydrusData.ToHumanBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
         self._current_install_path_st.SetLabelText( 'install: ' + HC.BASE_DIR )
         
         approx_total_client_files = self._all_local_files_total_size
@@ -1075,9 +1075,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         label_components = []
         
-        label_components.append( 'media (about ' + HydrusData.ConvertIntToBytes( approx_total_client_files ) + ')' )
-        label_components.append( 'resized thumbnails (about ' + HydrusData.ConvertIntToBytes( approx_total_resized_thumbs ) + ')' )
-        label_components.append( 'full-size thumbnails (about ' + HydrusData.ConvertIntToBytes( approx_total_fullsize_thumbs ) + ')' )
+        label_components.append( 'media (about ' + HydrusData.ToHumanBytes( approx_total_client_files ) + ')' )
+        label_components.append( 'resized thumbnails (about ' + HydrusData.ToHumanBytes( approx_total_resized_thumbs ) + ')' )
+        label_components.append( 'full-size thumbnails (about ' + HydrusData.ToHumanBytes( approx_total_fullsize_thumbs ) + ')' )
         
         label = ', '.join( label_components ) + ':'
         
@@ -1328,10 +1328,10 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             search_usage = ( search_usage_data, search_usage_requests )
             
-            pretty_search_usage = HydrusData.ConvertIntToBytes( search_usage_data ) + ' in ' + HydrusData.ToHumanInt( search_usage_requests ) + ' requests'
+            pretty_search_usage = HydrusData.ToHumanBytes( search_usage_data ) + ' in ' + HydrusData.ToHumanInt( search_usage_requests ) + ' requests'
             
         
-        pretty_network_context = network_context.ToUnicode()
+        pretty_network_context = network_context.ToString()
         pretty_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
         
         if current_usage == 0:
@@ -1340,11 +1340,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            pretty_current_usage = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+            pretty_current_usage = HydrusData.ToHumanBytes( current_usage ) + '/s'
             
         
-        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage_data ) + ' in ' + HydrusData.ToHumanInt( day_usage_requests ) + ' requests'
-        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage_data ) + ' in ' + HydrusData.ToHumanInt( month_usage_requests ) + ' requests'
+        pretty_day_usage = HydrusData.ToHumanBytes( day_usage_data ) + ' in ' + HydrusData.ToHumanInt( day_usage_requests ) + ' requests'
+        pretty_month_usage = HydrusData.ToHumanBytes( month_usage_data ) + ' in ' + HydrusData.ToHumanInt( month_usage_requests ) + ' requests'
         
         if has_rules:
             
@@ -1393,7 +1393,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         network_contexts_and_bandwidth_rules = self._controller.network_engine.bandwidth_manager.GetDefaultRules()
         
-        choice_tuples = [ ( network_context.ToUnicode() + ' (' + str( len( bandwidth_rules.GetRules() ) ) + ' rules)', ( network_context, bandwidth_rules ) ) for ( network_context, bandwidth_rules ) in network_contexts_and_bandwidth_rules ]
+        choice_tuples = [ ( network_context.ToString() + ' (' + str( len( bandwidth_rules.GetRules() ) ) + ' rules)', ( network_context, bandwidth_rules ) ) for ( network_context, bandwidth_rules ) in network_contexts_and_bandwidth_rules ]
         
         try:
             
@@ -1404,7 +1404,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + network_context.ToUnicode() ) as dlg_2:
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + network_context.ToString() ) as dlg_2:
             
             summary = network_context.GetSummary()
             
@@ -1494,7 +1494,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             parent = self.GetTopLevelParent().GetParent()
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review bandwidth for ' + network_context.ToUnicode() )
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review bandwidth for ' + network_context.ToString() )
             
             panel = ReviewNetworkContextBandwidthPanel( frame, self._controller, network_context )
             
@@ -1565,22 +1565,20 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         for path in paths:
             
-            path = HydrusData.ToUnicode( path )
-            
             try:
                 
                 payload = ClientSerialisable.LoadFromPng( path )
                 
             except Exception as e:
                 
-                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                wx.MessageBox( str( e ) )
                 
                 return
                 
             
             try:
                 
-                obj_list = HydrusSerialisable.CreateFromNetworkString( payload )
+                obj_list = HydrusSerialisable.CreateFromNetworkBytes( payload )
                 
             except:
                 
@@ -1929,17 +1927,17 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            num_archive_percent = float( num_archive ) / num_total
-            size_archive_percent = float( size_archive ) / size_total
+            num_archive_percent = num_archive / num_total
+            size_archive_percent = size_archive / size_total
             
-            num_inbox_percent = float( num_inbox ) / num_total
-            size_inbox_percent = float( size_inbox ) / size_total
+            num_inbox_percent = num_inbox / num_total
+            size_inbox_percent = size_inbox / size_total
             
-            archive_label = 'Archive: ' + HydrusData.ToHumanInt( num_archive ) + ' files (' + ClientData.ConvertZoomToPercentage( num_archive_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_archive ) + '(' + ClientData.ConvertZoomToPercentage( size_archive_percent ) + ')'
+            archive_label = 'Archive: ' + HydrusData.ToHumanInt( num_archive ) + ' files (' + ClientData.ConvertZoomToPercentage( num_archive_percent ) + '), totalling ' + HydrusData.ToHumanBytes( size_archive ) + '(' + ClientData.ConvertZoomToPercentage( size_archive_percent ) + ')'
             
             archive_st = ClientGUICommon.BetterStaticText( self, label = archive_label )
             
-            inbox_label = 'Inbox: ' + HydrusData.ToHumanInt( num_inbox ) + ' files (' + ClientData.ConvertZoomToPercentage( num_inbox_percent ) + '), totalling ' + HydrusData.ConvertIntToBytes( size_inbox ) + '(' + ClientData.ConvertZoomToPercentage( size_inbox_percent ) + ')'
+            inbox_label = 'Inbox: ' + HydrusData.ToHumanInt( num_inbox ) + ' files (' + ClientData.ConvertZoomToPercentage( num_inbox_percent ) + '), totalling ' + HydrusData.ToHumanBytes( size_inbox ) + '(' + ClientData.ConvertZoomToPercentage( size_inbox_percent ) + ')'
             
             inbox_st = ClientGUICommon.BetterStaticText( self, label = inbox_label )
             
@@ -1984,7 +1982,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         description = CC.network_context_type_description_lookup[ self._network_context.context_type ]
         
-        self._name = ClientGUICommon.BetterStaticText( info_panel, label = self._network_context.ToUnicode() )
+        self._name = ClientGUICommon.BetterStaticText( info_panel, label = self._network_context.ToString() )
         self._description = ClientGUICommon.BetterStaticText( info_panel, label = description )
         
         #
@@ -2085,7 +2083,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _EditRules( self ):
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + self._network_context.ToUnicode() ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + self._network_context.ToString() ) as dlg:
             
             summary = self._network_context.GetSummary()
             
@@ -2108,7 +2106,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_usage = self._bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         
-        pretty_current_usage = 'current usage: ' + HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+        pretty_current_usage = 'current usage: ' + HydrusData.ToHumanBytes( current_usage ) + '/s'
         
         self._current_usage_st.SetLabelText( pretty_current_usage )
         
@@ -2121,7 +2119,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
             
-            converter = HydrusData.ConvertIntToBytes
+            converter = HydrusData.ToHumanBytes
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
@@ -2269,7 +2267,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_position = ClientNetworking.job_status_str_lookup[ position ]
         pretty_url = url
         pretty_status = status
-        pretty_current_speed = HydrusData.ConvertIntToBytes( current_speed ) + '/s'
+        pretty_current_speed = HydrusData.ToHumanBytes( current_speed ) + '/s'
         pretty_progress = HydrusData.ConvertValueRangeToBytes( num_bytes_read, num_bytes_to_read )
         
         display_tuple = ( pretty_position, pretty_url, pretty_status, pretty_current_speed, pretty_progress )
@@ -2382,7 +2380,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         session = self._session_manager.GetSession( network_context )
         
-        pretty_network_context = network_context.ToUnicode()
+        pretty_network_context = network_context.ToString()
         
         number_of_cookies = len( session.cookies )
         pretty_number_of_cookies = HydrusData.ToHumanInt( number_of_cookies )
@@ -2421,7 +2419,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if f_dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( f_dlg.GetPath() )
+                path = f_dlg.GetPath()
                 
                 self._ImportCookiesTXTPaths( ( path, ) )
                 
@@ -2434,7 +2432,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for path in paths:
             
-            cj = cookielib.MozillaCookieJar()
+            cj = http.cookiejar.MozillaCookieJar()
             
             try:
                 
@@ -2459,7 +2457,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        wx.MessageBox( 'Added ' + HydrusData.ToUnicode( num_added ) + ' cookies!' )
+        wx.MessageBox( 'Added ' + HydrusData.ToHumanInt( num_added ) + ' cookies!' )
         
         self._Update()
         
@@ -2470,7 +2468,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             parent = self.GetTopLevelParent().GetParent()
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review session for ' + network_context.ToUnicode() )
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review session for ' + network_context.ToString() )
             
             panel = ReviewNetworkSessionPanel( frame, self._session_manager, network_context )
             
@@ -2518,7 +2516,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._session = self._session_manager.GetSession( self._network_context )
         
-        self._description = ClientGUICommon.BetterStaticText( self, network_context.ToUnicode() )
+        self._description = ClientGUICommon.BetterStaticText( self, network_context.ToString() )
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -2605,7 +2603,6 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if expiry is None:
             
-            expiry = -1
             pretty_expiry = 'session'
             
         else:
@@ -2613,8 +2610,10 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
             
         
+        sort_expiry = ClientGUIListCtrl.SafeNoneInt( expiry )
+        
         display_tuple = ( pretty_name, pretty_value, pretty_domain, pretty_path, pretty_expiry )
-        sort_tuple = ( name, value, domain, path, expiry )
+        sort_tuple = ( name, value, domain, path, sort_expiry )
         
         return ( display_tuple, sort_tuple )
         
@@ -2678,7 +2677,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if f_dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( f_dlg.GetPath() )
+                path = f_dlg.GetPath()
                 
                 self._ImportCookiesTXTPaths( ( path, ) )
                 
@@ -2691,7 +2690,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for path in paths:
             
-            cj = cookielib.MozillaCookieJar()
+            cj = http.cookiejar.MozillaCookieJar()
             
             try:
                 
@@ -2714,7 +2713,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        wx.MessageBox( 'Added ' + HydrusData.ToUnicode( num_added ) + ' cookies!' )
+        wx.MessageBox( 'Added ' + HydrusData.ToHumanInt( num_added ) + ' cookies!' )
         
         self._Update()
         
@@ -2733,7 +2732,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         comment_url = None
         rest = {}
         
-        cookie = cookielib.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+        cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
         
         self._session.cookies.set_cookie( cookie )
         

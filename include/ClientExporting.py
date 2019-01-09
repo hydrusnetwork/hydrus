@@ -1,13 +1,13 @@
-import ClientConstants as CC
-import ClientPaths
-import ClientSearch
-import HydrusConstants as HC
-import HydrusData
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
-import HydrusThreading
+from . import ClientConstants as CC
+from . import ClientPaths
+from . import ClientSearch
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusThreading
 import os
 import re
 import stat
@@ -20,11 +20,11 @@ def GenerateExportFilename( destination_directory, media, terms ):
         
         if HC.PLATFORM_WINDOWS:
             
-            t = re.sub( r'\\', '_', t, flags = re.UNICODE )
+            t = re.sub( r'\\', '_', t )
             
         else:
             
-            t = re.sub( '/', '_', t, flags = re.UNICODE )
+            t = re.sub( '/', '_', t )
             
         
         return t
@@ -81,7 +81,7 @@ def GenerateExportFilename( destination_directory, media, terms ):
                 
                 hash = media.GetHash()
                 
-                filename += hash.encode( 'hex' )
+                filename += hash.hex()
                 
             
         elif term_type == 'tag':
@@ -100,14 +100,14 @@ def GenerateExportFilename( destination_directory, media, terms ):
     if HC.PLATFORM_WINDOWS:
         
         # replace many consecutive backspace with single backspace
-        filename = re.sub( r'\\+', r'\\', filename, flags = re.UNICODE )
+        filename = re.sub( r'\\+', r'\\', filename )
         
         # /, :, *, ?, ", <, >, |
-        filename = re.sub( r'/|:|\*|\?|"|<|>|\|', '_', filename, flags = re.UNICODE )
+        filename = re.sub( r'/|:|\*|\?|"|<|>|\|', '_', filename )
         
     else:
         
-        filename = re.sub( '/', '_', filename, flags = re.UNICODE )
+        filename = re.sub( '/', '_', filename )
         
     
     #
@@ -225,7 +225,7 @@ def ParseExportPhrase( phrase ):
         
     except Exception as e:
         
-        raise Exception( 'Could not parse that phrase: ' + HydrusData.ToUnicode( e ) )
+        raise Exception( 'Could not parse that phrase: ' + str( e ) )
         
     
     return terms
@@ -315,9 +315,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if HydrusData.TimeHasPassed( self._last_checked + self._period ):
                 
-                folder_path = HydrusData.ToUnicode( self._path )
-                
-                if folder_path != '' and os.path.exists( folder_path ) and os.path.isdir( folder_path ):
+                if self._path != '' and os.path.exists( self._path ) and os.path.isdir( self._path ):
                     
                     query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context )
                     
@@ -348,7 +346,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     terms = ParseExportPhrase( self._phrase )
                     
-                    previous_filenames = set( os.listdir( folder_path ) )
+                    previous_filenames = set( os.listdir( self._path ) )
                     
                     sync_filenames = set()
                     
@@ -369,9 +367,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         source_path = client_files_manager.GetFilePath( hash, mime )
                         
-                        filename = GenerateExportFilename( folder_path, media_result, terms )
+                        filename = GenerateExportFilename( self._path, media_result, terms )
                         
-                        dest_path = os.path.join( folder_path, filename )
+                        dest_path = os.path.join( self._path, filename )
                         
                         dest_path_dir = os.path.dirname( dest_path )
                         
@@ -404,7 +402,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         for deletee_filename in deletee_filenames:
                             
-                            deletee_path = os.path.join( folder_path, deletee_filename )
+                            deletee_path = os.path.join( self._path, deletee_filename )
                             
                             ClientPaths.DeletePath( deletee_path )
                             

@@ -1,6 +1,6 @@
-import ClientGUICommon
-import HydrusGlobals as HG
-import HydrusPaths
+from . import ClientGUICommon
+from . import HydrusGlobals as HG
+from . import HydrusPaths
 import json
 import os
 import wx
@@ -23,14 +23,16 @@ def DoFileExportDragDrop( window, page_key, media, cmd_down ):
         
     else:
         
-        encoded_page_key = page_key.encode( 'hex' )
+        encoded_page_key = page_key.hex()
         
     
-    data = ( encoded_page_key, [ hash.encode( 'hex' ) for hash in hashes ] )
+    data_obj = ( encoded_page_key, [ hash.hex() for hash in hashes ] )
     
-    data = json.dumps( data )
+    data_str = json.dumps( data_obj )
     
-    hydrus_media_data_object.SetData( data )
+    data_bytes = bytes( data_str, 'utf-8' )
+    
+    hydrus_media_data_object.SetData( data_bytes )
     
     data_object.Add( hydrus_media_data_object, True )
     
@@ -185,14 +187,16 @@ class FileDropTarget( wx.DropTarget ):
                     
                     mview = self._hydrus_media_data_object.GetData()
                     
-                    data = mview.tobytes()
+                    data_bytes = mview.tobytes()
                     
-                    ( encoded_page_key, encoded_hashes ) = json.loads( data )
+                    data_str = str( data_bytes, 'utf-8' )
+                    
+                    ( encoded_page_key, encoded_hashes ) = json.loads( data_str )
                     
                     if encoded_page_key is not None:
                         
-                        page_key = encoded_page_key.decode( 'hex' )
-                        hashes = [ encoded_hash.decode( 'hex' ) for encoded_hash in encoded_hashes ]
+                        page_key = bytes.fromhex( encoded_page_key )
+                        hashes = [ bytes.fromhex( encoded_hash ) for encoded_hash in encoded_hashes ]
                         
                         wx.CallAfter( self._media_callable, page_key, hashes ) # callafter so we can terminate dnd event now
                         

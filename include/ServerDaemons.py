@@ -1,6 +1,6 @@
-import HydrusConstants as HC
-import HydrusGlobals as HG
-import HydrusNATPunch
+from . import HydrusConstants as HC
+from . import HydrusGlobals as HG
+from . import HydrusNATPunch
 
 def DAEMONSaveDirtyObjects( controller ):
     

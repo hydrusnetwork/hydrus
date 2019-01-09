@@ -1,37 +1,36 @@
-import HydrusConstants as HC
-import HydrusExceptions
-import HydrusSerialisable
-import ClientConstants as CC
-import ClientDefaults
-import ClientGUIACDropdown
-import ClientGUICanvas
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIImport
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIMedia
-import ClientGUIMenus
-import ClientGUIParsing
-import ClientGUIScrolledPanels
-import ClientGUIFileSeedCache
-import ClientGUIGallerySeedLog
-import ClientGUIScrolledPanelsEdit
-import ClientGUITopLevelWindows
-import ClientImportGallery
-import ClientImportLocal
-import ClientImportOptions
-import ClientImportSimpleURLs
-import ClientImportWatchers
-import ClientMedia
-import ClientParsing
-import ClientPaths
-import ClientThreading
-import HydrusData
-import HydrusGlobals as HG
-import HydrusThreading
-import multipart
+from . import HydrusConstants as HC
+from . import HydrusExceptions
+from . import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientGUIACDropdown
+from . import ClientGUICanvas
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIImport
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIMedia
+from . import ClientGUIMenus
+from . import ClientGUIParsing
+from . import ClientGUIScrolledPanels
+from . import ClientGUIFileSeedCache
+from . import ClientGUIGallerySeedLog
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUITopLevelWindows
+from . import ClientImportGallery
+from . import ClientImportLocal
+from . import ClientImportOptions
+from . import ClientImportSimpleURLs
+from . import ClientImportWatchers
+from . import ClientMedia
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientThreading
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusThreading
 import os
 import time
 import traceback
@@ -182,38 +181,6 @@ def CreateManagementPanel( parent, page, controller, management_controller ):
     management_panel = management_class( parent, page, controller, management_controller )
     
     return management_panel
-    
-def GenerateDumpMultipartFormDataCTAndBody( fields ):
-    
-    m = multipart.Multipart()
-    
-    for ( name, field_type, value ) in fields:
-        
-        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ):
-            
-            m.field( name, HydrusData.ToByteString( value ) )
-            
-        elif field_type == CC.FIELD_CHECKBOX:
-            
-            if value:
-                
-                # spoiler/on -> name : spoiler, value : on
-                # we don't say true/false for checkboxes
-                
-                ( name, value ) = name.split( '/', 1 )
-                
-                m.field( name, value )
-                
-            
-        elif field_type == CC.FIELD_FILE:
-            
-            ( hash, mime, file ) = value
-            
-            m.file( name, hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], file, { 'Content-Type' : HC.mime_string_lookup[ mime ] } )
-            
-        
-    
-    return m.get()
     
 '''class CaptchaControl( wx.Panel ):
     
@@ -551,16 +518,16 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return HydrusData.ToByteString( 'Management Controller: ' + self._management_type + ' - ' + self._page_name )
+        return 'Management Controller: ' + self._management_type + ' - ' + self._page_name
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_keys = { name : value.encode( 'hex' ) for ( name, value ) in self._keys.items() }
+        serialisable_keys = { name : value.hex() for ( name, value ) in list(self._keys.items()) }
         
         serialisable_simples = dict( self._simples )
         
-        serialisable_serialisables = { name : value.GetSerialisableTuple() for ( name, value ) in self._serialisables.items() }
+        serialisable_serialisables = { name : value.GetSerialisableTuple() for ( name, value ) in list(self._serialisables.items()) }
         
         return ( self._page_name, self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
         
@@ -581,7 +548,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._InitialiseDefaults()
         
-        self._keys.update( { name : key.decode( 'hex' ) for ( name, key ) in serialisable_keys.items() } )
+        self._keys.update( { name : bytes.fromhex( key ) for ( name, key ) in list(serialisable_keys.items()) } )
         
         if 'file_service' in self._keys:
             
@@ -593,7 +560,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._simples.update( dict( serialisable_simples ) )
         
-        self._serialisables.update( { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisable_serialisables.items() } )
+        self._serialisables.update( { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in list(serialisable_serialisables.items()) } )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -629,7 +596,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
                 file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
                 
-                paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in paths_to_tags.items() }
+                paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in list(paths_to_tags.items()) }
                 
                 hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                 
@@ -1340,7 +1307,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._search_distance_button.SetLabelText( button_label )
         
-        num_searched = sum( ( count for ( value, count ) in searched_distances_to_count.items() if value is not None and value >= search_distance ) )
+        num_searched = sum( ( count for ( value, count ) in list(searched_distances_to_count.items()) if value is not None and value >= search_distance ) )
         
         if num_searched == total_num_files:
             
@@ -1798,7 +1765,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if num_total > 0:
             
-            sort_float = float( num_done ) / num_total
+            sort_float = num_done / num_total
             
         else:
             
@@ -2485,7 +2452,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if num_total > 0:
             
-            sort_float = float( num_done ) / num_total
+            sort_float = num_done / num_total
             
         else:
             
@@ -2985,13 +2952,13 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._pending_jobs_listbox = wx.ListBox( self._simple_parsing_jobs_panel, size = ( -1, 100 ) )
         
-        self._advance_button = wx.Button( self._simple_parsing_jobs_panel, label = u'\u2191' )
+        self._advance_button = wx.Button( self._simple_parsing_jobs_panel, label = '\u2191' )
         self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
         
         self._delete_button = wx.Button( self._simple_parsing_jobs_panel, label = 'X' )
         self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
         
-        self._delay_button = wx.Button( self._simple_parsing_jobs_panel, label = u'\u2193' )
+        self._delay_button = wx.Button( self._simple_parsing_jobs_panel, label = '\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
         self._page_url_input = ClientGUIControls.TextAndPasteCtrl( self._simple_parsing_jobs_panel, self._PendPageURLs )
@@ -3722,7 +3689,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 self._contents.Append( content_string, content )
                 
             
-            self._contents.SetCheckedItems( range( self._contents.GetCount() ) )
+            self._contents.SetCheckedItems( list( range( self._contents.GetCount() ) ) )
             
             self._process.Enable()
             
@@ -3808,7 +3775,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        self._refresh_num_petitions_button.SetLabelText( u'Fetching\u2026' )
+        self._refresh_num_petitions_button.SetLabelText( 'Fetching\u2026' )
         
         self._controller.CallToThread( do_it, self._service )
         
@@ -3862,7 +3829,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
         button.Disable()
-        button.SetLabelText( u'Fetching\u2026' )
+        button.SetLabelText( 'Fetching\u2026' )
         
         self._controller.CallToThread( do_it, self._service )
         

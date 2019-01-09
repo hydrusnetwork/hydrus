@@ -1,7 +1,7 @@
-import ClientConstants as CC
-import HydrusData
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import os
 
 class NetworkContext( HydrusSerialisable.SerialisableBase ):
@@ -35,7 +35,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return self.ToUnicode()
+        return self.ToString()
         
     
     def _GetSerialisableInfo( self ):
@@ -52,7 +52,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                serialisable_context_data = self.context_data.encode( 'hex' )
+                serialisable_context_data = self.context_data.hex()
                 
             
         
@@ -75,7 +75,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                self.context_data = serialisable_context_data.decode( 'hex' )
+                self.context_data = bytes.fromhex( serialisable_context_data )
                 
             
         
@@ -91,7 +91,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 # unicode subscription names were erroring on the hex call
                 if context_type in ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_SUBSCRIPTION ):
                     
-                    context_data = serialisable_context_data.decode( 'hex' )
+                    context_data = bytes.fromhex( serialisable_context_data )
                     
                     serialisable_context_data = context_data
                     
@@ -120,14 +120,14 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     def GetSummary( self ):
         
-        summary = self.ToUnicode()
+        summary = self.ToString()
         summary += os.linesep * 2
         summary += CC.network_context_type_description_lookup[ self.context_type ]
         
         return summary
         
     
-    def ToUnicode( self ):
+    def ToString( self ):
         
         if self.context_data is None:
             
@@ -159,7 +159,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                name = HydrusData.ToUnicode( self.context_data )
+                name = str( self.context_data )
                 
             
             return CC.network_context_type_string_lookup[ self.context_type ] + ': ' + name

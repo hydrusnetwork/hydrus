@@ -1,10 +1,10 @@
-import cPickle
-import ClientConstants as CC
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import HydrusData
-import HydrusSerialisable
-import HydrusGlobals as HG
+import pickle
+from . import ClientConstants as CC
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import HydrusData
+from . import HydrusSerialisable
+from . import HydrusGlobals as HG
 import requests
 import threading
 
@@ -80,7 +80,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_network_contexts_to_sessions = [ ( network_context.GetSerialisableTuple(), cPickle.dumps( session ) ) for ( network_context, session ) in self._network_contexts_to_sessions.items() ]
+        serialisable_network_contexts_to_sessions = [ ( network_context.GetSerialisableTuple(), pickle.dumps( session ).hex() ) for ( network_context, session ) in list(self._network_contexts_to_sessions.items()) ]
         
         return serialisable_network_contexts_to_sessions
         
@@ -102,13 +102,13 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_network_contexts_to_sessions = serialisable_info
         
-        for ( serialisable_network_context, pickled_session ) in serialisable_network_contexts_to_sessions:
+        for ( serialisable_network_context, pickled_session_hex ) in serialisable_network_contexts_to_sessions:
             
             network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
             
             try:
                 
-                session = cPickle.loads( str( pickled_session ) )
+                session = pickle.loads( bytes.fromhex( pickled_session_hex ) )
                 
             except:
                 
@@ -165,7 +165,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._network_contexts_to_sessions.keys()
+            return list(self._network_contexts_to_sessions.keys())
             
         
     

@@ -1,10 +1,10 @@
-import ClientConstants as CC
-import ClientGUICommon
-import ClientGUIScrolledPanels
-import ClientGUITopLevelWindows
-import ClientImporting
-import ClientImportOptions
-import HydrusData
+from . import ClientConstants as CC
+from . import ClientGUICommon
+from . import ClientGUIScrolledPanels
+from . import ClientGUITopLevelWindows
+from . import ClientImporting
+from . import ClientImportOptions
+from . import HydrusData
 import os
 import wx
 
@@ -19,7 +19,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
         
-        import ClientDefaults
+        from . import ClientDefaults
         
         defaults_panel = ClientGUICommon.StaticBox( self, 'reasonable defaults' )
         
@@ -459,21 +459,21 @@ class TimeDeltaCtrl( wx.Panel ):
             
             if self._show_days:
                 
-                self._days.SetValue( value / 86400 )
+                self._days.SetValue( value // 86400 )
                 
                 value %= 86400
                 
             
             if self._show_hours:
                 
-                self._hours.SetValue( value / 3600 )
+                self._hours.SetValue( value // 3600 )
                 
                 value %= 3600
                 
             
             if self._show_minutes:
                 
-                self._minutes.SetValue( value / 60 )
+                self._minutes.SetValue( value // 60 )
                 
                 value %= 60
                 

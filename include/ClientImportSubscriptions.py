@@ -1,19 +1,19 @@
-import ClientConstants as CC
-import ClientDownloading
-import ClientImporting
-import ClientImportFileSeeds
-import ClientImportGallerySeeds
-import ClientImportOptions
-import ClientNetworkingContexts
-import ClientNetworkingJobs
-import ClientPaths
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientDownloading
+from . import ClientImporting
+from . import ClientImportFileSeeds
+from . import ClientImportGallerySeeds
+from . import ClientImportOptions
+from . import ClientNetworkingContexts
+from . import ClientNetworkingJobs
+from . import ClientPaths
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusSerialisable
 import os
 import random
 import time
@@ -143,7 +143,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( gug_key, gug_name ) = self._gug_key_and_name
         
-        serialisable_gug_key_and_name = ( gug_key.encode( 'hex' ), gug_name )
+        serialisable_gug_key_and_name = ( gug_key.hex(), gug_name )
         serialisable_queries = [ query.GetSerialisableTuple() for query in self._queries ]
         serialisable_checker_options = self._checker_options.GetSerialisableTuple()
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
@@ -158,7 +158,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( serialisable_gug_key, gug_name ) = serialisable_gug_key_and_name
         
-        self._gug_key_and_name = ( serialisable_gug_key.decode( 'hex' ), gug_name )
+        self._gug_key_and_name = ( bytes.fromhex( serialisable_gug_key ), gug_name )
         self._queries = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_query ) for serialisable_query in serialisable_queries ]
         self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
@@ -232,7 +232,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if not self._paused:
                         
-                        login_fail_reason = HydrusData.ToUnicode( e )
+                        login_fail_reason = str( e )
                         
                         message = 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its file imports. The reason was:'
                         message += os.linesep * 2
@@ -292,7 +292,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if not self._paused:
                         
-                        login_fail_reason = HydrusData.ToUnicode( e )
+                        login_fail_reason = str( e )
                         
                         message = 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login. The reason was:'
                         message += os.linesep * 2
@@ -358,7 +358,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, last_checked, check_now, last_error, no_work_until, no_work_until_reason, serialisable_file_seed_cache ) = old_serialisable_info
             
-            checker_options = ClientImportOptions.CheckerOptions( 5, period / 5, period * 10, ( 1, period * 10 ) )
+            checker_options = ClientImportOptions.CheckerOptions( 5, period // 5, period * 10, ( 1, period * 10 ) )
             
             file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
             
@@ -428,7 +428,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( gug_key, gug_name ) = ClientDownloading.ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier )
             
-            serialisable_gug_key_and_name = ( gug_key.encode( 'hex' ), gug_name )
+            serialisable_gug_key_and_name = ( gug_key.hex(), gug_name )
             
             new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
             
@@ -592,7 +592,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 except HydrusExceptions.CancelledException as e:
                     
-                    self._DelayWork( 300, HydrusData.ToUnicode( e ) )
+                    self._DelayWork( 300, str( e ) )
                     
                     break
                     
@@ -600,7 +600,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     status = CC.STATUS_VETOED
                     
-                    note = HydrusData.ToUnicode( e )
+                    note = str( e )
                     
                     file_seed.SetStatus( status, note = note )
                     
@@ -940,7 +940,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        stop_reason = HydrusData.ToUnicode( e )
+                        stop_reason = str( e )
                         
                         raise
                         
@@ -1335,7 +1335,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 job_key.SetVariable( 'popup_text_1', 'Encountered a network error, will retry again later' )
                 
-                self._DelayWork( delay, 'network error: ' + HydrusData.ToUnicode( e ) )
+                self._DelayWork( delay, 'network error: ' + str( e ) )
                 
                 time.sleep( 5 )
                 
@@ -1346,7 +1346,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 delay = HG.client_controller.new_options.GetInteger( 'subscription_other_error_delay' )
                 
-                self._DelayWork( delay, 'error: ' + HydrusData.ToUnicode( e ) )
+                self._DelayWork( delay, 'error: ' + str( e ) )
                 
             finally:
                 

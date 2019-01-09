@@ -1,13 +1,13 @@
-import ClientFiles
-import ClientImageHandling
-import ClientVideoHandling
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusImageHandling
-import HydrusGlobals as HG
-import HydrusThreading
-import HydrusVideoHandling
+from . import ClientFiles
+from . import ClientImageHandling
+from . import ClientVideoHandling
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusImageHandling
+from . import HydrusGlobals as HG
+from . import HydrusThreading
+from . import HydrusVideoHandling
 import os
 import threading
 import time
@@ -187,12 +187,15 @@ class RasterContainer( object ):
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
-        width_zoom = target_width / float( media_width )
-        height_zoom = target_height / float( media_height )
+        width_zoom = target_width / media_width
+        height_zoom = target_height / media_height
         
         self._zoom = min( ( width_zoom, height_zoom ) )
         
-        if self._zoom > 1.0: self._zoom = 1.0
+        if self._zoom > 1.0:
+            
+            self._zoom = 1.0
+            
         
     
 class RasterContainerVideo( RasterContainer ):
@@ -225,7 +228,7 @@ class RasterContainerVideo( RasterContainer ):
         
         if duration is None or duration == 0:
             
-            message = 'The file with hash ' + media.GetHash().encode( 'hex' ) + ', had an invalid duration.'
+            message = 'The file with hash ' + media.GetHash().hex() + ', had an invalid duration.'
             message += os.linesep * 2
             message += 'You may wish to try regenerating its metadata through the advanced mode right-click menu.'
             
@@ -236,7 +239,7 @@ class RasterContainerVideo( RasterContainer ):
         
         if num_frames_in_video is None or num_frames_in_video == 0:
             
-            message = 'The file with hash ' + media.GetHash().encode( 'hex' ) + ', had an invalid number of frames.'
+            message = 'The file with hash ' + media.GetHash().hex() + ', had an invalid number of frames.'
             message += os.linesep * 2
             message += 'You may wish to try regenerating its metadata through the advanced mode right-click menu.'
             
@@ -245,9 +248,9 @@ class RasterContainerVideo( RasterContainer ):
             num_frames_in_video = 1
             
         
-        self._average_frame_duration = float( duration ) / num_frames_in_video
+        self._average_frame_duration = duration / num_frames_in_video
         
-        frame_buffer_length = ( video_buffer_size_mb * 1024 * 1024 ) / ( x * y * 3 )
+        frame_buffer_length = ( video_buffer_size_mb * 1024 * 1024 ) // ( x * y * 3 )
         
         # if we can't buffer the whole vid, then don't have a clunky massive buffer
         
@@ -258,8 +261,8 @@ class RasterContainerVideo( RasterContainer ):
             frame_buffer_length = max_streaming_buffer_size
             
         
-        self._num_frames_backwards = frame_buffer_length * 2 / 3
-        self._num_frames_forwards = frame_buffer_length / 3
+        self._num_frames_backwards = frame_buffer_length * 2 // 3
+        self._num_frames_forwards = frame_buffer_length // 3
         
         self._lock = threading.Lock()
         
@@ -283,7 +286,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def _MaintainBuffer( self ):
         
-        deletees = [ index for index in self._frames.keys() if FrameIndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
+        deletees = [ index for index in list(self._frames.keys()) if FrameIndexOutOfRange( index, self._buffer_start_index, self._buffer_end_index ) ]
         
         for i in deletees:
             

@@ -1,10 +1,10 @@
 import numpy.core.multiarray # important this comes before cv!
 import cv2
-import ClientImageHandling
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusImageHandling
+from . import ClientImageHandling
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusImageHandling
 
 if cv2.__version__.startswith( '2' ):
     

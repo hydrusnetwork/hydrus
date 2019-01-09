@@ -1,17 +1,17 @@
-import ClientConstants as CC
-import ClientDownloading
-import ClientImporting
-import ClientImportOptions
-import ClientImportFileSeeds
-import ClientImportGallerySeeds
-import ClientNetworkingJobs
-import ClientParsing
+from . import ClientConstants as CC
+from . import ClientDownloading
+from . import ClientImporting
+from . import ClientImportOptions
+from . import ClientImportFileSeeds
+from . import ClientImportGallerySeeds
+from . import ClientNetworkingJobs
+from . import ClientParsing
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import threading
 import time
 import wx
@@ -639,7 +639,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             delay = HG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
             
-            self._DelayWork( delay, HydrusData.ToUnicode( e ) )
+            self._DelayWork( delay, str( e ) )
             
             HydrusData.PrintException( e )
             

@@ -37,7 +37,7 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
 
 # hash = ab156e87c5d6e215ab156e87c5d6e215
 
-# Then go hash = hash.decode( 'hex' ) before you pass it to Add/Get/Has/SetRating
+# Then go hash = bytes.fromhex( hash ) before you pass it to Add/Get/Has/SetRating
 
 
 # And also feel free to contact me directly at hydrus.admin@gmail.com if you need help.

@@ -1,29 +1,24 @@
-import ClientConstants as CC
+from . import ClientConstants as CC
 import collections
-import cStringIO
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusNetworking
-import HydrusPaths
-import HydrusSerialisable
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusNetworking
+from . import HydrusPaths
+from . import HydrusSerialisable
 import itertools
-import multipart
 import os
 import random
 import requests
 import urllib3
-from urllib3.exceptions import InsecureRequestWarning
 import threading
 import time
 import traceback
-import urllib
-import urlparse
+import urllib.parse
 import yaml
 
-urllib3.disable_warnings( InsecureRequestWarning )
 
 JOB_STATUS_AWAITING_VALIDITY = 0
 JOB_STATUS_AWAITING_BANDWIDTH = 1
@@ -39,17 +34,6 @@ job_status_str_lookup[ JOB_STATUS_AWAITING_LOGIN ] = 'waiting for login'
 job_status_str_lookup[ JOB_STATUS_AWAITING_SLOT ] = 'waiting for slot'
 job_status_str_lookup[ JOB_STATUS_RUNNING ] = 'running'
 
-def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
-    
-    m = multipart.Multipart()
-    
-    for ( name, value ) in fields.items():
-        
-        m.field( name, HydrusData.ToByteString( value ) )
-        
-    
-    return m.get()
-    
 class NetworkEngine( object ):
     
     def __init__( self, controller, bandwidth_manager, session_manager, domain_manager, login_manager ):
@@ -184,11 +168,11 @@ class NetworkEngine( object ):
                         
                         self._current_validation_process = validation_process
                         
-                        job.SetStatus( u'validation presented to user\u2026' )
+                        job.SetStatus( 'validation presented to user\u2026' )
                         
                     else:
                         
-                        job.SetStatus( u'waiting in user validation queue\u2026' )
+                        job.SetStatus( 'waiting in user validation queue\u2026' )
                         
                         job.Sleep( 5 )
                         
@@ -197,7 +181,7 @@ class NetworkEngine( object ):
                     
                 else:
                     
-                    error_text = u'network context not currently valid!'
+                    error_text = 'network context not currently valid!'
                     
                     job.SetError( HydrusExceptions.ValidationException( error_text ), error_text )
                     
@@ -288,7 +272,7 @@ class NetworkEngine( object ):
                     
                     if job.WillingToWaitOnInvalidLogin():
                         
-                        job.SetStatus( HydrusData.ToUnicode( e ) )
+                        job.SetStatus( str( e ) )
                         
                         job.Sleep( 60 )
                         
@@ -298,11 +282,11 @@ class NetworkEngine( object ):
                         
                         if job.IsHydrusJob():
                             
-                            message = 'This hydrus service (' + job.GetLoginNetworkContext().ToUnicode() + ') recently failed to log in. Please hit its \'refresh account\' under \'review services\' and try again.'
+                            message = 'This hydrus service (' + job.GetLoginNetworkContext().ToString() + ') recently failed to log in. Please hit its \'refresh account\' under \'review services\' and try again.'
                             
                         else:
                             
-                            message = 'This job\'s network context (' + job.GetLoginNetworkContext().ToUnicode() + ') seems to have an invalid login, and it is not willing to wait! Please review its login details and then try again.'
+                            message = 'This job\'s network context (' + job.GetLoginNetworkContext().ToString() + ') seems to have an invalid login, and it is not willing to wait! Please review its login details and then try again.'
                             
                         
                         job.Cancel( message )
@@ -321,7 +305,7 @@ class NetworkEngine( object ):
                         
                         HydrusData.ShowException( e )
                         
-                        job.SetStatus( HydrusData.ToUnicode( e ) )
+                        job.SetStatus( str( e ) )
                         
                         job.Sleep( 60 )
                         
@@ -332,11 +316,11 @@ class NetworkEngine( object ):
                     
                     self._current_login_process = login_process
                     
-                    job.SetStatus( u'logging in\u2026' )
+                    job.SetStatus( 'logging in\u2026' )
                     
                 else:
                     
-                    job.SetStatus( u'waiting in login queue\u2026' )
+                    job.SetStatus( 'waiting in login queue\u2026' )
                     
                     job.Sleep( 5 )
                     
@@ -376,7 +360,7 @@ class NetworkEngine( object ):
                 
                 if self._pause_all_new_network_traffic:
                     
-                    job.SetStatus( u'all new network traffic is paused\u2026' )
+                    job.SetStatus( 'all new network traffic is paused\u2026' )
                     
                     job.Sleep( 2 )
                     
@@ -384,7 +368,7 @@ class NetworkEngine( object ):
                     
                 elif self.controller.JustWokeFromSleep():
                     
-                    job.SetStatus( u'looks like computer just woke up, waiting a bit' )
+                    job.SetStatus( 'looks like computer just woke up, waiting a bit' )
                     
                     job.Sleep( 5 )
                     
@@ -392,7 +376,7 @@ class NetworkEngine( object ):
                     
                 elif self._active_domains_counter[ job.GetSecondLevelDomain() ] >= self.MAX_JOBS_PER_DOMAIN:
                     
-                    job.SetStatus( u'waiting for a slot on this domain' )
+                    job.SetStatus( 'waiting for a slot on this domain' )
                     
                     job.Sleep( 2 )
                     
@@ -420,7 +404,7 @@ class NetworkEngine( object ):
                 
             else:
                 
-                job.SetStatus( u'waiting for a slot\u2026' )
+                job.SetStatus( 'waiting for a slot\u2026' )
                 
                 return True
                 
@@ -458,21 +442,21 @@ class NetworkEngine( object ):
             
             with self._lock:
                 
-                self._jobs_awaiting_validity = filter( ProcessValidationJob, self._jobs_awaiting_validity )
+                self._jobs_awaiting_validity = list(filter( ProcessValidationJob, self._jobs_awaiting_validity ))
                 
                 ProcessCurrentValidationJob()
                 
-                self._jobs_awaiting_bandwidth = filter( ProcessBandwidthJob, self._jobs_awaiting_bandwidth )
+                self._jobs_awaiting_bandwidth = list(filter( ProcessBandwidthJob, self._jobs_awaiting_bandwidth ))
                 
                 ProcessForceLogins()
                 
-                self._jobs_awaiting_login = filter( ProcessLoginJob, self._jobs_awaiting_login )
+                self._jobs_awaiting_login = list(filter( ProcessLoginJob, self._jobs_awaiting_login ))
                 
                 ProcessCurrentLoginJob()
                 
-                self._jobs_awaiting_slot = filter( ProcessReadyJob, self._jobs_awaiting_slot )
+                self._jobs_awaiting_slot = list(filter( ProcessReadyJob, self._jobs_awaiting_slot ))
                 
-                self._jobs_running = filter( ProcessRunningJob, self._jobs_running )
+                self._jobs_running = list(filter( ProcessRunningJob, self._jobs_running ))
                 
             
             # we want to catch the rollover of the second for bandwidth jobs

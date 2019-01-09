@@ -11,37 +11,37 @@ if wx_first_num < 4:
     
     raise Exception( wx_error )
     
-import ClientCaches
-import ClientData
-import ClientDaemons
-import ClientDefaults
-import ClientGUICommon
-import ClientGUIMenus
-import ClientNetworking
-import ClientNetworkingBandwidth
-import ClientNetworkingDomain
-import ClientNetworkingLogin
-import ClientNetworkingSessions
-import ClientOptions
-import ClientPaths
-import ClientThreading
+from . import ClientCaches
+from . import ClientData
+from . import ClientDaemons
+from . import ClientDefaults
+from . import ClientGUICommon
+from . import ClientGUIMenus
+from . import ClientNetworking
+from . import ClientNetworkingBandwidth
+from . import ClientNetworkingDomain
+from . import ClientNetworkingLogin
+from . import ClientNetworkingSessions
+from . import ClientOptions
+from . import ClientPaths
+from . import ClientThreading
 import hashlib
-import HydrusConstants as HC
-import HydrusController
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetworking
-import HydrusPaths
-import HydrusSerialisable
-import HydrusThreading
-import HydrusVideoHandling
-import ClientConstants as CC
-import ClientDB
-import ClientGUI
-import ClientGUIDialogs
-import ClientGUIScrolledPanelsManagement
-import ClientGUITopLevelWindows
+from . import HydrusConstants as HC
+from . import HydrusController
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetworking
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusThreading
+from . import HydrusVideoHandling
+from . import ClientConstants as CC
+from . import ClientDB
+from . import ClientGUI
+from . import ClientGUIDialogs
+from . import ClientGUIScrolledPanelsManagement
+from . import ClientGUITopLevelWindows
 import gc
 import psutil
 import threading
@@ -507,8 +507,6 @@ class Controller( HydrusController.HydrusController ):
             
             text = data.GetText()
             
-            text = HydrusData.ToUnicode( text )
-            
             return text
             
         else:
@@ -588,17 +586,17 @@ class Controller( HydrusController.HydrusController ):
     
     def InitModel( self ):
         
-        self.pub( 'splash_set_title_text', u'booting db\u2026' )
+        self.pub( 'splash_set_title_text', 'booting db\u2026' )
         
         HydrusController.HydrusController.InitModel( self )
         
-        self.pub( 'splash_set_status_text', u'initialising managers' )
+        self.pub( 'splash_set_status_text', 'initialising managers' )
         
-        self.pub( 'splash_set_status_subtext', u'services' )
+        self.pub( 'splash_set_status_subtext', 'services' )
         
         self.services_manager = ClientCaches.ServicesManager( self )
         
-        self.pub( 'splash_set_status_subtext', u'options' )
+        self.pub( 'splash_set_status_subtext', 'options' )
         
         self.options = self.Read( 'options' )
         self.new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
@@ -613,13 +611,13 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        self.pub( 'splash_set_status_subtext', u'client files' )
+        self.pub( 'splash_set_status_subtext', 'client files' )
         
         self.InitClientFilesManager()
         
         #
         
-        self.pub( 'splash_set_status_subtext', u'network' )
+        self.pub( 'splash_set_status_subtext', 'network' )
         
         self.parsing_cache = ClientCaches.ParsingCache()
         
@@ -689,15 +687,15 @@ class Controller( HydrusController.HydrusController ):
         
         self.file_viewing_stats_manager = ClientCaches.FileViewingStatsManager( self )
         
-        self.pub( 'splash_set_status_subtext', u'tag censorship' )
+        self.pub( 'splash_set_status_subtext', 'tag censorship' )
         
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
         
-        self.pub( 'splash_set_status_subtext', u'tag siblings' )
+        self.pub( 'splash_set_status_subtext', 'tag siblings' )
         
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
         
-        self.pub( 'splash_set_status_subtext', u'tag parents' )
+        self.pub( 'splash_set_status_subtext', 'tag parents' )
         
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
@@ -711,7 +709,7 @@ class Controller( HydrusController.HydrusController ):
             CC.GlobalBMPs.STATICInitialise()
             
         
-        self.pub( 'splash_set_status_subtext', u'image caches' )
+        self.pub( 'splash_set_status_subtext', 'image caches' )
         
         self.CallBlockingToWx( wx_code )
         
@@ -733,10 +731,18 @@ class Controller( HydrusController.HydrusController ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            # this can produce unicode with cyrillic or w/e keyboards, which hashlib can't handle
-                            password = HydrusData.ToByteString( dlg.GetValue() )
+                            password_bytes = bytes( dlg.GetValue(), 'utf-8' )
                             
-                            if hashlib.sha256( password ).digest() == self.options[ 'password' ]: break
+                            if hashlib.sha256( password_bytes ).digest() == self.options[ 'password' ]:
+                                
+                                break
+                                
+                            elif HC.SOFTWARE_VERSION == 335:
+                                
+                                wx.MessageBox( 'The password you entered was incorrect! This _may_ be a result of the py3 update, so you are forgiven for this version. Please try remaking your password and testing it works in a normal boot in this version. Report continued errors to hydrus dev please!' )
+                                
+                                break
+                                
                             
                         else:
                             
@@ -749,7 +755,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToWx( wx_code_password )
             
         
-        self.pub( 'splash_set_title_text', u'booting gui\u2026' )
+        self.pub( 'splash_set_title_text', 'booting gui\u2026' )
         
         def wx_code_gui():
             
@@ -828,7 +834,7 @@ class Controller( HydrusController.HydrusController ):
                 phashes_stop_time = HydrusData.GetNow() + 15
                 
             
-            self.WriteInterruptable( 'maintain_similar_files_phashes', stop_time = phashes_stop_time )
+            self.WriteSynchronous( 'maintain_similar_files_phashes', stop_time = phashes_stop_time )
             
             tree_stop_time = stop_time
             
@@ -837,7 +843,7 @@ class Controller( HydrusController.HydrusController ):
                 tree_stop_time = HydrusData.GetNow() + 30
                 
             
-            self.WriteInterruptable( 'maintain_similar_files_tree', stop_time = tree_stop_time, abandon_if_other_work_to_do = True )
+            self.WriteSynchronous( 'maintain_similar_files_tree', stop_time = tree_stop_time, abandon_if_other_work_to_do = True )
             
             search_distance = self.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
@@ -848,22 +854,22 @@ class Controller( HydrusController.HydrusController ):
                 search_stop_time = HydrusData.GetNow() + 60
                 
             
-            self.WriteInterruptable( 'maintain_similar_files_duplicate_pairs', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
+            self.WriteSynchronous( 'maintain_similar_files_duplicate_pairs', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
             
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
-            self.WriteInterruptable( 'maintain_file_reparsing', stop_time = stop_time )
+            self.WriteSynchronous( 'maintain_file_reparsing', stop_time = stop_time )
             
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
-            self.WriteInterruptable( 'vacuum', stop_time = stop_time )
+            self.WriteSynchronous( 'vacuum', stop_time = stop_time )
             
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
-            self.WriteInterruptable( 'analyze', stop_time = stop_time )
+            self.WriteSynchronous( 'analyze', stop_time = stop_time )
             
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
@@ -1010,11 +1016,8 @@ class Controller( HydrusController.HydrusController ):
                 
                 try:
                     
-                    try:
-                        
-                        connection = HydrusNetworking.GetLocalConnection( port )
-                        connection.close()
-                        
+                    if HydrusNetworking.LocalPortInUse( port ):
+                    
                         text = 'The client\'s booru server could not start because something was already bound to port ' + str( port ) + '.'
                         text += os.linesep * 2
                         text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
@@ -1023,25 +1026,18 @@ class Controller( HydrusController.HydrusController ):
                         
                         HydrusData.ShowText( text )
                         
-                    except:
+                        return
                         
-                        import ClientLocalServer
+                    
+                    from . import ClientLocalServer
+                    
+                    self._booru_port_connection = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( service ) )
+                    
+                    if not HydrusNetworking.LocalPortInUse( port ):
                         
-                        self._booru_port_connection = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( service ) )
+                        text = 'Tried to bind port ' + str( port ) + ' for the local booru, but it appeared to be already in use.'
                         
-                        try:
-                            
-                            connection = HydrusNetworking.GetLocalConnection( port )
-                            connection.close()
-                            
-                        except Exception as e:
-                            
-                            text = 'Tried to bind port ' + str( port ) + ' for the local booru, but it failed:'
-                            text += os.linesep * 2
-                            text += HydrusData.ToUnicode( e )
-                            
-                            HydrusData.ShowText( text )
-                            
+                        HydrusData.ShowText( text )
                         
                     
                 except Exception as e:
@@ -1086,7 +1082,7 @@ class Controller( HydrusController.HydrusController ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 text = 'Are you sure you want to restore a backup from "' + path + '"?'
                 text += os.linesep * 2
@@ -1133,7 +1129,7 @@ class Controller( HydrusController.HydrusController ):
         # do not import locale here and try anything clever--assume that bad locale formatting is due to OS-level mess-up, not mine
         # wx locale is supposed to set it all up nice, so if someone's doesn't, explore that and find the external solution
         
-        HydrusData.Print( u'booting controller\u2026' )
+        HydrusData.Print( 'booting controller\u2026' )
         
         self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
         
@@ -1143,7 +1139,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.MainLoop()
         
-        HydrusData.Print( u'shutting down controller\u2026' )
+        HydrusData.Print( 'shutting down controller\u2026' )
         
     
     def SaveDirtyObjects( self ):
@@ -1318,16 +1314,16 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self.pub( 'splash_set_title_text', u'shutting down gui\u2026' )
+            self.pub( 'splash_set_title_text', 'shutting down gui\u2026' )
             
             self.ShutdownView()
             
-            self.pub( 'splash_set_title_text', u'shutting down db\u2026' )
+            self.pub( 'splash_set_title_text', 'shutting down db\u2026' )
             
             self.ShutdownModel()
             
-            self.pub( 'splash_set_title_text', u'cleaning up\u2026' )
-            self.pub( 'splash_set_status_text', u'' )
+            self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
+            self.pub( 'splash_set_status_text', '' )
             
             HydrusData.CleanRunningFile( self.db_dir, 'client' )
             

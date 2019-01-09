@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # This program is free software. It comes without any warranty, to
 # the extent permitted by applicable law. You can redistribute it
@@ -7,6 +7,10 @@
 # http://sam.zoy.org/wtfpl/COPYING for more details.
 
 try:
+    
+    from include import HydrusPy2To3
+    
+    HydrusPy2To3.do_2to3_test()
     
     import locale
     
@@ -48,9 +52,9 @@ try:
         
         db_dir = HC.DEFAULT_DB_DIR
         
-        if not HydrusPaths.DirectoryIsWritable( db_dir ):
+        if not HydrusPaths.DirectoryIsWritable( db_dir ) or HC.RUNNING_FROM_OSX_APP:
             
-            db_dir = os.path.join( os.path.expanduser( '~' ), 'Hydrus' )
+            db_dir = HC.USERPATH_DB_DIR
             
         
     else:
@@ -88,7 +92,7 @@ try:
             
             if action in ( 'start', 'restart' ):
                 
-                HydrusData.Print( u'Initialising controller\u2026' )
+                HydrusData.Print( 'Initialising controller\u2026' )
                 
                 threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
@@ -99,7 +103,7 @@ try:
             
         except HydrusExceptions.PermissionException as e:
             
-            error = HydrusData.ToUnicode( e )
+            error = str( e )
             
             HydrusData.Print( error )
             
@@ -138,7 +142,7 @@ except Exception as e:
         
         dest_path = os.path.join( db_dir, 'crash.log' )
         
-        with open( dest_path, 'wb' ) as f:
+        with open( dest_path, 'w' ) as f:
             
             f.write( traceback.format_exc() )
             

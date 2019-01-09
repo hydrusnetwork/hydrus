@@ -1,17 +1,17 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientGUIDialogs
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsManagement
-import ClientGUITopLevelWindows
-import ClientThreading
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientGUIDialogs
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsManagement
+from . import ClientGUITopLevelWindows
+from . import ClientThreading
 import collections
-import HydrusConstants as HC
+from . import HydrusConstants as HC
 import os
-import TestConstants
+from . import TestConstants
 import unittest
 import wx
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 
 def HitButton( button ):
     

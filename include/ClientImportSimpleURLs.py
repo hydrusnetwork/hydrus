@@ -1,19 +1,19 @@
-import ClientConstants as CC
-import ClientDownloading
-import ClientNetworkingJobs
-import ClientImporting
-import ClientImportFileSeeds
-import ClientImportGallerySeeds
-import ClientImportOptions
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientDownloading
+from . import ClientNetworkingJobs
+from . import ClientImporting
+from . import ClientImportFileSeeds
+from . import ClientImportGallerySeeds
+from . import ClientImportOptions
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import os
 import threading
 import time
-import urlparse
+import urllib.parse
 
 class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
@@ -245,7 +245,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                     network_job.WaitUntilDone()
                     
                 
-                data = network_job.GetContent()
+                parsing_text = network_job.GetContentText()
                 
                 #
                 
@@ -257,11 +257,11 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 file_seeds = []
                 
-                for parsed_text in parsing_formula.Parse( parsing_context, data ):
+                for parsed_text in parsing_formula.Parse( parsing_context, parsing_text ):
                     
                     try:
                         
-                        file_url = urlparse.urljoin( url, parsed_text )
+                        file_url = urllib.parse.urljoin( url, parsed_text )
                         
                         file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, file_url )
                         
@@ -314,7 +314,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 error_occurred = True
                 
-                parser_status = HydrusData.ToUnicode( e )
+                parser_status = str( e )
                 
             finally:
                 
@@ -938,7 +938,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            urls = filter( lambda u: len( u ) > 1, urls ) # > _1_ to take out the occasional whitespace
+            urls = [u for u in urls if len( u ) > 1] # > _1_ to take out the occasional whitespace
             
             file_seeds = []
             

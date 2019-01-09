@@ -1,19 +1,27 @@
-import ClientConstants as CC
-import ClientData
-import ClientDragDrop
-import ClientGUICommon
-import ClientSerialisable
-import ClientGUIShortcuts
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDragDrop
+from . import ClientGUICommon
+from . import ClientSerialisable
+from . import ClientGUIShortcuts
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import os
 import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
 ( ListCtrlEvent, EVT_LIST_CTRL ) = wx.lib.newevent.NewCommandEvent()
 
+def SafeNoneInt( value ):
+    
+    return -1 if value is None else value
+    
+def SafeNoneStr( value ):
+    
+    return '' if value is None else value
+    
 # This used to be ColumnSorterMixin, but it was crashing on sort-click on clients with many pages open
 # I've disabled it for now because it was still catching people. The transition to BetterListCtrl will nuke the whole thing eventually.
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
@@ -353,7 +361,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
             
         else:
             
-            indicies = range( self.GetItemCount() )
+            indicies = list( range( self.GetItemCount() ) )
             
         
         data_indicies = [ self.GetItemData( index ) for index in indicies ]
@@ -586,9 +594,9 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for item in sort_tuple:
             
-            if isinstance( item, ( str, unicode ) ):
+            if isinstance( item, str ):
                 
-                item = item.lower()
+                item = HydrusData.HumanTextSortKey( item )
                 
             
             better_sort.append( item )
@@ -866,7 +874,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         else:
             
-            indices = self._indices_to_data_info.keys()
+            indices = list(self._indices_to_data_info.keys())
             
         
         result = []
@@ -986,7 +994,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def ShowDeleteSelectedDialog( self ):
         
-        import ClientGUIDialogs
+        from . import ClientGUIDialogs
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
@@ -1020,7 +1028,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             # keep it sorted here, which is sometimes useful
             
-            indices_and_datas = [ ( index, data ) for ( data, index ) in self._data_to_indices.items() ]
+            indices_and_datas = [ ( index, data ) for ( data, index ) in list(self._data_to_indices.items()) ]
             
             indices_and_datas.sort()
             
@@ -1116,8 +1124,8 @@ class BetterListCtrlPanel( wx.Panel ):
         
         choice_tuples = [ ( default.GetName(), default, selected ) for default in defaults ]
         
-        import ClientGUITopLevelWindows
-        import ClientGUIScrolledPanelsEdit
+        from . import ClientGUITopLevelWindows
+        from . import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'select the defaults to add' ) as dlg:
             
@@ -1171,8 +1179,8 @@ class BetterListCtrlPanel( wx.Panel ):
         
         if export_object is not None:
             
-            import ClientGUITopLevelWindows
-            import ClientGUISerialisable
+            from . import ClientGUITopLevelWindows
+            from . import ClientGUISerialisable
             
             with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
                 
@@ -1201,8 +1209,8 @@ class BetterListCtrlPanel( wx.Panel ):
             return
             
         
-        import ClientGUITopLevelWindows
-        import ClientGUISerialisable
+        from . import ClientGUITopLevelWindows
+        from . import ClientGUISerialisable
         
         with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
@@ -1316,22 +1324,20 @@ class BetterListCtrlPanel( wx.Panel ):
         
         for path in paths:
             
-            path = HydrusData.ToUnicode( path )
-            
             try:
                 
                 payload = ClientSerialisable.LoadFromPng( path )
                 
             except Exception as e:
                 
-                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                wx.MessageBox( str( e ) )
                 
                 return
                 
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
                 
                 self._ImportObject( obj )
                 
@@ -1460,7 +1466,7 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def ImportFromDragDrop( self, paths ):
         
-        import ClientGUIDialogs
+        from . import ClientGUIDialogs
         
         message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
         

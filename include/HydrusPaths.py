@@ -1,9 +1,9 @@
 import gc
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusThreading
 import os
 import psutil
 import re
@@ -229,7 +229,7 @@ def DeletePath( path ):
             
         except Exception as e:
             
-            if 'Error 32' in HydrusData.ToUnicode( e ):
+            if 'Error 32' in str( e ):
                 
                 # file in use by another process
                 
@@ -301,7 +301,7 @@ def GetDevice( path ):
     
     path = path.lower()
     
-    partition_infos = psutil.disk_partitions()
+    partition_infos = psutil.disk_partitions( all = True )
     
     def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
         
@@ -349,7 +349,7 @@ def HasSpaceForDBTransaction( db_dir, num_bytes ):
         
         if temp_disk_free_space < space_needed:
             
-            return ( False, 'I believe you need about ' + HydrusData.ConvertIntToBytes( space_needed ) + ' on your db\'s partition, which I think also holds your temporary path, but you only seem to have ' + HydrusData.ConvertIntToBytes( temp_disk_free_space ) + '.' )
+            return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s partition, which I think also holds your temporary path, but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
             
         
     else:
@@ -358,14 +358,14 @@ def HasSpaceForDBTransaction( db_dir, num_bytes ):
         
         if temp_disk_free_space < space_needed:
             
-            return ( False, 'I believe you need about ' + HydrusData.ConvertIntToBytes( space_needed ) + ' on your temporary path\'s partition, which I think is ' + temp_dir + ', but you only seem to have ' + HydrusData.ConvertIntToBytes( temp_disk_free_space ) + '.' )
+            return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your temporary path\'s partition, which I think is ' + temp_dir + ', but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
             
         
         db_disk_free_space = GetFreeSpace( db_dir )
         
         if db_disk_free_space < space_needed:
             
-            return ( False, 'I believe you need about ' + HydrusData.ConvertIntToBytes( space_needed ) + ' on your db\'s partition, but you only seem to have ' + HydrusData.ConvertIntToBytes( db_disk_free_space ) + '.' )
+            return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s partition, but you only seem to have ' + HydrusData.ToHumanBytes( db_disk_free_space ) + '.' )
             
         
     
@@ -383,16 +383,18 @@ def LaunchDirectory( path ):
             
             if HC.PLATFORM_OSX:
                 
-                cmd = 'open'
+                cmd = [ 'open', path ]
                 
             elif HC.PLATFORM_LINUX:
                 
-                cmd = 'xdg-open'
+                cmd = [ 'xdg-open', path ]
                 
             
             # setsid call un-childs this new process
             
-            process = subprocess.Popen( [ cmd, path ], preexec_fn = os.setsid, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+            sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+            
+            process = subprocess.Popen( cmd, preexec_fn = os.setsid, **sbp_kwargs )
             
             process.wait()
             
@@ -421,19 +423,20 @@ def LaunchFile( path, launch_path = None ):
                 launch_path = GetDefaultLaunchPath()
                 
             
-            cmd = launch_path.replace( '%path%', path )
+            complete_launch_path = launch_path.replace( '%path%', path )
             
             if HC.PLATFORM_WINDOWS:
                 
+                cmd = complete_launch_path
                 preexec_fn = None
                 
             else:
                 
                 # setsid call un-childs this new process
                 
-                preexec_fn = os.setsid
+                cmd = shlex.split( complete_launch_path )
                 
-                cmd = shlex.split( cmd )
+                preexec_fn = os.setsid
                 
             
             if HG.callto_report_mode:
@@ -443,7 +446,9 @@ def LaunchFile( path, launch_path = None ):
             
             try:
                 
-                process = subprocess.Popen( cmd, preexec_fn = preexec_fn, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+                sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+                
+                process = subprocess.Popen( cmd, preexec_fn = preexec_fn, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
                 
                 process.wait()
                 
@@ -471,7 +476,7 @@ def LaunchFile( path, launch_path = None ):
                 
             except Exception as e:
                 
-                HydrusData.ShowText( 'Could not launch a file! Command used was:' + os.linesep + HydrusData.ToUnicode( cmd ) )
+                HydrusData.ShowText( 'Could not launch a file! Command used was:' + os.linesep + str( cmd ) )
                 
                 HydrusData.ShowException( e )
                 
@@ -738,18 +743,20 @@ def OpenFileLocation( path ):
         
         if HC.PLATFORM_WINDOWS:
             
-            cmd = 'explorer /select, "' + path + '"'
+            cmd = [ 'explorer', '/select,', path ]
             
         elif HC.PLATFORM_OSX:
             
-            cmd = 'open -R "' + path + '"'
+            cmd = [ 'open', '-R', path ]
             
         elif HC.PLATFORM_LINUX:
             
             raise NotImplementedError( 'Linux cannot open file locations!' )
             
         
-        process = subprocess.Popen( shlex.split( cmd ) )
+        sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
+        
+        process = subprocess.Popen( cmd, **sbp_kwargs )
         
         process.wait()
         
@@ -796,7 +803,7 @@ def ReadFileLikeAsBlocks( f ):
     
     next_block = f.read( HC.READ_BLOCK_SIZE )
     
-    while next_block != '':
+    while len( next_block ) > 0:
         
         yield next_block
         
@@ -804,29 +811,6 @@ def ReadFileLikeAsBlocks( f ):
         
     
 def RecyclePath( path ):
-    
-    original_path = path
-    
-    if HC.PLATFORM_LINUX:
-        
-        # send2trash for Linux tries to do some Python3 str() stuff in prepping non-str paths for recycling
-        
-        if not isinstance( path, str ):
-            
-            try:
-                
-                path = path.encode( sys.getfilesystemencoding() )
-                
-            except:
-                
-                HydrusData.Print( 'Trying to prepare ' + path + ' for recycling created this error:' )
-                
-                HydrusData.DebugPrint( traceback.format_exc() )
-                
-                return
-                
-            
-        
     
     if os.path.exists( path ):
         
@@ -844,7 +828,7 @@ def RecyclePath( path ):
             
             HydrusData.Print( 'It has been fully deleted instead.' )
             
-            DeletePath( original_path )
+            DeletePath( path )
             
         
     
@@ -853,11 +837,11 @@ def SanitizeFilename( filename ):
     if HC.PLATFORM_WINDOWS:
         
         # \, /, :, *, ?, ", <, >, |
-        filename = re.sub( r'\\|/|:|\*|\?|"|<|>|\|', '_', filename, flags = re.UNICODE )
+        filename = re.sub( r'\\|/|:|\*|\?|"|<|>|\|', '_', filename )
         
     else:
         
-        filename = re.sub( '/', '_', filename, flags = re.UNICODE )
+        filename = re.sub( '/', '_', filename )
         
     
     return filename

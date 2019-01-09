@@ -1,27 +1,27 @@
-import ClientParsing
-import ClientPaths
-import ClientRendering
-import ClientSearch
-import ClientServices
-import ClientThreading
-import HydrusConstants as HC
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusPaths
-import HydrusSerialisable
-import HydrusThreading
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientRendering
+from . import ClientSearch
+from . import ClientServices
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusThreading
 import json
 import os
 import random
 import threading
 import time
 import wx
-import HydrusData
-import ClientData
-import ClientConstants as CC
-import HydrusGlobals as HG
+from . import HydrusData
+from . import ClientData
+from . import ClientConstants as CC
+from . import HydrusGlobals as HG
 import collections
-import HydrusTags
+from . import HydrusTags
 import traceback
 import weakref
 
@@ -48,11 +48,11 @@ def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_pare
     
     service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
     
-    for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
+    for ( service_key, simple_children_to_parents ) in list(service_keys_to_simple_children_to_parents.items()):
         
         children_to_parents = service_keys_to_children_to_parents[ service_key ]
         
-        for ( child, parents ) in simple_children_to_parents.items():
+        for ( child, parents ) in list(simple_children_to_parents.items()):
             
             AddParents( simple_children_to_parents, children_to_parents, child, parents )
             
@@ -64,7 +64,7 @@ def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
     
     service_keys_to_simple_children_to_parents = collections.defaultdict( HydrusData.default_dict_set )
     
-    for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
+    for ( service_key, pairs ) in list(service_keys_to_pairs_flat.items()):
         
         service_keys_to_simple_children_to_parents[ service_key ] = BuildSimpleChildrenToParents( pairs )
         
@@ -149,7 +149,7 @@ def CollapseTagSiblingPairs( groups_of_pairs ):
     
     siblings = {}
     
-    for ( bad, good ) in valid_chains.items():
+    for ( bad, good ) in list(valid_chains.items()):
         
         # given a->b, want to find f
         
@@ -183,11 +183,11 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     potential_loop_paths = { parent }
     
-    while len( potential_loop_paths.intersection( simple_children_to_parents.keys() ) ) > 0:
+    while len( potential_loop_paths.intersection( list(simple_children_to_parents.keys()) ) ) > 0:
         
         new_potential_loop_paths = set()
         
-        for potential_loop_path in potential_loop_paths.intersection( simple_children_to_parents.keys() ):
+        for potential_loop_path in potential_loop_paths.intersection( list(simple_children_to_parents.keys()) ):
             
             new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
             
@@ -266,7 +266,7 @@ class ClientFilesManager( object ):
     
     def _GenerateExpectedFilePath( self, hash, mime ):
         
-        hash_encoded = hash.encode( 'hex' )
+        hash_encoded = hash.hex()
         
         prefix = 'f' + hash_encoded[:2]
         
@@ -279,7 +279,7 @@ class ClientFilesManager( object ):
     
     def _GenerateExpectedFullSizeThumbnailPath( self, hash ):
         
-        hash_encoded = hash.encode( 'hex' )
+        hash_encoded = hash.hex()
         
         prefix = 't' + hash_encoded[:2]
         
@@ -292,7 +292,7 @@ class ClientFilesManager( object ):
     
     def _GenerateExpectedResizedThumbnailPath( self, hash ):
         
-        hash_encoded = hash.encode( 'hex' )
+        hash_encoded = hash.hex()
         
         prefix = 'r' + hash_encoded[:2]
         
@@ -313,7 +313,7 @@ class ClientFilesManager( object ):
                 
             except HydrusExceptions.FileMissingException:
                 
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
                 
             
             mime = HydrusFileHandling.GetMime( file_path )
@@ -331,7 +331,7 @@ class ClientFilesManager( object ):
             
         except Exception as e:
             
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
             
         
         full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
@@ -347,7 +347,7 @@ class ClientFilesManager( object ):
             
         except Exception as e:
             
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + full_size_path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + full_size_path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
             
         
     
@@ -378,7 +378,7 @@ class ClientFilesManager( object ):
                 
             except:
                 
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                 
             
             self._GenerateFullSizeThumbnail( hash, mime )
@@ -401,15 +401,15 @@ class ClientFilesManager( object ):
             
             HydrusData.ShowException( e )
             
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but the resized version would not save to disk. This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was found, but the resized version would not save to disk. This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
             
         
     
     def _GetRecoverTuple( self ):
         
-        all_locations = { location for location in self._prefixes_to_locations.values() }
+        all_locations = { location for location in list(self._prefixes_to_locations.values()) }
         
-        all_prefixes = self._prefixes_to_locations.keys()
+        all_prefixes = list(self._prefixes_to_locations.keys())
         
         for possible_location in all_locations:
             
@@ -435,7 +435,7 @@ class ClientFilesManager( object ):
         
         total_weight = sum( locations_to_ideal_weights.values() )
         
-        ideal_locations_to_normalised_weights = { location : weight / total_weight for ( location, weight ) in locations_to_ideal_weights.items() }
+        ideal_locations_to_normalised_weights = { location : weight / total_weight for ( location, weight ) in list(locations_to_ideal_weights.items()) }
         
         current_locations_to_normalised_weights = collections.defaultdict( lambda: 0 )
         
@@ -448,7 +448,7 @@ class ClientFilesManager( object ):
             current_locations_to_normalised_weights[ location ] += 1.0 / 256
             
         
-        for location in current_locations_to_normalised_weights.keys():
+        for location in list(current_locations_to_normalised_weights.keys()):
             
             if location not in ideal_locations_to_normalised_weights:
                 
@@ -461,7 +461,7 @@ class ClientFilesManager( object ):
         overweight_locations = []
         underweight_locations = []
         
-        for ( location, ideal_weight ) in ideal_locations_to_normalised_weights.items():
+        for ( location, ideal_weight ) in list(ideal_locations_to_normalised_weights.items()):
             
             if location in current_locations_to_normalised_weights:
                 
@@ -571,7 +571,7 @@ class ClientFilesManager( object ):
     
     def _IterateAllFilePaths( self ):
         
-        for ( prefix, location ) in self._prefixes_to_locations.items():
+        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
             
             if prefix.startswith( 'f' ):
                 
@@ -589,7 +589,7 @@ class ClientFilesManager( object ):
     
     def _IterateAllThumbnailPaths( self ):
         
-        for ( prefix, location ) in self._prefixes_to_locations.items():
+        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
             
             if prefix.startswith( 't' ) or prefix.startswith( 'r' ):
                 
@@ -617,7 +617,7 @@ class ClientFilesManager( object ):
                 
             
         
-        raise HydrusExceptions.FileMissingException( 'File for ' + hash.encode( 'hex' ) + ' not found!' )
+        raise HydrusExceptions.FileMissingException( 'File for ' + hash.hex() + ' not found!' )
         
     
     def _Reinit( self ):
@@ -628,7 +628,7 @@ class ClientFilesManager( object ):
             
             try:
                 
-                for ( prefix, location ) in self._prefixes_to_locations.items():
+                for ( prefix, location ) in list(self._prefixes_to_locations.items()):
                     
                     HydrusPaths.MakeSureDirectoryExists( location )
                     
@@ -650,7 +650,7 @@ class ClientFilesManager( object ):
             
             self._missing_locations = set()
             
-            for ( prefix, location ) in self._prefixes_to_locations.items():
+            for ( prefix, location ) in list(self._prefixes_to_locations.items()):
                 
                 if os.path.exists( location ):
                     
@@ -738,20 +738,20 @@ class ClientFilesManager( object ):
             
         
     
-    def LocklessAddFileFromString( self, hash, mime, data ):
+    def LocklessAddFileFromBytes( self, hash, mime, file_bytes ):
         
         dest_path = self._GenerateExpectedFilePath( hash, mime )
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Adding file from string: ' + HydrusData.ToUnicode( ( HydrusData.ToByteString( len( data ) ), dest_path ) ) )
+            HydrusData.ShowText( 'Adding file from string: ' + str( ( len( file_bytes ), dest_path ) ) )
             
         
         HydrusPaths.MakeFileWritable( dest_path )
         
         with open( dest_path, 'wb' ) as f:
             
-            f.write( data )
+            f.write( file_bytes )
             
         
     
@@ -761,7 +761,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Adding file from path: ' + HydrusData.ToUnicode( ( source_path, dest_path ) ) )
+            HydrusData.ShowText( 'Adding file from path: ' + str( ( source_path, dest_path ) ) )
             
         
         if not os.path.exists( dest_path ):
@@ -775,21 +775,21 @@ class ClientFilesManager( object ):
             
         
     
-    def AddFullSizeThumbnail( self, hash, thumbnail ):
+    def AddFullSizeThumbnailFromBytes( self, hash, thumbnail ):
         
         with self._lock:
             
-            self.LocklessAddFullSizeThumbnail( hash, thumbnail )
+            self.LocklessAddFullSizeThumbnailFromBytes( hash, thumbnail )
             
         
     
-    def LocklessAddFullSizeThumbnail( self, hash, thumbnail ):
+    def LocklessAddFullSizeThumbnailFromBytes( self, hash, thumbnail ):
         
         dest_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Adding full-size thumbnail: ' + HydrusData.ToUnicode( ( HydrusData.ToByteString( len( thumbnail ) ), dest_path ) ) )
+            HydrusData.ShowText( 'Adding full-size thumbnail: ' + str( ( len( thumbnail ), dest_path ) ) )
             
         
         HydrusPaths.MakeFileWritable( dest_path )
@@ -856,7 +856,7 @@ class ClientFilesManager( object ):
                     
                     should_be_a_hex_hash = filename[:64]
                     
-                    hash = should_be_a_hex_hash.decode( 'hex' )
+                    hash = bytes.fromhex( should_be_a_hex_hash )
                     
                     is_an_orphan = HG.client_controller.Read( 'is_an_orphan', 'file', hash )
                     
@@ -910,7 +910,7 @@ class ClientFilesManager( object ):
                     
                     should_be_a_hex_hash = filename[:64]
                     
-                    hash = should_be_a_hex_hash.decode( 'hex' )
+                    hash = bytes.fromhex( should_be_a_hex_hash )
                     
                     is_an_orphan = HG.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
                     
@@ -1002,7 +1002,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Delayed delete files call: ' + HydrusData.ToUnicode( len( hashes ) ) )
+            HydrusData.ShowText( 'Delayed delete files call: ' + str( len( hashes ) ) )
             
         
         time.sleep( 2 )
@@ -1036,7 +1036,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Delayed delete thumbs call: ' + HydrusData.ToUnicode( len( hashes ) ) )
+            HydrusData.ShowText( 'Delayed delete thumbs call: ' + str( len( hashes ) ) )
             
         
         time.sleep( 2 )
@@ -1099,7 +1099,7 @@ class ClientFilesManager( object ):
                 
                 if thumbnail is not None:
                     
-                    self.LocklessAddFullSizeThumbnail( hash, thumbnail )
+                    self.LocklessAddFullSizeThumbnailFromBytes( hash, thumbnail )
                     
                 
                 ( import_status, note ) = self._controller.WriteSynchronous( 'import_file', file_import_job )
@@ -1119,7 +1119,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'File path request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            HydrusData.ShowText( 'File path request: ' + str( ( hash, mime ) ) )
             
         
         if mime is None:
@@ -1133,7 +1133,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'File path request success: ' + HydrusData.ToUnicode( path ) )
+            HydrusData.ShowText( 'File path request success: ' + path )
             
         
         if check_file_exists and not os.path.exists( path ):
@@ -1148,7 +1148,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Full-size thumbnail path request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            HydrusData.ShowText( 'Full-size thumbnail path request: ' + str( ( hash, mime ) ) )
             
         
         with self._lock:
@@ -1163,13 +1163,13 @@ class ClientFilesManager( object ):
                     
                     self._bad_error_occurred = True
                     
-                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.encode( 'hex' ) + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
+                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.hex() + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
                     
                 
             
             if HG.file_report_mode:
                 
-                HydrusData.ShowText( 'Full-size thumbnail path request success: ' + HydrusData.ToUnicode( path ) )
+                HydrusData.ShowText( 'Full-size thumbnail path request success: ' + path )
                 
             
             return path
@@ -1184,7 +1184,7 @@ class ClientFilesManager( object ):
             
             if HG.file_report_mode:
                 
-                HydrusData.ShowText( 'Resized thumbnail path request: ' + HydrusData.ToUnicode( path ) )
+                HydrusData.ShowText( 'Resized thumbnail path request: ' + path )
                 
             
             if not os.path.exists( path ):
@@ -1202,7 +1202,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Full-size thumbnail path test: ' + HydrusData.ToUnicode( path ) )
+            HydrusData.ShowText( 'Full-size thumbnail path test: ' + path )
             
         
         return os.path.exists( path )
@@ -1302,7 +1302,7 @@ class ClientFilesManager( object ):
         
         if HG.file_report_mode:
             
-            HydrusData.ShowText( 'Thumbnail regen request: ' + HydrusData.ToUnicode( ( hash, mime ) ) )
+            HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
             
         
         self._GenerateResizedThumbnail( hash, mime )
@@ -1352,7 +1352,7 @@ class ClientFilesManager( object ):
                         continue # it is an update file, so let's save us some ffmpeg lag and logspam
                         
                     
-                    hash = hash_encoded.decode( 'hex' )
+                    hash = bytes.fromhex( hash_encoded )
                     
                     full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
                     
@@ -1440,7 +1440,7 @@ class DataCache( object ):
     
     def _RecalcMemoryUsage( self ):
         
-        self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in self._keys_to_data.values() ) )
+        self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in list(self._keys_to_data.values()) ) )
         
     
     def _TouchKey( self, key ):
@@ -1499,7 +1499,7 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                raise Exception( 'Cache error! Looking for ' + HydrusData.ToUnicode( key ) + ', but it was missing.' )
+                raise Exception( 'Cache error! Looking for ' + str( key ) + ', but it was missing.' )
                 
             
             self._TouchKey( key )
@@ -1545,7 +1545,7 @@ class DataCache( object ):
                     
                 else:
                     
-                    ( key, last_access_time ) = next( self._keys_fifo.iteritems() )
+                    ( key, last_access_time ) = next( iter(self._keys_fifo.items()) )
                     
                     if HydrusData.TimeHasPassed( last_access_time + self._timeout ):
                         
@@ -1588,7 +1588,7 @@ class FileViewingStatsManager( object ):
                 
                 content_updates = []
                 
-                for ( hash, ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) ) in self._pending_updates.items():
+                for ( hash, ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) ) in list(self._pending_updates.items()):
                     
                     row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
                     
@@ -1871,7 +1871,7 @@ class MediaResultCache( object ):
                     
                     hash_ids_to_tags_managers = HG.client_controller.Read( 'force_refresh_tags_managers', group_of_hash_ids )
                     
-                    for ( hash_id, tags_manager ) in hash_ids_to_tags_managers.items():
+                    for ( hash_id, tags_manager ) in list(hash_ids_to_tags_managers.items()):
                         
                         if hash_id in self._hash_ids_to_media_results:
                             
@@ -1889,7 +1889,7 @@ class MediaResultCache( object ):
         
         with self._lock:
             
-            for media_result in self._hash_ids_to_media_results.values():
+            for media_result in list(self._hash_ids_to_media_results.values()):
                 
                 media_result.GetTagsManager().NewSiblings()
                 
@@ -1900,7 +1900,7 @@ class MediaResultCache( object ):
         
         with self._lock:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 for content_update in content_updates:
                     
@@ -1922,7 +1922,7 @@ class MediaResultCache( object ):
         
         with self._lock:
             
-            for ( service_key, service_updates ) in service_keys_to_service_updates.items():
+            for ( service_key, service_updates ) in list(service_keys_to_service_updates.items()):
                 
                 for service_update in service_updates:
                     
@@ -1930,7 +1930,7 @@ class MediaResultCache( object ):
                     
                     if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ):
                         
-                        for media_result in self._hash_ids_to_media_results.values():
+                        for media_result in list(self._hash_ids_to_media_results.values()):
                             
                             if action == HC.SERVICE_UPDATE_DELETE_PENDING:
                                 
@@ -2064,7 +2064,7 @@ class ParsingCache( object ):
                 
                 dead_datas = set()
                 
-                for ( data, ( last_accessed, parsed_object ) ) in cache.items():
+                for ( data, ( last_accessed, parsed_object ) ) in list(cache.items()):
                     
                     if HydrusData.TimeHasPassed( last_accessed + 10 ):
                         
@@ -2281,7 +2281,7 @@ class ThumbnailCache( object ):
                     
                     HydrusData.ShowException( e )
                     
-                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was broken. It was regenerated, but the new file would not render for the above reason. Please inform the hydrus developer what has happened.' )
+                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was broken. It was regenerated, but the new file would not render for the above reason. Please inform the hydrus developer what has happened.' )
                     
                 
             except Exception as e:
@@ -2316,7 +2316,9 @@ class ThumbnailCache( object ):
         
         # here we sort by the hash since this is both breddy random and more likely to access faster on a well defragged hard drive!
         
-        def sort_by_hash_key( ( page_key, media ) ):
+        def sort_by_hash_key( item ):
+            
+            ( page_key, media ) = item
             
             return media.GetDisplayMedia().GetHash()
             
@@ -2356,11 +2358,11 @@ class ThumbnailCache( object ):
                     
                     thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
                     
-                    thumbnail = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, thumbnail_dimensions, HC.IMAGE_PNG )
+                    thumbnail_bytes = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, thumbnail_dimensions, HC.IMAGE_PNG )
                     
                     with open( temp_path, 'wb' ) as f:
                         
-                        f.write( thumbnail )
+                        f.write( thumbnail_bytes )
                         
                     
                     hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path, HC.IMAGE_PNG )
@@ -2546,7 +2548,7 @@ class ThumbnailCache( object ):
                     
                 
             
-            for ( page_key, rendered_medias ) in page_keys_to_rendered_medias.items():
+            for ( page_key, rendered_medias ) in list(page_keys_to_rendered_medias.items()):
                 
                 self._controller.pub( 'waterfall_thumbnails', page_key, rendered_medias )
                 
@@ -2586,15 +2588,12 @@ class ServicesManager( object ):
         
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
-        self._keys_to_services[ CC.TEST_SERVICE_KEY ] = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, CC.TEST_SERVICE_KEY )
+        self._keys_to_services[ CC.TEST_SERVICE_KEY ] = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, 'test service' )
         
-        def compare_function( a, b ):
-            
-            return cmp( a.GetName(), b.GetName() )
-            
+        key = lambda s: s.GetName()
         
         self._services_sorted = list( services )
-        self._services_sorted.sort( cmp = compare_function )
+        self._services_sorted.sort( key = key )
         
     
     def Filter( self, service_keys, desired_types ):
@@ -2606,7 +2605,7 @@ class ServicesManager( object ):
                 return self._keys_to_services[ service_key ].GetServiceType() in desired_types
                 
             
-            filtered_service_keys = filter( func, service_keys )
+            filtered_service_keys = list(filter( func, service_keys ))
             
             return filtered_service_keys
             
@@ -2621,7 +2620,7 @@ class ServicesManager( object ):
                 return service_key in self._keys_to_services
                 
             
-            filtered_service_keys = filter( func, service_keys )
+            filtered_service_keys = list(filter( func, service_keys ))
             
             return filtered_service_keys
             
@@ -2657,7 +2656,7 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            filtered_service_keys = [ service_key for ( service_key, service ) in self._keys_to_services.items() if service.GetServiceType() in desired_types ]
+            filtered_service_keys = [ service_key for ( service_key, service ) in list(self._keys_to_services.items()) if service.GetServiceType() in desired_types ]
             
             return filtered_service_keys
             
@@ -2672,7 +2671,7 @@ class ServicesManager( object ):
                 return service.GetServiceType() in desired_types
                 
             
-            services = filter( func, self._services_sorted )
+            services = list(filter( func, self._services_sorted ))
             
             if randomised:
                 
@@ -2810,7 +2809,7 @@ class TagCensorshipManager( object ):
                 
                 new_statuses_to_pairs = HydrusData.default_dict_set()
                 
-                for ( status, pairs ) in statuses_to_pairs.items():
+                for ( status, pairs ) in list(statuses_to_pairs.items()):
                     
                     new_statuses_to_pairs[ status ] = { ( one, two ) for ( one, two ) in pairs if self._CensorshipMatches( one, blacklist, censorships ) and self._CensorshipMatches( two, blacklist, censorships ) }
                     
@@ -2828,13 +2827,13 @@ class TagCensorshipManager( object ):
             
             ( blacklist, censorships ) = self._service_keys_to_info[ CC.COMBINED_TAG_SERVICE_KEY ]
             
-            service_keys = service_keys_to_statuses_to_tags.keys()
+            service_keys = list(service_keys_to_statuses_to_tags.keys())
             
             for service_key in service_keys:
                 
                 statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
                 
-                statuses = statuses_to_tags.keys()
+                statuses = list(statuses_to_tags.keys())
                 
                 for status in statuses:
                     
@@ -2845,7 +2844,7 @@ class TagCensorshipManager( object ):
                 
             
         
-        for ( service_key, ( blacklist, censorships ) ) in self._service_keys_to_info.items():
+        for ( service_key, ( blacklist, censorships ) ) in list(self._service_keys_to_info.items()):
             
             if service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
@@ -2856,7 +2855,7 @@ class TagCensorshipManager( object ):
                 
                 statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
                 
-                statuses = statuses_to_tags.keys()
+                statuses = list(statuses_to_tags.keys())
                 
                 for status in statuses:
                     
@@ -2913,11 +2912,11 @@ class TagParentsManager( object ):
         
         collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
-        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+        for ( service_key, statuses_to_pairs ) in list(service_keys_to_statuses_to_pairs.items()):
             
             if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
             
-            for ( status, pairs ) in statuses_to_pairs.items():
+            for ( status, pairs ) in list(statuses_to_pairs.items()):
                 
                 pairs = sibling_manager.CollapsePairs( service_key, pairs )
                 
@@ -2929,7 +2928,7 @@ class TagParentsManager( object ):
         
         service_keys_to_pairs_flat = HydrusData.default_dict_set()
         
-        for ( service_key, statuses_to_pairs ) in collapsed_service_keys_to_statuses_to_pairs.items():
+        for ( service_key, statuses_to_pairs ) in list(collapsed_service_keys_to_statuses_to_pairs.items()):
             
             pairs_flat = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
@@ -2940,7 +2939,7 @@ class TagParentsManager( object ):
         
         combined_pairs_flat = set()
         
-        for pairs_flat in service_keys_to_pairs_flat.values():
+        for pairs_flat in list(service_keys_to_pairs_flat.values()):
             
             combined_pairs_flat.update( pairs_flat )
             
@@ -3086,7 +3085,7 @@ class TagSiblingsManager( object ):
         
         service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_siblings' )
         
-        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
+        for ( service_key, statuses_to_pairs ) in list(service_keys_to_statuses_to_pairs.items()):
             
             all_pairs = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
@@ -3105,7 +3104,7 @@ class TagSiblingsManager( object ):
             
             reverse_lookup = collections.defaultdict( list )
             
-            for ( bad, good ) in siblings.items():
+            for ( bad, good ) in list(siblings.items()):
                 
                 reverse_lookup[ good ].append( bad )
                 
@@ -3119,7 +3118,7 @@ class TagSiblingsManager( object ):
         
         combined_reverse_lookup = collections.defaultdict( list )
         
-        for ( bad, good ) in combined_siblings.items():
+        for ( bad, good ) in list(combined_siblings.items()):
             
             combined_reverse_lookup[ good ].append( bad )
             
@@ -3146,7 +3145,7 @@ class TagSiblingsManager( object ):
             
             tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG }
             
-            tags = tags_to_predicates.keys()
+            tags = list(tags_to_predicates.keys())
             
             tags_to_include_in_results = set()
             
@@ -3227,7 +3226,7 @@ class TagSiblingsManager( object ):
         
         with self._lock:
             
-            statuses = statuses_to_tags.keys()
+            statuses = list(statuses_to_tags.keys())
             
             new_statuses_to_tags = HydrusData.default_dict_set()
             
@@ -3288,7 +3287,7 @@ class TagSiblingsManager( object ):
             
             results = collections.Counter()
             
-            for ( tag, count ) in tags_to_count.items():
+            for ( tag, count ) in list(tags_to_count.items()):
                 
                 if tag in siblings:
                     
@@ -3407,7 +3406,7 @@ class UndoManager( object ):
         
         filtered_service_keys_to_content_updates = {}
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
             
             filtered_content_updates = []
             
@@ -3452,7 +3451,7 @@ class UndoManager( object ):
         
         inverted_service_keys_to_content_updates = {}
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
             
             inverted_content_updates = []
             

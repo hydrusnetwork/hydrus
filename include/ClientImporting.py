@@ -1,30 +1,29 @@
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientDownloading
-import ClientFiles
-import ClientImportOptions
-import ClientImportFileSeeds
-import ClientImportGallerySeeds
-import ClientNetworkingContexts
-import ClientNetworkingJobs
-import ClientParsing
-import ClientPaths
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusGlobals as HG
-import HydrusPaths
-import HydrusSerialisable
-import HydrusThreading
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientFiles
+from . import ClientImportOptions
+from . import ClientImportFileSeeds
+from . import ClientImportGallerySeeds
+from . import ClientNetworkingContexts
+from . import ClientNetworkingJobs
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusGlobals as HG
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusThreading
 import os
 import random
 import threading
 import time
 import traceback
-import urlparse
 import wx
 
 CHECKER_STATUS_OK = 0

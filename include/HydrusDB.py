@@ -1,11 +1,11 @@
 import distutils.version
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusPaths
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusPaths
 import os
-import Queue
+import queue
 import sqlite3
 import traceback
 import time
@@ -30,7 +30,7 @@ def CanVacuum( db_path, stop_time = None ):
             
             approx_vacuum_speed_mb_per_s = 1048576 * 1
             
-            approx_vacuum_duration = db_size / approx_vacuum_speed_mb_per_s
+            approx_vacuum_duration = db_size // approx_vacuum_speed_mb_per_s
             
             time_i_will_have_to_start = stop_time - approx_vacuum_duration
             
@@ -57,7 +57,7 @@ def CanVacuum( db_path, stop_time = None ):
     
 def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
     
-    table_name = 'mem.tempbigread' + os.urandom( 32 ).encode( 'hex' )
+    table_name = 'mem.tempbigread' + os.urandom( 32 ).hex()
     
     cursor.execute( 'CREATE TABLE ' + table_name + ' ( temp_id INTEGER PRIMARY KEY );' )
     
@@ -178,7 +178,7 @@ class HydrusDB( object ):
         self._ready_to_serve_requests = False
         self._could_not_initialise = False
         
-        self._jobs = Queue.PriorityQueue()
+        self._jobs = queue.Queue()
         self._pubsubs = []
         
         self._currently_doing_job = False
@@ -222,7 +222,7 @@ class HydrusDB( object ):
                 
             except Exception as e:
                 
-                raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
+                raise HydrusExceptions.DBAccessException( str( e ) )
                 
             
             try:
@@ -271,7 +271,7 @@ class HydrusDB( object ):
     
     def _AttachExternalDatabases( self ):
         
-        for ( name, filename ) in self._db_filenames.items():
+        for ( name, filename ) in list(self._db_filenames.items()):
             
             if name == 'main':
                 
@@ -515,7 +515,7 @@ class HydrusDB( object ):
             
         except Exception as e:
             
-            raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
+            raise HydrusExceptions.DBAccessException( str( e ) )
             
         
     
@@ -752,7 +752,7 @@ class HydrusDB( object ):
         
         total = 0
         
-        for filename in self._db_filenames.values():
+        for filename in list(self._db_filenames.values()):
             
             path = os.path.join( self._db_dir, filename )
             
@@ -814,7 +814,7 @@ class HydrusDB( object ):
             
             try:
                 
-                ( priority, job ) = self._jobs.get( timeout = 1 )
+                job = self._jobs.get( timeout = 1 )
                 
                 self._currently_doing_job = True
                 self._current_job_name = job.ToString()
@@ -854,7 +854,7 @@ class HydrusDB( object ):
                         raise
                         
                     
-                    self._jobs.put( ( priority, job ) ) # couldn't lock db; put job back on queue
+                    self._jobs.put( job ) # couldn't lock db; put job back on queue
                     
                     time.sleep( 5 )
                     
@@ -864,7 +864,7 @@ class HydrusDB( object ):
                 
                 self.publish_status_update()
                 
-            except Queue.Empty:
+            except queue.Empty:
                 
                 if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + self.TRANSACTION_COMMIT_TIME ):
                     
@@ -887,10 +887,16 @@ class HydrusDB( object ):
         self._loop_finished = True
         
     
-    def Read( self, action, priority, *args, **kwargs ):
+    def Read( self, action, *args, **kwargs ):
         
-        if action in self.READ_WRITE_ACTIONS: job_type = 'read_write'
-        else: job_type = 'read'
+        if action in self.READ_WRITE_ACTIONS:
+            
+            job_type = 'read_write'
+            
+        else:
+            
+            job_type = 'read'
+            
         
         synchronous = True
         
@@ -901,7 +907,7 @@ class HydrusDB( object ):
             raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
             
         
-        self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
+        self._jobs.put( job )
         
         return job.GetResult()
         
@@ -916,22 +922,7 @@ class HydrusDB( object ):
         self._local_shutdown = True
         
     
-    def SimpleRead( self, action, *args, **kwargs ):
-        
-        return self.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-        
-    
-    def SimpleWrite( self, action, *args, **kwargs ):
-        
-        return self.Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
-        
-    
-    def SimpleWriteSynchronous( self, action, *args, **kwargs ):
-        
-        return self.Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
-        
-    
-    def Write( self, action, priority, synchronous, *args, **kwargs ):
+    def Write( self, action, synchronous, *args, **kwargs ):
         
         job_type = 'write'
         
@@ -942,7 +933,7 @@ class HydrusDB( object ):
             raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
             
         
-        self._jobs.put( ( priority, job ) )
+        self._jobs.put( job )
         
         if synchronous: return job.GetResult()
         
@@ -955,7 +946,7 @@ class TemporaryIntegerTable( object ):
         self._integer_iterable = integer_iterable
         self._column_name = column_name
         
-        self._table_name = 'mem.tempint' + os.urandom( 32 ).encode( 'hex' )
+        self._table_name = 'mem.tempint' + os.urandom( 32 ).hex()
         
     
     def __enter__( self ):

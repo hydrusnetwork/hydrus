@@ -30,7 +30,7 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
 
 # hash = ab156e87c5d6e215ab156e87c5d6e215
 
-# Then go hash = hash.decode( 'hex' ) before you pass it to Add/Get/Has/SetMappings
+# Then go hash = bytes.fromhex( hash ) before you pass it to Add/Get/Has/SetMappings
 
 
 # If you have tags that are namespaced like hydrus (e.g. series:ghost in the shell), then check out:

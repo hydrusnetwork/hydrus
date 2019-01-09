@@ -1,23 +1,21 @@
 import bs4
-import ClientNetworkingDomain
-import ClientNetworkingJobs
-import ClientParsing
-import HydrusConstants as HC
-import HydrusExceptions
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
+from . import ClientNetworkingDomain
+from . import ClientNetworkingJobs
+from . import ClientParsing
+from . import HydrusConstants as HC
+from . import HydrusExceptions
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
 import json
 import os
 import re
 import requests
 import threading
 import time
-import urllib
-import urlparse
-import HydrusData
-import ClientConstants as CC
-import HydrusGlobals as HG
+from . import HydrusData
+from . import ClientConstants as CC
+from . import HydrusGlobals as HG
 
 def ConvertBooruToNewObjects( booru ):
     
@@ -140,7 +138,7 @@ def ConvertBooruToNewObjects( booru ):
         content_parsers.append( image_link_content_parser )
         
     
-    for ( classname, namespace ) in tag_classnames_to_namespaces.items():
+    for ( classname, namespace ) in list(tag_classnames_to_namespaces.items()):
         
         tag_rules = []
         
@@ -177,7 +175,7 @@ def ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier ):
     
     gug_name = ConvertGalleryIdentifierToGUGName( gallery_identifier )
     
-    import ClientDefaults
+    from . import ClientDefaults
     
     gugs = ClientDefaults.GetDefaultGUGs()
     
@@ -294,7 +292,7 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
         
         if self._site_type == HC.SITE_TYPE_BOORU:
             
-            text += ': ' + HydrusData.ToUnicode( self._additional_info )
+            text += ': ' + str( self._additional_info )
             
         
         return text

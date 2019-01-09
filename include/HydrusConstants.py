@@ -3,32 +3,29 @@ import sys
 
 # dirs
 
-BASE_DIR = sys.path[0]
-
-if BASE_DIR == '':
+if getattr( sys, 'frozen', False ):
     
-    BASE_DIR = os.getcwdu()
+    RUNNING_FROM_FROZEN_BUILD = True
+    
+    # we are in a pyinstaller frozen app
+    
+    BASE_DIR = getattr( sys, '_MEIPASS', None )
+    
+    if BASE_DIR is None:
+        
+        raise Exception( 'It seems this hydrus is running from a frozen bundle, but there was no _MEIPASS variable under sys to define the bundle directory.' )
+        
     
 else:
     
-    try:
-        
-        BASE_DIR = BASE_DIR.decode( 'utf-8' )
-        
-    except:
-        
-        pass
-        
+    RUNNING_FROM_FROZEN_BUILD = False
     
-BIN_DIR = os.path.join( BASE_DIR, 'bin' )
-HELP_DIR = os.path.join( BASE_DIR, 'help' )
-INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
-STATIC_DIR = os.path.join( BASE_DIR, 'static' )
-
-DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
-LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
-
-#
+    BASE_DIR = sys.path[0]
+    
+    if BASE_DIR == '':
+        
+        BASE_DIR = os.getcwd()
+        
 
 PLATFORM_WINDOWS = False
 PLATFORM_OSX  = False
@@ -36,9 +33,30 @@ PLATFORM_LINUX = False
 
 if sys.platform == 'win32': PLATFORM_WINDOWS = True
 elif sys.platform == 'darwin': PLATFORM_OSX = True
-elif sys.platform == 'linux2': PLATFORM_LINUX = True
+elif sys.platform == 'linux': PLATFORM_LINUX = True
 
 RUNNING_FROM_SOURCE = sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
+RUNNING_FROM_OSX_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
+
+BIN_DIR = os.path.join( BASE_DIR, 'bin' )
+HELP_DIR = os.path.join( BASE_DIR, 'help' )
+INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
+STATIC_DIR = os.path.join( BASE_DIR, 'static' )
+
+DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
+
+if PLATFORM_OSX:
+    
+    USERPATH_DB_DIR = os.path.join( os.path.expanduser( '~' ), 'Library', 'Hydrus' )
+    
+else:
+    
+    USERPATH_DB_DIR = os.path.join( os.path.expanduser( '~' ), 'Hydrus' )
+    
+
+LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
+
+#
 
 import sqlite3
 import traceback
@@ -49,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 334
+SOFTWARE_VERSION = 335
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -357,10 +375,6 @@ SUPERBAN = 1
 CHANGE_ACCOUNT_TYPE = 2
 ADD_TO_EXPIRES = 3
 SET_EXPIRES = 4
-
-HIGH_PRIORITY = 0
-LOW_PRIORITY = 2
-INTERRUPTABLE_PRIORITY = 4
 
 SCORE_PETITION = 0
 
@@ -703,12 +717,12 @@ DEFAULT_LOCAL_BOORU_PORT = 45866
 DEFAULT_SERVER_ADMIN_PORT = 45870
 DEFAULT_SERVICE_PORT = 45871
 
-SERVER_ADMIN_KEY = 'server admin'
+SERVER_ADMIN_KEY = b'server admin'
 
 def construct_python_tuple( self, node ): return tuple( self.construct_sequence( node ) )
-def represent_python_tuple( self, data ): return self.represent_sequence( u'tag:yaml.org,2002:python/tuple', data )
+def represent_python_tuple( self, data ): return self.represent_sequence( 'tag:yaml.org,2002:python/tuple', data )
 
-yaml.SafeLoader.add_constructor( u'tag:yaml.org,2002:python/tuple', construct_python_tuple )
+yaml.SafeLoader.add_constructor( 'tag:yaml.org,2002:python/tuple', construct_python_tuple )
 yaml.SafeDumper.add_representer( tuple, represent_python_tuple )
 
 # for some reason, sqlite doesn't parse to int before this, despite the column affinity
@@ -722,6 +736,5 @@ sqlite3.register_adapter( list, yaml.safe_dump )
 sqlite3.register_adapter( tuple, yaml.safe_dump )
 sqlite3.register_adapter( bool, int )
 
-sqlite3.register_converter( 'BLOB_BYTES', str )
 sqlite3.register_converter( 'INTEGER_BOOLEAN', integer_boolean_to_bool )
 sqlite3.register_converter( 'TEXT_YAML', yaml.safe_load )

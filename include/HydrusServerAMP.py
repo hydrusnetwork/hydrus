@@ -1,21 +1,20 @@
 import collections
-import HydrusConstants as HC
-import HydrusDocumentHandling
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusFlashHandling
-import HydrusImageHandling
-import HydrusServerResources
+from . import HydrusConstants as HC
+from . import HydrusDocumentHandling
+from . import HydrusExceptions
+from . import HydrusFileHandling
+from . import HydrusFlashHandling
+from . import HydrusImageHandling
+from . import HydrusServerResources
 import os
 import random
-import ServerFiles
+from . import ServerFiles
 import traceback
-import urllib
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.protocols import amp
-import HydrusData
-import HydrusGlobals as HG
+from . import HydrusData
+from . import HydrusGlobals as HG
 '''
 class HydrusAMPCommand( amp.Command ):
     errors = {}

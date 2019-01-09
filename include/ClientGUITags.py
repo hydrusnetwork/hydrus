@@ -1,31 +1,31 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientGUIACDropdown
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUITopLevelWindows
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsReview
-import ClientGUIShortcuts
-import ClientGUITagSuggestions
-import ClientMedia
-import ClientTags
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUIACDropdown
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUITopLevelWindows
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsReview
+from . import ClientGUIShortcuts
+from . import ClientGUITagSuggestions
+from . import ClientMedia
+from . import ClientTags
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusSerialisable
-import HydrusTags
-import HydrusTagArchive
-import HydrusText
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusTagArchive
+from . import HydrusText
 import itertools
 import os
 import wx
@@ -70,8 +70,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._notebook.AddPage( self._advanced_panel, 'advanced' )
         
-        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_BLACKLIST ]
-        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_WHITELIST ]
+        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in list(tag_filter.GetTagSlicesToRules().items()) if rule == CC.FILTER_BLACKLIST ]
+        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in list(tag_filter.GetTagSlicesToRules().items()) if rule == CC.FILTER_WHITELIST ]
         
         self._advanced_blacklist.AddTags( blacklist_tag_slices )
         self._advanced_whitelist.AddTags( whitelist_tag_slices )
@@ -791,7 +791,7 @@ def ExportToHTA( parent, service_key, hashes ):
         
         if dlg.ShowModal() == wx.ID_OK:
             
-            path = HydrusData.ToUnicode( dlg.GetPath() )
+            path = dlg.GetPath()
             
         else:
             
@@ -1418,7 +1418,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( choices ) == 1:
                 
-                [ ( choice_action, tag_counts ) ] = choices.items()
+                [ ( choice_action, tag_counts ) ] = list(choices.items())
                 
                 tags = { tag for ( tag, count ) in tag_counts }
                 
@@ -1668,7 +1668,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._tag_service_key, collapse_siblings = False )
                 
-                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )    
+                tags = set( current_tags_to_count.keys() ).union( list(pending_tags_to_count.keys()) )    
                 
             
             if len( tags ) > 0:
@@ -1806,7 +1806,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 for content_update in content_updates:
                     
@@ -2182,7 +2182,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' + os.linesep + '.' )
+            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' + os.linesep + '.' )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
             tags_box = wx.BoxSizer( wx.HORIZONTAL )
@@ -2222,7 +2222,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = list( pairs )
             
-            pairs.sort( key = lambda ( c, p ): HydrusTags.ConvertTagToSortable( p ) )
+            pairs.sort( key = lambda c_p: HydrusTags.ConvertTagToSortable( c_p[1] ) )
             
             new_pairs = []
             current_pairs = []
@@ -2518,7 +2518,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = []
             
-            for i in range( len( tags ) / 2 ):
+            for i in range( len( tags ) // 2 ):
                 
                 pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
                 
@@ -2545,9 +2545,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = dlg.GetPath()
                     
-                    with open( path, 'wb' ) as f:
+                    with open( path, 'w' ) as f:
                         
-                        f.write( HydrusData.ToByteString( export_string ) )
+                        f.write( export_string )
                         
                     
                 
@@ -2593,7 +2593,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            with open( path, 'rb' ) as f:
+            with open( path, 'r' ) as f:
                 
                 import_string = f.read()
                 
@@ -2642,7 +2642,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             show_all = self._show_all.GetValue()
             
-            for ( status, pairs ) in self._current_statuses_to_pairs.items():
+            for ( status, pairs ) in list(self._current_statuses_to_pairs.items()):
                 
                 if status == HC.CONTENT_STATUS_DELETED:
                     
@@ -2821,7 +2821,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             current_statuses_to_pairs = collections.defaultdict( set )
             
-            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
+            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in list(original_statuses_to_pairs.items()) } )
             
             wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
             
@@ -3005,7 +3005,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' )
+            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
             new_sibling_box = wx.BoxSizer( wx.VERTICAL )
@@ -3051,7 +3051,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = list( pairs )
             
-            pairs.sort( key = lambda ( c, p ): HydrusTags.ConvertTagToSortable( p ) )
+            pairs.sort( key = lambda c_p1: HydrusTags.ConvertTagToSortable( c_p1[1] ) )
             
             new_pairs = []
             current_pairs = []
@@ -3383,7 +3383,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = []
             
-            for i in range( len( tags ) / 2 ):
+            for i in range( len( tags ) // 2 ):
                 
                 pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
                 
@@ -3410,9 +3410,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = dlg.GetPath()
                     
-                    with open( path, 'wb' ) as f:
+                    with open( path, 'w' ) as f:
                         
-                        f.write( HydrusData.ToByteString( export_string ) )
+                        f.write( export_string )
                         
                     
                 
@@ -3460,7 +3460,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            with open( path, 'rb' ) as f:
+            with open( path, 'r' ) as f:
                 
                 import_string = f.read()
                 
@@ -3515,7 +3515,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             show_all = self._show_all.GetValue()
             
-            for ( status, pairs ) in self._current_statuses_to_pairs.items():
+            for ( status, pairs ) in list(self._current_statuses_to_pairs.items()):
                 
                 if status == HC.CONTENT_STATUS_DELETED:
                     
@@ -3723,7 +3723,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             current_statuses_to_pairs = collections.defaultdict( set )
             
-            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
+            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in list(original_statuses_to_pairs.items()) } )
             
             wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
             

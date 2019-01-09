@@ -1,50 +1,50 @@
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientDownloading
-import ClientGUIACDropdown
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIImport
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIPredicates
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsReview
-import ClientGUISerialisable
-import ClientGUIShortcuts
-import ClientGUITagSuggestions
-import ClientGUITopLevelWindows
-import ClientNetworkingContexts
-import ClientNetworkingJobs
-import ClientNetworkingSessions
-import ClientImporting
-import ClientMedia
-import ClientRatings
-import ClientSerialisable
-import ClientServices
-import ClientGUITime
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientGUIACDropdown
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIImport
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIPredicates
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsReview
+from . import ClientGUISerialisable
+from . import ClientGUIShortcuts
+from . import ClientGUITagSuggestions
+from . import ClientGUITopLevelWindows
+from . import ClientNetworkingContexts
+from . import ClientNetworkingJobs
+from . import ClientNetworkingSessions
+from . import ClientImporting
+from . import ClientMedia
+from . import ClientRatings
+from . import ClientSerialisable
+from . import ClientServices
+from . import ClientGUITime
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNetwork
-import HydrusNetworking
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTagArchive
-import HydrusTags
-import HydrusText
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNetwork
+from . import HydrusNetworking
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTagArchive
+from . import HydrusTags
+from . import HydrusText
 import itertools
 import os
 import random
 import traceback
-import urlparse
+import urllib.parse
 import wx
 
 class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
@@ -226,7 +226,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             deletee_account_type_keys = set( self._deletee_account_type_keys_to_new_account_type_keys.keys() )
             
-            account_type_keys_tuples = self._deletee_account_type_keys_to_new_account_type_keys.items()
+            account_type_keys_tuples = list(self._deletee_account_type_keys_to_new_account_type_keys.items())
             
             for ( deletee_account_type_key, new_account_type_key ) in account_type_keys_tuples:
                 
@@ -518,7 +518,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if dlg_file.ShowModal() == wx.ID_OK:
                     
-                    hta_path = HydrusData.ToUnicode( dlg_file.GetPath() )
+                    hta_path = dlg_file.GetPath()
                     
                     portable_hta_path = HydrusPaths.ConvertAbsPathToPortablePath( hta_path )
                     
@@ -701,7 +701,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.VetoException as e:
                     
-                    message = HydrusData.ToUnicode( e )
+                    message = str( e )
                     
                     if len( message ) > 0:
                         
@@ -742,7 +742,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.NetworkException as e:
                     
-                    wx.MessageBox( 'Problem with that address: ' + HydrusData.ToUnicode( e ) )
+                    wx.MessageBox( 'Problem with that address: ' + str( e ) )
                     
                 
             
@@ -793,7 +793,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if self._original_credentials.HasAccessKey():
                     
-                    self._access_key.SetValue( self._original_credentials.GetAccessKey().encode( 'hex' ) )
+                    self._access_key.SetValue( self._original_credentials.GetAccessKey().hex() )
                     
                 
                 #
@@ -838,7 +838,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         ( host, port ) = credentials.GetAddress()
                         
-                        url = 'https://' + host + ':' + str( port ) + '/access_key?registration_key=' + registration_key.encode( 'hex' )
+                        url = 'https://' + host + ':' + str( port ) + '/access_key?registration_key=' + registration_key.hex()
                         
                         network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
                         
@@ -852,11 +852,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             network_job.WaitUntilDone()
                             
-                            content = network_job.GetContent()
+                            network_bytes = network_job.GetContentBytes()
                             
-                            response = HydrusNetwork.ParseBodyString( content )
+                            hydrus_args = HydrusNetwork.ParseNetworkBytesToHydrusArgs( network_bytes )
                             
-                            access_key_encoded = response[ 'access_key' ].encode( 'hex' )
+                            access_key_encoded = hydrus_args[ 'access_key' ].hex()
                             
                             wx.CallAfter( wx_setkey, access_key_encoded )
                             
@@ -866,7 +866,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             HydrusData.PrintException( e )
                             
-                            wx.CallAfter( wx.MessageBox, 'Had a problem: ' + HydrusData.ToUnicode( e ) )
+                            wx.CallAfter( wx.MessageBox, 'Had a problem: ' + str( e ) )
                             
                         
                     finally:
@@ -881,7 +881,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.VetoException as e:
                     
-                    message = HydrusData.ToUnicode( e )
+                    message = str( e )
                     
                     if len( message ) > 0:
                         
@@ -910,13 +910,13 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if registration_key_encoded == 'init':
                     
-                    registration_key = registration_key_encoded
+                    registration_key = b'init'
                     
                 else:
                     
                     try:
                         
-                        registration_key = registration_key_encoded.decode( 'hex' )
+                        registration_key = bytes.fromhex( registration_key_encoded )
                         
                     except:
                         
@@ -927,7 +927,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
                 self._register.Disable()
-                self._register.SetLabel( u'fetching\u2026' )
+                self._register.SetLabel( 'fetching\u2026' )
                 
                 HG.client_controller.CallToThread( do_it, credentials, registration_key )
                 
@@ -936,7 +936,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 def do_it( credentials ):
                     
-                    service = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, self._service_type, CC.TEST_SERVICE_KEY )
+                    service = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, self._service_type, 'test service' )
                     
                     service.SetCredentials( credentials )
                     
@@ -964,7 +964,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     except HydrusExceptions.NetworkException as e:
                         
-                        wx.CallAfter( wx.MessageBox, 'Network problem: ' + HydrusData.ToUnicode( e ) )
+                        wx.CallAfter( wx.MessageBox, 'Network problem: ' + str( e ) )
                         
                         return
                         
@@ -981,7 +981,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.VetoException as e:
                     
-                    message = HydrusData.ToUnicode( e )
+                    message = str( e )
                     
                     if len( message ) > 0:
                         
@@ -992,7 +992,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
                 self._test_credentials_button.Disable()
-                self._test_credentials_button.SetLabel( u'fetching\u2026' )
+                self._test_credentials_button.SetLabel( 'fetching\u2026' )
                 
                 HG.client_controller.CallToThread( do_it, credentials )
                 
@@ -1003,14 +1003,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 try:
                     
-                    access_key = self._access_key.GetValue().decode( 'hex' )
+                    access_key = bytes.fromhex( self._access_key.GetValue() )
                     
                 except:
                     
                     raise HydrusExceptions.VetoException( 'Could not understand that access key!')
                     
                 
-                if access_key != '':
+                if len( access_key ) > 0:
                     
                     credentials.SetAccessKey( access_key )
                     
@@ -1223,7 +1223,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dictionary_part[ 'colours' ] = {}
                 
-                for ( colour_type, ( border_ctrl, fill_ctrl ) ) in self._colour_ctrls.items():
+                for ( colour_type, ( border_ctrl, fill_ctrl ) ) in list(self._colour_ctrls.items()):
                     
                     border_colour = border_ctrl.GetColour()
                     
@@ -1469,7 +1469,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for colourset in self._gui_colours:
                 
-                for ( colour_type, ctrl ) in self._gui_colours[ colourset ].items():
+                for ( colour_type, ctrl ) in list(self._gui_colours[ colourset ].items()):
                     
                     colour = ctrl.GetColour()
                     
@@ -1871,7 +1871,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
             
-            import ClientGUIImport
+            from . import ClientGUIImport
             
             show_downloader_options = True
             
@@ -2360,7 +2360,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( HydrusData.ToUnicode( self._export_location.GetPath() ) )
+            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
             HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
@@ -2902,7 +2902,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'animation_start_position' ] = float( self._animation_start_position.GetValue() ) / 100.0
+            HC.options[ 'animation_start_position' ] = self._animation_start_position.GetValue() / 100.0
             
             self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.GetValue() )
             self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetChoice() )
@@ -3210,9 +3210,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._disk_cache_maintenance.SetValue( disk_cache_maintenance )
             
-            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
+            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] // 1048576 ) )
             
-            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
+            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] // 1048576 ) )
             
             self._thumbnail_cache_timeout.SetValue( self._new_options.GetInteger( 'thumbnail_cache_timeout' ) )
             self._image_cache_timeout.SetValue( self._new_options.GetInteger( 'image_cache_timeout' ) )
@@ -3386,7 +3386,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_bytes_per_fullscreen = 3 * width * height
             
-            self._estimated_number_fullscreens.SetLabelText( '(about ' + HydrusData.ToHumanInt( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ToHumanInt( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
+            self._estimated_number_fullscreens.SetLabelText( '(about ' + HydrusData.ToHumanInt( ( self._fullscreen_cache_size.GetValue() * 1048576 ) // estimated_bytes_per_fullscreen ) + '-' + HydrusData.ToHumanInt( ( self._fullscreen_cache_size.GetValue() * 1048576 ) // ( estimated_bytes_per_fullscreen // 4 ) ) + ' images)' )
             
         
         def EventThumbnailsUpdate( self, event ):
@@ -3397,14 +3397,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_bytes_per_thumb = 3 * thumbnail_width * thumbnail_height
             
-            estimated_thumbs = ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb
+            estimated_thumbs = ( self._thumbnail_cache_size.GetValue() * 1048576 ) // estimated_bytes_per_thumb
             
             self._estimated_number_thumbnails.SetLabelText( '(at ' + res_string + ', about ' + HydrusData.ToHumanInt( estimated_thumbs ) + ' thumbnails)' )
             
         
         def EventVideoBufferUpdate( self, event ):
             
-            estimated_720p_frames = int( ( self._video_buffer_size_mb.GetValue() * 1024 * 1024 ) / ( 1280 * 720 * 3 ) )
+            estimated_720p_frames = int( ( self._video_buffer_size_mb.GetValue() * 1024 * 1024 ) // ( 1280 * 720 * 3 ) )
             
             self._estimated_number_video_frames.SetLabelText( '(about ' + HydrusData.ToHumanInt( estimated_720p_frames ) + ' frames of 720p video)' )
             
@@ -3688,7 +3688,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             results = self._namespace_colours.GetSelectedNamespaceColours()
             
-            for ( namespace, colour ) in results.items():
+            for ( namespace, colour ) in list(results.items()):
                 
                 colour_data = wx.ColourData()
                 
@@ -3967,7 +3967,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._SaveCurrentSuggestedFavourites()
             
-            for ( service_key, favourites ) in self._suggested_favourites_dict.items():
+            for ( service_key, favourites ) in list(self._suggested_favourites_dict.items()):
                 
                 self._new_options.SetSuggestedTagsFavourites( service_key, favourites )
                 
@@ -4629,7 +4629,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.SetSizer( vbox )
             
         
-        def _ConvertSortTupleToPrettyTuple( self, ( shortcut, command ) ):
+        def _ConvertSortTupleToPrettyTuple( self, shortcut_tuple ):
+            
+            ( shortcut, command ) = shortcut_tuple
             
             return ( shortcut.ToString(), command.ToString() )
             
@@ -4981,7 +4983,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 hbox.Add( self._shortcut_panel, CC.FLAGS_VCENTER )
-                hbox.Add( ClientGUICommon.BetterStaticText( self, u'\u2192' ), CC.FLAGS_VCENTER )
+                hbox.Add( ClientGUICommon.BetterStaticText( self, '\u2192' ), CC.FLAGS_VCENTER )
                 hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 self.SetSizer( hbox )
@@ -5083,11 +5085,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if allow_zero:
                             
-                            value = float( value ) / num_stars
+                            value = value / num_stars
                             
                         else:
                             
-                            value = float( value - 1 ) / ( num_stars - 1 )
+                            value = ( value - 1 ) / ( num_stars - 1 )
                             
                         
                     
@@ -5413,7 +5415,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             else:
                 
-                parse_result = urlparse.urlparse( url )
+                parse_result = urllib.parse.urlparse( url )
                 
                 if parse_result.scheme == '':
                     
@@ -5563,7 +5565,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
                 for prefix in self._locations.GetData():
                     
@@ -5624,7 +5626,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    path = HydrusData.ToUnicode( dlg.GetPath() )
+                    path = dlg.GetPath()
                     
                     for prefix in prefixes:
                         

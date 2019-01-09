@@ -1,19 +1,19 @@
 import collections
-import ClientConstants as CC
-import ClientOptions
-import HydrusConstants as HC
-import HydrusGlobals as HG
-import HydrusTags
+from . import ClientConstants as CC
+from . import ClientOptions
+from . import HydrusConstants as HC
+from . import HydrusGlobals as HG
+from . import HydrusTags
 import os
 import random
 import threading
-import HydrusData
-import HydrusThreading
+from . import HydrusData
+from . import HydrusThreading
 import wx
 
 DB_DIR = None
 
-tiniest_gif = '\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
+tiniest_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
 
 LOCAL_RATING_LIKE_SERVICE_KEY = HydrusData.GenerateKey()
 LOCAL_RATING_NUMERICAL_SERVICE_KEY = HydrusData.GenerateKey()
@@ -22,7 +22,7 @@ def ConvertServiceKeysToContentUpdatesToComparable( service_keys_to_content_upda
     
     comparable_dict = {}
     
-    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+    for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
         
         comparable_dict[ service_key ] = set( content_updates )
         

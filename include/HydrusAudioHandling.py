@@ -1,4 +1,4 @@
-import HydrusConstants as HC
+from . import HydrusConstants as HC
 import os
 import threading
 import time

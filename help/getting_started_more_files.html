@@ -46,10 +46,15 @@
 			</ul>
 			<h3>sharing files</h3>
 			<p>The hydrus network's server has a service that lets clients share files anonymously, called a <i>file repository</i>.</p>
-			<p>It simply stores files. Anyone who has an access key to the repository can see the pool's thumbnails and download anything they like. They may also have permission to upload or delete. I run a download-only file repository that you are welcome to connect to to get a feel for the interface. To add its details, go <i>services->manage services->remote->file repositories</i> and hit the 'add' button. You'll be asked if you have a <i>registration key</i> or an <i>access key</i>; you have an access key.</p>
-			<p><img src="edit_repos_file_repo.png" /></p>
-			<p>Here's the info so you can copy it:</p>
-			<ul><li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5@hydrus.no-ip.org:45872</li></ul>
+			<p>It simply stores files. Anyone who has an access key to the repository can see the pool's thumbnails and download anything they like. They may also have permission to upload or delete. I run a download-only file repository that you are welcome to connect to to get a feel for the interface. To add its details, go <i>services->manage services</i>, click add, and select 'hydrus file repository'.</p>
+			<p>This image is for the tag repo, but it is the same interface:</p>
+			<p><img src="edit_repos_public_tag_repo.png" /></p>
+			<p>For the file repo, put in this information:</p>
+			<ul>
+				<li>hydrus.no-ip.org</li>
+				<li>45872</li>
+				<li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5</li>
+			</ul>
 			<p>Hit ok and then go <i>services->review services</i> to see your new file repository. Over time, usually when it is idle, your client will download updates from the repository until it is fully synchronised. You can customise when this happens in <i>file->options->maintenance and processing</i>.</p>
 			<p><img src="review_services.png" /></p>
 			<p>From now on, you will see your new repository under <i>F9->files</i> (although until your client has done some synchronisation, you will not see any files). A repository search page works exactly like a local or a trash one, it just uses a different file list. Files you do not have will be drawn with a dark background, those you do will be drawn as normal. You might not see all the thumbnails until you are fully synchronised.</p>

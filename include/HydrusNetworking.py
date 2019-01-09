@@ -1,14 +1,20 @@
 import calendar
 import collections
 import datetime
-import httplib
-import HydrusConstants as HC
-import HydrusData
-import HydrusSerialisable
+import http.client
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusSerialisable
+import psutil
 import socket
 import ssl
 import threading
 import time
+
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+
+urllib3.disable_warnings( InsecureRequestWarning ) # stopping log-moaning when request sessions have verify = False
 
 # The calendar portion of this works in GMT. A new 'day' or 'month' is calculated based on GMT time, so it won't tick over at midnight for most people.
 # But this means a server can pass a bandwidth object to a lad and everyone can agree on when a new day is.
@@ -24,7 +30,7 @@ def ConvertBandwidthRuleToString( rule ):
     
     if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
         
-        s = HydrusData.ConvertIntToBytes( max_allowed )
+        s = HydrusData.ToHumanBytes( max_allowed )
         
     elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
         
@@ -42,35 +48,34 @@ def ConvertBandwidthRuleToString( rule ):
     
     return s
     
-def GetLocalConnection( port, https = False ):
+def LocalPortInUse( port ):
     
-    old_socket = httplib.socket.socket
-    
-    httplib.socket.socket = socket._socketobject
-    
-    try:
+    if HC.PLATFORM_WINDOWS:
         
-        if https:
+        for sconn in psutil.net_connections():
             
-            context = ssl.SSLContext( ssl.PROTOCOL_SSLv23 )
-            context.options |= ssl.OP_NO_SSLv2
-            context.options |= ssl.OP_NO_SSLv3
-            
-            connection = httplib.HTTPSConnection( '127.0.0.1', port, timeout = 8, context = context )
-            
-        else:
-            
-            connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 8 )
+            if port == sconn.laddr[1] and sconn.status in ( 'ESTABLISHED', 'LISTEN' ): # local address: ( ip, port )
+                
+                return True
+                
             
         
-        connection.connect()
+        return False
         
-    finally:
+    else:
         
-        httplib.socket.socket = old_socket
+        s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
         
-    
-    return connection
+        s.settimeout( 0.2 )
+        
+        result = s.connect_ex( ( '127.0.0.1', port ) )
+        
+        s.close()
+        
+        CONNECTION_SUCCESS = 0
+        
+        return result == CONNECTION_SUCCESS
+        
     
 class BandwidthRules( HydrusSerialisable.SerialisableBase ):
     
@@ -227,9 +232,18 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
             rules_sorted = list( self._rules )
             
-            def key( ( bandwidth_type, time_delta, max_allowed ) ):
+            def key( rule_tuple ):
                 
-                return time_delta
+                ( bandwidth_type, time_delta, max_allowed ) = rule_tuple
+                
+                if time_delta is None:
+                    
+                    return -1
+                    
+                else:
+                    
+                    return time_delta
+                    
                 
             
             rules_sorted.sort( key = key )
@@ -325,7 +339,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         for d in ( self._months_bytes, self._days_bytes, self._hours_bytes, self._minutes_bytes, self._seconds_bytes, self._months_requests, self._days_requests, self._hours_requests, self._minutes_requests, self._seconds_requests ):
             
-            dicts_flat.append( d.items() )
+            dicts_flat.append( list(d.items()) )
             
         
         return dicts_flat
@@ -470,7 +484,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             since = HydrusData.GetNow() - search_time_delta
             
-            return sum( ( value for ( timestamp, value ) in counter.items() if timestamp >= since ) )
+            return sum( ( value for ( timestamp, value ) in list(counter.items()) if timestamp >= since ) )
             
         
     
@@ -521,7 +535,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         since = now - SEARCH_DELTA
         
-        valid_keys = [ key for key in counter.keys() if key >= since ]
+        valid_keys = [ key for key in list(counter.keys()) if key >= since ]
         
         if len( valid_keys ) == 0:
             
@@ -555,7 +569,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             def clear_counter( counter, timestamp ):
                 
-                bad_keys = [ key for key in counter.keys() if key < timestamp ]
+                bad_keys = [ key for key in list(counter.keys()) if key < timestamp ]
                 
                 for bad_key in bad_keys:
                     
@@ -583,7 +597,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None, True )
             num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None, True )
             
-            return 'used ' + HydrusData.ConvertIntToBytes( num_bytes ) + ' in ' + HydrusData.ToHumanInt( num_requests ) + ' requests this month'
+            return 'used ' + HydrusData.ToHumanBytes( num_bytes ) + ' in ' + HydrusData.ToHumanInt( num_requests ) + ' requests this month'
             
         
     
@@ -593,7 +607,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             result = []
             
-            for ( month_time, usage ) in self._months_bytes.items():
+            for ( month_time, usage ) in list(self._months_bytes.items()):
                 
                 month_dt = datetime.datetime.utcfromtimestamp( month_time )
                 
@@ -657,7 +671,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
                 time_delta_in_which_bandwidth_counts = time_delta + window
                 
-                time_and_values = counter.items()
+                time_and_values = list(counter.items())
                 
                 time_and_values.sort( reverse = True )
                 

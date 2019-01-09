@@ -1,11 +1,11 @@
-import ClientConstants as CC
-import ClientImportFileSeeds
-import ClientImportOptions
-import ClientTags
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
+from . import ClientConstants as CC
+from . import ClientImportFileSeeds
+from . import ClientImportOptions
+from . import ClientTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
 import os
 import unittest
 from mock import patch
@@ -29,7 +29,7 @@ class TestCheckerOptions( unittest.TestCase ):
         
         for i in range( 50 ):
             
-            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).hex()
             
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
@@ -40,7 +40,7 @@ class TestCheckerOptions( unittest.TestCase ):
         
         for i in range( 50 ):
             
-            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).hex()
             
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
@@ -79,7 +79,7 @@ class TestCheckerOptions( unittest.TestCase ):
         
         for i in range( 8640 ):
             
-            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).hex()
             
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
@@ -92,7 +92,7 @@ class TestCheckerOptions( unittest.TestCase ):
         
         for i in range( 10 ):
             
-            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).hex()
             
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
@@ -123,10 +123,10 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertFalse( slow_checker_options.IsDead( file_seed_cache, last_check_time ) )
         self.assertTrue( callous_checker_options.IsDead( file_seed_cache, last_check_time ) )
         
-        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), u'at last check, found 50 files in previous 1 day' )
-        self.assertEqual( fast_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), u'at last check, found 50 files in previous 1 day' )
-        self.assertEqual( slow_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), u'at last check, found 50 files in previous 1 day' )
-        self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), u'at last check, found 0 files in previous 1 minute' )
+        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), 'at last check, found 50 files in previous 1 day' )
+        self.assertEqual( fast_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), 'at last check, found 50 files in previous 1 day' )
+        self.assertEqual( slow_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), 'at last check, found 50 files in previous 1 day' )
+        self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), 'at last check, found 0 files in previous 1 minute' )
         
         self.assertEqual( regular_checker_options.GetNextCheckTime( file_seed_cache, last_check_time, 0 ), last_check_time + 8640 )
         self.assertEqual( fast_checker_options.GetNextCheckTime( file_seed_cache, last_check_time, 0 ), last_check_time + 3456 )
@@ -138,7 +138,7 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertFalse( regular_checker_options.IsDead( bare_file_seed_cache, last_check_time ) )
         self.assertTrue( callous_checker_options.IsDead( bare_file_seed_cache, last_check_time ) )
         
-        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( bare_file_seed_cache, last_check_time ), u'at last check, found 1 files in previous 1 day' )
+        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( bare_file_seed_cache, last_check_time ), 'at last check, found 1 files in previous 1 day' )
         
         self.assertEqual( regular_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time, 0 ), last_check_time + 86400 )
         self.assertEqual( fast_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time, 0 ), last_check_time + 86400 )
@@ -152,8 +152,8 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertFalse( slow_checker_options.IsDead( busy_file_seed_cache, last_check_time ) )
         self.assertFalse( callous_checker_options.IsDead( busy_file_seed_cache, last_check_time ) )
         
-        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( busy_file_seed_cache, last_check_time ), u'at last check, found 8,640 files in previous 1 day' )
-        self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( busy_file_seed_cache, last_check_time ), u'at last check, found 6 files in previous 1 minute' )
+        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( busy_file_seed_cache, last_check_time ), 'at last check, found 8,640 files in previous 1 day' )
+        self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( busy_file_seed_cache, last_check_time ), 'at last check, found 6 files in previous 1 minute' )
         
         self.assertEqual( regular_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time, 0 ), last_check_time + 50 )
         self.assertEqual( fast_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time, 0 ), last_check_time + 30 )
@@ -168,10 +168,10 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertFalse( slow_checker_options.IsDead( new_thread_file_seed_cache, last_check_time ) )
         self.assertTrue( callous_checker_options.IsDead( new_thread_file_seed_cache, last_check_time ) )
         
-        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), u'at last check, found 10 files in previous 10 minutes' )
-        self.assertEqual( fast_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), u'at last check, found 10 files in previous 10 minutes' )
-        self.assertEqual( slow_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), u'at last check, found 10 files in previous 10 minutes' )
-        self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), u'at last check, found 0 files in previous 1 minute' )
+        self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 10 files in previous 10 minutes' )
+        self.assertEqual( fast_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 10 files in previous 10 minutes' )
+        self.assertEqual( slow_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 10 files in previous 10 minutes' )
+        self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 0 files in previous 1 minute' )
         
         # these would be 360, 120, 600, but the 'don't check faster the time since last file post' bumps this up
         self.assertEqual( regular_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, 0 ), last_check_time + 600 )

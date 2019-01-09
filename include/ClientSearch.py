@@ -1,19 +1,19 @@
 import calendar
-import ClientConstants as CC
-import ClientData
-import ClientTags
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientTags
 import datetime
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
 import re
 import time
 import wx
 
-IGNORED_TAG_SEARCH_CHARACTERS = u'[](){}"\''
+IGNORED_TAG_SEARCH_CHARACTERS = '[](){}"\''
 IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : None for char in IGNORED_TAG_SEARCH_CHARACTERS }
 
 def ConvertTagToSearchable( tag ):
@@ -21,11 +21,6 @@ def ConvertTagToSearchable( tag ):
     if tag == '':
         
         return ''
-        
-    
-    if not isinstance( tag, unicode ):
-        
-        tag = HydrusData.ToUnicode( tag )
         
     
     while '**' in tag:
@@ -50,7 +45,7 @@ def ConvertEntryTextToSearchText( entry_text ):
     
     if not IsComplexWildcard( entry_text ) and not entry_text.endswith( '*' ):
         
-        entry_text = entry_text + u'*'
+        entry_text = entry_text + '*'
         
     
     return entry_text
@@ -69,7 +64,7 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates ):
             
         
     
-    matching_tags = FilterTagsBySearchText( service_key, search_text, tags_to_predicates.keys() )
+    matching_tags = FilterTagsBySearchText( service_key, search_text, list(tags_to_predicates.keys()) )
     
     matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
     
@@ -81,7 +76,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         
         regular_parts_of_s = s.split( '*' )
         
-        escaped_parts_of_s = map( re.escape, regular_parts_of_s )
+        escaped_parts_of_s = list(map( re.escape, regular_parts_of_s ))
         
         s = '.*'.join( escaped_parts_of_s )
         
@@ -107,7 +102,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
             end = '(\\s|\\Z)' # whitespace or end of string
             
         
-        return re.compile( beginning + s + end, flags = re.UNICODE )
+        return re.compile( beginning + s + end )
         
     
     re_predicate = compile_re( search_text )
@@ -129,7 +124,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         
         if not IsComplexWildcard( search_text ):
             
-            possible_tags = map( ConvertTagToSearchable, possible_tags )
+            possible_tags = list(map( ConvertTagToSearchable, possible_tags ))
             
         
         for possible_tag in possible_tags:
@@ -163,9 +158,9 @@ def IsComplexWildcard( search_text ):
     
 def SortPredicates( predicates ):
     
-    def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
+    key = lambda p: p.GetCount()
     
-    predicates.sort( cmp = cmp_func, reverse = True )
+    predicates.sort( key = key, reverse = True )
     
     return predicates
 
@@ -196,15 +191,15 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         
         serialisable_predicates = [ predicate.GetSerialisableTuple() for predicate in self._predicates ]
         
-        return ( self._file_service_key.encode( 'hex' ), self._tag_service_key.encode( 'hex' ), self._include_current_tags, self._include_pending_tags, serialisable_predicates, self._search_complete )
+        return ( self._file_service_key.hex(), self._tag_service_key.hex(), self._include_current_tags, self._include_pending_tags, serialisable_predicates, self._search_complete )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         ( file_service_key, tag_service_key, self._include_current_tags, self._include_pending_tags, serialisable_predicates, self._search_complete ) = serialisable_info
         
-        self._file_service_key = file_service_key.decode( 'hex' )
-        self._tag_service_key = tag_service_key.decode( 'hex' )
+        self._file_service_key = bytes.fromhex( file_service_key )
+        self._tag_service_key = bytes.fromhex( tag_service_key )
         
         services_manager = HG.client_controller.services_manager
         
@@ -398,7 +393,7 @@ class FileSystemPredicates( object ):
                         
                         self._common_info[ 'max_timestamp' ] = now - age
                         
-                    elif operator == u'\u2248':
+                    elif operator == '\u2248':
                         
                         self._common_info[ 'min_timestamp' ] = now - int( age * 1.15 )
                         self._common_info[ 'max_timestamp' ] = now - int( age * 0.85 )
@@ -426,7 +421,7 @@ class FileSystemPredicates( object ):
                         self._common_info[ 'min_timestamp' ] = timestamp
                         self._common_info[ 'max_timestamp' ] = timestamp + 86400
                         
-                    elif operator == u'\u2248':
+                    elif operator == '\u2248':
                         
                         self._common_info[ 'min_timestamp' ] = timestamp - 86400 * 30
                         self._common_info[ 'max_timestamp' ] = timestamp + 86400 * 30
@@ -450,7 +445,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_duration' ] = duration
                 elif operator == '>': self._common_info[ 'min_duration' ] = duration
                 elif operator == '=': self._common_info[ 'duration' ] = duration
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     if duration == 0: self._common_info[ 'duration' ] = 0
                     else:
@@ -481,7 +476,7 @@ class FileSystemPredicates( object ):
                     
                     self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
                     
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
                     self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
@@ -497,7 +492,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_size' ] = size
                 elif operator == '>': self._common_info[ 'min_size' ] = size
                 elif operator == '=': self._common_info[ 'size' ] = size
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     self._common_info[ 'min_size' ] = int( size * 0.85 )
                     self._common_info[ 'max_size' ] = int( size * 1.15 )
@@ -519,7 +514,7 @@ class FileSystemPredicates( object ):
                 
                 if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
                 elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
                     self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
@@ -533,7 +528,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_width' ] = width
                 elif operator == '>': self._common_info[ 'min_width' ] = width
                 elif operator == '=': self._common_info[ 'width' ] = width
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     if width == 0: self._common_info[ 'width' ] = 0
                     else:
@@ -553,7 +548,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
                 elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
                 elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
                     self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
@@ -567,7 +562,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_height' ] = height
                 elif operator == '>': self._common_info[ 'min_height' ] = height
                 elif operator == '=': self._common_info[ 'height' ] = height
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     if height == 0: self._common_info[ 'height' ] = 0
                     else:
@@ -585,7 +580,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_words' ] = num_words
                 elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
                 elif operator == '=': self._common_info[ 'num_words' ] = num_words
-                elif operator == u'\u2248':
+                elif operator == '\u2248':
                     
                     if num_words == 0: self._common_info[ 'num_words' ] = 0
                     else:
@@ -726,7 +721,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Predicate: ' + HydrusData.ToUnicode( ( self._predicate_type, self._value, self._inclusive, self.GetCount() ) )
+        return 'Predicate: ' + str( ( self._predicate_type, self._value, self._inclusive, self.GetCount() ) )
         
     
     def _GetSerialisableInfo( self ):
@@ -735,13 +730,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( operator, value, service_key ) = self._value
             
-            serialisable_value = ( operator, value, service_key.encode( 'hex' ) )
+            serialisable_value = ( operator, value, service_key.hex() )
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
             
             ( hash, max_hamming ) = self._value
             
-            serialisable_value = ( hash.encode( 'hex' ), max_hamming )
+            serialisable_value = ( hash.hex(), max_hamming )
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
@@ -762,7 +757,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( hash, hash_type ) = self._value
             
-            serialisable_value = ( hash.encode( 'hex' ), hash_type )
+            serialisable_value = ( hash.hex(), hash_type )
             
         else:
             
@@ -780,13 +775,13 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( operator, value, service_key ) = serialisable_value
             
-            self._value = ( operator, value, service_key.decode( 'hex' ) )
+            self._value = ( operator, value, bytes.fromhex( service_key ) )
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
             
             ( serialisable_hash, max_hamming ) = serialisable_value
             
-            self._value = ( serialisable_hash.decode( 'hex' ), max_hamming )
+            self._value = ( bytes.fromhex( serialisable_hash ), max_hamming )
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
@@ -807,7 +802,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_hash, hash_type ) = serialisable_value
             
-            self._value = ( serialisable_hash.decode( 'hex' ), hash_type )
+            self._value = ( bytes.fromhex( serialisable_hash ), hash_type )
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
             
@@ -969,9 +964,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type
         
     
-    def GetUnicode( self, with_count = True, sibling_service_key = None, render_for_user = False ):
+    def ToString( self, with_count = True, sibling_service_key = None, render_for_user = False ):
         
-        count_text = u''
+        count_text = ''
         
         if with_count:
             
@@ -981,10 +976,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._max_current_count is not None:
                     
-                    number_text += u'-' + HydrusData.ToHumanInt( self._max_current_count )
+                    number_text += '-' + HydrusData.ToHumanInt( self._max_current_count )
                     
                 
-                count_text += u' (' + number_text + u')'
+                count_text += ' (' + number_text + ')'
                 
             
             if self._min_pending_count > 0:
@@ -993,83 +988,83 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if self._max_pending_count is not None:
                     
-                    number_text += u'-' + HydrusData.ToHumanInt( self._max_pending_count )
+                    number_text += '-' + HydrusData.ToHumanInt( self._max_pending_count )
                     
                 
-                count_text += u' (+' + number_text + u')'
+                count_text += ' (+' + number_text + ')'
                 
             
         
         if self._predicate_type in HC.SYSTEM_PREDICATES:
             
-            if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING: base = u'everything'
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_INBOX: base = u'inbox'
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE: base = u'archive'
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: base = u'untagged'
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: base = u'local'
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = u'not local'
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = u'dimensions'
+            if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING: base = 'everything'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_INBOX: base = 'inbox'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE: base = 'archive'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED: base = 'untagged'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: base = 'local'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
                 
-                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = u'number of tags'
-                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = u'width'
-                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT: base = u'height'
-                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = u'number of words'
+                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = 'number of tags'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = 'width'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT: base = 'height'
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = 'number of words'
                 
                 if self._value is not None:
                     
                     ( operator, value ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ToHumanInt( value )
+                    base += ' ' + operator + ' ' + HydrusData.ToHumanInt( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
                 
-                base = u'duration'
+                base = 'duration'
                 
                 if self._value is not None:
                     
                     ( operator, value ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ConvertMillisecondsToPrettyTime( value )
+                    base += ' ' + operator + ' ' + HydrusData.ConvertMillisecondsToPrettyTime( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATIO:
                 
-                base = u'ratio'
+                base = 'ratio'
                 
                 if self._value is not None:
                     
                     ( operator, ratio_width, ratio_height ) = self._value
                     
-                    base += u' ' + operator + u' ' + str( ratio_width ) + u':' + str( ratio_height )
+                    base += ' ' + operator + ' ' + str( ratio_width ) + ':' + str( ratio_height )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
                 
-                base = u'size'
+                base = 'size'
                 
                 if self._value is not None:
                     
                     ( operator, size, unit ) = self._value
                     
-                    base += u' ' + operator + u' ' + str( size ) + HydrusData.ConvertIntToUnit( unit )
+                    base += ' ' + operator + ' ' + str( size ) + HydrusData.ConvertIntToUnit( unit )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
                 
-                base = u'limit'
+                base = 'limit'
                 
                 if self._value is not None:
                     
                     value = self._value
                     
-                    base += u' is ' + HydrusData.ToHumanInt( value )
+                    base += ' is ' + HydrusData.ToHumanInt( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
                 
-                base = u'time imported'
+                base = 'time imported'
                 
                 if self._value is not None:
                     
@@ -1092,18 +1087,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         if operator == '<':
                             
-                            pretty_operator = u'since '
+                            pretty_operator = 'since '
                             
                         elif operator == '>':
                             
-                            pretty_operator = u'before '
+                            pretty_operator = 'before '
                             
-                        elif operator == u'\u2248':
+                        elif operator == '\u2248':
                             
-                            pretty_operator = u'around '
+                            pretty_operator = 'around '
                             
                         
-                        base += u': ' + pretty_operator + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta ) + u' ago'
+                        base += ': ' + pretty_operator + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta ) + ' ago'
                         
                     elif age_type == 'date':
                         
@@ -1116,35 +1111,35 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         if operator == '<':
                             
-                            pretty_operator = u'before '
+                            pretty_operator = 'before '
                             
                         elif operator == '>':
                             
-                            pretty_operator = u'since '
+                            pretty_operator = 'since '
                             
                         elif operator == '=':
                             
-                            pretty_operator = u'on the day of '
+                            pretty_operator = 'on the day of '
                             
-                        elif operator == u'\u2248':
+                        elif operator == '\u2248':
                             
-                            pretty_operator = u'a month either side of '
+                            pretty_operator = 'a month either side of '
                             
                         
                         # convert this GMT TIMESTAMP to a pretty local string
-                        base += u': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = False )
+                        base += ': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = False )
                         
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:
                 
-                base = u'num_pixels'
+                base = 'num_pixels'
                 
                 if self._value is not None:
                     
                     ( operator, num_pixels, unit ) = self._value
                     
-                    base += u' ' + operator + u' ' + str( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
+                    base += ' ' + operator + ' ' + str( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
@@ -1160,18 +1155,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
                 
-                base = u'hash'
+                base = 'hash'
                 
                 if self._value is not None:
                     
                     ( hash, hash_type ) = self._value
                     
-                    base = hash_type + ' hash is ' + hash.encode( 'hex' )
+                    base = hash_type + ' hash is ' + hash.hex()
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
                 
-                base = u'mime'
+                base = 'mime'
                 
                 if self._value is not None:
                     
@@ -1202,12 +1197,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         mime_text = ', '.join( [ HC.mime_string_lookup[ mime ] for mime in mimes ] )
                         
                     
-                    base += u' is ' + mime_text
+                    base += ' is ' + mime_text
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
                 
-                base = u'rating'
+                base = 'rating'
                 
                 if self._value is not None:
                     
@@ -1219,7 +1214,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         service_type = service.GetServiceType()
                         
-                        pretty_value = HydrusData.ToUnicode( value )
+                        pretty_value = str( value )
                         
                         if service_type == HC.LOCAL_RATING_LIKE:
                             
@@ -1260,23 +1255,23 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                                 
                             
                         
-                        base += u' for ' + service.GetName() + u' ' + operator + u' ' + pretty_value
+                        base += ' for ' + service.GetName() + ' ' + operator + ' ' + pretty_value
                         
                     except HydrusExceptions.DataMissing:
                         
-                        base = u'system:unknown rating service system predicate'
+                        base = 'system:unknown rating service system predicate'
                         
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
                 
-                base = u'similar to'
+                base = 'similar to'
                 
                 if self._value is not None:
                     
                     ( hash, max_hamming ) = self._value
                     
-                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + str( max_hamming )
+                    base += ' ' + hash.hex() + ' using max hamming of ' + str( max_hamming )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
@@ -1289,11 +1284,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, current_or_pending, service_key ) = self._value
                     
-                    if operator == True: base = u'is'
-                    else: base = u'is not'
+                    if operator == True: base = 'is'
+                    else: base = 'is not'
                     
-                    if current_or_pending == HC.CONTENT_STATUS_PENDING: base += u' pending to '
-                    else: base += u' currently in '
+                    if current_or_pending == HC.CONTENT_STATUS_PENDING: base += ' pending to '
+                    else: base += ' currently in '
                     
                     try:
                         
@@ -1303,7 +1298,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     except HydrusExceptions.DataMissing:
                         
-                        base = u'unknown file service system predicate'
+                        base = 'unknown file service system predicate'
                         
                     
                 
@@ -1326,7 +1321,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         n_text = namespace
                         
                     
-                    if operator == u'\u2248':
+                    if operator == '\u2248':
                         
                         o_text = ' about '
                         
@@ -1350,7 +1345,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, num_relationships, dupe_type ) = self._value
                     
-                    if operator == u'\u2248':
+                    if operator == '\u2248':
                         
                         o_text = ' about '
                         
@@ -1367,7 +1362,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         o_text = ' '
                         
                     
-                    base += u' - has' + o_text + HydrusData.ToHumanInt( num_relationships ) + u' ' + HC.duplicate_type_string_lookup[ dupe_type ]
+                    base += ' - has' + o_text + HydrusData.ToHumanInt( num_relationships ) + ' ' + HC.duplicate_type_string_lookup[ dupe_type ]
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
@@ -1421,8 +1416,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             tag = self._value
             
-            if not self._inclusive: base = u'-'
-            else: base = u''
+            if not self._inclusive: base = '-'
+            else: base = ''
             
             base += ClientTags.RenderTag( tag, render_for_user )
             
@@ -1438,7 +1433,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     sibling = ClientTags.RenderTag( sibling, render_for_user )
                     
-                    base += u' (will display as ' + sibling + ')'
+                    base += ' (will display as ' + sibling + ')'
                     
                 
             
@@ -1456,8 +1451,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             namespace = self._value
             
-            if not self._inclusive: base = u'-'
-            else: base = u''
+            if not self._inclusive: base = '-'
+            else: base = ''
             
             anything_tag = HydrusTags.CombineTag( namespace, '*anything*' )
             
@@ -1469,8 +1464,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             wildcard = self._value
             
-            if not self._inclusive: base = u'-'
-            else: base = u''
+            if not self._inclusive: base = '-'
+            else: base = ''
             
             base += wildcard
             

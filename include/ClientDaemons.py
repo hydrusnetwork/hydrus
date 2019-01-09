@@ -1,17 +1,17 @@
-import ClientImporting
-import ClientImportOptions
-import ClientImportFileSeeds
-import ClientPaths
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusNATPunch
-import HydrusPaths
-import HydrusSerialisable
-import HydrusThreading
-import ClientConstants as CC
+from . import ClientImporting
+from . import ClientImportOptions
+from . import ClientImportFileSeeds
+from . import ClientPaths
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusNATPunch
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusThreading
+from . import ClientConstants as CC
 import random
 import threading
 import time

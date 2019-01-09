@@ -1,15 +1,15 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientGUIListBoxes
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientGUIListBoxes
 import collections
-import HydrusConstants as HC
+from . import HydrusConstants as HC
 import os
 import random
-import TestConstants
+from . import TestConstants
 import time
 import unittest
 import wx
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 
 def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
@@ -103,12 +103,12 @@ class TestListBoxes( unittest.TestCase ):
             
             all_clickable_indices = GetAllClickableIndices( panel )
             
-            self.assertEqual( len( all_clickable_indices.keys() ), len( terms ) )
-            self.assertEqual( set( all_clickable_indices.keys() ), set( range( len( all_clickable_indices.keys() ) ) ) )
+            self.assertEqual( len( list(all_clickable_indices.keys()) ), len( terms ) )
+            self.assertEqual( set( all_clickable_indices.keys() ), set( range( len( list(all_clickable_indices.keys()) ) ) ) )
             
             #
             
-            for ( index, y ) in all_clickable_indices.items():
+            for ( index, y ) in list(all_clickable_indices.items()):
                 
                 click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
                 
@@ -144,9 +144,9 @@ class TestListBoxes( unittest.TestCase ):
             
             
             
-            if len( all_clickable_indices.keys() ) > 2:
+            if len( list(all_clickable_indices.keys()) ) > 2:
                 
-                indices = random.sample( all_clickable_indices.keys(), len( all_clickable_indices.keys() ) - 1 )
+                indices = random.sample( list(all_clickable_indices.keys()), len( list(all_clickable_indices.keys()) ) - 1 )
                 
                 for index in indices:
                     
@@ -167,11 +167,11 @@ class TestListBoxes( unittest.TestCase ):
             
             #
             
-            random_index = random.choice( all_clickable_indices.keys() )
+            random_index = random.choice( list(all_clickable_indices.keys()) )
             
             while ordered_terms[ random_index ][0] in panel.PROTECTED_TERMS:
                 
-                random_index = random.choice( all_clickable_indices.keys() )
+                random_index = random.choice( list(all_clickable_indices.keys()) )
                 
             
             del new_namespace_colours[ ordered_terms[ random_index ][0] ]

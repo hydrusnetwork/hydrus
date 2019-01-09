@@ -1,10 +1,10 @@
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import HydrusConstants as HC
-import HydrusData
-import HydrusGlobals as HG
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import wx
 
 FLASHWIN_OK = False
@@ -26,7 +26,7 @@ def ConvertKeyEventToShortcut( event ):
     
     key = event.KeyCode
     
-    if ClientData.OrdIsSensibleASCII( key ) or key in CC.wxk_code_string_lookup.keys():
+    if ClientData.OrdIsSensibleASCII( key ) or key in list(CC.wxk_code_string_lookup.keys()):
         
         modifiers = []
         
@@ -179,11 +179,6 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         self._shortcut_type = shortcut_type
         self._shortcut_key = shortcut_key
         self._modifiers = modifiers
-        
-    
-    def __cmp__( self, other ):
-        
-        return cmp( self.ToString(), other.ToString() )
         
     
     def __eq__( self, other ):
@@ -442,7 +437,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __iter__( self ):
         
-        for ( shortcut, command ) in self._shortcuts_to_commands.items():
+        for ( shortcut, command ) in list(self._shortcuts_to_commands.items()):
             
             yield ( shortcut, command )
             
@@ -455,7 +450,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        return [ ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in self._shortcuts_to_commands.items() ]
+        return [ ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in list(self._shortcuts_to_commands.items()) ]
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -500,7 +495,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 else:
                     
-                    service_key = serialisable_service_key.decode( 'hex' )
+                    service_key = bytes.fromhex( serialisable_service_key )
                     
                     if not services_manager.ServiceExists( service_key ):
                         
@@ -534,7 +529,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
                 shortcuts_to_commands[ shortcut ] = command
                 
             
-            new_serialisable_info = ( ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in shortcuts_to_commands.items() )
+            new_serialisable_info = ( ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in list(shortcuts_to_commands.items()) )
             
             return ( 2, new_serialisable_info )
             

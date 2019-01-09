@@ -1,6 +1,6 @@
-import ClientGUIScrolledPanelsEdit
-import ClientGUITopLevelWindows
-import HydrusExceptions
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUITopLevelWindows
+from . import HydrusExceptions
 import wx
 
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):

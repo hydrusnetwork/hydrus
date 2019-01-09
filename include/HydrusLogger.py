@@ -1,5 +1,5 @@
-import HydrusConstants as HC
-import HydrusData
+from . import HydrusConstants as HC
+from . import HydrusData
 import os
 import sys
 import threading
@@ -30,8 +30,8 @@ class HydrusLogger( object ):
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         
-        sys.stdout = self._previous_sys_stdout
-        sys.stderr = self._previous_sys_stderr
+        #sys.stdout = self._previous_sys_stdout
+        #sys.stderr = self._previous_sys_stderr
         
         self._CloseLog()
         
@@ -117,21 +117,17 @@ class HydrusLogger( object ):
             
             if not self._problem_with_previous_stdout:
                 
-                stdout_message = HydrusData.ToByteString( message.replace( u'\u2026', '...' ) )
-                
                 try:
                     
-                    self._previous_sys_stdout.write( stdout_message )
+                    self._previous_sys_stdout.write( message )
                     
-                except IOError:
+                except:
                     
                     self._problem_with_previous_stdout = True
                     
                 
             
-            log_message = HydrusData.ToByteString( message )
-            
-            self._log_file.write( log_message )
+            self._log_file.write( message )
             
         
     

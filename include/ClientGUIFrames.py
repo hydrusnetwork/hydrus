@@ -1,9 +1,9 @@
-import ClientConstants as CC
-import ClientGUICommon
-import ClientGUITopLevelWindows
-import HydrusConstants as HC
-import HydrusData
-import HydrusGlobals as HG
+from . import ClientConstants as CC
+from . import ClientGUICommon
+from . import ClientGUITopLevelWindows
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusGlobals as HG
 import os
 import wx
 
@@ -35,7 +35,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         if key_type == 'registration': prepend = 'r'
         else: prepend = ''
         
-        self._text = os.linesep.join( [ prepend + key.encode( 'hex' ) for key in self._keys ] )
+        self._text = os.linesep.join( [ prepend + key.hex() for key in self._keys ] )
         
         self._text_ctrl.SetValue( self._text )
         
@@ -72,11 +72,11 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
+                path = dlg.GetPath()
                 
-                with open( path, 'wb' ) as f:
+                with open( path, 'w' ) as f:
                     
-                    f.write( HydrusData.ToByteString( self._text ) )
+                    f.write( self._text )
                     
                 
             

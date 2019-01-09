@@ -1,9 +1,10 @@
-import ClientConstants as CC
-import ClientData
-import HydrusConstants as HC
-import HydrusGlobals as HG
-import HydrusNetworking
-import HydrusSerialisable
+from . import ClientConstants as CC
+from . import ClientData
+from . import HydrusConstants as HC
+from . import HydrusGlobals as HG
+from . import HydrusNetworking
+from . import HydrusSerialisable
+import re
 import os
 import wx
 
@@ -47,8 +48,8 @@ def GetClientDefaultOptions():
     
     regex_favourites = []
     
-    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', u'\u2026' + r'0074.jpg -> 74' ) )
-    regex_favourites.append( ( r'[^' + os.path.sep.encode( 'string_escape' ) + r']+(?=\s-)', r'E:\my collection\author name - v4c1p0074.jpg -> author name' ) )
+    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', '\u2026' + r'0074.jpg -> 74' ) )
+    regex_favourites.append( ( r'[^' + re.escape( os.path.sep ) + r']+(?=\s-)', r'E:\my collection\author name - v4c1p0074.jpg -> author name' ) )
     
     options[ 'regex_favourites' ] = regex_favourites
     
@@ -64,7 +65,7 @@ def GetClientDefaultOptions():
     system_predicates[ 'size' ] = ( '<', 200, 1024 )
     system_predicates[ 'width' ] = ( '=', 1920 )
     system_predicates[ 'num_words' ] = ( '<', 30000 )
-    system_predicates[ 'num_pixels' ] = ( u'\u2248', 2, 1000000 )
+    system_predicates[ 'num_pixels' ] = ( '\u2248', 2, 1000000 )
     system_predicates[ 'hamming_distance' ] = 5
     
     options[ 'file_system_predicates' ] = system_predicates
@@ -109,7 +110,7 @@ def GetClientDefaultOptions():
     
 def GetDefaultCheckerOptions( name ):
     
-    import ClientImportOptions
+    from . import ClientImportOptions
     
     if name == 'thread':
         
@@ -169,13 +170,13 @@ def GetDefaultGUGs():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'gugs' )
     
-    import ClientNetworkingDomain
+    from . import ClientNetworkingDomain
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) )
     
 def GetDefaultNGUGs():
     
-    import ClientNetworkingDomain
+    from . import ClientNetworkingDomain
     
     gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.NestedGalleryURLGenerator ) ]
     
@@ -183,7 +184,7 @@ def GetDefaultNGUGs():
     
 def GetDefaultSingleGUGs():
     
-    import ClientNetworkingDomain
+    from . import ClientNetworkingDomain
     
     gugs = [ gug for gug in GetDefaultGUGs() if isinstance( gug, ClientNetworkingDomain.GalleryURLGenerator ) ]
     
@@ -287,7 +288,7 @@ def GetDefaultLoginScripts():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'login_scripts' )
     
-    import ClientNetworkingLogin
+    from . import ClientNetworkingLogin
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingLogin.LoginScriptDomain, ) )
     
@@ -295,13 +296,13 @@ def GetDefaultParsers():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
     
-    import ClientParsing
+    from . import ClientParsing
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.PageParser, ) )
     
 def GetDefaultScriptRows():
     
-    import HydrusData
+    from . import HydrusData
     
     script_info = []
     
@@ -312,7 +313,7 @@ def GetDefaultScriptRows():
     
 def GetDefaultShortcuts():
     
-    import ClientGUIShortcuts
+    from . import ClientGUIShortcuts
     
     shortcuts = []
     
@@ -436,7 +437,7 @@ def GetDefaultSimpleDownloaderFormulae():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'simple_downloader_formulae' )
     
-    import ClientParsing
+    from . import ClientParsing
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
     
@@ -444,7 +445,7 @@ def GetDefaultURLMatches():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
     
-    import ClientNetworkingDomain
+    from . import ClientNetworkingDomain
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLMatch, ) )
     
@@ -457,7 +458,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
     default_objects = []
     
-    import ClientSerialisable
+    from . import ClientSerialisable
     
     for filename in os.listdir( dir_path ):
         
@@ -467,7 +468,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
             
             payload = ClientSerialisable.LoadFromPng( path )
             
-            obj = HydrusSerialisable.CreateFromNetworkString( payload )
+            obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
             
             if isinstance( obj, HydrusSerialisable.SerialisableList ):
                 
@@ -496,7 +497,7 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
 def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
-    import ClientNetworkingContexts
+    from . import ClientNetworkingContexts
     
     KB = 1024
     MB = 1024 ** 2
@@ -583,8 +584,8 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    import ClientNetworkingContexts
-    import ClientNetworkingDomain
+    from . import ClientNetworkingContexts
+    from . import ClientNetworkingDomain
     
     custom_header_dict = {}
     

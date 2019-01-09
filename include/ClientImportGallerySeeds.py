@@ -1,20 +1,19 @@
-import ClientConstants as CC
-import ClientImporting
-import ClientNetworkingDomain
-import ClientParsing
+from . import ClientConstants as CC
+from . import ClientImporting
+from . import ClientNetworkingDomain
+from . import ClientParsing
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
 import itertools
 import os
 import threading
 import time
 import traceback
-import urlparse
 
 def GenerateGallerySeedLogStatus( statuses_to_counts ):
     
@@ -161,11 +160,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         if exception is not None:
             
-            first_line = HydrusData.ToUnicode( exception ).split( os.linesep )[0]
+            first_line = str( exception ).split( os.linesep )[0]
             
-            note = first_line + u'\u2026 (Copy note to see full error)'
+            note = first_line + '\u2026 (Copy note to see full error)'
             note += os.linesep
-            note += HydrusData.ToUnicode( traceback.format_exc() )
+            note += traceback.format_exc()
             
             HydrusData.Print( 'Error when processing ' + self.url + ' !' )
             HydrusData.Print( traceback.format_exc() )
@@ -249,18 +248,18 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 network_job.WaitUntilDone()
                 
             
-            data = network_job.GetContent()
+            parsing_text = network_job.GetContentText()
             
             parsing_context = {}
             
             parsing_context[ 'gallery_url' ] = self.url
             parsing_context[ 'url' ] = url_to_check
             
-            all_parse_results = parser.Parse( parsing_context, data )
+            all_parse_results = parser.Parse( parsing_context, parsing_text )
             
             if len( all_parse_results ) == 0:
                 
-                raise HydrusExceptions.VetoException( 'No data found in document!' )
+                raise HydrusExceptions.VetoException( 'The parser found nothing in the document!' )
                 
             
             title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
@@ -338,7 +337,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                             
                             note += ' - Attempted to generate a next gallery page url, but failed!'
                             note += os.linesep
-                            note += HydrusData.ToUnicode( traceback.format_exc() )
+                            note += traceback.format_exc()
                             
                         
                     
@@ -392,7 +391,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             status = CC.STATUS_VETOED
             
-            note = HydrusData.ToUnicode( e )
+            note = str( e )
             
             self.SetStatus( status, note = note )
             

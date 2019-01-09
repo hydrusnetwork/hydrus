@@ -1,20 +1,19 @@
-import ClientConstants as CC
-import ClientData
-import ClientDragDrop
-import ClientGUICanvas
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIListBoxes
-import ClientGUIMenus
-import ClientGUITopLevelWindows
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsManagement
-import ClientMedia
-import HydrusConstants as HC
-import HydrusData
-import HydrusGlobals as HG
-import HydrusSerialisable
-import urlparse
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDragDrop
+from . import ClientGUICanvas
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIListBoxes
+from . import ClientGUIMenus
+from . import ClientGUITopLevelWindows
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsManagement
+from . import ClientMedia
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
 import os
 import wx
 
@@ -543,7 +542,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -614,7 +613,7 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
         
         FullscreenHoverFrameTop._PopulateLeftButtons( self )
         
-        self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ), self._canvas_key )
+        self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ), self._canvas_key )
         self._skip_button.SetToolTip( 'skip' )
         
         self._top_hbox.Add( self._skip_button, CC.FLAGS_VCENTER )
@@ -635,7 +634,7 @@ class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
         self._next_button.SetToolTip( 'next' )
         
         self._top_hbox.Add( self._previous_button, CC.FLAGS_VCENTER )
@@ -978,7 +977,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 # ratings updates do not change the shape of this hover but file changes of several kinds do
                 
@@ -1060,7 +1059,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     

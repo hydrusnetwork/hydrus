@@ -1,35 +1,35 @@
-import ClientConstants as CC
-import ClientDefaults
-import ClientDownloading
-import ClientGUIACDropdown
-import ClientGUICommon
-import ClientGUIControls
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIFileSeedCache
-import ClientGUIGallerySeedLog
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIMenus
-import ClientGUIOptionsPanels
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIShortcuts
-import ClientGUITime
-import ClientGUITopLevelWindows
-import ClientImporting
-import ClientImportFileSeeds
-import ClientImportGallerySeeds
-import ClientImportLocal
-import ClientImportOptions
+from . import ClientConstants as CC
+from . import ClientDefaults
+from . import ClientDownloading
+from . import ClientGUIACDropdown
+from . import ClientGUICommon
+from . import ClientGUIControls
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIFileSeedCache
+from . import ClientGUIGallerySeedLog
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIMenus
+from . import ClientGUIOptionsPanels
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIShortcuts
+from . import ClientGUITime
+from . import ClientGUITopLevelWindows
+from . import ClientImporting
+from . import ClientImportFileSeeds
+from . import ClientImportGallerySeeds
+from . import ClientImportLocal
+from . import ClientImportOptions
 import collections
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
-import HydrusText
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusText
 import os
 import re
 import wx
@@ -359,7 +359,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
                 ( namespace, regex ) = old_data
                 
-                import ClientGUIDialogs
+                from . import ClientGUIDialogs
                 
                 with ClientGUIDialogs.DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                     
@@ -390,13 +390,13 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
                 try:
                     
-                    re.compile( regex, flags = re.UNICODE )
+                    re.compile( regex )
                     
                 except Exception as e:
                     
                     text = 'That regex would not compile!'
                     text += os.linesep * 2
-                    text += HydrusData.ToUnicode( e )
+                    text += str( e )
                     
                     wx.MessageBox( text )
                     
@@ -405,7 +405,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
                 self._regexes.Append( regex )
                 
-                self._regex_box.Clear()
+                self._regex_box.ChangeValue( '' )
                 
                 self._refresh_callable()
                 
@@ -413,7 +413,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         def EventAddQuickNamespace( self, event ):
             
-            import ClientGUIDialogs
+            from . import ClientGUIDialogs
             
             with ClientGUIDialogs.DialogInputNamespaceRegex( self ) as dlg:
                 
@@ -583,7 +583,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._filename_checkbox.SetValue( add_filename_boolean )
             self._filename_namespace.SetValue( add_filename_namespace )
             
-            for ( index, ( dir_boolean, dir_namespace ) ) in directory_dict.items():
+            for ( index, ( dir_boolean, dir_namespace ) ) in list(directory_dict.items()):
                 
                 ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
                 
@@ -670,7 +670,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                wx.MessageBox( str( e ) )
                 
                 return
                 
@@ -686,7 +686,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                wx.MessageBox( str( e ) )
                 
                 return
                 
@@ -832,7 +832,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             directories_dict = {}
             
-            for ( index, ( dir_checkbox, dir_namespace_textctrl ) ) in self._directory_namespace_controls.items():
+            for ( index, ( dir_checkbox, dir_namespace_textctrl ) ) in list(self._directory_namespace_controls.items()):
                 
                 directories_dict[ index ] = ( dir_checkbox.GetValue(), dir_namespace_textctrl.GetValue() )
                 
@@ -1114,9 +1114,9 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             self._location_failed.SetPath( action_locations[ CC.STATUS_ERROR ] )
             
         
-        good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in tag_service_keys_to_filename_tagging_options.items() if HG.client_controller.services_manager.ServiceExists( service_key ) }
+        good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in list(tag_service_keys_to_filename_tagging_options.items()) if HG.client_controller.services_manager.ServiceExists( service_key ) }
         
-        self._filename_tagging_options.AddDatas( good_tag_service_keys_to_filename_tagging_options.items() )
+        self._filename_tagging_options.AddDatas( list(good_tag_service_keys_to_filename_tagging_options.items()) )
         
         self._filename_tagging_options.Sort()
         
@@ -1426,7 +1426,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._CheckValid()
         
         name = self._name.GetValue()
-        path = HydrusData.ToUnicode( self._path.GetPath() )
+        path = self._path.GetPath()
         mimes = self._mimes.GetValue()
         file_import_options = self._file_import_options.GetValue()
         tag_import_options = self._tag_import_options.GetValue()
@@ -1437,25 +1437,25 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] = self._action_successful.GetChoice()
         if actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_SUCCESSFUL_AND_NEW ] = HydrusData.ToUnicode( self._location_successful.GetPath() )
+            action_locations[ CC.STATUS_SUCCESSFUL_AND_NEW ] = self._location_successful.GetPath()
             
         
         actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = self._action_redundant.GetChoice()
         if actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = HydrusData.ToUnicode( self._location_redundant.GetPath() )
+            action_locations[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = self._location_redundant.GetPath()
             
         
         actions[ CC.STATUS_DELETED ] = self._action_deleted.GetChoice()
         if actions[ CC.STATUS_DELETED] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_DELETED ] = HydrusData.ToUnicode( self._location_deleted.GetPath() )
+            action_locations[ CC.STATUS_DELETED ] = self._location_deleted.GetPath()
             
         
         actions[ CC.STATUS_ERROR ] = self._action_failed.GetChoice()
         if actions[ CC.STATUS_ERROR ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_ERROR ] = HydrusData.ToUnicode( self._location_failed.GetPath() )
+            action_locations[ CC.STATUS_ERROR ] = self._location_failed.GetPath()
             
         
         period = self._period.GetValue()
@@ -1529,7 +1529,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( service_key, page_of_paths_to_tags ) = page.GetInfo()
             
-            for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_key ] = tags
+            for ( path, tags ) in list(page_of_paths_to_tags.items()): paths_to_tags[ path ][ service_key ] = tags
             
         
         return paths_to_tags

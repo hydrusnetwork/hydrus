@@ -1,6 +1,6 @@
-import ClientConstants as CC
-import ClientGUIShortcuts
-import ClientGUITopLevelWindows
+from . import ClientConstants as CC
+from . import ClientGUIShortcuts
+from . import ClientGUITopLevelWindows
 import wx
 import wx.lib.scrolledpanel
 

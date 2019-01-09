@@ -1,17 +1,17 @@
-import ClientConstants as CC
-import ClientGUICommon
-import ClientCaches
-import ClientDefaults
-import ClientGUIDialogs
-import ClientImporting
-import ClientTags
+from . import ClientConstants as CC
+from . import ClientGUICommon
+from . import ClientCaches
+from . import ClientDefaults
+from . import ClientGUIDialogs
+from . import ClientImporting
+from . import ClientTags
 import collections
-import HydrusConstants as HC
-import HydrusData
+from . import HydrusConstants as HC
+from . import HydrusData
 import os
 import wx
 import wx.lib.masked.timectrl
-import HydrusGlobals as HG
+from . import HydrusGlobals as HG
 
 class OptionsPanel( wx.Panel ):
     
@@ -86,9 +86,9 @@ class OptionsPanelMimes( OptionsPanel ):
     
     def _UpdateMimeGroupCheckboxes( self ):
         
-        for ( mime_group, mg_checkbox ) in self._mime_groups_to_checkboxes.items():
+        for ( mime_group, mg_checkbox ) in list(self._mime_groups_to_checkboxes.items()):
             
-            respective_checkbox_values = [ m_checkbox.GetValue() for ( mime, m_checkbox ) in self._mimes_to_checkboxes.items() if mime in mime_group ]
+            respective_checkbox_values = [ m_checkbox.GetValue() for ( mime, m_checkbox ) in list(self._mimes_to_checkboxes.items()) if mime in mime_group ]
             
             all_true = False not in respective_checkbox_values
             
@@ -106,14 +106,14 @@ class OptionsPanelMimes( OptionsPanel ):
         
         # this is a commandevent, which won't give up the checkbox object, so we have to do some jiggery pokery
         
-        for ( mime_group, mg_checkbox ) in self._mime_groups_to_checkboxes.items():
+        for ( mime_group, mg_checkbox ) in list(self._mime_groups_to_checkboxes.items()):
             
             expected_value = self._mime_groups_to_values[ mime_group ]
             actual_value = mg_checkbox.GetValue()
             
             if actual_value != expected_value:
                 
-                for ( mime, m_checkbox ) in self._mimes_to_checkboxes.items():
+                for ( mime, m_checkbox ) in list(self._mimes_to_checkboxes.items()):
                     
                     if mime in mime_group:
                         
@@ -128,14 +128,14 @@ class OptionsPanelMimes( OptionsPanel ):
     
     def GetValue( self ):
         
-        mimes = tuple( [ mime for ( mime, checkbox ) in self._mimes_to_checkboxes.items() if checkbox.GetValue() == True ] )
+        mimes = tuple( [ mime for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()) if checkbox.GetValue() == True ] )
         
         return mimes
         
     
     def SetValue( self, mimes ):
         
-        for ( mime, checkbox ) in self._mimes_to_checkboxes.items():
+        for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()):
             
             if mime in mimes:
                 

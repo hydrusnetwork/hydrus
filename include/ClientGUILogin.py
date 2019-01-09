@@ -1,37 +1,37 @@
-import ClientConstants as CC
-import ClientData
-import ClientDefaults
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIDialogsQuick
-import ClientGUIMenus
-import ClientGUIControls
-import ClientGUIListBoxes
-import ClientGUIListCtrl
-import ClientGUIParsing
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUISerialisable
-import ClientGUITopLevelWindows
-import ClientImporting
-import ClientNetworking
-import ClientNetworkingBandwidth
-import ClientNetworkingContexts
-import ClientNetworkingDomain
-import ClientNetworkingLogin
-import ClientNetworkingJobs
-import ClientNetworkingSessions
-import ClientParsing
-import ClientPaths
-import ClientSerialisable
-import ClientThreading
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import HydrusSerialisable
-import HydrusTags
-import HydrusText
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientDefaults
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
+from . import ClientGUIMenus
+from . import ClientGUIControls
+from . import ClientGUIListBoxes
+from . import ClientGUIListCtrl
+from . import ClientGUIParsing
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUISerialisable
+from . import ClientGUITopLevelWindows
+from . import ClientImporting
+from . import ClientNetworking
+from . import ClientNetworkingBandwidth
+from . import ClientNetworkingContexts
+from . import ClientNetworkingDomain
+from . import ClientNetworkingLogin
+from . import ClientNetworkingJobs
+from . import ClientNetworkingSessions
+from . import ClientParsing
+from . import ClientPaths
+from . import ClientSerialisable
+from . import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import HydrusSerialisable
+from . import HydrusTags
+from . import HydrusText
 import itertools
 import os
 import re
@@ -115,7 +115,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    st_label = string_match.ToUnicode()
+                    st_label = string_match.ToString()
                     
                 
             else:
@@ -124,13 +124,13 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     credential_definition.Test( value )
                     
-                    st_label = u'looks good \u2713'
+                    st_label = 'looks good \u2713'
                     
                     colour = ( 0, 127, 0 )
                     
                 except Exception as e:
                     
-                    st_label = HydrusData.ToUnicode( e )
+                    st_label = str( e )
                     
                 
             
@@ -161,7 +161,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except Exception as e:
                     
-                    veto_errors.append( 'For ' + name + ': ' + HydrusData.ToUnicode( e ) )
+                    veto_errors.append( 'For ' + name + ': ' + str( e ) )
                     
                 
             
@@ -293,7 +293,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         listctrl_data = []
         
-        for ( login_domain, ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) ) in domains_to_login_info.items():
+        for ( login_domain, ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) ) in list(domains_to_login_info.items()):
             
             credentials_tuple = tuple( credentials.items() )
             
@@ -455,12 +455,12 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             validity_error_text = ''
             
             # hacky: if there are creds, is at least one not empty string?
-            creds_are_good = len( credentials ) == 0 or True in ( value != '' for value in credentials.values() )
+            creds_are_good = len( credentials ) == 0 or True in ( value != '' for value in list(credentials.values()) )
             
         except HydrusExceptions.ValidationException as e:
             
             validity = ClientNetworkingLogin.VALIDITY_INVALID
-            validity_error_text = HydrusData.ToUnicode( e )
+            validity_error_text = str( e )
             
             creds_are_good = False
             
@@ -847,12 +847,12 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 validity_error_text = ''
                 
                 # hacky: if there are creds, is at least one not empty string?
-                creds_are_good = len( credentials ) == 0 or True in ( value != '' for value in credentials.values() )
+                creds_are_good = len( credentials ) == 0 or True in ( value != '' for value in list(credentials.values()) )
                 
             except HydrusExceptions.ValidationException as e:
                 
                 validity = ClientNetworkingLogin.VALIDITY_INVALID
-                validity_error_text = HydrusData.ToUnicode( e )
+                validity_error_text = str( e )
                 
                 creds_are_good = False
                 
@@ -993,7 +993,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             except HydrusExceptions.ValidationException as e:
                 
                 validity = ClientNetworkingLogin.VALIDITY_INVALID
-                validity_error_text = HydrusData.ToUnicode( e )
+                validity_error_text = str( e )
                 
                 creds_are_good = False
                 
@@ -1111,7 +1111,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             except HydrusExceptions.ValidationException as e:
                 
                 validity = ClientNetworkingLogin.VALIDITY_INVALID
-                validity_error_text = HydrusData.ToUnicode( e )
+                validity_error_text = str( e )
                 
             
             scrubbed_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
@@ -1227,11 +1227,11 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except:
                 
-                self._body.SetValue( HydrusData.ToUnicode( body ) )
+                self._body.SetValue( str( body ) )
                 
             
         
-        self._data_preview.SetValue( HydrusData.ToUnicode( self._downloaded_data[:1024] ) )
+        self._data_preview.SetValue( str( self._downloaded_data[:1024] ) )
         
         self._temp_variables.SetValue( os.linesep.join( new_temp_strings ) )
         self._cookies.SetValue( os.linesep.join( new_cookie_strings ) )
@@ -1502,7 +1502,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_match = credential_definition.GetStringMatch()
         
-        value = string_match.ToUnicode()
+        value = string_match.ToString()
         
         pretty_name = name
         pretty_type_string = type_string
@@ -1640,7 +1640,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except Exception as e:
                 
-                login_result = HydrusData.ToUnicode( e )
+                login_result = str( e )
                 
                 HydrusData.ShowException( e )
                 
@@ -1872,7 +1872,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'There is a problem with this script. The reason is:'
             message += os.linesep * 2
-            message += HydrusData.ToUnicode( e )
+            message += str( e )
             message += os.linesep * 2
             message += 'Do you want to proceed with this invalid script, or go back and fix it?'
             

@@ -1,40 +1,40 @@
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals as HG
-import ClientCaches
-import ClientConstants as CC
-import ClientData
-import ClientGUICommon
-import ClientGUIDialogs
-import ClientGUIDialogsManage
-import ClientGUIDialogsQuick
-import ClientGUIHoverFrames
-import ClientGUIMedia
-import ClientGUIMenus
-import ClientGUIScrolledPanels
-import ClientGUIScrolledPanelsEdit
-import ClientGUIScrolledPanelsManagement
-import ClientGUIShortcuts
-import ClientGUITags
-import ClientGUITopLevelWindows
-import ClientMedia
-import ClientPaths
-import ClientRatings
-import ClientRendering
-import ClientTags
-import ClientThreading
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
+from . import HydrusGlobals as HG
+from . import ClientCaches
+from . import ClientConstants as CC
+from . import ClientData
+from . import ClientGUICommon
+from . import ClientGUIDialogs
+from . import ClientGUIDialogsManage
+from . import ClientGUIDialogsQuick
+from . import ClientGUIHoverFrames
+from . import ClientGUIMedia
+from . import ClientGUIMenus
+from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUIScrolledPanelsManagement
+from . import ClientGUIShortcuts
+from . import ClientGUITags
+from . import ClientGUITopLevelWindows
+from . import ClientMedia
+from . import ClientPaths
+from . import ClientRatings
+from . import ClientRendering
+from . import ClientTags
+from . import ClientThreading
 import gc
-import HydrusImageHandling
-import HydrusPaths
-import HydrusSerialisable
-import HydrusTags
+from . import HydrusImageHandling
+from . import HydrusPaths
+from . import HydrusSerialisable
+from . import HydrusTags
 import os
-import urlparse
 import wx
 
 FLASHWIN_OK = False
-
+# this is currently a bit dodgy in wxPython 4.0, so disabled for now
+'''
 if HC.PLATFORM_WINDOWS:
     
     try:
@@ -49,8 +49,7 @@ if HC.PLATFORM_WINDOWS:
         
         HydrusData.PrintException( e )
         
-
-FLASHWIN_OK = False # this is currently a bit dodgy in wxPython 4.0, so disabled for now
+'''
     
 ID_TIMER_HOVER_SHOW = wx.NewId()
 
@@ -59,7 +58,9 @@ ANIMATED_SCANBAR_CARET_WIDTH = 10
 
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
-def CalculateCanvasMediaSize( media, ( canvas_width, canvas_height ) ):
+def CalculateCanvasMediaSize( media, canvas_size ):
+    
+    ( canvas_width, canvas_height ) = canvas_size
     
     if ShouldHaveAnimationBar( media ):
         
@@ -100,9 +101,9 @@ def CalculateCanvasZooms( canvas, media, show_action ):
     
     ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.GetClientSize() )
     
-    width_zoom = canvas_width / float( media_width )
+    width_zoom = canvas_width / media_width
     
-    height_zoom = canvas_height / float( media_height )
+    height_zoom = canvas_height / media_height
     
     canvas_zoom = min( ( width_zoom, height_zoom ) )
     
@@ -239,7 +240,9 @@ def ShouldHaveAnimationBar( media ):
     
     is_native_video = media.GetMime() in HC.NATIVE_VIDEO
     
-    has_more_than_one_frame = media.GetNumFrames() > 1
+    num_frames = media.GetNumFrames()
+    
+    has_more_than_one_frame = num_frames is not None and num_frames > 1
     
     return is_animated_gif or is_animated_flash or is_native_video
     
@@ -344,7 +347,7 @@ class Animation( wx.Window ):
             # os x double buffering something?
             # apparently some os x blit bindings might just be missing
             
-            scale = float( my_width ) / frame_width
+            scale = my_width / frame_width
             
             dc.SetUserScale( scale, scale )
             
@@ -723,7 +726,7 @@ class AnimationBar( wx.Window ):
         
         ( my_width, my_height ) = self._canvas_bmp.GetSize()
         
-        return int( float( my_width - width_offset ) * float( index ) / float( self._num_frames - 1 ) )
+        return int( ( my_width - width_offset ) * index / ( self._num_frames - 1 ) )
         
     
     def _Redraw( self, dc ):
@@ -868,7 +871,7 @@ class AnimationBar( wx.Window ):
                 
                 compensated_x_position = x - ( ANIMATED_SCANBAR_CARET_WIDTH / 2 )
                 
-                proportion = float( compensated_x_position ) / float( my_width - ANIMATED_SCANBAR_CARET_WIDTH )
+                proportion = ( compensated_x_position ) / ( my_width - ANIMATED_SCANBAR_CARET_WIDTH )
                 
                 if proportion < 0: proportion = 0
                 if proportion > 1: proportion = 1
@@ -1225,7 +1228,7 @@ class Canvas( wx.Window ):
         
         if hash_type == 'sha256':
             
-            hex_hash = sha256_hash.encode( 'hex' )
+            hex_hash = sha256_hash.hex()
             
         else:
             
@@ -1233,7 +1236,7 @@ class Canvas( wx.Window ):
                 
                 ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
-                hex_hash = other_hash.encode( 'hex' )
+                hex_hash = other_hash.hex()
                 
             else:
                 
@@ -1342,8 +1345,8 @@ class Canvas( wx.Window ):
         ( my_x, my_y ) = self.GetClientSize()
         ( media_x, media_y ) = self._media_container.GetClientSize()
         
-        x_pan_distance = min( my_x / 12, media_x / 12 )
-        y_pan_distance = min( my_y / 12, media_y / 12 )
+        x_pan_distance = min( my_x // 12, media_x // 12 )
+        y_pan_distance = min( my_y // 12, media_y // 12 )
         
         delta_x = delta_x_step * x_pan_distance
         delta_y = delta_y_step * y_pan_distance
@@ -1458,8 +1461,8 @@ class Canvas( wx.Window ):
         
         ( drag_x, drag_y ) = self._total_drag_delta
         
-        x_offset = ( my_width - media_width ) / 2 + drag_x
-        y_offset = ( my_height - media_height ) / 2 + drag_y
+        x_offset = ( my_width - media_width ) // 2 + drag_x
+        y_offset = ( my_height - media_height ) // 2 + drag_y
         
         new_size = ( media_width, media_height )
         new_position = ( x_offset, y_offset )
@@ -1503,14 +1506,14 @@ class Canvas( wx.Window ):
             ( previous_width, previous_height ) = previous_media.GetResolution()
             ( current_width, current_height ) = self._current_media.GetResolution()
             
-            previous_ratio = float( previous_width ) / float( previous_height )
-            current_ratio = float( current_width ) / float( current_height )
+            previous_ratio = previous_width / previous_height
+            current_ratio = current_width / current_height
             
             if previous_ratio == current_ratio:
                 
                 # if this new one is half the size, the new zoom needs to be twice as much to be the same size
                 
-                zoom_ratio = float( previous_width ) / float( current_width )
+                zoom_ratio = previous_width / current_width
                 
                 ultimate_canvas_zoom = self._current_zoom * zoom_ratio
                 
@@ -2604,7 +2607,7 @@ class CanvasPanel( Canvas ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -2820,7 +2823,7 @@ class CanvasWithDetails( Canvas ):
                 
                 ( x, y ) = dc.GetTextExtent( title_string )
                 
-                dc.DrawText( title_string, ( client_width - x ) / 2, current_y )
+                dc.DrawText( title_string, ( client_width - x ) // 2, current_y )
                 
                 current_y += y + 3
                 
@@ -2829,7 +2832,7 @@ class CanvasWithDetails( Canvas ):
             
             ( x, y ) = dc.GetTextExtent( info_string )
             
-            dc.DrawText( info_string, ( client_width - x ) / 2, current_y )
+            dc.DrawText( info_string, ( client_width - x ) // 2, current_y )
             
             current_y += y + 3
             
@@ -2940,7 +2943,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
-            delta_distance = ( float( delta_x ) ** 2 + float( delta_y ) ** 2 ) ** 0.5
+            delta_distance = ( ( delta_x ** 2 ) + ( delta_y ** 2 ) ) ** 0.5
             
             if delta_distance > 0:
                 
@@ -3250,7 +3253,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     ( width, height ) = dc.GetTextExtent( statement )
                     
-                    dc.DrawText( statement, ( client_width - width ) / 2, current_y )
+                    dc.DrawText( statement, ( client_width - width ) // 2, current_y )
                     
                     current_y += height + 3
                     
@@ -3264,7 +3267,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._currently_fetching_pairs:
             
-            text = u'Loading pairs\u2026'
+            text = 'Loading pairs\u2026'
             
             ( width, height ) = dc.GetTextExtent( text )
             
@@ -5329,8 +5332,8 @@ class EmbedButton( wx.Window ):
         
         ( x, y ) = self.GetClientSize()
         
-        center_x = x / 2
-        center_y = y / 2
+        center_x = x // 2
+        center_y = y // 2
         radius = min( 50, center_x, center_y ) - 5
         
         new_options = HG.client_controller.new_options
@@ -5351,7 +5354,7 @@ class EmbedButton( wx.Window ):
             
             ( thumb_width, thumb_height ) = self._thumbnail_bmp.GetSize()
             
-            scale = x / float( thumb_width )
+            scale = x / thumb_width
             
             dc.SetUserScale( scale, scale )
             
@@ -5370,13 +5373,13 @@ class EmbedButton( wx.Window ):
         
         triangle_side = radius * 0.8
         
-        half_triangle_side = int( triangle_side / 2 )
+        half_triangle_side = int( triangle_side // 2 )
         
         cos30 = 0.866
         
         triangle_width = triangle_side * cos30
         
-        third_triangle_width = int( triangle_width / 3 )
+        third_triangle_width = int( triangle_width // 3 )
         
         points = []
         

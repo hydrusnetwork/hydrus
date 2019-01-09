@@ -15,11 +15,12 @@
 			</ul></p>
 			<p>But that by simply deleting the <i>libX11.so.6</i> file in the hydrus install directory, he was able to boot. I presume this meant my hydrus build was then relying on his local libX11.so, which happened to have better API compatibility. If you receive a similar error, you might like to try the same sort of thing. Let me know if you discover anything!</p>
 			<h3>what you will need</h3>
-			<p>You will need basic python experience, python 2.7 and a number of python modules. Most of it you can get through pip.</p>
+			<p>You will need basic python experience, python 3.x and a number of python modules. Most of it you can get through pip.</p>
 			<p>If you are on Linux or OS X, or if you are on Windows and have an existing python you do not want to stomp all over with new modules, I recommend you create a virtual environment:</p>
+			<p><i>Note, <a href="https://wiki.wxpython.org/wxPythonVirtualenvOnMac">trying to get wx working in a virtual environment on OS X can be a mega-pain</a>. TBH, if you want to run the client on OS X, it is a lot easier to just pip-install to your OS X's python (if that isn't a conflict with what else you are doing).</i></p>
 			<ul>
 				<li>(navigate to your hydrus extract folder)</li>
-				<li>pip install virtualenv (if you need it)</li>
+				<li>pip3 install virtualenv (if you need it)</li>
 				<li>mkdir venv</li>
 				<li>virtualenv venv</li>
 				<li>. venv/bin/activate</li>
@@ -27,28 +28,30 @@
 			<p>That '. venv/bin/activate' line turns your venv on, and will be needed every time you run the client.pyw/server.py files. You can easily tuck it into a launch script.</p>
 			<p>After that, you can go nuts with pip. I think this will do for most systems:</p>
 			<ul>
-				<li>pip install beautifulsoup4 html5lib lxml nose numpy opencv-python six Pillow psutil pycrypto pylzma PyOpenSSL PyYAML requests Send2Trash service_identity twisted</li>
+				<li>pip3 install beautifulsoup4 html5lib lxml nose numpy opencv-python six Pillow psutil pycryptodome PyOpenSSL PyYAML requests Send2Trash service_identity twisted</li>
 			</ul>
 			<p>You may want to do all that in smaller batches.</p>
 			<p>And optionally, you can add these packages:</p>
 			<ul>
 				<li>lz4 - for some memory compression in the client</li>
+				<li>pylzma - for importing rare ZWS swf files</li>
 				<li>pysocks - for socks4/socks5 proxy support (although you may want to try "requests[socks]" instead)</li>
 				<li>matplotlib - for some bandwidth graph drawing</li>
+				<li>mock httmock pyinstaller - if you want to run test.py and make a build yourself</li>
 			</ul>
 			<p>Depending on your OS, you might need something else. Ultimately, the best way to figure out if you have enough for hydrus is to just keep running client.pyw and see what it complains about missing. If you are not familiar with pip and get an error about a library already existing, know that you update an existing library with the --upgrade switch, like so:</p>
 			<ul>
-				<li>pip install --upgrade libraryname</li>
+				<li>pip3 install --upgrade libraryname</li>
 			</ul>
 			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python27\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>You will also need wxPython 4.0. This can be simple or complicated. For Windows and OS X, just get it with pip like the rest:</p>
 			<ul>
-				<li>pip install wxPython</li>
+				<li>pip3 install wxPython</li>
 			</ul>
 			<p>If you run Linux, getting wxPython from pip needs a build, which in my experience is a time-consuming and frequently failing pain. <a href="https://wxpython.org/pages/downloads/index.html">Here</a> is their page on it.</p>
 			<p>They have some wheels for common distros <a href="https://extras.wxpython.org/wxPython4/extras/linux/">here</a>, which I highly recommend trying before you attempt to build. Even if your distro is not listed, try one that looks similar. On Ubuntu 16.04, I had more luck with the gtk2 build. You'll be running a command like:</p>
 			<ul>
-				<li>pip install -f https://extras.wxpython.org/wxPython4/extras/linux/gtk2/ubuntu-16.04 wxPython</li>
+				<li>pip3 install -f https://extras.wxpython.org/wxPython4/extras/linux/gtk2/ubuntu-16.04 wxPython</li>
 			</ul>
 			<p>Even with a wheel, you might need some additional dependencies. In my different attempts to build or just get the wheel going, I needed one or more of these:</p>
 			<ul>
