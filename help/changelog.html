@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 336</h3></li>
+				<ul>
+					<li>fixed an issue where the numerical rating control was coercing all clicks to either the minimum or maximum allowable rating (e.g. 3/5 stars wasn't working)</li>
+					<li>fixed some text file and process i/o, which was handling some unicode decoding/encoding incorrectly. it now mandates utf-8 in all cases</li>
+					<li>fixed a referral url encoding problem that was stopping pixiv from downloading when the gallery page url had kana/kanji characters (from a search term)</li>
+					<li>fixed a str vs bytes issue when loading the filename tagging panel</li>
+					<li>improved some json dump deserialisation code</li>
+					<li>fixed a data-sorting issue that would appear with certain parsers in the edit parsers panel</li>
+					<li>improved video metadata parsing, fixing an issue when the video has a 'title' row containing inconvenient data</li>
+					<li>fixed some hex character processing for system preds</li>
+					<li>added an advanced check item to the gallery downloader cog icon menu that will 'bundle' multiple query-pastes to the same single gallery downloader (this is helpful if you are pasting a whole bunch of md5 queries in one go and would rather one downloader work through them sequentially than 50+ separate ones blat your CPU simultaneously)</li>
+					<li>the different kinds of importer worker threads now have several limits on the max number that can be working at once, to stop accidental ui overload when a hundred or more are in memory and all want to work at once (like after a big paste event or resuming after computer sleep). during periods of heavy import activity, the importers will now naturally space themselves out to smooth out the spike. the limits are hardcoded for now, let me know if it noticeably bottlenecks your situation</li>
+					<li>made some menubar update code a bit less complicated and reduced how often it'll spam during heavy update</li>
+					<li>the 'what to do?' buttons that appear in manage tags sometimes on a tag action got a simplification pass and are now on the new dialog system</li>
+					<li>simplified my new dialog code significantly, clearing out redundant code and classes and pushing all okable/cancellable/vetoable closing checks through one single method</li>
+					<li>wrote some new help.txt in the db dir about hanging startups</li>
+				</ul>
 				<li><h3>version 335</h3></li>
 				<ul>
 					<li class="dealwithit">important:</li>
