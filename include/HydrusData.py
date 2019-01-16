@@ -507,7 +507,7 @@ def GetSiblingProcessPorts( db_path, instance ):
     
     if os.path.exists( path ):
         
-        with open( path, 'r' ) as f:
+        with open( path, 'r', encoding = 'utf-8' ) as f:
             
             file_text = f.read()
             
@@ -618,11 +618,30 @@ def GetSubprocessHideTerminalStartupInfo():
     
     return startupinfo
     
-def GetSubprocessKWArgs( hide_terminal = True ):
+def GetSubprocessKWArgs( hide_terminal = True, text = False ):
     
     sbp_kwargs = {}
     
     sbp_kwargs[ 'env' ] = GetSubprocessEnv()
+    
+    if text:
+        
+        # probably need to override the stdXXX pipes with i/o encoding wrappers in the case of 3.5 here
+        
+        if sys.version_info.minor >= 6:
+            
+            sbp_kwargs[ 'encoding' ] = 'utf-8'
+            
+        
+        if sys.version_info.minor >= 7:
+            
+            sbp_kwargs[ 'text' ] = True
+            
+        else:
+            
+            sbp_kwargs[ 'universal_newlines' ] = True
+            
+        
     
     if hide_terminal:
         
@@ -732,7 +751,7 @@ def IsAlreadyRunning( db_path, instance ):
     
     if os.path.exists( path ):
         
-        with open( path, 'r' ) as f:
+        with open( path, 'r', encoding = 'utf-8' ) as f:
             
             file_text = f.read()
             
@@ -955,7 +974,7 @@ def RecordRunningStart( db_path, instance ):
         return
         
     
-    with open( path, 'w' ) as f:
+    with open( path, 'w', encoding = 'utf-8' ) as f:
         
         f.write( record_string )
         

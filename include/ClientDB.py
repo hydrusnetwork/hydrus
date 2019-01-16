@@ -2635,7 +2635,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if create_urls_txt:
                     
-                    with open( os.path.join( self._db_dir, 'missing filename urls.txt' ), 'w' ) as f:
+                    with open( os.path.join( self._db_dir, 'missing filename urls.txt' ), 'w', encoding = 'utf-8' ) as f:
                         
                         for hash_id in deletee_hash_ids:
                             
@@ -5777,7 +5777,12 @@ class DB( HydrusDB.HydrusDB ):
             
             ( version, dump ) = result
             
-            serialisable_info = json.loads( str( dump, 'utf-8' ) )
+            if isinstance( dump, bytes ):
+                
+                dump = str( dump, 'utf-8' )
+                
+            
+            serialisable_info = json.loads( dump )
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
             
@@ -5793,7 +5798,12 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( dump_name, version, dump ) in results:
                 
-                serialisable_info = json.loads( str( dump, 'utf-8' ) )
+                if isinstance( dump, bytes ):
+                    
+                    dump = str( dump, 'utf-8' )
+                    
+                
+                serialisable_info = json.loads( dump )
                 
                 objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) ) )
                 
@@ -5811,7 +5821,12 @@ class DB( HydrusDB.HydrusDB ):
                 ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
                 
             
-            serialisable_info = json.loads( str( dump, 'utf-8' ) )
+            if isinstance( dump, bytes ):
+                
+                dump = str( dump, 'utf-8' )
+                
+            
+            serialisable_info = json.loads( dump )
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )
             
@@ -5850,9 +5865,14 @@ class DB( HydrusDB.HydrusDB ):
             return None
             
         
-        ( json_dump, ) = result
+        ( dump, ) = result
         
-        value = json.loads( str( json_dump, 'utf-8' ) )
+        if isinstance( dump, bytes ):
+            
+            dump = str( dump, 'utf-8' )
+            
+        
+        value = json.loads( dump )
         
         return value
         

@@ -670,7 +670,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         txt_path = path + '.txt'
                         
-                        with open( txt_path, 'w' ) as f:
+                        with open( txt_path, 'w', encoding = 'utf-8' ) as f:
                             
                             f.write( os.linesep.join( tags ) )
                             

@@ -1080,11 +1080,11 @@ class PopupMessageManager( wx.Frame ):
             
         
     
-class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
+class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, job_key ):
         
-        ClientGUIScrolledPanels.ReviewPanelVetoable.__init__( self, parent )
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._job_key = job_key
         

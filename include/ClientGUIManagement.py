@@ -1902,19 +1902,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _PendQueries( self, queries ):
         
-        first_result = None
+        results = self._multiple_gallery_import.PendQueries( queries )
         
-        for query in queries:
+        if len( results ) > 0 and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
             
-            result = self._multiple_gallery_import.PendQuery( query )
-            
-            if result is not None and first_result is None:
-                
-                first_result = result
-                
-            
-        
-        if first_result is not None and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
+            first_result = results[ 0 ]
             
             self._HighlightGalleryImport( first_result )
             
@@ -2040,10 +2032,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         menu = wx.Menu()
         
-        ( start_file_queues_paused, start_gallery_queues_paused ) = self._multiple_gallery_import.GetQueueStartSettings()
+        ( start_file_queues_paused, start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer ) = self._multiple_gallery_import.GetQueueStartSettings()
         
-        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', start_file_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, not start_file_queues_paused, start_gallery_queues_paused )
-        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', start_gallery_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, not start_gallery_queues_paused )
+        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', start_file_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, not start_file_queues_paused, start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer )
+        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', start_gallery_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, not start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer )
+        ClientGUIMenus.AppendSeparator( menu )
+        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'bundle multiple pasted queries into one importer (advanced)', 'If you are pasting many small queries at once (such as md5 lookups), check this to smooth out the workflow.', merge_simultaneous_pends_to_one_importer, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, start_gallery_queues_paused, not merge_simultaneous_pends_to_one_importer )
         
         HG.client_controller.PopupMenu( self._cog_button, menu )
         

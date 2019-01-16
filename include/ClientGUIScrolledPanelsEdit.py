@@ -5143,6 +5143,49 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._list.GetClientData( selection )
         
     
+class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, choices ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._data = None
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        first_focused = False
+        
+        for ( text, data, tooltip ) in choices:
+            
+            button = ClientGUICommon.BetterButton( self, text, self._ButtonChoice, data )
+            
+            button.SetToolTip( tooltip )
+            
+            vbox.Add( button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            if not first_focused:
+                
+                wx.CallAfter( button.SetFocus )
+                
+                first_focused = True
+                
+            
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ButtonChoice( self, data ):
+        
+        self._data = data
+        
+        self.GetParent().DoOK()
+        
+    
+    def GetValue( self ):
+        
+        return self._data
+        
+    
 class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, service_key, service_tag_import_options, show_downloader_options = True ):

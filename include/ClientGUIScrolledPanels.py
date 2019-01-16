@@ -35,6 +35,11 @@ class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         event.Skip()
         
     
+    def TryToClose( self ):
+        
+        pass
+        
+    
 class EditPanel( ResizingScrolledPanel ):
     
     def GetValue( self ):
@@ -137,12 +142,5 @@ class ReviewSinglePanelPanel( ReviewPanel ):
         self._panel = panel
         
         self._vbox.Add( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-    
-class ReviewPanelVetoable( ResizingScrolledPanel ):
-    
-    def TryToClose( self ):
-        
-        return
         
     

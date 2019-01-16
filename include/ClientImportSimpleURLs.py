@@ -523,6 +523,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
         self._queue_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnQueue, page_key )
         
+        self._files_repeating_job.SetThreadSlotType( 'misc' )
+        self._queue_repeating_job.SetThreadSlotType( 'misc' )
+        
     
     def REPEATINGWorkOnFiles( self, page_key ):
         
@@ -1000,6 +1003,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
         self._gallery_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnGallery, page_key )
+        
+        self._files_repeating_job.SetThreadSlotType( 'misc' )
+        self._gallery_repeating_job.SetThreadSlotType( 'misc' )
         
     
     def REPEATINGWorkOnFiles( self, page_key ):

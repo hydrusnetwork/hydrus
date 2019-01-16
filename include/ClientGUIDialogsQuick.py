@@ -23,3 +23,23 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
             
         
     
+def SelectFromListButtons( win, title, choice_tuples ):
+    
+    with ClientGUITopLevelWindows.DialogEdit( win, title, hide_buttons = True ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsEdit.EditSelectFromListButtonsPanel( dlg, choice_tuples )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.ShowModal() == wx.ID_OK:
+            
+            result = panel.GetValue()
+            
+            return result
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException()
+            
+        
+    

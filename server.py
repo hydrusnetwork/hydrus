@@ -142,7 +142,7 @@ except Exception as e:
         
         dest_path = os.path.join( db_dir, 'crash.log' )
         
-        with open( dest_path, 'w' ) as f:
+        with open( dest_path, 'w', encoding = 'utf-8' ) as f:
             
             f.write( traceback.format_exc() )
             

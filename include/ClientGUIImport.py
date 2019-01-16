@@ -228,21 +228,17 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
             
+            quick_namespaces_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._quick_namespaces_panel )
+            
             columns = [ ( 'namespace', 12 ), ( 'regex', -1 ) ]
             
-            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( self._quick_namespaces_panel, 'quick_namespaces', 4, 20, columns, self._ConvertQuickRegexDataToListCtrlTuples, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
+            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( quick_namespaces_listctrl_panel, 'quick_namespaces', 4, 20, columns, self._ConvertQuickRegexDataToListCtrlTuples, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
             
-            self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
-            self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
-            self._add_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+            quick_namespaces_listctrl_panel.SetListCtrl( self._quick_namespaces_list )
             
-            self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
-            self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
-            self._edit_quick_namespace_button.SetMinSize( ( 20, -1 ) )
-            
-            self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
-            self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
-            self._delete_quick_namespace_button.SetMinSize( ( 20, -1 ) )
+            quick_namespaces_listctrl_panel.AddButton( 'add', self.AddQuickNamespace )
+            quick_namespaces_listctrl_panel.AddButton( 'edit', self.EditQuickNamespaces, enabled_only_on_selection = True )
+            quick_namespaces_listctrl_panel.AddDeleteButton()
             
             #
             
@@ -292,14 +288,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             #
             
-            button_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            button_box.Add( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            button_box.Add( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            button_box.Add( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._quick_namespaces_panel.Add( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._quick_namespaces_panel.Add( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._quick_namespaces_panel.Add( quick_namespaces_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
@@ -349,6 +338,25 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             sort_tuple = ( namespace, regex )
             
             return ( display_tuple, sort_tuple )
+            
+        
+        def AddQuickNamespace( self ):
+            
+            from . import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogInputNamespaceRegex( self ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( namespace, regex ) = dlg.GetInfo()
+                    
+                    data = ( namespace, regex )
+                    
+                    self._quick_namespaces_list.AddDatas( ( data, ) )
+                    
+                    self._refresh_callable()
+                    
+                
             
         
         def EditQuickNamespaces( self ):
@@ -409,35 +417,6 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
                 self._refresh_callable()
                 
-            
-        
-        def EventAddQuickNamespace( self, event ):
-            
-            from . import ClientGUIDialogs
-            
-            with ClientGUIDialogs.DialogInputNamespaceRegex( self ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( namespace, regex ) = dlg.GetInfo()
-                    
-                    data = ( namespace, regex )
-                    
-                    self._quick_namespaces_list.AddDatas( ( data, ) )
-                    
-                    self._refresh_callable()
-                    
-                
-            
-        
-        def EventDeleteQuickNamespace( self, event ):
-            
-            self.DeleteQuickNamespaces()
-            
-        
-        def EventEditQuickNamespace( self, event ):
-            
-            self.EditQuickNamespaces()
             
         
         def EventNumNamespaceChanged( self, event ):
@@ -1504,7 +1483,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, paths )
         
-        name = CC.LOCAL_TAG_SERVICE_KEY
+        name = HG.client_controller.services_manager.GetName( CC.LOCAL_TAG_SERVICE_KEY )
         
         self._tag_repositories.AddPage( name, name, page )
         

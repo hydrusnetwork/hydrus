@@ -76,12 +76,6 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         comparable_namespace = HydrusTags.ConvertTagToSortable( namespace )
         comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
         
-        # 'cat' < 'character:rei'
-        # 'page:3' < 'page:20'
-        # '1' < 'series:eva'
-        
-        # note that 'test' < ( 1, '' ) but u'test' > ( 1, '' ) wew
-        
         if namespace == '':
             
             return ( comparable_subtag, comparable_subtag )

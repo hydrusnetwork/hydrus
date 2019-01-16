@@ -569,12 +569,9 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        def hex_filter( c ):
-            
-            return c in string.hexdigits
-            
+        hex_hash = self._hash.GetValue().lower()
         
-        hex_hash = list(filter( hex_filter, self._hash.GetValue().lower() ))
+        hex_hash = re.sub( '[^0123456789abcdefABCDEF]', '', hex_hash )
         
         if len( hex_hash ) == 0:
             

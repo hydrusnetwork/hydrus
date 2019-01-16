@@ -2774,11 +2774,11 @@ class RatingNumerical( wx.Window ):
                 
                 if self._allow_zero:
                     
-                    rating = round( proportion_filled * self._num_stars ) // self._num_stars
+                    rating = round( proportion_filled * self._num_stars ) / self._num_stars
                     
                 else:
                     
-                    rating = int( proportion_filled * self._num_stars ) // ( self._num_stars - 1 )
+                    rating = int( proportion_filled * self._num_stars ) / ( self._num_stars - 1 )
                     
                 
                 return rating

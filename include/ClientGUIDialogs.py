@@ -169,68 +169,6 @@ class Dialog( wx.Dialog ):
         self.SetMinSize( ( min_width, min_height ) )
         
     
-class DialogButtonChoice( Dialog ):
-    
-    def __init__( self, parent, intro, choices, show_always_checkbox = False ):
-        
-        Dialog.__init__( self, parent, 'choose what to do', position = 'center' )
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
-        self._buttons = []
-        self._data = None
-        
-        for ( text, data, tooltip ) in choices:
-            
-            button = ClientGUICommon.BetterButton( self, text, self._ButtonChoice, data )
-            
-            button.SetToolTip( tooltip )
-            
-            self._buttons.append( button )
-            
-        
-        self._always_do_checkbox = wx.CheckBox( self, label = 'do this for all' )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        for button in self._buttons:
-            
-            vbox.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-        
-        vbox.Add( self._always_do_checkbox, CC.FLAGS_LONE_BUTTON )
-        
-        if not show_always_checkbox:
-            
-            self._always_do_checkbox.Hide()
-            
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        if len( self._buttons ) > 0:
-            
-            wx.CallAfter( self._buttons[0].SetFocus )
-            
-        
-    
-    def _ButtonChoice( self, data ):
-        
-        self._data = data
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-    def GetData( self ):
-        
-        return ( self._always_do_checkbox.GetValue(), self._data )
-        
-    
 class DialogChooseNewServiceMethod( Dialog ):
     
     def __init__( self, parent ):

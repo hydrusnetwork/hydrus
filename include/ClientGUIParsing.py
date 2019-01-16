@@ -3383,15 +3383,15 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         produces = list( parser.GetParsableContent() )
         
-        produces.sort()
+        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
+        
+        sort_produces = pretty_produces
         
         pretty_name = name
         pretty_example_urls = ', '.join( example_urls )
         
-        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
-        
         display_tuple = ( pretty_name, pretty_example_urls, pretty_produces )
-        sort_tuple = ( name, example_urls, produces )
+        sort_tuple = ( name, example_urls, sort_produces )
         
         return ( display_tuple, sort_tuple )
         

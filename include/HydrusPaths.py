@@ -446,9 +446,9 @@ def LaunchFile( path, launch_path = None ):
             
             try:
                 
-                sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+                sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
                 
-                process = subprocess.Popen( cmd, preexec_fn = preexec_fn, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+                process = subprocess.Popen( cmd, preexec_fn = preexec_fn, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
                 
                 process.wait()
                 

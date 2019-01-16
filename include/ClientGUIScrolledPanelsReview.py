@@ -938,7 +938,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
         
-        with ClientGUITopLevelWindows.DialogNullipotentVetoable( self, 'migrating files' ) as dlg:
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'migrating files' ) as dlg:
             
             panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
             
@@ -1153,7 +1153,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
         
         style_override = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.DIALOG_NO_PARENT
         
-        with ClientGUITopLevelWindows.DialogNullipotentVetoable( None, 'migrating files', style_override = style_override ) as dlg:
+        with ClientGUITopLevelWindows.DialogNullipotent( None, 'migrating files', style_override = style_override ) as dlg:
             
             panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
             

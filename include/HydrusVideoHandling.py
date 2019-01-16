@@ -48,9 +48,9 @@ def GetFFMPEGVersion():
     
     try:
         
-        sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
         
-        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+        proc = subprocess.Popen( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
         
     except FileNotFoundError:
         
@@ -110,9 +110,9 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
             
         
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
-    proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+    proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     info = proc.stderr.read()
     
@@ -530,7 +530,8 @@ def ParseFFMPEGVideoFormat( lines ):
 def ParseFFMPEGVideoLine( lines ):
     
     # get the output line that speaks about video
-    lines_video = [ l for l in lines if 'Video: ' in l and not ( 'Video: png' in l or 'Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
+    # the ^\sStream is to exclude the 'title' line, when it exists, includes the string 'Video: ', ha ha
+    lines_video = [ l for l in lines if re.search( '^\s*Stream', l ) is not None and 'Video: ' in l and not ( 'Video: png' in l or 'Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
     
     if len( lines_video ) == 0:
         

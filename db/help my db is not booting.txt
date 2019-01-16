@@ -1,0 +1,9 @@
+If your client seems to hang on the database startup phase, especially after a previously bad shutdown (like a power cut), it could be that the db needs to 'heal' itself a bit. It can take several minutes, sometimes even more, to clean the bad shutdown up.
+
+So, if your client seems suddenly to take a very long time to start up, just sitting on the splash screen, go make a coffee and give it time--it is probably just sorting itself out, not broken.
+
+You can double-check this by looking at the client executable in your OS's Task Manager (Ctrl+Shift+Esc on Windows). If it is doing some CPU/HDD, there is no need to kill the process.
+
+Please contact hydrus_dev if it really does seem stuck (say, no progress after an hour, or if CPU/HDD activity completely drops to nothing), or if every startup is delayed like this.
+
+One possible cause of delayed startup every time (usually a delay _before_ the splash screen appears) is overly paranoid virus scanners rechecking all of hydrus every time it starts. To relieve this, please check your anti-virus software's options and make sure your hard drive is defragged.

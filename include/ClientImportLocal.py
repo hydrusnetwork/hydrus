@@ -256,6 +256,8 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
         
+        self._files_repeating_job.SetThreadSlotType( 'misc' )
+        
     
     def REPEATINGWorkOnFiles( self, page_key ):
         

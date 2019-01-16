@@ -38,9 +38,9 @@ def GetExternalIP():
         
         cmd = [ upnpc_path, '-l' ]
         
-        sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
         
-        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
         HydrusData.WaitForProcessToFinish( p, 30 )
         
@@ -87,9 +87,9 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     cmd = [ upnpc_path, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
-    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -123,9 +123,9 @@ def GetUPnPMappings():
     
     cmd = [ upnpc_path, '-l' ]
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
-    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
@@ -199,9 +199,9 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     cmd = [ upnpc_path, '-d', str( external_port ), protocol ]
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
     
-    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, universal_newlines = True, **sbp_kwargs )
+    p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     

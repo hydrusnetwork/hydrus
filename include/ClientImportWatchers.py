@@ -1287,6 +1287,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
         self._checker_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnChecker )
         
+        self._files_repeating_job.SetThreadSlotType( 'watcher_files' )
+        self._checker_repeating_job.SetThreadSlotType( 'watcher_check' )
+        
     
     def REPEATINGWorkOnFiles( self ):
         

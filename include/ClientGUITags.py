@@ -1481,22 +1481,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     bdc_choices.append( ( text, data, tooltip ) )
                     
                 
-                intro = 'What would you like to do?'
-                
-                with ClientGUIDialogs.DialogButtonChoice( self, intro, bdc_choices ) as dlg:
+                try:
                     
-                    result = dlg.ShowModal()
+                    ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices )
                     
-                    if result == wx.ID_OK:
-                        
-                        ( always_do, ( choice_action, tags ) ) = dlg.GetData()
-                        
-                    else:
-                        
-                        return
-                        
+                except HydrusExceptions.CancelledException:
                     
-                
+                    return
+                    
                 
             
             if choice_action == HC.CONTENT_UPDATE_PETITION:
@@ -2545,7 +2537,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = dlg.GetPath()
                     
-                    with open( path, 'w' ) as f:
+                    with open( path, 'w', encoding = 'utf-8' ) as f:
                         
                         f.write( export_string )
                         
@@ -2593,7 +2585,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            with open( path, 'r' ) as f:
+            with open( path, 'r', encoding = 'utf-8' ) as f:
                 
                 import_string = f.read()
                 
@@ -3410,7 +3402,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = dlg.GetPath()
                     
-                    with open( path, 'w' ) as f:
+                    with open( path, 'w', encoding = 'utf-8' ) as f:
                         
                         f.write( export_string )
                         
@@ -3460,7 +3452,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            with open( path, 'r' ) as f:
+            with open( path, 'r', encoding = 'utf-8' ) as f:
                 
                 import_string = f.read()
                 

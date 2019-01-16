@@ -48,6 +48,12 @@ class HydrusController( object ):
         self._fast_job_scheduler = None
         self._slow_job_scheduler = None
         
+        self._thread_slots = {}
+        
+        self._thread_slots[ 'misc' ] = ( 0, 10 )
+        
+        self._thread_slot_lock = threading.Lock()
+        
         self._call_to_threads = []
         self._long_running_call_to_threads = []
         
@@ -233,6 +239,30 @@ class HydrusController( object ):
         self._pubsub.sub( object, method_name, topic )
         
     
+    def AcquireThreadSlot( self, thread_type ):
+        
+        with self._thread_slot_lock:
+            
+            if thread_type not in self._thread_slots:
+                
+                return True # assume no max if no max set
+                
+            
+            ( current_threads, max_threads ) = self._thread_slots[ thread_type ]
+            
+            if current_threads < max_threads:
+                
+                self._thread_slots[ thread_type ] = ( current_threads + 1, max_threads )
+                
+                return True
+                
+            else:
+                
+                return False
+                
+            
+        
+    
     def CallLater( self, initial_delay, func, *args, **kwargs ):
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
@@ -314,7 +344,7 @@ class HydrusController( object ):
     
     def CreateNoWALFile( self ):
         
-        with open( self._no_wal_path, 'w' ) as f:
+        with open( self._no_wal_path, 'w', encoding = 'utf-8' ) as f:
             
             f.write( 'This file was created because the database failed to set WAL journalling. It will not reattempt WAL as long as this file exists.' )
             
@@ -538,6 +568,21 @@ class HydrusController( object ):
     def Read( self, action, *args, **kwargs ):
         
         return self._Read( action, *args, **kwargs )
+        
+    
+    def ReleaseThreadSlot( self, thread_type ):
+        
+        with self._thread_slot_lock:
+            
+            if thread_type not in self._thread_slots:
+                
+                return
+                
+            
+            ( current_threads, max_threads ) = self._thread_slots[ thread_type ]
+            
+            self._thread_slots[ thread_type ] = ( current_threads - 1, max_threads )
+            
         
     
     def ReportDataUsed( self, num_bytes ):

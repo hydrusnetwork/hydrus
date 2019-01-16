@@ -432,9 +432,23 @@ class JobScheduler( threading.Thread ):
                     
                     next_job = self._waiting.pop( 0 )
                     
-                    next_job.StartWork()
+                    if next_job.IsCancelled():
+                        
+                        continue
+                        
                     
-                    jobs_started += 1
+                    if next_job.SlotOK():
+                        
+                        next_job.StartWork()
+                        
+                        jobs_started += 1
+                        
+                    else:
+                        
+                        # delay is automatically set by SlotOK
+                        
+                        bisect.insort( self._waiting, next_job )
+                        
                     
                 else:
                     
@@ -573,6 +587,8 @@ class SchedulableJob( object ):
         
         self._next_work_time = HydrusData.GetNowFloat() + initial_delay
         
+        self._thread_slot_type = None
+        
         self._work_lock = threading.Lock()
         
         self._currently_working = threading.Event()
@@ -626,6 +642,30 @@ class SchedulableJob( object ):
         return HydrusData.TimeHasPassedFloat( self._next_work_time )
         
     
+    def SetThreadSlotType( self, thread_type ):
+        
+        self._thread_slot_type = thread_type
+        
+    
+    def SlotOK( self ):
+        
+        if self._thread_slot_type is not None:
+            
+            if HG.controller.AcquireThreadSlot( self._thread_slot_type ):
+                
+                return True
+                
+            else:
+                
+                self._next_work_time = HydrusData.GetNowFloat() + 10 + random.random()
+                
+                return False
+                
+            
+        
+        return True
+        
+    
     def StartWork( self ):
         
         if self._is_cancelled.is_set():
@@ -660,6 +700,11 @@ class SchedulableJob( object ):
                 
             
         finally:
+            
+            if self._thread_slot_type is not None:
+                
+                HG.controller.ReleaseThreadSlot( self._thread_slot_type )
+                
             
             self._currently_working.clear()
             

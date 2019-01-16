@@ -124,8 +124,6 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
     
     data = list( content_type_to_additional_infos.items() )
     
-    data.sort()
-    
     for ( ( content_type, name ), additional_infos ) in data:
         
         if content_type == HC.CONTENT_TYPE_URLS:
@@ -200,6 +198,8 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
             pretty_strings.append( 'temp variables: ' + ', '.join( additional_infos ) )
             
         
+    
+    pretty_strings.sort()
     
     if len( pretty_strings ) == 0:
         

@@ -233,7 +233,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         aboutinfo.SetDescription( description )
         
-        with open( HC.LICENSE_PATH, 'r' ) as f:
+        with open( HC.LICENSE_PATH, 'r', encoding = 'utf-8' ) as f:
             
             license = f.read()
             
@@ -3935,7 +3935,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             hide_close_button = not job_key.IsCancellable()
             
-            with ClientGUITopLevelWindows.DialogNullipotentVetoable( self, title, hide_close_button = hide_close_button ) as dlg:
+            with ClientGUITopLevelWindows.DialogNullipotent( self, title, hide_buttons = hide_close_button ) as dlg:
                 
                 panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
                 
@@ -4627,7 +4627,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        for name in self._dirty_menus:
+        if len( self._dirty_menus ) > 0:
+            
+            name = self._dirty_menus.pop()
             
             ( menu, label, show ) = self._GenerateMenuInfo( name )
             
@@ -4681,7 +4683,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.DestroyMenu( self, old_menu )
             
         
-        self._dirty_menus = set()
+        if len( self._dirty_menus ) > 0:
+            
+            self._controller.CallLaterWXSafe( self, 0.5, self.RefreshMenu )
+            
         
     
     def RefreshStatusBar( self ):

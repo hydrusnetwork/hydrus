@@ -363,7 +363,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
             
             if os.path.exists( txt_path ):
                 
-                with open( txt_path, 'r' ) as f:
+                with open( txt_path, 'r', encoding = 'utf-8'  ) as f:
                     
                     txt_tags_string = f.read()
                     

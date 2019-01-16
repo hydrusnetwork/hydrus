@@ -76,6 +76,11 @@ class Controller( HydrusController.HydrusController ):
         
         self._page_key_lock = threading.Lock()
         
+        self._thread_slots[ 'watcher_files' ] = ( 0, 15 )
+        self._thread_slots[ 'watcher_check' ] = ( 0, 5 )
+        self._thread_slots[ 'gallery_files' ] = ( 0, 15 )
+        self._thread_slots[ 'gallery_search' ] = ( 0, 5 )
+        
         self._alive_page_keys = set()
         self._closed_page_keys = set()
         
@@ -734,12 +739,6 @@ class Controller( HydrusController.HydrusController ):
                             password_bytes = bytes( dlg.GetValue(), 'utf-8' )
                             
                             if hashlib.sha256( password_bytes ).digest() == self.options[ 'password' ]:
-                                
-                                break
-                                
-                            elif HC.SOFTWARE_VERSION == 335:
-                                
-                                wx.MessageBox( 'The password you entered was incorrect! This _may_ be a result of the py3 update, so you are forgiven for this version. Please try remaking your password and testing it works in a normal boot in this version. Report continued errors to hydrus dev please!' )
                                 
                                 break
                                 

@@ -12,6 +12,7 @@ import requests
 import threading
 import traceback
 import time
+import urllib
 
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
@@ -91,6 +92,11 @@ class NetworkJob( object ):
     IS_HYDRUS_SERVICE = False
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
+        
+        if body is not None and isinstance( body, str ):
+            
+            body = bytes( body, 'utf-8' )
+            
         
         self.engine = None
         
@@ -223,7 +229,7 @@ class NetworkJob( object ):
             
             if self._referral_url is not None:
                 
-                headers[ 'referer' ] = self._referral_url
+                headers[ 'referer' ] = urllib.parse.quote( self._referral_url, "!#$%&'()*+,/:;=?@[]~" ) # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
                 
             
             for ( key, value ) in list(self._additional_headers.items()):

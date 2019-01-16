@@ -99,7 +99,7 @@ def ConvertTagToSortable( tag ):
     
     # this copies the human sort in hydrusdata
     
-    convert = lambda text: int( text ) if text.isdecimal() else text
+    convert = lambda text: ( '', int( text ) ) if text.isdecimal() else ( text, 0 )
     
     return tuple( [ convert( c ) for c in re.split( '([0-9]+)', tag.lower() ) ] )
     

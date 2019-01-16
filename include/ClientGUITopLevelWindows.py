@@ -313,6 +313,8 @@ class NewDialog( wx.Dialog ):
         
         HG.client_controller.ResetIdleTimer()
         
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        
     
     def _CanCancel( self ):
         
@@ -322,6 +324,128 @@ class NewDialog( wx.Dialog ):
     def _CanOK( self ):
         
         return True
+        
+    
+    def _ReadyToClose( self, value ):
+        
+        return True
+        
+    
+    def _SaveOKPosition( self ):
+        
+        pass
+        
+    
+    def _TryEndModal( self, value ):
+        
+        if not self.IsModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
+            
+            return
+            
+        
+        if not self._ReadyToClose( value ):
+            
+            return
+            
+        
+        if value == wx.ID_CANCEL:
+            
+            if not self._CanCancel():
+                
+                return
+                
+            
+        
+        if value == wx.ID_OK:
+            
+            if not self._CanOK():
+                
+                return
+                
+            
+            self._SaveOKPosition()
+            
+        
+        try:
+            
+            self.EndModal( value )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'This dialog seems to have been unable to close for some reason. I am printing the stack to the log. The dialog may have already closed, or may attempt to close now. Please inform hydrus dev of this situation. I recommend you restart the client if you can. If the UI is locked, you will have to kill it via task manager.' )
+            
+            HydrusData.PrintException( e )
+            
+            import traceback
+            
+            HydrusData.DebugPrint( ''.join( traceback.format_stack() ) )
+            
+            try:
+                
+                self.Close()
+                
+            except:
+                
+                HydrusData.ShowText( 'The dialog would not close on command.' )
+                
+            
+            try:
+                
+                self.Destroy()
+                
+            except:
+                
+                HydrusData.ShowText( 'The dialog would not destroy on command.' )
+                
+            
+        
+    
+    def DoOK( self ):
+        
+        self._TryEndModal( wx.ID_OK )
+        
+    
+    def EventCharHook( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key == wx.WXK_ESCAPE:
+            
+            self._TryEndModal( wx.ID_CANCEL )
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def EventClose( self, event ):
+        
+        if not self:
+            
+            return
+            
+        
+        self._TryEndModal( wx.ID_CANCEL )
+        
+    
+    def EventDialogButton( self, event ):
+        
+        if not self:
+            
+            return
+            
+        
+        event_id = event.GetId()
+        
+        if event_id == wx.ID_ANY:
+            
+            event.Skip()
+            
+            return
+            
+        
+        self._TryEndModal( event_id )
         
     
     def EventMenuClose( self, event ):
@@ -391,32 +515,14 @@ class NewDialog( wx.Dialog ):
             
         
     
-    def EventDialogButton( self, event ):
+    def EventOK( self, event ):
         
-        event_id = event.GetId()
-        
-        if event_id == wx.ID_CANCEL:
-            
-            if not self._CanCancel():
-                
-                return
-                
-            
-        
-        if event_id == wx.ID_OK:
-            
-            if not self._CanOK():
-                
-                return
-                
-            
-        
-        if not self.IsModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
+        if not self:
             
             return
             
         
-        self.EndModal( event_id )
+        self._TryEndModal( wx.ID_OK )
         
     
 class DialogThatResizes( NewDialog ):
@@ -426,6 +532,11 @@ class DialogThatResizes( NewDialog ):
         self._frame_key = frame_key
         
         NewDialog.__init__( self, parent, title, style_override = style_override )
+        
+    
+    def _SaveOKPosition( self ):
+        
+        SaveTLWSizeAndPosition( self, self._frame_key )
         
     
 class DialogThatTakesScrollablePanel( DialogThatResizes ):
@@ -463,47 +574,6 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         raise NotImplementedError()
         
     
-    def _TryEndModal( self, value ):
-        
-        try:
-            
-            self.EndModal( value )
-            
-        except Exception as e:
-            
-            HydrusData.ShowText( 'This dialog seems to have been unable to close for some reason. I am printing the stack to the log. The dialog may have already closed, or may attempt to close now. Please inform hydrus dev of this situation. I recommend you restart the client if you can. If the UI is locked, you will have to kill it via task manager.' )
-            
-            HydrusData.PrintException( e )
-            
-            import traceback
-            
-            HydrusData.DebugPrint( ''.join( traceback.format_stack() ) )
-            
-            try:
-                
-                self.Close()
-                
-            except:
-                
-                HydrusData.ShowText( 'The dialog would not close on command.' )
-                
-            
-            try:
-                
-                self.Destroy()
-                
-            except:
-                
-                HydrusData.ShowText( 'The dialog would not destroy on command.' )
-                
-            
-        
-    
-    def DoOK( self ):
-        
-        raise NotImplementedError()
-        
-    
     def EventChildSizeChanged( self, event ):
         
         if self._panel is not None:
@@ -522,16 +592,6 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
                 ExpandTLWIfPossible( self, self._frame_key, ( desired_delta_width, desired_delta_height ) )
                 
             
-        
-    
-    def EventOK( self, event ):
-        
-        if not self:
-            
-            return
-            
-        
-        self.DoOK()
         
     
     def SetPanel( self, panel ):
@@ -554,7 +614,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherent virtual size
         
     
-class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
+class DialogNullipotent( DialogThatTakesScrollablePanel ):
     
     def _GetButtonBox( self ):
         
@@ -574,64 +634,17 @@ class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
             
             self._close.Hide()
             
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL )
-        self._cancel.Hide()
-        
-    
-class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
-    
-    def __init__( self, parent, title ):
-        
-        DialogThatTakesScrollablePanelClose.__init__( self, parent, title )
-        
-    
-    def DoOK( self ):
-        
-        if not self.IsModal():
-            
-            return
-            
-        
-        if not self._CanOK():
-            
-            return
-            
-        
-        SaveTLWSizeAndPosition( self, self._frame_key )
-        
-        self._TryEndModal( wx.ID_OK )
-        
-    
-class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
-    
-    def __init__( self, parent, title, style_override = None, hide_close_button = False ):
-        
-        DialogThatTakesScrollablePanelClose.__init__( self, parent, title, style_override = style_override )
-        
-        if hide_close_button:
-            
-            self._close.Hide()
-            
             self.Bind( wx.EVT_CLOSE, self.EventOK ) # the close event no longer goes to the default button, since it is hidden, wew
             
         
     
-    def DoOK( self ):
-        
-        if not self.IsModal():
-            
-            return
-            
-        
-        if not self._CanOK():
-            
-            return
-            
+    def _ReadyToClose( self, value ):
         
         try:
             
             self._panel.TryToClose()
+            
+            return True
             
         except HydrusExceptions.VetoException as e:
             
@@ -642,15 +655,11 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
                 wx.MessageBox( message )
                 
             
-            return
+            return False
             
         
-        SaveTLWSizeAndPosition( self, self._frame_key )
-        
-        self._TryEndModal( wx.ID_OK )
-        
     
-class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel ):
+class DialogApplyCancel( DialogThatTakesScrollablePanel ):
     
     def _GetButtonBox( self ):
         
@@ -665,8 +674,8 @@ class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel 
     def _InitialiseButtons( self ):
         
         self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
         self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        #self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
@@ -676,31 +685,30 @@ class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel 
             self._apply.Hide()
             self._cancel.Hide()
             
+            self.Bind( wx.EVT_CLOSE, self.EventClose ) # the close event no longer goes to the default button, since it is hidden, wew
+            
         
     
-class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
+class DialogEdit( DialogApplyCancel ):
     
     def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
         
-        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
+        DialogApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
         
     
-    def DoOK( self ):
+    def _ReadyToClose( self, value ):
         
-        if not self.IsModal():
+        if value != wx.ID_OK:
             
-            return
-            
-        
-        if not self._CanOK():
-            
-            return
+            return True
             
         
         try:
             
             value = self._panel.GetValue()
             
+            return True
+            
         except HydrusExceptions.VetoException as e:
             
             message = str( e )
@@ -710,32 +718,25 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
                 wx.MessageBox( message )
                 
             
-            return
+            return False
             
-        
-        SaveTLWSizeAndPosition( self, self._frame_key )
-        
-        self._TryEndModal( wx.ID_OK )
         
     
-class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
+class DialogManage( DialogApplyCancel ):
     
-    def DoOK( self ):
+    def _ReadyToClose( self, value ):
         
-        if not self.IsModal():
+        if value != wx.ID_OK:
             
-            return
-            
-        
-        if not self._CanOK():
-            
-            return
+            return True
             
         
         try:
             
             self._panel.CommitChanges()
             
+            return True
+            
         except HydrusExceptions.VetoException as e:
             
             message = str( e )
@@ -745,12 +746,8 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
                 wx.MessageBox( message )
                 
             
-            return
+            return False
             
-        
-        SaveTLWSizeAndPosition( self, self._frame_key )
-        
-        self._TryEndModal( wx.ID_OK )
         
     
 class Frame( wx.Frame ):
