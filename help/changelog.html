@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 337</h3></li>
+				<ul>
+					<li>fixed another couple of unicode encoding problems with the logging and profiling code</li>
+					<li>the logger now sticks a unicode BOM at the top of new log files to help text readers guess the utf-8 encoding</li>
+					<li>fixed musical webm import when the video stream has no stated duration but the audio stream does and typically stretches out a 'single frame' video</li>
+					<li>fixed some 'max size' download file size testing</li>
+					<li>the downloader easy-importer lain image is now clickable to launch a file selection dialog</li>
+					<li>if you are in advanced mode, the manual file export dialog now lets you export symlinks with a new checkbox. this is experimental, so if you are interested, give it a brief test and let me know how it works for you</li>
+					<li>duplicate content merging now applies to pending as well as current tags</li>
+					<li>the duplicate filter now counts pending tags when saying which file has more tags</li>
+					<li>advanced content updates now _copy_ both current and pending tags. the other actions now state what they do more clearly</li>
+					<li>stopped printing long server error text on 304 and 404, where actual response content is uninteresting</li>
+					<li>removed wx import that accidentally came into server space due to 2to3 check</li>
+					<li>improved the path-fixing code that helps environment construction when launching external programs from non-windows frozen builds</li>
+					<li>fixed a critical pubsub processing bug that kicked in at a certain stage of client shutdown. this should stop the post-shutdown-processing memory explosion certain users were seeing and should stop any ui jank in the last 0.2s of the program for everyone else</li>
+					<li>improved some other shutdown memory cleanup that was sometimes leading to double-log-printing of exit statements</li>
+					<li>did a full pass over the daemon scheduling code. it now reacts more responsively to various shut down situations</li>
+					<li>reduced db disk cache aggression significantly and added more memory maintenance to the cache population process</li>
+					<li>fixed an issue where subscriptions were not promptly responding to shutdown events</li>
+					<li>fixed an issue where some delayed network jobs (e.g. while all network traffic is paused) were also not responding to shutdown events</li>
+					<li>added a 'pubsub report mode' debug mode for simpler pubsub review</li>
+					<li>the db is now less redundantly spammy on certain behind the scenes update notifications</li>
+					<li>wrote a first version of the client api manager and permissions handling objects</li>
+					<li>misc fixes, cleaned some shutdown code</li>
+				</ul>
 				<li><h3>version 336</h3></li>
 				<ul>
 					<li>fixed an issue where the numerical rating control was coercing all clicks to either the minimum or maximum allowable rating (e.g. 3/5 stars wasn't working)</li>
