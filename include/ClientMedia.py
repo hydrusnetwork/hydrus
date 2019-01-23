@@ -142,8 +142,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # more tags
     
-    s_num_tags = len( shown_media.GetTagsManager().GetCurrent() )
-    c_num_tags = len( comparison_media.GetTagsManager().GetCurrent() )
+    s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending() )
+    c_num_tags = len( comparison_media.GetTagsManager().GetCurrentAndPending() )
     
     if s_num_tags > 0 and c_num_tags > 0:
         
@@ -2494,6 +2494,11 @@ class TagsManagerSimple( object ):
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+        
+    
+    def GetCurrentAndPending( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
+        
+        return self.GetCurrent( service_key = service_key ).union( self.GetPending( service_key = service_key ) )
         
     
     def GetDeleted( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):

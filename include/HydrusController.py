@@ -550,7 +550,7 @@ class HydrusController( object ):
         
         profile_log_path = os.path.join( self.db_dir, profile_log_filename )
         
-        with open( profile_log_path, 'a' ) as f:
+        with open( profile_log_path, 'a', encoding = 'utf-8' ) as f:
             
             prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
             
@@ -602,10 +602,9 @@ class HydrusController( object ):
     
     def ShutdownModel( self ):
         
-        self._model_shutdown = True
-        HG.model_shutdown = True
-        
         if self.db is not None:
+            
+            self.db.Shutdown()
             
             while not self.db.LoopIsFinished():
                 
@@ -631,6 +630,9 @@ class HydrusController( object ):
             
             HydrusPaths.DeletePath( self.temp_dir )
             
+        
+        self._model_shutdown = True
+        HG.model_shutdown = True
         
     
     def ShutdownView( self ):

@@ -428,6 +428,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._delete_files_after_export = wx.CheckBox( self, label = 'delete files from client after export?' )
         self._delete_files_after_export.SetForegroundColour( wx.Colour( 127, 0, 0 ) )
         
+        self._export_symlinks = wx.CheckBox( self, label = 'EXPERIMENTAL: export symlinks' )
+        self._export_symlinks.SetForegroundColour( wx.Colour( 127, 0, 0 ) )
+        
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         
         self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
@@ -457,6 +460,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._delete_files_after_export.SetValue( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
         self._delete_files_after_export.Bind( wx.EVT_CHECKBOX, self.EventDeleteFilesChanged )
         
+        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            self._export_symlinks.Hide()
+            
+        
         #
         
         top_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -485,6 +493,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox.Add( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._export_symlinks, CC.FLAGS_LONE_BUTTON )
         vbox.Add( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
         vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
         
@@ -532,6 +541,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _DoExport( self, quit_afterwards = False ):
         
         delete_afterwards = self._delete_files_after_export.GetValue()
+        export_symlinks = self._export_symlinks.GetValue() and not delete_afterwards
         
         if quit_afterwards:
             
@@ -626,7 +636,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def do_it( neighbouring_txt_tag_service_keys, delete_afterwards, quit_afterwards ):
+        def do_it( neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards ):
             
             for ( index, ( ordering_index, media ) ) in enumerate( to_do ):
                 
@@ -678,10 +688,17 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     source_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
                     
-                    HydrusPaths.MirrorFile( source_path, path )
-                    
-                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                    except: pass
+                    if export_symlinks:
+                        
+                        os.symlink( source_path, path )
+                        
+                    else:
+                        
+                        HydrusPaths.MirrorFile( source_path, path )
+                        
+                        try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                        except: pass
+                        
                     
                 except:
                     
@@ -716,7 +733,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             wx.CallAfter( wx_done, quit_afterwards )
             
         
-        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, delete_afterwards, quit_afterwards )
+        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
         
     
     def _GetPath( self, media ):
@@ -793,7 +810,14 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventDeleteFilesChanged( self, event ):
         
-        HG.client_controller.new_options.SetBoolean( 'delete_files_after_export', self._delete_files_after_export.GetValue() )
+        value = self._delete_files_after_export.GetValue()
+        
+        HG.client_controller.new_options.SetBoolean( 'delete_files_after_export', value )
+        
+        if value:
+            
+            self._export_symlinks.SetValue( False )
+            
         
     
     def EventExportTagTxtsChanged( self, event ):

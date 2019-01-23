@@ -269,10 +269,7 @@ def FilterFreePaths( paths ):
     
     for path in paths:
         
-        if HydrusThreading.IsThreadShuttingDown():
-            
-            raise HydrusExceptions.ShutdownException()
-            
+        HydrusThreading.CheckIfThreadShuttingDown()
         
         if PathIsFree( path ):
             

@@ -267,6 +267,22 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def AllowsEverything( self ):
+        
+        with self._lock:
+            
+            for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
+                
+                if rule == CC.FILTER_BLACKLIST:
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+    
     def Filter( self, tags ):
         
         with self._lock:
@@ -293,159 +309,168 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def ToBlacklistString( self ):
         
-        blacklist = []
-        whitelist = []
-        
-        for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
+        with self._lock:
             
-            if rule == CC.FILTER_BLACKLIST:
+            blacklist = []
+            whitelist = []
+            
+            for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
                 
-                blacklist.append( tag_slice )
-                
-            elif rule == CC.FILTER_WHITELIST:
-                
-                whitelist.append( tag_slice )
+                if rule == CC.FILTER_BLACKLIST:
+                    
+                    blacklist.append( tag_slice )
+                    
+                elif rule == CC.FILTER_WHITELIST:
+                    
+                    whitelist.append( tag_slice )
+                    
                 
             
-        
-        blacklist.sort()
-        whitelist.sort()
-        
-        if len( blacklist ) == 0:
+            blacklist.sort()
+            whitelist.sort()
             
-            return 'no blacklist set'
-            
-        else:
-            
-            if set( blacklist ) == { '', ':' }:
+            if len( blacklist ) == 0:
                 
-                text = 'blacklisting on any tags'
+                return 'no blacklist set'
                 
             else:
                 
-                text = 'blacklisting on ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
+                if set( blacklist ) == { '', ':' }:
+                    
+                    text = 'blacklisting on any tags'
+                    
+                else:
+                    
+                    text = 'blacklisting on ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
+                    
                 
-            
-            if len( whitelist ) > 0:
+                if len( whitelist ) > 0:
+                    
+                    text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                    
                 
-                text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                return text
                 
-            
-            return text
             
         
     
     def ToCensoredString( self ):
         
-        blacklist = []
-        whitelist = []
-        
-        for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
+        with self._lock:
             
-            if rule == CC.FILTER_BLACKLIST:
+            blacklist = []
+            whitelist = []
+            
+            for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
                 
-                blacklist.append( tag_slice )
-                
-            elif rule == CC.FILTER_WHITELIST:
-                
-                whitelist.append( tag_slice )
+                if rule == CC.FILTER_BLACKLIST:
+                    
+                    blacklist.append( tag_slice )
+                    
+                elif rule == CC.FILTER_WHITELIST:
+                    
+                    whitelist.append( tag_slice )
+                    
                 
             
-        
-        blacklist.sort()
-        whitelist.sort()
-        
-        if len( blacklist ) == 0:
+            blacklist.sort()
+            whitelist.sort()
             
-            return 'all tags allowed'
-            
-        else:
-            
-            if set( blacklist ) == { '', ':' }:
+            if len( blacklist ) == 0:
                 
-                text = 'no tags allowed'
+                return 'all tags allowed'
                 
             else:
                 
-                text = 'all but ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) ) + ' allowed'
+                if set( blacklist ) == { '', ':' }:
+                    
+                    text = 'no tags allowed'
+                    
+                else:
+                    
+                    text = 'all but ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) ) + ' allowed'
+                    
                 
-            
-            if len( whitelist ) > 0:
+                if len( whitelist ) > 0:
+                    
+                    text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                    
                 
-                text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                return text
                 
-            
-            return text
             
         
     
     def ToPermittedString( self ):
         
-        blacklist = []
-        whitelist = []
-        
-        for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
+        with self._lock:
             
-            if rule == CC.FILTER_BLACKLIST:
+            blacklist = []
+            whitelist = []
+            
+            for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
                 
-                blacklist.append( tag_slice )
-                
-            elif rule == CC.FILTER_WHITELIST:
-                
-                whitelist.append( tag_slice )
+                if rule == CC.FILTER_BLACKLIST:
+                    
+                    blacklist.append( tag_slice )
+                    
+                elif rule == CC.FILTER_WHITELIST:
+                    
+                    whitelist.append( tag_slice )
+                    
                 
             
-        
-        blacklist.sort()
-        whitelist.sort()
-        
-        if len( blacklist ) == 0:
+            blacklist.sort()
+            whitelist.sort()
             
-            return 'all tags'
-            
-        else:
-            
-            if set( blacklist ) == { '', ':' }:
+            if len( blacklist ) == 0:
                 
-                if len( whitelist ) == 0:
-                    
-                    text = 'no tags'
-                    
-                else:
-                    
-                    text = 'only ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
-                    
-                
-            elif set( blacklist ) == { '' }:
-                
-                text = 'all namespaced tags'
-                
-                if len( whitelist ) > 0:
-                    
-                    text += ' and ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
-                    
-                
-            elif set( blacklist ) == { ':' }:
-                
-                text = 'all unnamespaced tags'
-                
-                if len( whitelist ) > 0:
-                    
-                    text += ' and ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
-                    
+                return 'all tags'
                 
             else:
                 
-                text = 'all tags except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
-                
-                if len( whitelist ) > 0:
+                if set( blacklist ) == { '', ':' }:
                     
-                    text += ' (except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) ) + ')'
+                    if len( whitelist ) == 0:
+                        
+                        text = 'no tags'
+                        
+                    else:
+                        
+                        text = 'only ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        
+                    
+                elif set( blacklist ) == { '' }:
+                    
+                    text = 'all namespaced tags'
+                    
+                    if len( whitelist ) > 0:
+                        
+                        text += ' and ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        
+                    
+                elif set( blacklist ) == { ':' }:
+                    
+                    text = 'all unnamespaced tags'
+                    
+                    if len( whitelist ) > 0:
+                        
+                        text += ' and ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        
+                    
+                else:
+                    
+                    text = 'all tags except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
+                    
+                    if len( whitelist ) > 0:
+                        
+                        text += ' (except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) ) + ')'
+                        
                     
                 
             
-        
-        return text
+            return text
+            
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER ] = TagFilter

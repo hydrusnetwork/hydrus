@@ -10,7 +10,9 @@ try:
     
     from include import HydrusPy2To3
     
-    HydrusPy2To3.do_2to3_test()
+    import wx
+    
+    HydrusPy2To3.do_2to3_test( wx_error_display_callable = wx.SafeShowMessage )
     
     from include import HydrusExceptions
     from include import HydrusConstants as HC
@@ -86,7 +88,7 @@ try:
             
             if not HG.twisted_is_broke:
                 
-                threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+                threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
             
             controller = ClientController.Controller( db_dir, no_daemons, no_wal )

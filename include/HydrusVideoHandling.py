@@ -390,6 +390,11 @@ def ParseFFMPEGDuration( lines ):
             duration = 3600 * hms[0] + 60 * hms[1] + hms[2]
             
         
+        if duration == 0:
+            
+            return None
+            
+        
         duration -= start_offset
         
         return duration

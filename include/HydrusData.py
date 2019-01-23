@@ -573,19 +573,23 @@ def GetSubprocessEnv():
         
         if ( HC.PLATFORM_LINUX or HC.PLATFORM_OSX ) and 'PATH' in env:
             
-            # fix for pyinstaller on os x, which drops this for some reason and hence breaks ffmpeg
+            # fix for pyinstaller, which drops this stuff for some reason and hence breaks ffmpeg
             
             path = env[ 'PATH' ]
             
-            missing_path_location = '/usr/local/bin'
+            path_locations = set( path.split( ':' ) )
+            desired_path_locations = [ '/usr/bin', '/usr/local/bin' ]
             
-            if missing_path_location not in path:
+            for desired_path_location in desired_path_locations:
                 
-                path = missing_path_location + ':' + path
-                
-                env[ 'PATH' ] = path
-                
-                changes_made = True
+                if desired_path_location not in path_locations:
+                    
+                    path = desired_path_location + ':' + path
+                    
+                    env[ 'PATH' ] = path
+                    
+                    changes_made = True
+                    
                 
             
         

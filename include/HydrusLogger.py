@@ -58,7 +58,14 @@ class HydrusLogger( object ):
         
         self._log_path = self._GetLogPath()
         
-        self._log_file = open( self._log_path, 'a' )
+        is_new_file = not os.path.exists( self._log_path )
+        
+        self._log_file = open( self._log_path, 'a', encoding = 'utf-8' )
+        
+        if is_new_file:
+            
+            self._log_file.write( u'\uFEFF' ) # Byte Order Mark, BOM, to help reader software interpret this as utf-8
+            
         
     
     def _SwitchToANewLogFileIfDue( self ):

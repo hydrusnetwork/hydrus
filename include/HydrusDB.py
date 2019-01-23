@@ -735,6 +735,14 @@ class HydrusDB( object ):
     
     def pub_after_job( self, topic, *args, **kwargs ):
         
+        if len( args ) == 0 and len( kwargs ) == 0:
+            
+            if ( topic, args, kwargs ) in self._pubsubs:
+                
+                return
+                
+            
+        
         self._pubsubs.append( ( topic, args, kwargs ) )
         
     

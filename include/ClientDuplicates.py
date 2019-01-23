@@ -174,32 +174,32 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 add_content_action = HC.CONTENT_UPDATE_PEND
                 
             
-            first_current_tags = first_media.GetTagsManager().GetCurrent( service_key )
-            second_current_tags = second_media.GetTagsManager().GetCurrent( service_key )
+            first_tags = first_media.GetTagsManager().GetCurrentAndPending( service_key )
+            second_tags = second_media.GetTagsManager().GetCurrentAndPending( service_key )
             
-            first_current_tags = tag_filter.Filter( first_current_tags )
-            second_current_tags = tag_filter.Filter( second_current_tags )
+            first_tags = tag_filter.Filter( first_tags )
+            second_tags = tag_filter.Filter( second_tags )
             
             if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
-                first_needs = second_current_tags.difference( first_current_tags )
-                second_needs = first_current_tags.difference( second_current_tags )
+                first_needs = second_tags.difference( first_tags )
+                second_needs = first_tags.difference( second_tags )
                 
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, second_hashes ) ) for tag in second_needs ) )
                 
             elif action == HC.CONTENT_MERGE_ACTION_COPY:
                 
-                first_needs = second_current_tags.difference( first_current_tags )
+                first_needs = second_tags.difference( first_tags )
                 
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
                 
             elif service_type == HC.LOCAL_TAG and action == HC.CONTENT_MERGE_ACTION_MOVE:
                 
-                first_needs = second_current_tags.difference( first_current_tags )
+                first_needs = second_tags.difference( first_tags )
                 
                 content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, second_hashes ) ) for tag in second_current_tags ) )
+                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, second_hashes ) ) for tag in second_tags ) )
                 
             
             if len( content_updates ) > 0:

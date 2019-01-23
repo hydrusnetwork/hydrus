@@ -1068,7 +1068,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         to_print.sort( key = lambda pair: -pair[1] )
         
-        for ( k, v ) in list( count.items() ):
+        for ( k, v ) in to_print:
             
             if v > 100:
                 
@@ -2038,6 +2038,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
             
@@ -3526,6 +3527,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.network_report_mode = not HG.network_report_mode
             
+        elif name == 'pubsub_report_mode':
+            
+            HG.pubsub_report_mode = not HG.pubsub_report_mode
+            
         elif name == 'pubsub_profile_mode':
             
             HG.pubsub_profile_mode = not HG.pubsub_profile_mode
@@ -4893,7 +4898,7 @@ class FrameSplashStatus( object ):
     
     def SetText( self, text, print_to_log = True ):
         
-        if print_to_log:
+        if print_to_log and len( text ) > 0:
             
             HydrusData.Print( text )
             
@@ -4921,7 +4926,7 @@ class FrameSplashStatus( object ):
         
         if print_to_log:
             
-            HydrusData.Print( text )
+            HydrusData.DebugPrint( text )
             
         
         with self._lock:

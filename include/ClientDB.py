@@ -1,3 +1,4 @@
+from . import ClientAPI
 from . import ClientCaches
 from . import ClientData
 from . import ClientDefaults
@@ -378,6 +379,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._controller.pub( 'splash_set_status_text', 'analyzing ' + name )
                     job_key.SetVariable( 'popup_text_1', 'analyzing ' + name )
+                    
+                    time.sleep( 0.25 )
                     
                     started = HydrusData.GetNowPrecise()
                     
@@ -2970,6 +2973,10 @@ class DB( HydrusDB.HydrusDB ):
             
             self._SetJSONDump( shortcuts )
             
+        
+        #client_api_manager = ClientAPI.APIManager()
+        
+        #self._SetJSONDump( client_api_manager )
         
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         
@@ -7488,6 +7495,7 @@ class DB( HydrusDB.HydrusDB ):
         try:
             
             next_stop_time_presentation = 0
+            next_gc_collect = 0
             
             paths = [ os.path.join( self._db_dir, filename ) for filename in list(self._db_filenames.values()) ]
             
@@ -7503,12 +7511,12 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if HydrusData.TimeHasPassed( next_stop_time_presentation ):
                                 
-                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + HydrusData.TimestampToPrettyTimeDelta( stop_time, just_now_string = 'ok', just_now_threshold = 1 ) )
-                                
                                 if HydrusData.TimeHasPassed( stop_time ):
                                     
                                     return False
                                     
+                                
+                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + HydrusData.TimestampToPrettyTimeDelta( stop_time, just_now_string = 'ok', just_now_threshold = 1 ) )
                                 
                                 next_stop_time_presentation = HydrusData.GetNow() + 1
                                 
@@ -7526,10 +7534,21 @@ class DB( HydrusDB.HydrusDB ):
                             return False
                             
                         
+                        if HydrusData.TimeHasPassed( next_gc_collect ):
+                            
+                            gc.collect()
+                            
+                            next_gc_collect = HydrusData.GetNow() + 1
+                            
+                            time.sleep( 0.00001 )
+                            
+                        
                     
                 
             
         finally:
+            
+            gc.collect()
             
             self._InitDBCursor()
             
@@ -7962,25 +7981,25 @@ class DB( HydrusDB.HydrusDB ):
                                     
                                     ( tag, hashes, service_key_target ) = sub_row
                                     
-                                    source_table_name = current_mappings_table_name
+                                    source_table_names = [ current_mappings_table_name, pending_mappings_table_name ]
                                     
                                 elif sub_action == 'delete':
                                     
                                     ( tag, hashes ) = sub_row
                                     
-                                    source_table_name = current_mappings_table_name
+                                    source_table_names = [ current_mappings_table_name ]
                                     
                                 elif sub_action == 'delete_deleted':
                                     
                                     ( tag, hashes ) = sub_row
                                     
-                                    source_table_name = deleted_mappings_table_name
+                                    source_table_names = [ deleted_mappings_table_name ]
                                     
                                 elif sub_action == 'delete_for_deleted_files':
                                     
                                     ( tag, hashes ) = sub_row
                                     
-                                    source_table_name = current_mappings_table_name + ' NATURAL JOIN deleted_files'
+                                    source_table_names = [ current_mappings_table_name + ' NATURAL JOIN deleted_files' ]
                                     
                                     predicates.append( 'deleted_files.service_id = ' + str( self._combined_local_file_service_id ) )
                                     
@@ -8021,28 +8040,33 @@ class DB( HydrusDB.HydrusDB ):
                                         
                                     
                                 
-                                if do_namespace_join:
+                                num_to_do = 0
+                                
+                                for source_table_name in source_table_names:
                                     
-                                    source_table_name = source_table_name + ' NATURAL JOIN tags NATURAL JOIN namespaces'
+                                    if do_namespace_join:
+                                        
+                                        source_table_name = source_table_name + ' NATURAL JOIN tags NATURAL JOIN namespaces'
+                                        
+                                    
+                                    if hashes is not None:
+                                        
+                                        hash_ids = self._GetHashIds( hashes )
+                                        
+                                        predicates.append( 'hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) )
+                                        
+                                    
+                                    if len( predicates ) == 0:
+                                        
+                                        self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ';' )
+                                        
+                                    else:
+                                        
+                                        self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ' WHERE ' + ' AND '.join( predicates ) + ';' )
+                                        
                                     
                                 
-                                if hashes is not None:
-                                    
-                                    hash_ids = self._GetHashIds( hashes )
-                                    
-                                    predicates.append( 'hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) )
-                                    
-                                
-                                if len( predicates ) == 0:
-                                    
-                                    self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ';' )
-                                    
-                                else:
-                                    
-                                    self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ' WHERE ' + ' AND '.join( predicates ) + ';' )
-                                    
-                                
-                                num_to_do = self._GetRowCount()
+                                num_to_do += self._GetRowCount()
                                 
                                 i = 0
                                 
@@ -8934,6 +8958,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             finally:
+                
+                HG.client_controller.pub( 'splash_set_status_text', 'committing' )
                 
                 self._AnalyzeStaleBigTables()
                 
@@ -11535,6 +11561,14 @@ class DB( HydrusDB.HydrusDB ):
             self._CreateIndex( 'file_viewing_stats', [ 'media_viewtime' ] )
             
         
+        '''
+        if version == bring in api manager:
+            
+            client_api_manager = ClientAPI.APIManager()
+            
+            self._SetJSONDump( client_api_manager )
+            
+        '''
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11714,7 +11748,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._CacheCombinedFilesMappingsUpdate( tag_service_id, combined_files_counts )
         
-        # 
+        #
         
         post_existing_tag_ids = self._STS( self._c.execute( 'SELECT tag_id as t FROM temp_tag_ids WHERE EXISTS ( SELECT 1 FROM ' + current_mappings_table_name + ' WHERE tag_id = t );' ) )
         post_existing_hash_ids = self._STS( self._c.execute( 'SELECT hash_id as h FROM temp_hash_ids WHERE EXISTS ( SELECT 1 FROM ' + current_mappings_table_name + ' WHERE hash_id = h );' ) )

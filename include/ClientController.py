@@ -11,6 +11,7 @@ if wx_first_num < 4:
     
     raise Exception( wx_error )
     
+from . import ClientAPI
 from . import ClientCaches
 from . import ClientData
 from . import ClientDaemons
@@ -107,7 +108,9 @@ class Controller( HydrusController.HydrusController ):
         
         if self._splash is not None:
             
-            self._splash.DestroyLater()
+            wx.CallAfter( self._splash.Hide )
+            
+            wx.CallAfter( self._splash.Destroy )
             
             self._splash = None
             
@@ -163,7 +166,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        job_key = ClientThreading.JobKey()
+        job_key = ClientThreading.JobKey( cancel_on_shutdown = False )
         
         job_key.Begin()
         
@@ -459,6 +462,7 @@ class Controller( HydrusController.HydrusController ):
                                         
                                     else:
                                         
+                                        # if they said no, don't keep asking
                                         self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
                                         
                                     
@@ -493,11 +497,6 @@ class Controller( HydrusController.HydrusController ):
     def GetApp( self ):
         
         return self._app
-        
-    
-    def GetBandwidthManager( self ):
-        
-        raise NotImplementedError()
         
     
     def GetClipboardText( self ):
@@ -625,6 +624,22 @@ class Controller( HydrusController.HydrusController ):
         self.pub( 'splash_set_status_subtext', 'network' )
         
         self.parsing_cache = ClientCaches.ParsingCache()
+        '''
+        client_api_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_MANAGER )
+        
+        if client_api_manager is None:
+            
+            client_api_manager = ClientAPI.APIManager()
+            
+            client_api_manager._dirty = True
+            
+            wx.MessageBox( 'Your client api manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
+        self.client_api_manager = client_api_manager
+        '''
+        
+        self.client_api_manager = ClientAPI.APIManager()
         
         bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
         
@@ -912,23 +927,10 @@ class Controller( HydrusController.HydrusController ):
         
         disk_cache_maintenance_mb = self.new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
         
-        if disk_cache_maintenance_mb is not None:
+        if disk_cache_maintenance_mb is not None and not self._view_shutdown:
             
-            if self.CurrentlyVeryIdle():
-                
-                cache_period = 3600
-                disk_cache_stop_time = HydrusData.GetNow() + 30
-                
-            elif self.CurrentlyIdle():
-                
-                cache_period = 1800
-                disk_cache_stop_time = HydrusData.GetNow() + 10
-                
-            else:
-                
-                cache_period = 240
-                disk_cache_stop_time = HydrusData.GetNow() + 2
-                
+            cache_period = 3600
+            disk_cache_stop_time = HydrusData.GetNow() + 2
             
             if HydrusData.TimeHasPassed( self._timestamps[ 'last_disk_cache_population' ] + cache_period ):
                 
@@ -1138,7 +1140,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.MainLoop()
         
-        HydrusData.Print( 'shutting down controller\u2026' )
+        HydrusData.DebugPrint( 'shutting down controller\u2026' )
         
     
     def SaveDirtyObjects( self ):
@@ -1151,7 +1153,14 @@ class Controller( HydrusController.HydrusController ):
                 
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
-            
+            '''
+            if self.client_api_manager.IsDirty():
+                
+                self.WriteSynchronous( 'serialisable', self.client_api_manager )
+                
+                self.client_api_manager.SetClean()
+                
+            '''
             if self.network_engine.bandwidth_manager.IsDirty():
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
@@ -1313,6 +1322,8 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
+            gc.collect()
+            
             self.pub( 'splash_set_title_text', 'shutting down gui\u2026' )
             
             self.ShutdownView()
@@ -1322,7 +1333,6 @@ class Controller( HydrusController.HydrusController ):
             self.ShutdownModel()
             
             self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
-            self.pub( 'splash_set_status_text', '' )
             
             HydrusData.CleanRunningFile( self.db_dir, 'client' )
             

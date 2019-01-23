@@ -127,6 +127,18 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
+    def ToHumanString( self ):
+        
+        if self.IsEphemeral():
+            
+            return CC.network_context_type_string_lookup[ self.context_type ] + ' instance'
+            
+        else:
+            
+            return self.ToString()
+            
+        
+    
     def ToString( self ):
         
         if self.context_data is None:

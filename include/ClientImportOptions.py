@@ -689,11 +689,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CheckNetworkDownload( self, possible_mime, size, certain ):
+    def CheckNetworkDownload( self, possible_mime, num_bytes, is_complete_file_size ):
         
-        if certain:
-            
-            # by certain, we really mean 'content-length said', hence the 'apparently'
+        if is_complete_file_size:
             
             error_prefix = 'Download was apparently '
             
@@ -704,22 +702,22 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if possible_mime is not None:
             
-            if possible_mime == HC.IMAGE_GIF and self._max_gif_size is not None and size > self._max_gif_size:
+            if possible_mime == HC.IMAGE_GIF and self._max_gif_size is not None and num_bytes > self._max_gif_size:
                 
-                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
+                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
                 
             
         
-        if self._max_size is not None and size > self._max_size:
+        if self._max_size is not None and num_bytes > self._max_size:
             
-            raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( size ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
+            raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
             
         
-        if certain:
+        if is_complete_file_size:
             
-            if self._min_size is not None and size < self._min_size:
+            if self._min_size is not None and num_bytes < self._min_size:
                 
-                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( size ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
+                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
                 
             
         

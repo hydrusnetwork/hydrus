@@ -334,7 +334,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetWaitingEstimate( self, network_contexts ):
+    def GetWaitingEstimateAndContext( self, network_contexts ):
         
         with self._lock:
             
@@ -346,16 +346,18 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
                 
-                estimates.append( bandwidth_rules.GetWaitingEstimate( bandwidth_tracker ) )
+                estimates.append( ( bandwidth_rules.GetWaitingEstimate( bandwidth_tracker ), network_context ) )
                 
+            
+            estimates.sort( key = lambda pair: -pair[0] ) # biggest first
             
             if len( estimates ) == 0:
                 
-                return 0
+                return ( 0, ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
                 
             else:
                 
-                return max( estimates )
+                return estimates[0]
                 
             
         

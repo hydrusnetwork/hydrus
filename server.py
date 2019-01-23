@@ -94,7 +94,7 @@ try:
                 
                 HydrusData.Print( 'Initialising controller\u2026' )
                 
-                threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+                threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
                 controller = ServerController.Controller( db_dir, no_daemons, no_wal )
                 

@@ -14,6 +14,7 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusPaths
 from . import HydrusSerialisable
+from . import HydrusThreading
 import os
 import random
 import time
@@ -521,11 +522,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 
                 p1 = HC.options[ 'pause_subs_sync' ]
+                p2 = HydrusThreading.IsThreadShuttingDown()
                 p3 = HG.view_shutdown
                 p4 = not self._QueryBandwidthIsOK( query )
                 p5 = not self._QueryFileLoginIsOK( query )
                 
-                if p1 or p3 or p4 or p5:
+                if p1 or p2 or p3 or p4 or p5:
                     
                     if p4 and this_query_has_done_work:
                         
@@ -794,8 +796,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     p1 = HC.options[ 'pause_subs_sync' ]
                     p2 = HG.view_shutdown
                     p3 = not self._QuerySyncLoginIsOK( query )
+                    p4 = HydrusThreading.IsThreadShuttingDown()
                     
-                    if p1 or p2 or p3:
+                    if p1 or p2 or p3 or p4:
                         
                         if p3:
                             
@@ -1064,7 +1067,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         example_network_contexts = self._GetExampleNetworkContexts( query )
         
-        estimate = HG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimate( example_network_contexts )
+        ( estimate, bandwidth_network_context ) = HG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
         
         return estimate
         
@@ -1082,7 +1085,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_network_contexts = self._GetExampleNetworkContexts( query )
             
-            estimate = HG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimate( example_network_contexts )
+            ( estimate, bandwidth_network_context ) = HG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
             
             estimates.append( estimate )
             

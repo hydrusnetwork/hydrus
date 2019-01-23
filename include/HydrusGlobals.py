@@ -22,6 +22,7 @@ subscription_report_mode = False
 hover_window_report_mode = False
 menu_profile_mode = False
 network_report_mode = False
+pubsub_report_mode = False
 pubsub_profile_mode = False
 ui_timer_profile_mode = False
 daemon_report_mode = False

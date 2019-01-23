@@ -102,25 +102,25 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( services ) > 0:
             
-            self._action_dropdown.Append( 'copy', self.COPY )
+            self._action_dropdown.Append( 'copy current and pending mappings', self.COPY )
             
         
         if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
             
-            self._action_dropdown.Append( 'delete', self.DELETE )
-            self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
-            self._action_dropdown.Append( 'delete from deleted files', self.DELETE_FOR_DELETED_FILES )
+            self._action_dropdown.Append( 'delete current mappings', self.DELETE )
+            self._action_dropdown.Append( 'clear deleted mappings record', self.DELETE_DELETED )
+            self._action_dropdown.Append( 'delete current mappings from deleted files', self.DELETE_FOR_DELETED_FILES )
             
         
         self._action_dropdown.Select( 0 )
         
         #
         
-        self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
-        self._tag_type_dropdown.Append( 'all namespaced mappings', self.NAMESPACED )
-        self._tag_type_dropdown.Append( 'all unnamespaced mappings', self.UNNAMESPACED )
-        self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
-        self._tag_type_dropdown.Append( 'specific namespace\'s mappings', self.SPECIFIC_NAMESPACE )
+        self._tag_type_dropdown.Append( 'all', self.ALL_MAPPINGS )
+        self._tag_type_dropdown.Append( 'all namespaced', self.NAMESPACED )
+        self._tag_type_dropdown.Append( 'all unnamespaced', self.UNNAMESPACED )
+        self._tag_type_dropdown.Append( 'specific tag', self.SPECIFIC_MAPPINGS )
+        self._tag_type_dropdown.Append( 'specific namespace', self.SPECIFIC_NAMESPACE )
         
         self._tag_type_dropdown.Select( 0 )
         
@@ -173,7 +173,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable.'
         message += os.linesep * 2
-        message += 'You may need to refresh your existing searches to see their effect.' 
+        message += 'You may need to restart your client to see their effect.' 
         
         st = ClientGUICommon.BetterStaticText( self, message )
         
@@ -1530,6 +1530,8 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         win = ClientGUICommon.BufferedWindowIcon( self, lain_bmp )
         
+        win.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
+        
         self._select_from_list = wx.CheckBox( self )
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
@@ -1548,8 +1550,10 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         win.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
         
+        win.Bind( wx.EVT_LEFT_DOWN, self.EventLainClick )
+        
     
-    def ImportFromDragDrop( self, paths ):
+    def _ImportPaths( self, paths ):
         
         gugs = []
         url_matches = []
@@ -1879,6 +1883,24 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         wx.MessageBox( final_message )
+        
+    
+    def EventLainClick( self, event ):
+        
+        with wx.FileDialog( self, 'Select the pngs to add.', style = wx.FD_OPEN | wx.FD_MULTIPLE ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                paths = dlg.GetPaths()
+                
+                self._ImportPaths( paths )
+                
+            
+        
+    
+    def ImportFromDragDrop( self, paths ):
+        
+        self._ImportPaths( paths )
         
     
 class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):

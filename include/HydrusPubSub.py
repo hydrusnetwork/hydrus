@@ -100,13 +100,19 @@ class HydrusPubSub( object ):
                 
                 try:
                     
+                    # do all this _outside_ the lock, lol
+                    
                     callables = self._GetCallables( topic )
                     
-                    # do this _outside_ the lock, lol
+                    # don't want to report the showtext we just send here!
+                    not_a_report = topic != 'message'
                     
-                    pubsub_profilable = topic != 'message'
+                    if HG.pubsub_report_mode and not_a_report:
+                        
+                        HydrusData.ShowText( ( topic, args, kwargs, callables ) )
+                        
                     
-                    if HG.pubsub_profile_mode and pubsub_profilable:
+                    if HG.pubsub_profile_mode and not_a_report:
                         
                         summary = 'Profiling ' + HydrusData.ToHumanInt( len( callables ) ) + ' x ' + topic
                         
