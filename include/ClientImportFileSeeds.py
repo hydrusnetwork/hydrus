@@ -1023,7 +1023,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if url_type not in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                 
-                raise HydrusExceptions.VetoException( 'Did not recognise this as a File or Post URL!' )
+                raise HydrusExceptions.VetoException( 'This URL appeared to be a "{}", which is not a File or Post URL!'.format( match_name ) )
                 
             
             if url_type == HC.URL_TYPE_POST and not can_parse:

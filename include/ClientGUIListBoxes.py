@@ -1464,6 +1464,8 @@ class ListBoxTags( ListBox ):
         
         self._get_current_predicates_callable = None
         
+        self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
+        
         self._UpdateBackgroundColour()
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
@@ -1682,6 +1684,23 @@ class ListBoxTags( ListBox ):
             
             if len( self._selected_terms ) > 0:
                 
+                selected_tags = set()
+                
+                for term in self._selected_terms:
+                    
+                    if isinstance( term, ClientSearch.Predicate ):
+                        
+                        if term.GetType() == HC.PREDICATE_TYPE_TAG and term.IsInclusive():
+                            
+                            selected_tags.add( term.GetValue() )
+                            
+                        
+                    else:
+                        
+                        selected_tags.add( term )
+                        
+                    
+                
                 if len( self._selected_terms ) == 1:
                     
                     ( term, ) = self._selected_terms
@@ -1746,6 +1765,43 @@ class ListBoxTags( ListBox ):
                     if len( self._selected_terms ) > 1:
                         
                         ClientGUIMenus.AppendMenuItem( self, menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPageForEach )
+                        
+                    
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                if self._page_key is not None:
+                    
+                    if len( selected_tags ) > 0:
+                        
+                        tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_tags )
+                        
+                        tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu )
+                        
+                        while len( tags_sorted_to_show_on_menu_string ) > 64:
+                            
+                            if len( tags_sorted_to_show_on_menu ) == 1:
+                                
+                                tags_sorted_to_show_on_menu_string = '(many/long tags)'
+                                
+                            else:
+                                
+                                tags_sorted_to_show_on_menu.pop( -1 )
+                                
+                                tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ '\u2026' ] )
+                                
+                            
+                        
+                        label = 'select files with "{}"'.format( tags_sorted_to_show_on_menu_string )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_tags ) )
+                        
+                        if len( selected_tags ) > 1:
+                            
+                            label = 'select files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                            
+                            ClientGUIMenus.AppendMenuItem( self, menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_tags ) )
+                            
                         
                     
                 
@@ -2162,7 +2218,13 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
                         
                         for ( index, predicate ) in enumerate( predicates ):
                             
-                            if predicate.GetCount() != 0:
+                            # now only apply this to simple tags, not wildcards and system tags
+                            
+                            if predicate.GetType() in ( HC.PREDICATE_TYPE_PARENT, HC.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
+                                
+                                continue
+                                
+                            else:
                                 
                                 hit_index = index
                                 

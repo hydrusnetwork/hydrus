@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 337
+SOFTWARE_VERSION = 338
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -324,6 +324,7 @@ LOCAL_FILE_TRASH_DOMAIN = 14
 COMBINED_LOCAL_FILE = 15
 TEST_SERVICE = 16
 LOCAL_NOTES = 17
+CLIENT_API_SERVICE = 18
 SERVER_ADMIN = 99
 NULL_SERVICE = 100
 
@@ -342,7 +343,8 @@ service_string_lookup[ RATING_NUMERICAL_REPOSITORY ] = 'hydrus numerical rating 
 service_string_lookup[ RATING_LIKE_REPOSITORY ] = 'hydrus like/dislike rating repository'
 service_string_lookup[ COMBINED_TAG ] = 'virtual combined tag service'
 service_string_lookup[ COMBINED_FILE ] = 'virtual combined file service'
-service_string_lookup[ LOCAL_BOORU ] = 'hydrus local booru'
+service_string_lookup[ LOCAL_BOORU ] = 'client local booru'
+service_string_lookup[ CLIENT_API_SERVICE ] = 'client api'
 service_string_lookup[ IPFS ] = 'ipfs daemon'
 service_string_lookup[ TEST_SERVICE ] = 'test service'
 service_string_lookup[ LOCAL_NOTES ] = 'local file notes service'
@@ -352,7 +354,7 @@ service_string_lookup[ NULL_SERVICE ] = 'null service'
 LOCAL_FILE_SERVICES = ( LOCAL_FILE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN, COMBINED_LOCAL_FILE )
 LOCAL_TAG_SERVICES = ( LOCAL_TAG, )
 
-LOCAL_SERVICES = LOCAL_FILE_SERVICES + LOCAL_TAG_SERVICES + ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_BOORU, LOCAL_NOTES )
+LOCAL_SERVICES = LOCAL_FILE_SERVICES + LOCAL_TAG_SERVICES + ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_BOORU, LOCAL_NOTES, CLIENT_API_SERVICE )
 
 RATINGS_SERVICES = ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY )
 REPOSITORIES = ( TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY )
@@ -712,8 +714,6 @@ url_type_string_lookup[ URL_TYPE_SOURCE ] = 'associable/source url'
 
 # default options
 
-DEFAULT_LOCAL_FILE_PORT = 45865
-DEFAULT_LOCAL_BOORU_PORT = 45866
 DEFAULT_SERVER_ADMIN_PORT = 45870
 DEFAULT_SERVICE_PORT = 45871
 

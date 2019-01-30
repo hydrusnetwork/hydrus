@@ -4,6 +4,7 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusPaths
+from . import HydrusText
 import os
 import queue
 import sqlite3

@@ -6,6 +6,7 @@ from . import ClientGUIListBoxes
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
 from . import ClientSearch
+from . import ClientThreading
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -24,6 +25,309 @@ ID_TIMER_AC_LAG = wx.NewId()
 ( ShowPreviousEvent, EVT_SHOW_PREVIOUS ) = wx.lib.newevent.NewCommandEvent()
 ( ShowNextEvent, EVT_SHOW_NEXT ) = wx.lib.newevent.NewCommandEvent()
 
+def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_callable, file_search_context, synchronised, include_unusual_predicate_types, initial_matches_fetched, search_text_for_current_cache, cached_results ):
+    
+    next_search_is_probably_fast = False
+    
+    include_current = file_search_context.IncludeCurrentTags()
+    include_pending = file_search_context.IncludePendingTags()
+    
+    file_service_key = file_search_context.GetFileServiceKey()
+    tag_service_key = file_search_context.GetTagServiceKey()
+    
+    num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
+    
+    ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
+    
+    if search_text in ( '', ':', '*' ):
+        
+        # if the user inputs '-' or similar, let's go to an empty list
+        if raw_entry == '':
+            
+            input_just_changed = search_text_for_current_cache is not None
+            
+            db_not_going_to_hang_if_we_hit_it = not HG.client_controller.DBCurrentlyDoingJob()
+            
+            if input_just_changed or db_not_going_to_hang_if_we_hit_it or not initial_matches_fetched:
+                
+                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    search_service_key = tag_service_key
+                    
+                else:
+                    
+                    search_service_key = file_service_key
+                    
+                
+                search_text_for_current_cache = None
+                
+                cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key )
+                
+            
+            matches = cached_results
+            
+        else:
+            
+            matches = []
+            
+        
+    else:
+        
+        ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
+        
+        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        
+        if False and half_complete_subtag == '':
+            
+            search_text_for_current_cache = None
+            
+            matches = [] # a query like 'namespace:'
+            
+        else:
+            
+            fetch_from_db = True
+            
+            if synchronised and wx_media_callable is not None:
+                
+                try:
+                    
+                    media = HG.client_controller.CallBlockingToWX( win, wx_media_callable )
+                    
+                except HydrusExceptions.WXDeadWindowException:
+                    
+                    return
+                    
+                
+                can_fetch_from_media = media is not None and len( media ) > 0
+                
+                if can_fetch_from_media:
+                    
+                    fetch_from_db = False
+                    
+                
+            
+            if fetch_from_db:
+                
+                # if user searches 'blah', then we include 'blah (23)' for 'series:blah (10)', 'blah (13)'
+                # if they search for 'series:blah', then we don't!
+                add_namespaceless = ':' not in namespace
+                
+                small_and_specific_search = cache_text is not None and len( cache_text ) < num_autocomplete_chars
+                
+                if small_and_specific_search:
+                    
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = cache_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = add_namespaceless, job_key = job_key, collapse_siblings = True )
+                    
+                else:
+                    
+                    cache_invalid_for_this_search = cache_text is None or search_text_for_current_cache is None or not cache_text.startswith( search_text_for_current_cache )
+                    
+                    if cache_invalid_for_this_search:
+                        
+                        new_search_text_for_current_cache = cache_text
+                        
+                        cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = search_text, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = add_namespaceless, job_key = job_key, collapse_siblings = True )
+                        
+                    
+                    predicates = cached_results
+                    
+                    next_search_is_probably_fast = True
+                    
+                
+            else:
+                
+                # it is possible that media will change between calls to this, so don't cache it
+                # it's also quick as hell, so who cares
+                
+                tags_managers = []
+                
+                for m in media:
+                    
+                    if m.IsCollection():
+                        
+                        tags_managers.extend( m.GetSingletonsTagsManagers() )
+                        
+                    else:
+                        
+                        tags_managers.append( m.GetTagsManager() )
+                        
+                    
+                
+                tags_to_do = set()
+                
+                current_tags_to_count = collections.Counter()
+                pending_tags_to_count = collections.Counter()
+                
+                if include_current:
+                    
+                    lists_of_current_tags = [ list( tags_manager.GetCurrent( tag_service_key ) ) for tags_manager in tags_managers ]
+                    
+                    current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
+                    
+                    current_tags_flat = ClientSearch.FilterTagsBySearchText( tag_service_key, search_text, current_tags_flat_iterable )
+                    
+                    current_tags_to_count.update( current_tags_flat )
+                    
+                    tags_to_do.update( list(current_tags_to_count.keys()) )
+                    
+                
+                if include_pending:
+                    
+                    lists_of_pending_tags = [ list( tags_manager.GetPending( tag_service_key ) ) for tags_manager in tags_managers ]
+                    
+                    pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
+                    
+                    pending_tags_flat = ClientSearch.FilterTagsBySearchText( tag_service_key, search_text, pending_tags_flat_iterable )
+                    
+                    pending_tags_to_count.update( pending_tags_flat )
+                    
+                    tags_to_do.update( list(pending_tags_to_count.keys()) )
+                    
+                
+                predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
+                
+                if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
+                    
+                    predicates = siblings_manager.CollapsePredicates( tag_service_key, predicates )
+                    
+                
+                if namespace == '':
+                    
+                    predicates = ClientData.MergePredicates( predicates, add_namespaceless = True )
+                    
+                
+                next_search_is_probably_fast = True
+                
+            
+            matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, search_text, predicates )
+            
+            matches = ClientSearch.SortPredicates( matches )
+            
+        
+        if include_unusual_predicate_types:
+            
+            if explicit_wildcard:
+                
+                matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
+                
+            else:
+                
+                if namespace != '' and half_complete_subtag in ( '', '*' ):
+                    
+                    matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) )
+                    
+                
+            
+        
+        for match in matches:
+            
+            if match.GetInclusive() != inclusive:
+                
+                match.SetInclusive( inclusive )
+                
+            
+        
+        try:
+            
+            index = matches.index( entry_predicate )
+            
+            predicate = matches[ index ]
+            
+            del matches[ index ]
+            
+            matches.insert( 0, predicate )
+            
+        except:
+            
+            pass
+            
+        
+    
+    if job_key.IsCancelled():
+        
+        return
+        
+    
+    HG.client_controller.CallLaterWXSafe( win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast )
+    
+def PutAtTopOfMatches( matches, predicate ):
+    
+    try:
+        
+        index = matches.index( predicate )
+        
+        predicate = matches[ index ]
+        
+        matches.remove( predicate )
+        
+    except ValueError:
+        
+        pass
+        
+    
+    matches.insert( 0, predicate )
+    
+def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service_key, tag_service_key, expand_parents, search_text_for_current_cache, cached_results ):
+    
+    next_search_is_probably_fast = False
+    
+    num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
+    
+    ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = parsed_search_text
+    
+    if search_text in ( '', ':', '*' ):
+        
+        search_text_for_current_cache = None
+        
+        matches = []
+        
+    else:
+        
+        must_do_a_search = False
+        
+        small_and_specific_search = cache_text is not None and len( cache_text ) < num_autocomplete_chars
+        
+        if small_and_specific_search:
+            
+            predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = cache_text, exact_match = True, add_namespaceless = False, job_key = job_key, collapse_siblings = False )
+            
+        else:
+            
+            cache_invalid_for_this_search = cache_text is None or search_text_for_current_cache is None or not cache_text.startswith( search_text_for_current_cache )
+            
+            if must_do_a_search or cache_invalid_for_this_search:
+                
+                search_text_for_current_cache = cache_text
+                
+                cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = search_text, add_namespaceless = False, job_key = job_key, collapse_siblings = False )
+                
+            
+            predicates = cached_results
+            
+            next_search_is_probably_fast = True
+            
+        
+        matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, search_text, predicates )
+        
+        matches = ClientSearch.SortPredicates( matches )
+        
+        PutAtTopOfMatches( matches, entry_predicate )
+        
+        if sibling_predicate is not None:
+            
+            PutAtTopOfMatches( matches, sibling_predicate )
+            
+        
+        if expand_parents:
+            
+            parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+            
+            matches = parents_manager.ExpandPredicates( tag_service_key, matches )
+            
+        
+    
+    HG.client_controller.CallLaterWXSafe( win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast )
+    
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( wx.Panel ):
     
@@ -32,9 +336,6 @@ class AutoCompleteDropdown( wx.Panel ):
         wx.Panel.__init__( self, parent )
         
         self._intercept_key_events = True
-        
-        self._last_search_text = ''
-        self._next_search_is_probably_fast = False
         
         tlp = self.GetTopLevelParent()
         
@@ -114,12 +415,6 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._dropdown_notebook.AddPage( self._search_results_list, 'results', True )
         
-        self._favourites_list = self._InitFavouritesList()
-        
-        self.RefreshFavouriteTags()
-        
-        self._dropdown_notebook.AddPage( self._favourites_list, 'favourites', False )
-        
         #
         
         if not self._float_mode:
@@ -129,12 +424,18 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self.SetSizer( vbox )
         
-        self._cache_text = None
+        self._last_fetched_search_text = ''
+        self._next_search_is_probably_fast = False
+        
+        self._search_text_for_current_cache = None
         self._cached_results = []
+        
+        self._current_fetch_job_key = None
         
         self._initial_matches_fetched = False
         
         self._move_hide_job = None
+        self._refresh_list_job = None
         
         if self._float_mode:
             
@@ -164,10 +465,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
-        HG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
         HG.client_controller.sub( self, 'DoDropdownHideShow', 'notify_page_change' )
-        
-        self._refresh_list_job = None
         
         self._ScheduleListRefresh( 0.0 )
         
@@ -237,11 +535,6 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
-    def _GenerateMatches( self ):
-        
-        raise NotImplementedError()
-        
-    
     def _HideDropdown( self ):
         
         if not self._dropdown_hidden:
@@ -253,11 +546,6 @@ class AutoCompleteDropdown( wx.Panel ):
         
     
     def _InitSearchResultsList( self ):
-        
-        raise NotImplementedError()
-        
-    
-    def _InitFavouritesList( self ):
         
         raise NotImplementedError()
         
@@ -316,9 +604,14 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _SetListDirty( self ):
         
-        self._cache_text = None
+        self._search_text_for_current_cache = None
         
         self._ScheduleListRefresh( 0.0 )
+        
+    
+    def _SetResultsToList( self, results ):
+        
+        raise NotImplementedError()
         
     
     def _ShouldShow( self ):
@@ -400,6 +693,11 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
+    def _StartResultsFetchJob( self, job_key ):
+        
+        raise NotImplementedError()
+        
+    
     def _TakeResponsibilityForEnter( self ):
         
         raise NotImplementedError()
@@ -421,7 +719,16 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _UpdateSearchResultsList( self ):
         
-        pass
+        self._refresh_list_job = None
+        
+        if self._current_fetch_job_key is not None:
+            
+            self._current_fetch_job_key.Cancel()
+            
+        
+        self._current_fetch_job_key = ClientThreading.JobKey( cancellable = True )
+        
+        self._StartResultsFetchJob( self._current_fetch_job_key )
         
     
     def BroadcastChoices( self, predicates ):
@@ -637,7 +944,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
                 
-                self._next_search_is_probably_fast = self._next_search_is_probably_fast and num_chars > len( self._last_search_text )
+                self._next_search_is_probably_fast = self._next_search_is_probably_fast and num_chars > len( self._last_fetched_search_text )
                 
                 if self._next_search_is_probably_fast:
                     
@@ -696,15 +1003,21 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
-    def RefreshFavouriteTags( self ):
+    def SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results ):
         
-        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
-        
-        favourite_tags.sort()
-        
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
-        
-        self._favourites_list.SetPredicates( predicates )
+        if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
+            
+            self._last_fetched_search_text = search_text
+            
+            self._search_text_for_current_cache = search_text_for_cache
+            self._cached_results = cached_results
+            
+            self._current_fetch_job_key = None
+            
+            self._initial_matches_fetched = True
+            
+            self._SetResultsToList( results )
+            
         
     
     def SetFocus( self ):
@@ -728,8 +1041,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         AutoCompleteDropdown.__init__( self, parent )
         
-        self._current_matches = []
-        
         file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
         
         tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
@@ -739,6 +1050,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._tag_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, tag_service.GetName(), self.TagButtonHit )
         self._tag_repo_button.SetMinSize( ( 20, -1 ) )
+        
+        self._favourites_list = self._InitFavouritesList()
+        
+        self.RefreshFavouriteTags()
+        
+        self._dropdown_notebook.AddPage( self._favourites_list, 'favourites', False )
+        
+        #
+        
+        HG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
         
     
     def _ChangeFileService( self, file_service_key ):
@@ -776,24 +1097,19 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._tag_repo_button.SetLabelText( name )
         
-        self._cache_text = None
+        self._search_text_for_current_cache = None
         
         self._SetListDirty()
         
     
-    def _UpdateSearchResultsList( self ):
+    def _InitFavouritesList( self ):
         
-        self._refresh_list_job = None
+        raise NotImplementedError()
         
-        self._last_search_text = self._text_ctrl.GetValue()
+    
+    def _SetResultsToList( self, results ):
         
-        matches = self._GenerateMatches()
-        
-        self._initial_matches_fetched = True
-        
-        self._search_results_list.SetPredicates( matches )
-        
-        self._current_matches = matches
+        self._search_results_list.SetPredicates( results )
         
     
     def FileButtonHit( self ):
@@ -822,6 +1138,17 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
         HG.client_controller.PopupMenu( self._file_repo_button, menu )
+        
+    
+    def RefreshFavouriteTags( self ):
+        
+        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+        
+        favourite_tags.sort()
+        
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
+        
+        self._favourites_list.SetPredicates( predicates )
         
     
     def SetFileService( self, file_service_key ):
@@ -1010,232 +1337,29 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate )
         
     
-    def _GenerateMatches( self ):
+    def _StartResultsFetchJob( self, job_key ):
         
-        self._next_search_is_probably_fast = False
+        parsed_search_text = self._ParseSearchText()
         
-        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
-        
-        ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
-        
-        if search_text in ( '', ':', '*' ):
-            
-            # if the user inputs '-' or similar, let's go to an empty list
-            if raw_entry == '':
-                
-                input_just_changed = self._cache_text is not None
-                
-                db_not_going_to_hang_if_we_hit_it = not HG.client_controller.DBCurrentlyDoingJob()
-                
-                if input_just_changed or db_not_going_to_hang_if_we_hit_it or not self._initial_matches_fetched:
-                    
-                    self._cache_text = None
-                    
-                    if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                        
-                        search_service_key = self._tag_service_key
-                        
-                    else:
-                        
-                        search_service_key = self._file_service_key
-                        
-                    
-                    self._cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key )
-                    
-                
-                matches = self._cached_results
-                
-            else:
-                
-                matches = []
-                
-            
-        else:
-            
-            ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
-            
-            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-            
-            if False and half_complete_subtag == '':
-                
-                self._cache_text = None
-                
-                matches = [] # a query like 'namespace:'
-                
-            else:
-                
-                fetch_from_db = True
-                
-                if self._media_callable is not None:
-                    
-                    media = self._media_callable()
-                    
-                    can_fetch_from_media = media is not None and len( media ) > 0
-                    
-                    if can_fetch_from_media and self._synchronised.IsOn():
-                        
-                        fetch_from_db = False
-                        
-                    
-                
-                if fetch_from_db:
-                    
-                    # if user searches 'blah', then we include 'blah (23)' for 'series:blah (10)', 'blah (13)'
-                    # if they search for 'series:blah', then we don't!
-                    add_namespaceless = ':' not in namespace
-                    
-                    include_current = self._file_search_context.IncludeCurrentTags()
-                    include_pending = self._file_search_context.IncludePendingTags()
-                    
-                    small_and_specific_search = cache_text is not None and len( cache_text ) < num_autocomplete_chars
-                    
-                    if small_and_specific_search:
-                        
-                        predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = cache_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = add_namespaceless, collapse_siblings = True )
-                        
-                    else:
-                        
-                        cache_invalid_for_this_search = cache_text is None or self._cache_text is None or not cache_text.startswith( self._cache_text )
-                        
-                        if cache_invalid_for_this_search:
-                            
-                            self._cache_text = cache_text
-                            
-                            self._cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = add_namespaceless, collapse_siblings = True )
-                            
-                        
-                        predicates = self._cached_results
-                        
-                        self._next_search_is_probably_fast = True
-                        
-                    
-                else:
-                    
-                    # it is possible that media will change between calls to this, so don't cache it
-                    # it's also quick as hell, so who cares
-                    
-                    tags_managers = []
-                    
-                    for m in media:
-                        
-                        if m.IsCollection(): tags_managers.extend( m.GetSingletonsTagsManagers() )
-                        else: tags_managers.append( m.GetTagsManager() )
-                        
-                    
-                    tags_to_do = set()
-                    
-                    current_tags_to_count = collections.Counter()
-                    pending_tags_to_count = collections.Counter()
-                    
-                    if self._file_search_context.IncludeCurrentTags():
-                        
-                        lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service_key ) ) for tags_manager in tags_managers ]
-                        
-                        current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
-                        
-                        current_tags_flat = ClientSearch.FilterTagsBySearchText( self._tag_service_key, search_text, current_tags_flat_iterable )
-                        
-                        current_tags_to_count.update( current_tags_flat )
-                        
-                        tags_to_do.update( list(current_tags_to_count.keys()) )
-                        
-                    
-                    if self._file_search_context.IncludePendingTags():
-                        
-                        lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service_key ) ) for tags_manager in tags_managers ]
-                        
-                        pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
-                        
-                        pending_tags_flat = ClientSearch.FilterTagsBySearchText( self._tag_service_key, search_text, pending_tags_flat_iterable )
-                        
-                        pending_tags_to_count.update( pending_tags_flat )
-                        
-                        tags_to_do.update( list(pending_tags_to_count.keys()) )
-                        
-                    
-                    predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
-                    
-                    if self._tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
-                        
-                        predicates = siblings_manager.CollapsePredicates( self._tag_service_key, predicates )
-                        
-                    
-                    if namespace == '':
-                        
-                        predicates = ClientData.MergePredicates( predicates, add_namespaceless = True )
-                        
-                    
-                    self._next_search_is_probably_fast = True
-                    
-                
-                matches = ClientSearch.FilterPredicatesBySearchText( self._tag_service_key, search_text, predicates )
-                
-                matches = ClientSearch.SortPredicates( matches )
-                
-            
-            if self._include_unusual_predicate_types:
-                
-                if explicit_wildcard:
-                    
-                    matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
-                    
-                else:
-                    
-                    if namespace != '' and half_complete_subtag in ( '', '*' ):
-                        
-                        matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) )
-                        
-                    
-                
-            
-            for match in matches:
-                
-                if match.GetInclusive() != inclusive: match.SetInclusive( inclusive )
-                
-            
-            try:
-                
-                index = matches.index( entry_predicate )
-                
-                predicate = matches[ index ]
-                
-                del matches[ index ]
-                
-                matches.insert( 0, predicate )
-                
-            except:
-                
-                pass
-                
-            
-        
-        return matches
+        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._media_callable, self._file_search_context, self._synchronised.IsOn(), self._include_unusual_predicate_types, self._initial_matches_fetched, self._search_text_for_current_cache, self._cached_results )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
         
+        ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        
+        sitting_on_empty = raw_entry == ''
+        
         # when the user has quickly typed something in and the results are not yet in
         
-        return self._text_ctrl.GetValue() != '' and self._last_search_text == ''
+        p1 = not sitting_on_empty and self._last_fetched_search_text != search_text
+        
+        return p1
         
     
     def _TakeResponsibilityForEnter( self ):
         
         self._BroadcastCurrentText()
-        
-    
-    def _UpdateSearchResultsList( self ):
-        
-        AutoCompleteDropdownTags._UpdateSearchResultsList( self )
-        
-        num_chars = len( self._text_ctrl.GetValue() )
-        
-        if num_chars == 0:
-            
-            # refresh system preds after five mins
-            
-            self._ScheduleListRefresh( 300 )
-            
         
     
     def GetFileSearchContext( self ):
@@ -1264,6 +1388,25 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._SetListDirty()
             
             HG.client_controller.pub( 'refresh_query', self._page_key )
+            
+        
+    
+    def SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results, next_search_is_probably_fast ):
+        
+        if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
+            
+            AutoCompleteDropdownTags.SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results )
+            
+            self._next_search_is_probably_fast = next_search_is_probably_fast
+            
+            num_chars = len( self._text_ctrl.GetValue() )
+            
+            if num_chars == 0:
+                
+                # refresh system preds after five mins
+                
+                self._ScheduleListRefresh( 300 )
+                
             
         
     
@@ -1379,68 +1522,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
-    def _GenerateMatches( self ):
-        
-        self._next_search_is_probably_fast = False
-        
-        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
-        
-        ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
-        
-        if search_text in ( '', ':', '*' ):
-            
-            self._cache_text = None
-            
-            matches = []
-            
-        else:
-            
-            must_do_a_search = False
-            
-            small_and_specific_search = cache_text is not None and len( cache_text ) < num_autocomplete_chars
-            
-            if small_and_specific_search:
-                
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = cache_text, exact_match = True, add_namespaceless = False, collapse_siblings = False )
-                
-            else:
-                
-                cache_invalid_for_this_search = cache_text is None or self._cache_text is None or not cache_text.startswith( self._cache_text )
-                
-                if must_do_a_search or cache_invalid_for_this_search:
-                    
-                    self._cache_text = cache_text
-                    
-                    self._cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, add_namespaceless = False, collapse_siblings = False )
-                    
-                
-                predicates = self._cached_results
-                
-                self._next_search_is_probably_fast = True
-                
-            
-            matches = ClientSearch.FilterPredicatesBySearchText( self._tag_service_key, search_text, predicates )
-            
-            matches = ClientSearch.SortPredicates( matches )
-            
-            self._PutAtTopOfMatches( matches, entry_predicate )
-            
-            if sibling_predicate is not None:
-                
-                self._PutAtTopOfMatches( matches, sibling_predicate )
-                
-            
-            if self._expand_parents:
-                
-                parents_manager = HG.client_controller.GetManager( 'tag_parents' )
-                
-                matches = parents_manager.ExpandPredicates( self._tag_service_key, matches )
-                
-            
-        
-        return matches
-        
-    
     def _InitFavouritesList( self ):
         
         favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
@@ -1453,35 +1534,28 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
     
-    def _PutAtTopOfMatches( self, matches, predicate ):
-        
-        try:
-            
-            index = matches.index( predicate )
-            
-            predicate = matches[ index ]
-            
-            matches.remove( predicate )
-            
-        except ValueError:
-            
-            pass
-            
-        
-        matches.insert( 0, predicate )
-        
-    
     def _ShouldTakeResponsibilityForEnter( self ):
+        
+        ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
+        
+        sitting_on_empty = raw_entry == ''
         
         # when the user has quickly typed something in and the results are not yet in
         
-        p1 = self._text_ctrl.GetValue() != '' and self._last_search_text == ''
+        p1 = not sitting_on_empty and self._last_fetched_search_text != search_text
         
         # when the text ctrl is empty, we are looking at search results, and we want to push a None to the parent dialog
         
-        p2 = self._text_ctrl.GetValue() == '' and self._dropdown_notebook.GetCurrentPage() == self._search_results_list
+        p2 = sitting_on_empty and self._dropdown_notebook.GetCurrentPage() == self._search_results_list
         
         return p1 or p2
+        
+    
+    def _StartResultsFetchJob( self, job_key ):
+        
+        parsed_search_text = self._ParseSearchText()
+        
+        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._search_text_for_current_cache, self._cached_results )
         
     
     def _TakeResponsibilityForEnter( self ):
@@ -1512,5 +1586,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         predicates = parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates )
         
         self._favourites_list.SetPredicates( predicates )
+        
+    
+    def SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results, next_search_is_probably_fast ):
+        
+        if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
+            
+            AutoCompleteDropdownTags.SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results )
+            
+            self._next_search_is_probably_fast = next_search_is_probably_fast
+            
         
     

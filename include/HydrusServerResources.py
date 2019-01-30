@@ -16,23 +16,25 @@ from twisted.web.static import File as FileResource, NoRangeStaticProducer
 from . import HydrusData
 from . import HydrusGlobals as HG
 
-def GenerateEris( service, domain ):
+def GenerateEris( service ):
     
     name = service.GetName()
     service_type = service.GetServiceType()
+    
+    allows_non_local_connections = service.AllowsNonLocalConnections()
     
     welcome_text_1 = 'This is <b>' + name + '</b>,'
     welcome_text_2 = 'a ' + HC.service_string_lookup[ service_type ] + '.'
     welcome_text_3 = 'Software version ' + str( HC.SOFTWARE_VERSION )
     welcome_text_4 = 'Network version ' + str( HC.NETWORK_VERSION )
     
-    if domain.IsLocal():
+    if allows_non_local_connections:
         
-        welcome_text_5 = 'It only responds to requests from localhost.'
+        welcome_text_5 = 'It responds to requests from any host.'
         
     else:
         
-        welcome_text_5 = 'It responds to requests from any host.'
+        welcome_text_5 = 'It only responds to requests from localhost.'
         
     
     return '''<html><head><title>''' + name + '''</title></head><body><pre>
@@ -754,7 +756,7 @@ class HydrusResourceWelcome( HydrusResource ):
     
     def _threadDoGETJob( self, request ):
         
-        body = GenerateEris( self._service, self._domain )
+        body = GenerateEris( self._service )
         
         response_context = ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
         

@@ -2413,11 +2413,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def wx_do_it():
             
-            if not self:
-                
-                return
-                
-            
             export_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit export folders' ) as dlg:
@@ -2489,7 +2484,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                         
                     
-                    controller.CallBlockingToWx( wx_do_it )
+                    try:
+                        
+                        controller.CallBlockingToWX( self, wx_do_it )
+                        
+                    except HydrusExceptions.WXDeadWindowException:
+                        
+                        pass
+                        
                     
                 finally:
                     
@@ -2529,11 +2531,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _ManageImportFolders( self ):
         
         def wx_do_it():
-            
-            if not self:
-                
-                return
-                
             
             import_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
             
@@ -2606,7 +2603,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                         
                     
-                    controller.CallBlockingToWx( wx_do_it )
+                    try:
+                        
+                        controller.CallBlockingToWX( wx_do_it )
+                        
+                    except HydrusExceptions.WXDeadWindowException:
+                        
+                        pass
+                        
                     
                 finally:
                     
@@ -2810,11 +2814,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def wx_do_it( subscriptions, original_pause_status ):
             
-            if not self:
-                
-                return
-                
-            
             title = 'manage subscriptions'
             frame_key = 'manage_subscriptions_dialog'
             
@@ -2900,7 +2899,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     job_key.Delete()
                     
-                    controller.CallBlockingToWx( wx_do_it, subscriptions, original_pause_status )
+                    try:
+                        
+                        controller.CallBlockingToWX( self, wx_do_it, subscriptions, original_pause_status )
+                        
+                    except HydrusExceptions.WXDeadWindowException:
+                        
+                        pass
+                        
                     
                 finally:
                     

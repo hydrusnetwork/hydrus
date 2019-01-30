@@ -55,16 +55,44 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         self._access_keys_to_permissions = { permissions_object.GetAccessKey() : permissions_object for permissions_object in permissions_objects }
         
     
-    def GetPermissions( self, access_key ):
+    def _SetDirty( self ):
+        
+        self._dirty = True
+        
+    
+    def DeleteAccess( self, access_keys ):
         
         with self._lock:
             
-            if access_key not in self._access_keys_to_permissions:
+            for access_key in access_keys:
                 
-                raise HydrusExceptions.DataMissing( 'Did not find an entry for that access key!' )
+                if access_key in self._access_keys_to_permissions:
+                    
+                    del self._access_keys_to_permissions[ access_key ]
+                    
                 
             
-            return self._access_keys_to_permissions[ access_key ]
+            self._SetDirty()
+            
+        
+    
+    def GetPermissions( self, access_key = None ):
+        
+        with self._lock:
+            
+            if access_key is None:
+                
+                return list( self._access_keys_to_permissions.values() )
+                
+            else:
+                
+                if access_key not in self._access_keys_to_permissions:
+                    
+                    raise HydrusExceptions.DataMissing( 'Did not find an entry for that access key!' )
+                    
+                
+                return self._access_keys_to_permissions[ access_key ]
+                
             
         
     
@@ -101,7 +129,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
             
             self._access_keys_to_permissions = { permissions_object.GetAccessKey() : permissions_object for permissions_object in permissions_objects }
             
-            self._dirty = True
+            self._SetDirty()
             
         
     
@@ -117,7 +145,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._access_key = os.urandom( 32 )
+        self._access_key = HydrusData.GenerateKey()
         
         self._basic_permissions = set()
         self._search_tag_filter = ClientTags.TagFilter()
@@ -193,6 +221,22 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def GenerateNewAccessKey( self ):
+        
+        with self._lock:
+            
+            self._access_key = HydrusData.GenerateKey()
+            
+        
+    
+    def GetAccessKey( self ):
+        
+        with self._lock:
+            
+            return self._access_key
+            
+        
+    
     def GetAdvancedPermissionsString( self ):
         
         with self._lock:
@@ -213,6 +257,18 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         with self._lock:
             
             return self._basic_permissions
+            
+        
+    
+    def GetBasicPermissionsString( self ):
+        
+        with self._lock:
+            
+            l = [ basic_permission_to_str_lookup[ p ] for p in self._basic_permissions ]
+            
+            l.sort()
+            
+            return ', '.join( l )
             
         
     

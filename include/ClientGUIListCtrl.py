@@ -911,6 +911,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         return data in self._data_to_indices
         
     
+    def HasOneSelected( self ):
+        
+        return self.GetSelectedItemCount() == 1
+        
+    
     def HasSelected( self ):
         
         return self.GetSelectedItemCount() > 0
@@ -1101,13 +1106,18 @@ class BetterListCtrlPanel( wx.Panel ):
         self._listctrl.Sort()
         
     
-    def _AddButton( self, button, enabled_only_on_selection = False, enabled_check_func = None ):
+    def _AddButton( self, button, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
         
         self._buttonbox.Add( button, CC.FLAGS_VCENTER )
         
         if enabled_only_on_selection:
             
             enabled_check_func = self._HasSelected
+            
+        
+        if enabled_only_on_single_selection:
+            
+            enabled_check_func = self._HasOneSelected
             
         
         if enabled_check_func is not None:
@@ -1250,6 +1260,11 @@ class BetterListCtrlPanel( wx.Panel ):
         return self._listctrl.HasSelected()
         
     
+    def _HasOneSelected( self ):
+        
+        return self._listctrl.HasOneSelected()
+        
+    
     def _ImportFromClipboard( self ):
         
         raw_text = HG.client_controller.GetClipboardText()
@@ -1365,11 +1380,11 @@ class BetterListCtrlPanel( wx.Panel ):
             
         
     
-    def AddButton( self, label, clicked_func, enabled_only_on_selection = False, enabled_check_func = None ):
+    def AddButton( self, label, clicked_func, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
         
         button = ClientGUICommon.BetterButton( self, label, clicked_func )
         
-        self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
+        self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_only_on_single_selection = enabled_only_on_single_selection, enabled_check_func = enabled_check_func )
         
         self._UpdateButtons()
         

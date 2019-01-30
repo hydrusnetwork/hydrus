@@ -1588,7 +1588,7 @@ class FileViewingStatsManager( object ):
                 
                 content_updates = []
                 
-                for ( hash, ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) ) in list(self._pending_updates.items()):
+                for ( hash, ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) ) in self._pending_updates.items():
                     
                     row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
                     
@@ -1665,7 +1665,7 @@ class LocalBooruCache( object ):
         self._RefreshShares()
         
         self._controller.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
-        self._controller.sub( self, 'RefreshShares', 'restart_booru' )
+        self._controller.sub( self, 'RefreshShares', 'restart_client_server_service' )
         
     
     def _CheckDataUsage( self ):
@@ -1737,7 +1737,10 @@ class LocalBooruCache( object ):
         
         share_keys = self._controller.Read( 'local_booru_share_keys' )
         
-        for share_key in share_keys: self._keys_to_infos[ share_key ] = None
+        for share_key in share_keys:
+            
+            self._keys_to_infos[ share_key ] = None
+            
         
     
     def CheckShareAuthorised( self, share_key ):
@@ -1796,7 +1799,7 @@ class LocalBooruCache( object ):
             
         
     
-    def RefreshShares( self ):
+    def RefreshShares( self, *args, **kwargs ):
         
         with self._lock:
             

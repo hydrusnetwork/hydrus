@@ -2840,6 +2840,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             elif service_type == HC.LOCAL_RATING_LIKE: service_type_name = 'like/dislike ratings'
             elif service_type == HC.LOCAL_RATING_NUMERICAL: service_type_name = 'numerical ratings'
             elif service_type == HC.LOCAL_BOORU: service_type_name = 'booru'
+            elif service_type == HC.CLIENT_API_SERVICE: service_type_name = 'client api'
             elif service_type == HC.IPFS: service_type_name = 'ipfs'
             else: continue
             

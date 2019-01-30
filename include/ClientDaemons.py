@@ -492,7 +492,7 @@ def DAEMONUPnP( controller ):
         return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
         
     
-    services = controller.services_manager.GetServices( ( HC.LOCAL_BOORU, ) )
+    services = controller.services_manager.GetServices( ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) )
     
     for service in services:
         

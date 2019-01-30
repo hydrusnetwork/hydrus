@@ -55,12 +55,23 @@ def GenerateDefaultServiceDictionary( service_type ):
         dictionary[ 'tag_archive_sync' ] = []
         
     
-    if service_type == HC.LOCAL_BOORU:
+    if service_type in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ):
         
         dictionary[ 'port' ] = None
         dictionary[ 'upnp_port' ] = None
         dictionary[ 'bandwidth_tracker' ] = HydrusNetworking.BandwidthTracker()
         dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
+        
+        if service_type == HC.LOCAL_BOORU:
+            
+            allow_non_local_connections = True
+            
+        elif service_type == HC.CLIENT_API_SERVICE:
+            
+            allow_non_local_connections = False
+            
+        
+        dictionary[ 'allow_non_local_connections' ] = allow_non_local_connections
         
     
     if service_type in HC.RATINGS_SERVICES:
@@ -70,11 +81,11 @@ def GenerateDefaultServiceDictionary( service_type ):
         
         if service_type == HC.LOCAL_RATING_LIKE:
             
-            dictionary[ 'colours' ] = list(ClientRatings.default_like_colours.items())
+            dictionary[ 'colours' ] = list( ClientRatings.default_like_colours.items() )
             
         elif service_type == HC.LOCAL_RATING_NUMERICAL:
             
-            dictionary[ 'colours' ] = list(ClientRatings.default_numerical_colours.items())
+            dictionary[ 'colours' ] = list( ClientRatings.default_numerical_colours.items() )
             dictionary[ 'num_stars' ] = 5
             dictionary[ 'allow_zero' ]= True
             
@@ -121,6 +132,10 @@ def GenerateService( service_key, service_type, name, dictionary = None ):
         
         cl = ServiceLocalBooru
         
+    elif service_type == HC.CLIENT_API_SERVICE:
+        
+        cl = ServiceClientAPI
+        
     else:
         
         cl = Service
@@ -161,7 +176,15 @@ class Service( object ):
     
     def _LoadFromDictionary( self, dictionary ):
         
-        pass
+        default_dictionary = GenerateDefaultServiceDictionary( self._service_type )
+        
+        for ( key, value ) in default_dictionary.items():
+            
+            if key not in dictionary:
+                
+                dictionary[ key ] = value
+                
+            
         
     
     def _SetDirty( self ):
@@ -287,7 +310,7 @@ class Service( object ):
         return ( self._service_key, self._service_type, self._name, dictionary )
         
     
-class ServiceLocalBooru( Service ):
+class ServiceLocalServerService( Service ):
     
     def _CheckFunctional( self ):
         
@@ -305,6 +328,7 @@ class ServiceLocalBooru( Service ):
         
         dictionary[ 'port' ] = self._port
         dictionary[ 'upnp_port' ] = self._upnp_port
+        dictionary[ 'allow_non_local_connections' ] = self._allow_non_local_connections
         dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         
@@ -317,10 +341,19 @@ class ServiceLocalBooru( Service ):
         
         self._port = dictionary[ 'port' ]
         self._upnp_port = dictionary[ 'upnp_port' ]
+        self._allow_non_local_connections = dictionary[ 'allow_non_local_connections' ]
         self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         
         # this should support the same serverservice interface so we can just toss it at the regular serverengine and all the bandwidth will work ok
+        
+    
+    def AllowsNonLocalConnections( self ):
+        
+        with self._lock:
+            
+            return self._allow_non_local_connections
+            
         
     
     def BandwidthOK( self ):
@@ -362,6 +395,14 @@ class ServiceLocalBooru( Service ):
             self._bandwidth_tracker.ReportRequestUsed()
             
         
+    
+class ServiceLocalBooru( ServiceLocalServerService ):
+    
+    pass
+    
+class ServiceClientAPI( ServiceLocalServerService ):
+    
+    pass
     
 class ServiceLocalTag( Service ):
     

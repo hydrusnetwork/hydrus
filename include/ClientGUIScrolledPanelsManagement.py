@@ -461,9 +461,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._panels.append( self._ServiceTagPanel( self, self._dictionary ) )
                 
             
-            if self._service_type == HC.LOCAL_BOORU:
+            if self._service_type in ( HC.CLIENT_API_SERVICE, HC.LOCAL_BOORU ):
                 
-                self._panels.append( self._ServiceLocalBooruPanel( self, self._dictionary ) )
+                self._panels.append( self._ServiceClientServerPanel( self, self._service_type, self._dictionary ) )
                 
             
             if self._service_type in HC.RATINGS_SERVICES:
@@ -1041,6 +1041,85 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
+        class _ServiceClientServerPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, service_type, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'client api' )
+                
+                self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
+                
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    name = 'local booru'
+                    
+                elif service_type == HC.CLIENT_API_SERVICE:
+                    
+                    name = 'client api'
+                    
+                
+                port_name = '{} local port'.format( name )
+                none_phrase = 'do not run {} service'.format( name )
+                
+                self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, port_name, none_phrase = none_phrase, min = 1, max = 65535 )
+                
+                self._allow_non_local_connections = wx.CheckBox( self._booru_options_panel, label = 'allow non-local connections' )
+                
+                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+                
+                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._booru_options_panel, dictionary[ 'bandwidth_rules' ] )
+                
+                #
+                
+                self._port.SetValue( dictionary[ 'port' ] )
+                self._upnp.SetValue( dictionary[ 'upnp_port' ] )
+                
+                self._allow_non_local_connections.SetValue( dictionary[ 'allow_non_local_connections' ] )
+                
+                #
+                
+                self._booru_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.Add( self._allow_non_local_connections, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.Add( self._booru_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._allow_non_local_connections.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
+                
+            
+            def _UpdateControls( self ):
+                
+                if self._allow_non_local_connections.GetValue():
+                    
+                    self._upnp.Setvalue( None )
+                    
+                    self._upnp.Disable()
+                    
+                else:
+                    
+                    self._upnp.Enable()
+                    
+                
+            
+            def EventCheckBox( self, event ):
+                
+                self._UpdateControls()
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                dictionary_part[ 'port' ] = self._port.GetValue()
+                dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
+                dictionary_part[ 'allow_non_local_connections' ] = self._allow_non_local_connections.GetValue()
+                dictionary_part[ 'bandwidth_rules' ] = self._bandwidth_rules.GetValue()
+                
+                return dictionary_part
+                
+            
+        
         class _ServiceTagPanel( ClientGUICommon.StaticBox ):
             
             def __init__( self, parent, dictionary ):
@@ -1105,46 +1184,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             def GetValue( self ):
                 
                 dictionary_part = {}
-                
-                return dictionary_part
-                
-            
-        
-        class _ServiceLocalBooruPanel( ClientGUICommon.StaticBox ):
-            
-            def __init__( self, parent, dictionary ):
-                
-                ClientGUICommon.StaticBox.__init__( self, parent, 'local booru' )
-                
-                self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
-                
-                self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'booru local port', none_phrase = 'do not run local booru service', min = 1, max = 65535 )
-                
-                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
-                
-                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._booru_options_panel, dictionary[ 'bandwidth_rules' ] )
-                
-                #
-                
-                self._port.SetValue( dictionary[ 'port' ] )
-                self._upnp.SetValue( dictionary[ 'upnp_port' ] )
-                
-                #
-                
-                self._booru_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self.Add( self._booru_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-            
-            def GetValue( self ):
-                
-                dictionary_part = {}
-                
-                dictionary_part[ 'port' ] = self._port.GetValue()
-                dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
-                dictionary_part[ 'bandwidth_rules' ] = self._bandwidth_rules.GetValue()
                 
                 return dictionary_part
                 

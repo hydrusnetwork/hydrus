@@ -46,6 +46,8 @@
 				<li>client -d="D:\media\my_hydrus_database"</li>
 				<li><i>--or--</i></li>
 				<li>client --db_dir="G:\misc documents\New Folder (3)\DO NOT ENTER"</li>
+				<li><i>--or, for OS X--</i></li>
+				<li>open -n -a "Hydrus Network.app" --args -d="/path/to/db"</li>
 			</ul>
 			<p>And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system, but I would not advise using network locations and so on, as the database works best with some clever device locking calls these interfaces may not provide.</p>
 			<p>Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this, which is from my main development computer and tests that a fresh default install will run an existing database ok:</p>

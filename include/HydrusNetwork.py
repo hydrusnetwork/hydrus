@@ -2070,6 +2070,14 @@ class ServerService( object ):
         self._dirty = True
         
     
+    def AllowsNonLocalConnections( self ):
+        
+        with self._lock:
+            
+            return True
+            
+        
+    
     def BandwidthOK( self ):
         
         with self._lock:

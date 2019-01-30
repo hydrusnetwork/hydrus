@@ -224,15 +224,24 @@ class Controller( object ):
         return HydrusData.GenerateKey()
         
     
-    def CallBlockingToWx( self, func, *args, **kwargs ):
+    def CallBlockingToWX( self, win, func, *args, **kwargs ):
         
-        def wx_code( job_key ):
+        def wx_code( win, job_key ):
             
             try:
+                
+                if win is not None and not win:
+                    
+                    raise HydrusExceptions.WXDeadWindowException( 'Parent Window was destroyed before wx command was called!' )
+                    
                 
                 result = func( *args, **kwargs )
                 
                 job_key.SetVariable( 'result', result )
+                
+            except HydrusExceptions.WXDeadWindowException as e:
+                
+                job_key.SetVariable( 'error', e )
                 
             except HydrusExceptions.PermissionException as e:
                 
@@ -242,7 +251,7 @@ class Controller( object ):
                 
                 job_key.SetVariable( 'error', e )
                 
-                HydrusData.Print( 'CallBlockingToWx just caught this error:' )
+                HydrusData.Print( 'CallBlockingToWX just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
@@ -255,7 +264,7 @@ class Controller( object ):
         
         job_key.Begin()
         
-        wx.CallAfter( wx_code, job_key )
+        wx.CallAfter( wx_code, win, job_key )
         
         while not job_key.IsDone():
             

@@ -139,15 +139,24 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CallBlockingToWx( self, func, *args, **kwargs ):
+    def CallBlockingToWX( self, win, func, *args, **kwargs ):
         
-        def wx_code( job_key ):
+        def wx_code( win, job_key ):
             
             try:
+                
+                if win is not None and not win:
+                    
+                    raise HydrusExceptions.WXDeadWindowException( 'Parent Window was destroyed before wx command was called!' )
+                    
                 
                 result = func( *args, **kwargs )
                 
                 job_key.SetVariable( 'result', result )
+                
+            except HydrusExceptions.WXDeadWindowException as e:
+                
+                job_key.SetVariable( 'error', e )
                 
             except HydrusExceptions.PermissionException as e:
                 
@@ -157,7 +166,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'error', e )
                 
-                HydrusData.Print( 'CallBlockingToWx just caught this error:' )
+                HydrusData.Print( 'CallBlockingToWX just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
@@ -170,7 +179,7 @@ class Controller( HydrusController.HydrusController ):
         
         job_key.Begin()
         
-        wx.CallAfter( wx_code, job_key )
+        wx.CallAfter( wx_code, win, job_key )
         
         while not job_key.IsDone():
             
@@ -248,7 +257,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToWx( wx_code )
+            self.CallBlockingToWX( self._splash, wx_code )
             
             for i in range( 10, 0, -1 ):
                 
@@ -584,7 +593,7 @@ class Controller( HydrusController.HydrusController ):
         
         while len( missing_locations ) > 0:
             
-            missing_locations = self.CallBlockingToWx( wx_code, missing_locations )
+            missing_locations = self.CallBlockingToWX( self._splash, wx_code, missing_locations )
             
         
     
@@ -624,7 +633,7 @@ class Controller( HydrusController.HydrusController ):
         self.pub( 'splash_set_status_subtext', 'network' )
         
         self.parsing_cache = ClientCaches.ParsingCache()
-        '''
+        
         client_api_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_MANAGER )
         
         if client_api_manager is None:
@@ -637,9 +646,6 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.client_api_manager = client_api_manager
-        '''
-        
-        self.client_api_manager = ClientAPI.APIManager()
         
         bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
         
@@ -731,10 +737,10 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', 'image caches' )
         
-        self.CallBlockingToWx( wx_code )
+        self.CallBlockingToWX( self._splash, wx_code )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
-        self.sub( self, 'RestartBooru', 'restart_booru' )
+        self.sub( self, 'RestartClientServerService', 'restart_client_server_service' )
         
     
     def InitView( self ):
@@ -766,7 +772,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToWx( wx_code_password )
+            self.CallBlockingToWX( self._splash, wx_code_password )
             
         
         self.pub( 'splash_set_title_text', 'booting gui\u2026' )
@@ -778,15 +784,16 @@ class Controller( HydrusController.HydrusController ):
             self.ResetIdleTimer()
             
         
-        self.CallBlockingToWx( wx_code_gui )
+        self.CallBlockingToWX( self._splash, wx_code_gui )
         
         # ShowText will now popup as a message, as popup message manager has overwritten the hooks
         
         HydrusController.HydrusController.InitView( self )
         
-        self._booru_port_connection = None
+        self._listening_services = {}
         
-        self.RestartBooru()
+        self.RestartClientServerService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self.RestartClientServerService( CC.CLIENT_API_SERVICE_KEY )
         
         if not self._no_daemons:
             
@@ -983,7 +990,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ProcessPubSub( self ):
         
-        self.CallBlockingToWx( self._pubsub.Process )
+        self.CallBlockingToWX( None, self._pubsub.Process )
         
     
     def RefreshServices( self ):
@@ -1005,11 +1012,14 @@ class Controller( HydrusController.HydrusController ):
         self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
         
     
-    def RestartBooru( self ):
+    def RestartClientServerService( self, service_key ):
         
-        service = self.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        service = self.services_manager.GetService( service_key )
+        
+        name = service.GetName()
         
         port = service.GetPort()
+        allow_non_local_connections = service.AllowsNonLocalConnections()
         
         def TWISTEDRestartServer():
             
@@ -1019,11 +1029,11 @@ class Controller( HydrusController.HydrusController ):
                     
                     if HydrusNetworking.LocalPortInUse( port ):
                     
-                        text = 'The client\'s booru server could not start because something was already bound to port ' + str( port ) + '.'
+                        text = 'The client\'s {} could not start because something was already bound to port {}.'.format( name, port )
                         text += os.linesep * 2
-                        text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
+                        text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to completely shut itself down.'
                         text += os.linesep * 2
-                        text += 'You can change the port this client tries to host its local server on in services->manage services.'
+                        text += 'You can change the port this service tries to host on under services->manage services.'
                         
                         HydrusData.ShowText( text )
                         
@@ -1032,11 +1042,13 @@ class Controller( HydrusController.HydrusController ):
                     
                     from . import ClientLocalServer
                     
-                    self._booru_port_connection = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( service ) )
+                    listening_connection = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( service, allow_non_local_connections = allow_non_local_connections ) )
+                    
+                    self._listening_services[ service_key ] = listening_connection
                     
                     if not HydrusNetworking.LocalPortInUse( port ):
                         
-                        text = 'Tried to bind port ' + str( port ) + ' for the local booru, but it appeared to be already in use.'
+                        text = 'Tried to bind port ' + str( port ) + ' for the local booru, but it appeared to fail. It could be a firewall or permissions issue, or perhaps another program was quietly already using it.'
                         
                         HydrusData.ShowText( text )
                         
@@ -1047,27 +1059,31 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            if self._booru_port_connection is None:
+            if service_key in self._listening_services:
                 
-                if port is not None:
-                    
-                    StartServer()
-                    
+                listening_connection = self._listening_services[ service_key ]
                 
-            else:
+                del self._listening_services[ service_key ]
                 
-                deferred = defer.maybeDeferred( self._booru_port_connection.stopListening )
+                deferred = defer.maybeDeferred( listening_connection.stopListening )
                 
                 if port is not None:
                     
                     deferred.addCallback( StartServer )
                     
                 
+            else:
+                
+                if port is not None:
+                    
+                    StartServer()
+                    
+                
             
         
         if HG.twisted_is_broke:
             
-            HydrusData.ShowText( 'Twisted failed to import, so could not restart the booru! Please contact hydrus dev!' )
+            HydrusData.ShowText( 'Twisted failed to import, so could not start the {}! Please contact hydrus dev!'.format( name ) )
             
         else:
             
@@ -1153,14 +1169,14 @@ class Controller( HydrusController.HydrusController ):
                 
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
-            '''
+            
             if self.client_api_manager.IsDirty():
                 
                 self.WriteSynchronous( 'serialisable', self.client_api_manager )
                 
                 self.client_api_manager.SetClean()
                 
-            '''
+            
             if self.network_engine.bandwidth_manager.IsDirty():
                 
                 self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )

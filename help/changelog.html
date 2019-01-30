@@ -8,12 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 338</h3></li>
+				<ul>
+					<li>after talking with some users, put a bit of time into tag autocomplete wolkflow. both read (search pages) and write (manage tags) autocomplete inputs now operate ~asynchronously~, with the tag fetch working on a separate thread. tag jobs can also now cancel at certain checkpoints in the tag search process if overwritten by a new request. therefore, a variety of tag lookup scenarios _should_ be less painful. this change was executed in a semi-inelegant way, so please report if you encounter bugs from fast typing etc...</li>
+					<li>I also improved some of the "I hit enter before results were in" code as a result of this. not sure I have it totally nailed, so please give feedback on errors here</li>
+					<li>wildcard search tags now have an explicit '(wildcard search)' after their label</li>
+					<li>taglists that have an attached page of media (basically the 'selection tags' box and the 'active search predicates' up top) now have a right-click menu entry to 'select files with (all these tags)' and, if more than one tag is selected, 'select files with (any of these tags)'! This is pretty neat in action, so give it a go!</li>
+					<li>added a 'sort by approx bitrate' file sorting option that does a basic filesize/duration so you can filter out dense gifs and other short-but-big vids a bit easier. anything without a duration is shoved to the 'smallest' side</li>
+					<li>some of the file sort options now default to their respective 'biggest' first, see how you like it</li>
+					<li>folded in updated gelbooru file page parser (fixing the 403 errors that just appeared) and added searches for gelbooru user favourites and pools</li>
+					<li>if a gallery or watchable url ends up in the file processing queue (and hence fails), it now says the believed-to-be url class name in the error, which should help some false positive url class matching debugging</li>
+					<li>fixed a focused-file selection issue that meant preview viewtime was frequently counting in file viewing statistics even while a page was not currently in view</li>
+					<li>fixed the local booru review service panel, which wasn't fully deleting shares when the button was clicked</li>
+					<li>wrote a service object and basic server skeleton for the client api (basically refactoring the existing local booru code). client api now appears in manage and review services and can boot and present the normal hydrus browser welcome page at '/'</li>
+					<li>the client api and the local booru now have an 'allow non-local connections' checkbox! defaulting to off and on respectively</li>
+					<li>updated a wx-thread call function to more safely and universally deal with instances where the responsible window died before the call could be made</li>
+					<li>removed some old experimental crypto code that isn't used any more--pycryptodome is no longer needed to run the program from source</li>
+					<li>improved some misc client service code</li>
+					<li>deleted some old unused code</li>
+					<li>misc cleanup</li>
+					<li>updated to ffmpeg 4.1 on windows release</li>
+					<li>updated to sqlite 3.26 on windows release</li>
+					<li>updated to wxpython 4.0.4 on all platforms</li>
+				</ul>
 				<li><h3>version 337</h3></li>
 				<ul>
 					<li>fixed another couple of unicode encoding problems with the logging and profiling code</li>
 					<li>the logger now sticks a unicode BOM at the top of new log files to help text readers guess the utf-8 encoding</li>
 					<li>fixed musical webm import when the video stream has no stated duration but the audio stream does and typically stretches out a 'single frame' video</li>
 					<li>fixed some 'max size' download file size testing</li>
+					<li>'waiting on bandwidth' statements on network job controls now show the specific network context (like 'web domain: somesite.com') they are waiting on (you might need to hover over to see the tooltip for this)</li>
 					<li>the downloader easy-importer lain image is now clickable to launch a file selection dialog</li>
 					<li>if you are in advanced mode, the manual file export dialog now lets you export symlinks with a new checkbox. this is experimental, so if you are interested, give it a brief test and let me know how it works for you</li>
 					<li>duplicate content merging now applies to pending as well as current tags</li>

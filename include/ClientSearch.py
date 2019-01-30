@@ -964,6 +964,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type
         
     
+    def IsInclusive( self ):
+        
+        return self._inclusive
+        
+    
     def ToString( self, with_count = True, sibling_service_key = None, render_for_user = False ):
         
         count_text = ''
@@ -1462,10 +1467,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == HC.PREDICATE_TYPE_WILDCARD:
             
-            wildcard = self._value
+            wildcard = self._value + ' (wildcard search)'
             
-            if not self._inclusive: base = '-'
-            else: base = ''
+            if not self._inclusive:
+                
+                base = '-'
+                
+            else:
+                
+                base = ''
+                
             
             base += wildcard
             

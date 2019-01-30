@@ -4,6 +4,7 @@ from . import ClientGUIDialogs
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanelsReview
 from . import ClientGUITopLevelWindows
+from . import ClientPaths
 from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -80,6 +81,11 @@ class ReviewServicePanel( wx.Panel ):
             subpanels.append( self._ServiceLocalBooruPanel( self, service ) )
             
         
+        if service_type == HC.CLIENT_API_SERVICE:
+            
+            subpanels.append( self._ServiceClientAPIPanel( self, service ) )
+            
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -90,31 +96,6 @@ class ReviewServicePanel( wx.Panel ):
             
         
         self.SetSizer( vbox )
-        
-    
-    def _DisplayService( self ):
-        
-        service_type = self._service.GetServiceType()
-        
-        self._DisplayAccountInfo()
-        
-        if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
-            
-            service_info = self._controller.Read( 'service_info', self._service_key )
-            
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                
-                num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                
-                self._ratings_text.SetLabelText( HydrusData.ToHumanInt( num_ratings ) + ' files rated' )
-                
-            elif service_type == HC.LOCAL_BOORU:
-                
-                num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
-                
-                self._num_shares.SetLabelText( HydrusData.ToHumanInt( num_shares ) + ' shares currently active' )
-                
-            
         
     
     def EventImmediateSync( self, event ):
@@ -224,6 +205,216 @@ class ReviewServicePanel( wx.Panel ):
             label = name + ' - ' + HC.service_string_lookup[ service_type ]
             
             self._name_and_type.SetLabelText( label )
+            
+        
+        def ServiceUpdated( self, service ):
+            
+            if service.GetServiceKey() == self._service.GetServiceKey():
+                
+                self._service = service
+                
+                self._my_updater.Update()
+                
+            
+        
+    
+    class _ServiceClientAPIPanel( ClientGUICommon.StaticBox ):
+        
+        def __init__( self, parent, service ):
+            
+            ClientGUICommon.StaticBox.__init__( self, parent, 'client api' )
+            
+            self._service = service
+            
+            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            
+            self._service_status = ClientGUICommon.BetterStaticText( self )
+            
+            permissions_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            
+            columns = [ ( 'name', -1 ), ( 'basic permissions', 36 ), ( 'advanced permissions', 36 ) ]
+            
+            self._permissions_list = ClientGUIListCtrl.BetterListCtrl( permissions_list_panel, 'client_api_permissions', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            
+            permissions_list_panel.SetListCtrl( self._permissions_list )
+            
+            # make this add a menu with manual add vs. listen to request
+            permissions_list_panel.AddButton( 'add', self._Add )
+            permissions_list_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+            permissions_list_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
+            permissions_list_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+            permissions_list_panel.AddSeparator()
+            permissions_list_panel.AddButton( 'open client api base url', self._OpenBaseURL )
+            permissions_list_panel.AddButton( 'copy api access key', self._CopyAPIAccessKey, enabled_only_on_single_selection = True )
+            
+            self._permissions_list.Sort()
+            
+            #
+            
+            self._Refresh()
+            
+            #
+            
+            self.Add( self._service_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( permissions_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
+            
+        
+        def _ConvertDataToListCtrlTuples( self, permissions_object ):
+            
+            name = permissions_object.GetName()
+            
+            pretty_name = name
+            
+            basic_permissions_string = permissions_object.GetBasicPermissionsString()
+            advanced_permissions_string = permissions_object.GetAdvancedPermissionsString()
+            
+            sort_basic_permissions = basic_permissions_string
+            sort_advanced_permissions = advanced_permissions_string
+            
+            display_tuple = ( pretty_name, basic_permissions_string, advanced_permissions_string )
+            sort_tuple = ( name, sort_basic_permissions, sort_advanced_permissions )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _CopyAPIAccessKey( self ):
+            
+            selected = self._permissions_list.GetData( only_selected = True )
+            
+            if len( selected ) != 1:
+                
+                return
+                
+            
+            permissions_object = selected[0]
+            
+            access_key = permissions_object.GetAccessKey()
+            
+            text = access_key.hex()
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+        def _Add( self ):
+            
+            wx.MessageBox( 'Sorry, this is still under construction!' )
+            
+            # throw up panel to allow editing key and all permissions
+            
+            # careful of funky edit process here. update the manager and then let the list refresh itself
+            
+            # self._Refresh()
+            
+        
+        def _Delete( self ):
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    access_keys = [ permissions_object.GetAccessKey() for permissions_object in self._permissions_list.GetData( only_selected = True ) ]
+                    
+                    HG.client_controller.client_api_manager.DeleteAccess( access_keys )
+                    
+                    self._Refresh()
+                    
+                
+            
+        
+        def _Duplicate( self ):
+            
+            selected_permissions_objects = self._permissions_list.GetData( only_selected = True )
+            
+            dupes = [ permissions_object.Duplicate() for permissions_object in selected_permissions_objects ]
+            
+            # permissions objects do not need unique names, but let's dedupe the dupe objects' names here to make it easy to see which is which in this step
+            
+            existing_objects = list( self._permissions_list.GetData() )
+            
+            existing_names = { p_o.GetName() for p_o in existing_objects }
+            
+            for dupe in dupes:
+                
+                dupe.GenerateNewAccessKey()
+                
+                dupe.SetNonDupeName( existing_names )
+                
+                existing_names.add( dupe.GetName() )
+                
+            
+            existing_objects.extend( dupes )
+            
+            HG.client_controller.client_api_manager.SetPermissions( existing_objects )
+            
+            self._Refresh()
+            
+        
+        def _Edit( self ):
+            
+            selected_permissions_objects = self._permissions_list.GetData( only_selected = True )
+            
+            for permissions_object in selected_permissions_objects:
+                
+                # throw up panel to allow editing key and all permissions
+                
+                pass
+                
+            
+            # careful of funky edit process here. update the manager and then let the list refresh itself
+            
+            self._Refresh()
+            
+        
+        def _OpenBaseURL( self ):
+            
+            port = self._service.GetPort()
+            
+            if port is None:
+                
+                wx.MessageBox( 'The service is not running, so you cannot view it in a web browser!' )
+                
+            else:
+                
+                url = 'http://127.0.0.1:{}/'.format( self._service.GetPort() )
+                
+                ClientPaths.LaunchURLInWebBrowser( url )
+                
+            
+        
+        def _Refresh( self ):
+            
+            if not self:
+                
+                return
+                
+            
+            port = self._service.GetPort()
+            
+            if port is None:
+                
+                status = 'The client api is not running.'
+                
+            else:
+                
+                status = 'The client api should be running on port {}.'.format( port )
+                
+                upnp_port = self._service.GetUPnPPort()
+                
+                if upnp_port is not None:
+                    
+                    status += ' It should be open via UPnP on external port {}.'.format( upnp_port )
+                    
+                
+            
+            self._service_status.SetLabelText( status )
+            
+            permissions_objects = HG.client_controller.client_api_manager.GetPermissions()
+            
+            self._permissions_list.SetData( permissions_objects )
+            
+            self._permissions_list.Sort()
             
         
         def ServiceUpdated( self, service ):
@@ -1170,20 +1361,20 @@ class ReviewServicePanel( wx.Panel ):
             
             self._service_status = ClientGUICommon.BetterStaticText( self )
             
-            booru_search_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            booru_share_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
             columns = [ ( 'name', -1 ), ( 'info', 36 ), ( 'expires', 12 ), ( 'files', 12 ) ]
             
-            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_search_panel, 'local_booru_shares', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_share_panel, 'local_booru_shares', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
             
-            booru_search_panel.SetListCtrl( self._booru_shares )
+            booru_share_panel.SetListCtrl( self._booru_shares )
             
-            booru_search_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-            booru_search_panel.AddDeleteButton()
-            booru_search_panel.AddSeparator()
-            booru_search_panel.AddButton( 'open in new page', self._OpenSearch, enabled_only_on_selection = True )
-            booru_search_panel.AddButton( 'copy internal share url', self._CopyInternalShareURL, enabled_check_func = self._CanCopyURL )
-            booru_search_panel.AddButton( 'copy external share url', self._CopyExternalShareURL, enabled_check_func = self._CanCopyURL )
+            booru_share_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+            booru_share_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+            booru_share_panel.AddSeparator()
+            booru_share_panel.AddButton( 'open in new page', self._OpenSearch, enabled_only_on_selection = True )
+            booru_share_panel.AddButton( 'copy internal share url', self._CopyInternalShareURL, enabled_check_func = self._CanCopyURL )
+            booru_share_panel.AddButton( 'copy external share url', self._CopyExternalShareURL, enabled_check_func = self._CanCopyURL )
             
             self._booru_shares.Sort()
             
@@ -1194,7 +1385,7 @@ class ReviewServicePanel( wx.Panel ):
             #
             
             self.Add( self._service_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.Add( booru_search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self.Add( booru_share_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1377,7 +1568,14 @@ class ReviewServicePanel( wx.Panel ):
                 
             else:
                 
-                status = 'The local booru should be running on port ' + str( port ) + '.'
+                status = 'The local booru should be running on port {}.'.format( port )
+                
+                upnp_port = self._service.GetUPnPPort()
+                
+                if upnp_port is not None:
+                    
+                    status += ' It should be open via UPnP on external port {}.'.format( upnp_port )
+                    
                 
             
             self._service_status.SetLabelText( status )

@@ -90,7 +90,7 @@ class TestServer( unittest.TestCase ):
             reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryFile( cls._serverside_file_service ), context_factory )
             reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryTag( cls._serverside_tag_service ), context_factory )
             
-            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( cls._local_booru ) )
+            reactor.listenTCP( 45866, ClientLocalServer.HydrusServiceBooru( cls._local_booru, allow_non_local_connections = False ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -593,7 +593,7 @@ class TestServer( unittest.TestCase ):
     def test_local_booru( self ):
         
         host = '127.0.0.1'
-        port = HC.DEFAULT_LOCAL_BOORU_PORT
+        port = 45866
         
         self._test_basics( host, port, https = False )
         self._test_local_booru( host, port )

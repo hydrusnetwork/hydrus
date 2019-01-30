@@ -379,6 +379,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
         HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        HG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
         
         self._due_a_forced_selection_pub = False
         
@@ -1603,6 +1604,22 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     media_to_select = [ m for m in remote_media if m not in self._selected_media ]
                     
                 
+            elif select_type == 'tags':
+                
+                ( and_or_or, select_tags ) = extra_info
+                
+                if and_or_or == 'AND':
+                    
+                    matching_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending().intersection( select_tags ) ) == len( select_tags ) }
+                    
+                elif and_or_or == 'OR':
+                    
+                    matching_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending().intersection( select_tags ) ) > 0 }
+                    
+                
+                media_to_deselect = self._selected_media.difference( matching_media )
+                media_to_select = matching_media.difference( self._selected_media )
+                
             
             if self._focussed_media in media_to_deselect:
                 
@@ -2202,11 +2219,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             self._PublishSelectionChange( force_reload = True )
             
         
-        if self._focussed_media is not None:
-            
-            self._HitMedia( self._focussed_media, False, False )
-            
-        
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
@@ -2233,6 +2245,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         if page_key == self._page_key:
             
             self._RemoveMediaByHashes( hashes )
+            
+        
+    
+    def SelectByTags( self, page_key, and_or_or, tags ):
+        
+        if page_key == self._page_key:
+            
+            self._Select( 'tags', ( and_or_or, tags ) )
             
         
     

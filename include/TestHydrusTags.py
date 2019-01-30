@@ -519,7 +519,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
-        self.assertEqual( p.ToString(), 'a*i:o*' )
+        self.assertEqual( p.ToString(), 'a*i:o* (wildcard search)' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', False )
         

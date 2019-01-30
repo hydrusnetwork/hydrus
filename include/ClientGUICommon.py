@@ -1425,7 +1425,7 @@ class ChoiceSort( wx.Panel ):
         return media_sort
         
     
-    def _UpdateAscLabels( self ):
+    def _UpdateAscLabels( self, set_default_asc = False ):
         
         media_sort = self._GetCurrentSort()
         
@@ -1433,12 +1433,21 @@ class ChoiceSort( wx.Panel ):
         
         if media_sort.CanAsc():
             
-            ( asc_str, desc_str ) = media_sort.GetSortAscStrings()
+            ( asc_str, desc_str, default_asc ) = media_sort.GetSortAscStrings()
             
             self._sort_asc_choice.Append( asc_str, CC.SORT_ASC )
             self._sort_asc_choice.Append( desc_str, CC.SORT_DESC )
             
-            self._sort_asc_choice.SelectClientData( media_sort.sort_asc )
+            if set_default_asc:
+                
+                asc_to_set = default_asc
+                
+            else:
+                
+                asc_to_set = media_sort.sort_asc
+                
+            
+            self._sort_asc_choice.SelectClientData( asc_to_set )
             
             self._sort_asc_choice.Enable()
             
@@ -1483,7 +1492,7 @@ class ChoiceSort( wx.Panel ):
     
     def EventSortTypeChoice( self, event ):
         
-        self._UpdateAscLabels()
+        self._UpdateAscLabels( set_default_asc = True )
         
         self._BroadcastSort()
         
@@ -3189,7 +3198,10 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def ChangeTagService( self, service_key ): self._tags_box.ChangeTagService( service_key )
+    def ChangeTagService( self, service_key ):
+        
+        self._tags_box.ChangeTagService( service_key )
+        
     
     def EventSort( self, event ):
         
