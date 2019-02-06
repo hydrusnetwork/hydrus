@@ -26,7 +26,15 @@ def GenerateEris( service ):
     welcome_text_1 = 'This is <b>' + name + '</b>,'
     welcome_text_2 = 'a ' + HC.service_string_lookup[ service_type ] + '.'
     welcome_text_3 = 'Software version ' + str( HC.SOFTWARE_VERSION )
-    welcome_text_4 = 'Network version ' + str( HC.NETWORK_VERSION )
+    
+    if service_type == HC.CLIENT_API_SERVICE:
+        
+        welcome_text_4 = 'API version ' + str( HC.CLIENT_API_VERSION )
+        
+    else:
+        
+        welcome_text_4 = 'Network version ' + str( HC.NETWORK_VERSION )
+        
     
     if allows_non_local_connections:
         
@@ -214,7 +222,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             
             if HydrusImageHandling.IsDecompressionBomb( path ):
                 
-                raise HydrusExceptions.ForbiddenException( 'File seemed to be a Decompression Bomb!' )
+                raise HydrusExceptions.InsufficientCredentialsException( 'File seemed to be a Decompression Bomb!' )
                 
             
         
@@ -222,7 +230,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
         
     except Exception as e:
         
-        raise HydrusExceptions.ForbiddenException( 'File ' + hash.hex() + ' could not parse: ' + str( e ) )
+        raise HydrusExceptions.InsufficientCredentialsException( 'File ' + hash.hex() + ' could not parse: ' + str( e ) )
         
     
     args = {}
@@ -248,7 +256,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             
             tb = traceback.format_exc()
             
-            raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
+            raise HydrusExceptions.InsufficientCredentialsException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
             
         
         args[ 'thumbnail' ] = thumbnail
@@ -269,7 +277,7 @@ class HydrusDomain( object ):
         
         if self._local_only and client_ip != '127.0.0.1':
             
-            raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'Only local access allowed!' )
             
         
     
@@ -304,6 +312,16 @@ class HydrusResource( Resource ):
         return request
         
     
+    def _callbackParseGETArgs( self, request ):
+        
+        return request
+        
+    
+    def _callbackParsePOSTArgs( self, request ):
+        
+        return request
+        
+    
     def _checkService( self, request ):
         
         if HG.server_busy:
@@ -328,7 +346,10 @@ class HydrusResource( Resource ):
                 
                 user_agents = user_agent_text.split( ' ' )
                 
-            except: return # crazy user agent string, so just assume not a hydrus client
+            except:
+                
+                return # crazy user agent string, so just assume not a hydrus client
+                
             
             for user_agent in user_agents:
                 
@@ -342,7 +363,10 @@ class HydrusResource( Resource ):
                         
                         network_version = int( network_version )
                         
-                        if network_version == HC.NETWORK_VERSION: return
+                        if network_version == HC.NETWORK_VERSION:
+                            
+                            return
+                            
                         else:
                             
                             if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
@@ -354,77 +378,6 @@ class HydrusResource( Resource ):
                     
                 
             
-        
-    
-    def _callbackParseGETArgs( self, request ):
-        
-        hydrus_args = HydrusNetwork.ParseGETArgs( request.args )
-        
-        request.hydrus_args = hydrus_args
-        
-        return request
-        
-    
-    def _callbackParsePOSTArgs( self, request ):
-        
-        request.content.seek( 0 )
-        
-        if not request.requestHeaders.hasHeader( 'Content-Type' ):
-            
-            hydrus_args = {}
-            
-        else:
-            
-            content_types = request.requestHeaders.getRawHeaders( 'Content-Type' )
-            
-            content_type = content_types[0]
-            
-            try:
-                
-                mime = HC.mime_enum_lookup[ content_type ]
-                
-            except:
-                
-                raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
-                
-            
-            total_bytes_read = 0
-            
-            if mime == HC.APPLICATION_JSON:
-                
-                json_string = request.content.read()
-                
-                total_bytes_read += len( json_string )
-                
-                hydrus_args = HydrusNetwork.ParseNetworkBytesToHydrusArgs( json_string )
-                
-            else:
-                
-                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-                
-                request.temp_file_info = ( os_file_handle, temp_path )
-                
-                with open( temp_path, 'wb' ) as f:
-                    
-                    for block in HydrusPaths.ReadFileLikeAsBlocks( request.content ): 
-                        
-                        f.write( block )
-                        
-                        total_bytes_read += len( block )
-                        
-                    
-                
-                decompression_bombs_ok = self._DecompressionBombsOK( request )
-                
-                hydrus_args = ParseFileArguments( temp_path, decompression_bombs_ok )
-                
-            
-            self._reportDataUsed( request, total_bytes_read )
-            
-        
-        request.hydrus_args = hydrus_args
-        
-        return request
         
     
     def _callbackRenderResponseContext( self, request ):
@@ -595,11 +548,11 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
             
-        elif failure.type == HydrusExceptions.PermissionException:
+        elif failure.type == HydrusExceptions.MissingCredentialsException:
             
             response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
             
-        elif failure.type == HydrusExceptions.ForbiddenException:
+        elif failure.type == HydrusExceptions.InsufficientCredentialsException:
             
             response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
             
@@ -631,11 +584,11 @@ class HydrusResource( Resource ):
         return request
         
     
-    def _parseAccessKey( self, request ):
+    def _parseHydrusNetworkAccessKey( self, request ):
         
         if not request.requestHeaders.hasHeader( 'Hydrus-Key' ):
             
-            raise HydrusExceptions.PermissionException( 'No hydrus key header found!' )
+            raise HydrusExceptions.MissingCredentialsException( 'No hydrus key header found!' )
             
         
         hex_keys = request.requestHeaders.getRawHeaders( 'Hydrus-Key' )
@@ -648,7 +601,7 @@ class HydrusResource( Resource ):
             
         except:
             
-            raise HydrusExceptions.ForbiddenException( 'Could not parse the hydrus key!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'Could not parse the hydrus key!' )
             
         
         return access_key

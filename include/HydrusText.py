@@ -9,6 +9,14 @@ re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)+' )
 re_leading_single_colon = re.compile( '^:(?!:)' )
 re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew
 
+def HexFilter( text ):
+    
+    text = text.lower()
+    
+    text = re.sub( '[^0123456789abcdef]', '', text )
+    
+    return text
+    
 def DeserialiseNewlinedTexts( text ):
     
     text = text.replace( '\r', '' )

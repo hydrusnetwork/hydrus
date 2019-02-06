@@ -267,7 +267,10 @@ class Service( object ):
     
     def IsDirty( self ):
         
-        return self._dirty
+        with self._lock:
+            
+            return self._dirty
+            
         
     
     def IsFunctional( self ):
@@ -561,7 +564,7 @@ class ServiceRemote( Service ):
         
         if not HydrusData.TimeHasPassed( self._no_requests_until ):
             
-            raise HydrusExceptions.PermissionException( self._no_requests_reason + ' - next request ' + HydrusData.TimestampToPrettyTimeDelta( self._no_requests_until ) )
+            raise HydrusExceptions.InsufficientCredentialsException( self._no_requests_reason + ' - next request ' + HydrusData.TimestampToPrettyTimeDelta( self._no_requests_until ) )
             
         
         example_nj = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, 'GET', self._GetBaseURL() )
@@ -698,7 +701,7 @@ class ServiceRestricted( ServiceRemote ):
         
         if not self._credentials.HasAccessKey():
             
-            raise HydrusExceptions.PermissionException( 'this service has no access key set' )
+            raise HydrusExceptions.MissingCredentialsException( 'this service has no access key set' )
             
         
         ServiceRemote._CheckCanCommunicateExternally( self )
@@ -768,7 +771,10 @@ class ServiceRestricted( ServiceRemote ):
             return True
             
         
-        return self._account.IsDirty()
+        with self._lock:
+            
+            return self._account.IsDirty()
+            
         
     
     def IsFunctional( self, including_external_communication = True, including_account = True ):
@@ -909,11 +915,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     HG.client_controller.network_engine.session_manager.ClearSession( self.network_context )
                     
-                elif isinstance( e, HydrusExceptions.PermissionException ):
-                    
-                    self._DealWithAccountError()
-                    
-                elif isinstance( e, HydrusExceptions.ForbiddenException ):
+                elif isinstance( e, ( HydrusExceptions.MissingCredentialsException, HydrusExceptions.InsufficientCredentialsException ) ):
                     
                     self._DealWithAccountError()
                     
@@ -1079,12 +1081,12 @@ class ServiceRepository( ServiceRestricted ):
         
         if self._paused:
             
-            raise HydrusExceptions.PermissionException( 'Repository is paused!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'Repository is paused!' )
             
         
         if HG.client_controller.options[ 'pause_repo_sync' ]:
             
-            raise HydrusExceptions.PermissionException( 'All repositories are paused!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'All repositories are paused!' )
             
         
         ServiceRestricted._CheckFunctional( self, including_external_communication = including_external_communication, including_account = including_account )

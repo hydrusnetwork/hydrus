@@ -402,7 +402,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 time.sleep( 2 )
                 
             
-        except HydrusExceptions.ForbiddenException:
+        except HydrusExceptions.InsufficientCredentialsException:
             
             status = CC.STATUS_VETOED
             note = '403'
@@ -518,10 +518,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        with self._lock:
-            
-            return self._gallery_seeds.GetSerialisableTuple()
-            
+        return self._gallery_seeds.GetSerialisableTuple()
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):

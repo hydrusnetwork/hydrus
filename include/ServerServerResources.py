@@ -4,6 +4,7 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusNetwork
+from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusServerResources
 from . import ServerFiles
@@ -23,11 +24,90 @@ class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
         
         request.setHeader( 'Server', self._server_version_string )
         
-        if HG.server_busy: return '1'
-        else: return '0'
+        if HG.server_busy:
+            
+            return b'1'
+            
+        else:
+            
+            return b'0'
+            
         
     
-class HydrusResourceAccessKey( HydrusServerResources.HydrusResource ):
+class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
+    
+    def _callbackParseGETArgs( self, request ):
+        
+        hydrus_args = HydrusNetwork.ParseHydrusNetworkGETArgs( request.args )
+        
+        request.hydrus_args = hydrus_args
+        
+        return request
+        
+    
+    def _callbackParsePOSTArgs( self, request ):
+        
+        request.content.seek( 0 )
+        
+        if not request.requestHeaders.hasHeader( 'Content-Type' ):
+            
+            hydrus_args = {}
+            
+        else:
+            
+            content_types = request.requestHeaders.getRawHeaders( 'Content-Type' )
+            
+            content_type = content_types[0]
+            
+            try:
+                
+                mime = HC.mime_enum_lookup[ content_type ]
+                
+            except:
+                
+                raise HydrusExceptions.InsufficientCredentialsException( 'Did not recognise Content-Type header!' )
+                
+            
+            total_bytes_read = 0
+            
+            if mime == HC.APPLICATION_JSON:
+                
+                json_string = request.content.read()
+                
+                total_bytes_read += len( json_string )
+                
+                hydrus_args = HydrusNetwork.ParseNetworkBytesToHydrusArgs( json_string )
+                
+            else:
+                
+                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                
+                request.temp_file_info = ( os_file_handle, temp_path )
+                
+                with open( temp_path, 'wb' ) as f:
+                    
+                    for block in HydrusPaths.ReadFileLikeAsBlocks( request.content ): 
+                        
+                        f.write( block )
+                        
+                        total_bytes_read += len( block )
+                        
+                    
+                
+                decompression_bombs_ok = self._DecompressionBombsOK( request )
+                
+                hydrus_args = HydrusServerResources.ParseFileArguments( temp_path, decompression_bombs_ok )
+                
+            
+            self._reportDataUsed( request, total_bytes_read )
+            
+        
+        request.hydrus_args = hydrus_args
+        
+        return request
+        
+    
+class HydrusResourceAccessKey( HydrusResourceHydrusNetwork ):
     
     def _threadDoGETJob( self, request ):
         
@@ -42,7 +122,7 @@ class HydrusResourceAccessKey( HydrusServerResources.HydrusResource ):
         return response_context
         
     
-class HydrusResourceShutdown( HydrusServerResources.HydrusResource ):
+class HydrusResourceShutdown( HydrusResourceHydrusNetwork ):
     
     def _threadDoPOSTJob( self, request ):
         
@@ -53,11 +133,11 @@ class HydrusResourceShutdown( HydrusServerResources.HydrusResource ):
         return response_context
         
     
-class HydrusResourceAccessKeyVerification( HydrusServerResources.HydrusResource ):
+class HydrusResourceAccessKeyVerification( HydrusResourceHydrusNetwork ):
     
     def _threadDoGETJob( self, request ):
         
-        access_key = self._parseAccessKey( request )
+        access_key = self._parseHydrusNetworkAccessKey( request )
         
         verified = HG.server_controller.Read( 'verify_access_key', self._service_key, access_key )
         
@@ -68,11 +148,11 @@ class HydrusResourceAccessKeyVerification( HydrusServerResources.HydrusResource 
         return response_context
         
     
-class HydrusResourceSessionKey( HydrusServerResources.HydrusResource ):
+class HydrusResourceSessionKey( HydrusResourceHydrusNetwork ):
     
     def _threadDoGETJob( self, request ):
         
-        access_key = self._parseAccessKey( request )
+        access_key = self._parseHydrusNetworkAccessKey( request )
         
         ( session_key, expires ) = HG.server_controller.server_session_manager.AddSession( self._service_key, access_key )
         
@@ -87,11 +167,11 @@ class HydrusResourceSessionKey( HydrusServerResources.HydrusResource ):
         return response_context
         
     
-class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
+class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
     
     def _callbackCheckRestrictions( self, request ):
         
-        HydrusServerResources.HydrusResource._callbackCheckRestrictions( self, request )
+        HydrusResourceHydrusNetwork._callbackCheckRestrictions( self, request )
         
         self._checkSession( request )
         
@@ -124,7 +204,7 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
         
         if not request.requestHeaders.hasHeader( 'Cookie' ):
             
-            raise HydrusExceptions.PermissionException( 'No cookies found!' )
+            raise HydrusExceptions.MissingCredentialsException( 'No cookies found!' )
             
         
         cookie_texts = request.requestHeaders.getRawHeaders( 'Cookie' )
@@ -163,7 +243,7 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
     
     def _reportDataUsed( self, request, num_bytes ):
         
-        HydrusServerResources.HydrusResource._reportDataUsed( self, request, num_bytes )
+        HydrusResourceHydrusNetwork._reportDataUsed( self, request, num_bytes )
         
         account = request.hydrus_account
         
@@ -175,7 +255,7 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
     
     def _reportRequestUsed( self, request ):
         
-        HydrusServerResources.HydrusResource._reportRequestUsed( self, request )
+        HydrusResourceHydrusNetwork._reportRequestUsed( self, request )
         
         account = request.hydrus_account
         
@@ -217,7 +297,7 @@ class HydrusResourceRestrictedAccountInfo( HydrusResourceRestricted ):
             
         else:
             
-            raise HydrusExceptions.PermissionException( 'I was expecting an account key, but did not get one!' )
+            raise HydrusExceptions.MissingCredentialsException( 'I was expecting an account key, but did not get one!' )
             
         
         subject_account = HG.server_controller.Read( 'account', self._service_key, subject_account_key )
@@ -458,7 +538,7 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
         
         if len( unique_ports ) < len( services ):
             
-            raise HydrusExceptions.PermissionException( 'It looks like some of those services share ports! Please give them unique ports!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'It looks like some of those services share ports! Please give them unique ports!' )
             
         
         with HG.dirty_object_lock:

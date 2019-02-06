@@ -6,10 +6,12 @@ from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusSerialisable
 import threading
+import urllib
 
 INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
-BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'share_key', 'update_hash' }
+BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'update_hash' }
 STRING_PARAMS = { 'subject_tag' }
+JSON_PARAMS = set()
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -85,7 +87,7 @@ def GenerateServiceFromSerialisableTuple( serialisable_info ):
         
     except TypeError:
         
-        raise HydrusExceptions.ForbiddenException( 'Could not decode that service key!' )
+        raise HydrusExceptions.InsufficientCredentialsException( 'Could not decode that service key!' )
         
     
     dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
@@ -221,7 +223,7 @@ def DumpToGETQuery( args ):
         
         if name in args:
             
-            args[ name ] = bytes( args[ name ], 'utf-8' ).hex()
+            args[ name ] = urllib.parse.quote( args[ name ] )
             
         
     
@@ -281,68 +283,9 @@ def ParseNetworkBytesToHydrusArgs( network_bytes ):
     
     return args
     
-def ParseGETArgs( requests_args ):
+def ParseHydrusNetworkGETArgs( requests_args ):
     
-    args = {}
-    
-    for name_bytes in requests_args:
-        
-        values_bytes = requests_args[ name_bytes ]
-        
-        try:
-            
-            name = str( name_bytes, 'utf-8' )
-            
-        except UnicodeDecodeError:
-            
-            continue
-            
-        
-        value_bytes = values_bytes[0]
-        
-        try:
-            
-            value = str( value_bytes, 'utf-8' )
-            
-        except UnicodeDecodeError:
-            
-            continue
-            
-        
-        if name in INT_PARAMS:
-            
-            try:
-                
-                args[ name ] = int( value )
-                
-            except:
-                
-                raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
-                
-            
-        elif name in BYTE_PARAMS:
-            
-            try:
-                
-                args[ name ] = bytes.fromhex( value )
-                
-            except:
-                
-                raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
-                
-            
-        elif name in STRING_PARAMS:
-            
-            try:
-                
-                args[ name ] = str( bytes.fromhex( value ), 'utf-8' )
-                
-            except:
-                
-                raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
-                
-            
-        
+    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, INT_PARAMS, BYTE_PARAMS, STRING_PARAMS, JSON_PARAMS )
     
     if 'subject_account_key' in args:
         
@@ -410,7 +353,7 @@ class Account( object ):
         
         if self._created == 0:
             
-            raise HydrusExceptions.PermissionException( 'account is unsynced' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'account is unsynced' )
             
         
         if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ):
@@ -420,17 +363,17 @@ class Account( object ):
         
         if self._IsBanned():
             
-            raise HydrusExceptions.PermissionException( 'This account is banned: ' + self._GetBannedString() )
+            raise HydrusExceptions.InsufficientCredentialsException( 'This account is banned: ' + self._GetBannedString() )
             
         
         if self._IsExpired():
             
-            raise HydrusExceptions.PermissionException( 'This account is expired: ' + self._GetExpiresString() )
+            raise HydrusExceptions.InsufficientCredentialsException( 'This account is expired: ' + self._GetExpiresString() )
             
         
         if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
             
-            raise HydrusExceptions.PermissionException( 'account has exceeded bandwidth' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'account has exceeded bandwidth' )
             
         
     
@@ -522,7 +465,7 @@ class Account( object ):
             
             if not self._account_type.HasPermission( content_type, action ):
                 
-                raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
+                raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to do that.' )
                 
             
         
@@ -893,7 +836,7 @@ class AccountType( object ):
             
         except TypeError:
             
-            raise HydrusExceptions.ForbiddenException( 'Could not decode that account type key!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'Could not decode that account type key!' )
             
         
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )

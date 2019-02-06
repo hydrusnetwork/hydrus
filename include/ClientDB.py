@@ -8405,6 +8405,33 @@ class DB( HydrusDB.HydrusDB ):
                             # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
                             
                         
+                    elif action == HC.CONTENT_UPDATE_ADVANCED:
+                        
+                        action = row
+                        
+                        if action == 'delete_for_deleted_files':
+                            
+                            self._c.execute( 'DELETE FROM local_ratings WHERE local_ratings.service_id = ? and hash_id IN ( SELECT hash_id FROM deleted_files WHERE deleted_files.service_id = ? );', ( service_id, self._combined_local_file_service_id ) )
+                            
+                            ratings_deleted = self._GetRowCount()
+                            
+                            self._c.execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            
+                        elif action == 'delete_for_non_local_files':
+                            
+                            self._c.execute( 'DELETE FROM local_ratings WHERE local_ratings.service_id = ? and hash_id NOT IN ( SELECT hash_id FROM current_files WHERE current_files.service_id = ? );', ( service_id, self._combined_local_file_service_id ) )
+                            
+                            ratings_deleted = self._GetRowCount()
+                            
+                            self._c.execute( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', ( ratings_deleted, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            
+                        elif action == 'delete_for_all_files':
+                            
+                            self._c.execute( 'DELETE FROM local_ratings WHERE service_id = ?;', ( service_id, ) )
+                            
+                            self._c.execute( 'UPDATE service_info SET info = ? WHERE service_id = ? AND info_type = ?;', ( 0, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            
+                        
                     
                 elif service_type == HC.LOCAL_NOTES:
                     
@@ -9349,6 +9376,8 @@ class DB( HydrusDB.HydrusDB ):
             
             num_to_do = len( hashes )
             
+            needed_to_dupe_some_files = False
+            
             for ( i, hash ) in enumerate( hashes ):
                 
                 ( i_paused, should_quit ) = job_key.WaitIfNeeded()
@@ -9365,9 +9394,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    mime = self._GetMime( hash_id )
+                    old_mime = self._GetMime( hash_id )
                     
-                    path = client_files_manager.LocklessGetFilePath( hash, mime )
+                    path = client_files_manager.LocklessGetFilePath( hash, old_mime )
                     
                 except HydrusExceptions.FileMissingException:
                     
@@ -9379,6 +9408,18 @@ class DB( HydrusDB.HydrusDB ):
                     ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
                     
                     self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
+                    
+                    if mime != old_mime:
+                        
+                        needed_to_dupe_the_file = client_files_manager.LocklessChangeFileExt( hash, old_mime, mime )
+                        
+                        if needed_to_dupe_the_file:
+                            
+                            needed_to_dupe_some_files = True
+                            
+                        
+                        path = client_files_manager.LocklessGetFilePath( hash, mime )
+                        
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS:
                         
@@ -9412,6 +9453,15 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+            if needed_to_dupe_some_files:
+                
+                message = 'Some files that were reparsed needed to be moved, but the move was not possible and they were copied instead.'
+                message += os.linesep * 2
+                message += 'At some point, you should run _network->clear orphan files_ to clear out the duplicates.'
+                
+                HydrusData.ShowText( message )
+                
+            
         finally:
             
             job_key.SetVariable( 'popup_text_1', 'done!' )
@@ -9419,8 +9469,6 @@ class DB( HydrusDB.HydrusDB ):
             job_key.DeleteVariable( 'popup_gauge_1' )
             
             job_key.Finish()
-            
-            job_key.Delete()
             
         
     
@@ -9553,7 +9601,19 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
                 
             
-            self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, HydrusData.GetNow(), sqlite3.Binary( bytes( dump, 'utf-8' ) ) ) )
+            dump_buffer = sqlite3.Binary( bytes( dump, 'utf-8' ) )
+            
+            try:
+                
+                self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, HydrusData.GetNow(), dump_buffer ) )
+                
+            except:
+                
+                HydrusData.DebugPrint( dump )
+                HydrusData.ShowText( 'Had a problem saving a JSON object. The dump has been printed to the log.' )
+                
+                raise
+                
             
         else:
             
@@ -9574,7 +9634,19 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
             
-            self._c.execute( 'INSERT INTO json_dumps ( dump_type, version, dump ) VALUES ( ?, ?, ? );', ( dump_type, version, sqlite3.Binary( bytes( dump, 'utf-8' ) ) ) )
+            dump_buffer = sqlite3.Binary( bytes( dump, 'utf-8' ) )
+            
+            try:
+                
+                self._c.execute( 'INSERT INTO json_dumps ( dump_type, version, dump ) VALUES ( ?, ?, ? );', ( dump_type, version, dump_buffer ) )
+                
+            except:
+                
+                HydrusData.DebugPrint( dump )
+                HydrusData.ShowText( 'Had a problem saving a JSON object. The dump has been printed to the log.' )
+                
+                raise
+                
             
         
     
@@ -9586,9 +9658,21 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            json_dump = json.dumps( value )
+            dump = json.dumps( value )
             
-            self._c.execute( 'REPLACE INTO json_dict ( name, dump ) VALUES ( ?, ? );', ( name, sqlite3.Binary( bytes( json_dump, 'utf-8' ) ) ) )
+            dump_buffer = sqlite3.Binary( bytes( dump, 'utf-8' ) )
+            
+            try:
+                
+                self._c.execute( 'REPLACE INTO json_dict ( name, dump ) VALUES ( ?, ? );', ( name, dump_buffer ) )
+                
+            except:
+                
+                HydrusData.DebugPrint( dump )
+                HydrusData.ShowText( 'Had a problem saving a JSON object. The dump has been printed to the log.' )
+                
+                raise
+                
             
         
     

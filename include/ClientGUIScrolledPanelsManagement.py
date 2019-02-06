@@ -1052,10 +1052,12 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 if service_type == HC.LOCAL_BOORU:
                     
                     name = 'local booru'
+                    default_port = 45868
                     
                 elif service_type == HC.CLIENT_API_SERVICE:
                     
                     name = 'client api'
+                    default_port = 45869
                     
                 
                 port_name = '{} local port'.format( name )
@@ -1070,6 +1072,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._booru_options_panel, dictionary[ 'bandwidth_rules' ] )
                 
                 #
+                
+                self._port.SetValue( default_port )
+                self._upnp.SetValue( default_port )
                 
                 self._port.SetValue( dictionary[ 'port' ] )
                 self._upnp.SetValue( dictionary[ 'upnp_port' ] )
@@ -1092,7 +1097,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if self._allow_non_local_connections.GetValue():
                     
-                    self._upnp.Setvalue( None )
+                    self._upnp.SetValue( None )
                     
                     self._upnp.Disable()
                     

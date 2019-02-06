@@ -577,9 +577,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             time.sleep( 10 )
             
-            result = service.Request( HC.GET, 'busy' )
+            result_bytes = service.Request( HC.GET, 'busy' )
             
-            while result == '1':
+            while result_bytes == b'1':
                 
                 if self._controller.ViewIsShutdown():
                     
@@ -588,7 +588,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 time.sleep( 10 )
                 
-                result = service.Request( HC.GET, 'busy' )
+                result_bytes = service.Request( HC.GET, 'busy' )
                 
             
             it_took = HydrusData.GetNow() - started
@@ -1150,7 +1150,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if show:
                 
-                menu_index = self._FindMenuBarIndex( menu )
+                menu_index = self._FindMenuBarIndex( name )
                 
                 self._menubar.EnableTop( menu_index, False )
                 
@@ -1202,11 +1202,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _FindMenuBarIndex( self, menu ):
+    def _FindMenuBarIndex( self, name ):
         
         for index in range( self._menubar.GetMenuCount() ):
             
-            if self._menubar.GetMenu( index ) == menu:
+            if self._menubar.GetMenu( index ).hydrus_menubar_name == name:
                 
                 return index
                 
@@ -1262,6 +1262,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _GenerateMenuInfo( self, name ):
         
         menu = wx.Menu()
+        
+        menu.hydrus_menubar_name = name
         
         def file():
             
@@ -2605,7 +2607,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     try:
                         
-                        controller.CallBlockingToWX( wx_do_it )
+                        controller.CallBlockingToWX( self, wx_do_it )
                         
                     except HydrusExceptions.WXDeadWindowException:
                         
@@ -4122,7 +4124,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if not HG.emergency_exit:
             
-            if HC.options[ 'confirm_client_exit' ]:
+            able_to_close_statement = self._notebook.GetTestAbleToCloseStatement()
+            
+            if HC.options[ 'confirm_client_exit' ] or able_to_close_statement is not None:
                 
                 if restart:
                     
@@ -4131,6 +4135,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 else:
                     
                     text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
+                    
+                
+                if able_to_close_statement is not None:
+                    
+                    text += os.linesep * 2
+                    text += able_to_close_statement
                     
                 
                 with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
@@ -4149,15 +4159,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         job.Cancel()
                         
                     
-                
-            
-            try:
-                
-                self._notebook.TestAbleToClose()
-                
-            except HydrusExceptions.VetoException:
-                
-                return False
                 
             
         
@@ -4328,13 +4329,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and not can_parse:
             
-            message = 'This URL was recognised as a "' + match_name + '" but this URL class does not yet have a parsing script linked to it!'
+            message = 'This URL was recognised as a "{}" but this URL class does not yet have a parsing script linked to it!'.format( match_name )
             message += os.linesep * 2
             message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
             
             wx.MessageBox( message )
             
-            return
+            return message
             
         
         if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
@@ -4349,27 +4350,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HG.client_controller.pub( 'pend_url', page_key, url )
                 
-            
-        else:
-            
-            # watchable url (thread url) -> open new watcher, set it
-                # at some point, append it to existing multiple-thread-supporting-page
-            # gallery url -> open gallery page for the respective parser for import options, but no query input stuff, queue up gallery page to be parsed for page urls
-            
-            if url_type == HC.URL_TYPE_WATCHABLE:
-                
-                page = self._notebook.GetOrMakeMultipleWatcherPage()
-                
-                if page is not None:
-                    
-                    self._notebook.ShowPage( page )
-                    
-                    page_key = page.GetPageKey()
-                    
-                    HG.client_controller.pub( 'pend_url', page_key, url )
-                    
+                return '"{}" URL added successfully.'.format( match_name )
                 
             
+        elif url_type == HC.URL_TYPE_WATCHABLE:
+            
+            page = self._notebook.GetOrMakeMultipleWatcherPage()
+            
+            if page is not None:
+                
+                self._notebook.ShowPage( page )
+                
+                page_key = page.GetPageKey()
+                
+                HG.client_controller.pub( 'pend_url', page_key, url )
+                
+                return '"{}" URL added successfully.'.format( match_name )
+                
+            
+        
+        return '"{}" URL was not added successfully--check the gui for possible error information.'.format( match_name )
         
     
     def IsCurrentPage( self, page_key ):
@@ -4653,7 +4653,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if old_show:
                 
-                old_menu_index = self._FindMenuBarIndex( old_menu )
+                old_menu_index = self._FindMenuBarIndex( name )
                 
                 if show:
                     

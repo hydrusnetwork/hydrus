@@ -1985,6 +1985,52 @@ class PagesNotebook( wx.Notebook ):
         return HydrusData.ToHumanInt( self.GetPageCount() ) + ' pages, ' + num_string + ' files'
         
     
+    def GetTestAbleToCloseStatement( self ):
+        
+        count = collections.Counter()
+        
+        for page in self._GetMediaPages( False ):
+            
+            try:
+                
+                page.CheckAbleToClose()
+                
+            except HydrusExceptions.VetoException as e:
+                
+                reason = str( e )
+                
+                count[ reason ] += 1
+                
+            
+        
+        if len( count ) > 0:
+            
+            total_problems = sum( count.values() )
+            
+            message = ''
+            
+            for ( reason, c ) in list(count.items()):
+                
+                if c == 1:
+                    
+                    message = '1 page says: ' + reason
+                    
+                else:
+                    
+                    message = HydrusData.ToHumanInt( c ) + ' pages say:' + reason
+                    
+                
+                message += os.linesep
+                
+            
+            return message
+            
+        else:
+            
+            return None
+            
+        
+    
     def HasMediaPageName( self, page_name, only_my_level = False ):
         
         media_pages = self._GetMediaPages( only_my_level )
@@ -2802,65 +2848,6 @@ class PagesNotebook( wx.Notebook ):
                 self.SetSelection( i )
                 
                 break
-                
-            
-        
-    
-    def TestAbleToClose( self ):
-        
-        count = collections.Counter()
-        
-        for page in self._GetMediaPages( False ):
-            
-            try:
-                
-                page.CheckAbleToClose()
-                
-            except HydrusExceptions.VetoException as e:
-                
-                reason = str( e )
-                
-                count[ reason ] += 1
-                
-            
-        
-        if len( count ) > 0:
-            
-            total_problems = sum( count.values() )
-            
-            message = ''
-            
-            for ( reason, c ) in list(count.items()):
-                
-                if c == 1:
-                    
-                    message = '1 page says: ' + reason
-                    
-                else:
-                    
-                    message = HydrusData.ToHumanInt( c ) + ' pages say:' + reason
-                    
-                
-                message += os.linesep
-                
-            
-            message += os.linesep
-            
-            if total_problems == 1:
-                
-                message += 'Are you sure you want to close it?'
-                
-            else:
-                
-                message += 'Are you sure you want to close them?'
-                
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
                 
             
         

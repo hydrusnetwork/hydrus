@@ -718,6 +718,18 @@ class BetterCheckListBox( wx.CheckListBox ):
         return result
         
     
+    def SetCheckedData( self, datas ):
+        
+        for index in range( self.GetCount() ):
+            
+            data = self.GetClientData( index )
+            
+            check_it = data in datas
+            
+            self.Check( index, check_it )
+            
+        
+    
 class BetterChoice( wx.Choice ):
     
     def Append( self, display_string, client_data ):

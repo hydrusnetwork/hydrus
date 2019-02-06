@@ -12,6 +12,7 @@ import datetime
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
+from . import HydrusText
 import re
 import string
 import wx
@@ -571,7 +572,7 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         hex_hash = self._hash.GetValue().lower()
         
-        hex_hash = re.sub( '[^0123456789abcdefABCDEF]', '', hex_hash )
+        hex_hash = HydrusText.HexFilter( hex_hash )
         
         if len( hex_hash ) == 0:
             
@@ -1274,7 +1275,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         hex_hash = self._hash.GetValue()
         
-        hex_hash = re.sub( '[^0123456789abcdefABCDEF]', '', hex_hash )
+        hex_hash = HydrusText.HexFilter( hex_hash )
         
         if len( hex_hash ) == 0:
             

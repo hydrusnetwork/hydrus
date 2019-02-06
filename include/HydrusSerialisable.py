@@ -206,7 +206,19 @@ class SerialisableBase( object ):
     
     def GetSerialisableTuple( self ):
         
-        return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, self._GetSerialisableInfo() )
+        if hasattr( self, '_lock' ):
+            
+            with getattr( self, '_lock' ):
+                
+                serialisable_info = self._GetSerialisableInfo()
+                
+            
+        else:
+            
+            serialisable_info = self._GetSerialisableInfo()
+            
+        
+        return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
         
     
     def InitialiseFromSerialisableInfo( self, version, serialisable_info ):

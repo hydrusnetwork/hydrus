@@ -1217,7 +1217,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if parent.IsModal(): # event sometimes fires after modal done
                     
-                    self.GetParent().DoOK()
+                    parent.DoOK()
                     
                 
             else:

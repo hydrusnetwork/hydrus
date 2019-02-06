@@ -1516,6 +1516,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
+                    self._SetFocussedMedia( None )
+                    
+                    time.sleep( 1 )
+                    
                     HG.client_controller.Write( 'reparse_files', hashes )
                     
                 

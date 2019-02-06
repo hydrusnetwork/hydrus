@@ -18,10 +18,10 @@ from . import HydrusGlobals as HG
 '''
 class HydrusAMPCommand( amp.Command ):
     errors = {}
-    errors[ HydrusExceptions.ForbiddenException ] = 'FORBIDDEN'
+    errors[ HydrusExceptions.InsufficientCredentialsException ] = 'FORBIDDEN'
     errors[ HydrusExceptions.NetworkVersionException ] = 'NETWORK_VERSION'
     errors[ HydrusExceptions.NotFoundException ] = 'NOT_FOUND'
-    errors[ HydrusExceptions.PermissionException ] = 'PERMISSION'
+    errors[ HydrusExceptions.MissingCredentialsException ] = 'PERMISSION'
     errors[ HydrusExceptions.SessionException ] = 'SESSION'
     errors[ Exception ] = 'EXCEPTION'
     
@@ -58,10 +58,10 @@ class HydrusAMP( amp.AMP ):
         
         normal_errors = []
         
-        normal_errors.append( HydrusExceptions.ForbiddenException )
+        normal_errors.append( HydrusExceptions.InsufficientCredentialsException )
         normal_errors.append( HydrusExceptions.NetworkVersionException )
         normal_errors.append( HydrusExceptions.NotFoundException )
-        normal_errors.append( HydrusExceptions.PermissionException )
+        normal_errors.append( HydrusExceptions.MissingCredentialsException )
         normal_errors.append( HydrusExceptions.SessionException )
         
         if failure.type in normal_errors: failure.raiseException()

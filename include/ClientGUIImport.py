@@ -1463,33 +1463,26 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paths = paths
         
-        self._tag_repositories = ClientGUICommon.ListBook( self )
+        
+        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
-        
-        for service in services:
-            
-            if service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_CREATE ):
-                
-                service_key = service.GetServiceKey()
-                
-                name = service.GetName()
-                
-                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
-                
-            
-        
-        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, paths )
-        
-        name = HG.client_controller.services_manager.GetName( CC.LOCAL_TAG_SERVICE_KEY )
-        
-        self._tag_repositories.AddPage( name, name, page )
+        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
         
         default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
-        self._tag_repositories.Select( default_tag_repository_key )
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_repositories, service_key, paths )
+            
+            select = service_key == default_tag_repository_key
+            
+            self._tag_repositories.AddPage( page, name, select = select )
+            
         
         #
         
@@ -1504,11 +1497,19 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         paths_to_tags = collections.defaultdict( dict )
         
-        for page in self._tag_repositories.GetActivePages():
+        for page in self._tag_repositories.GetPages():
             
             ( service_key, page_of_paths_to_tags ) = page.GetInfo()
             
-            for ( path, tags ) in list(page_of_paths_to_tags.items()): paths_to_tags[ path ][ service_key ] = tags
+            for ( path, tags ) in page_of_paths_to_tags.items():
+                
+                if len( tags ) == 0:
+                    
+                    continue
+                    
+                
+                paths_to_tags[ path ][ service_key ] = tags
+                
             
         
         return paths_to_tags

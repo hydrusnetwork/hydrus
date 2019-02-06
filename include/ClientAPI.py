@@ -11,6 +11,8 @@ CLIENT_API_PERMISSION_ADD_FILES = 1
 CLIENT_API_PERMISSION_ADD_TAGS = 2
 CLIENT_API_PERMISSION_SEARCH_FILES = 3
 
+ALLOWED_PERMISSIONS = ( CLIENT_API_PERMISSION_ADD_FILES, CLIENT_API_PERMISSION_ADD_TAGS, CLIENT_API_PERMISSION_ADD_URLS, CLIENT_API_PERMISSION_SEARCH_FILES )
+
 basic_permission_to_str_lookup = {}
 
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_URLS ] = 'add urls for processing'
@@ -19,6 +21,9 @@ basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_TAGS ] = 'add tags to 
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_SEARCH_FILES ] = 'search for files'
 
 SEARCH_RESULTS_CACHE_TIMEOUT = 4 * 3600
+
+api_request_dialog_open = False
+last_api_permissions_request = None
 
 class APIManager( HydrusSerialisable.SerialisableBase ):
     
@@ -41,23 +46,33 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_permissions_objects = [ permissions_object.GetSerialisableTuple() for permissions_object in self._access_keys_to_permissions.values() ]
+        serialisable_api_permissions_objects = [ api_permissions.GetSerialisableTuple() for api_permissions in self._access_keys_to_permissions.values() ]
         
-        return serialisable_permissions_objects
+        return serialisable_api_permissions_objects
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        serialisable_permissions_objects = serialisable_info
+        serialisable_api_permissions_objects = serialisable_info
         
-        permissions_objects = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_permissions_object ) for serialisable_permissions_object in serialisable_permissions_objects ]
+        api_permissions_objects = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_permissions ) for serialisable_api_permissions in serialisable_api_permissions_objects ]
         
-        self._access_keys_to_permissions = { permissions_object.GetAccessKey() : permissions_object for permissions_object in permissions_objects }
+        self._access_keys_to_permissions = { api_permissions.GetAccessKey() : api_permissions for api_permissions in api_permissions_objects }
         
     
     def _SetDirty( self ):
         
         self._dirty = True
+        
+    
+    def AddAccess( self, api_permissions ):
+        
+        with self._lock:
+            
+            self._access_keys_to_permissions[ api_permissions.GetAccessKey() ] = api_permissions
+            
+            self._SetDirty()
+            
         
     
     def DeleteAccess( self, access_keys ):
@@ -108,11 +123,16 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            for permissions_object in self._access_keys_to_permissions.values():
+            for api_permissions in self._access_keys_to_permissions.values():
                 
-                permissions_object.MaintainMemory()
+                api_permissions.MaintainMemory()
                 
             
+        
+    
+    def OverwriteAccess( self, api_permissions ):
+        
+        self.AddAccess( api_permissions )
         
     
     def SetClean( self ):
@@ -123,11 +143,11 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetPermissions( self, permissions_objects ):
+    def SetPermissions( self, api_permissions_objects ):
         
         with self._lock:
             
-            self._access_keys_to_permissions = { permissions_object.GetAccessKey() : permissions_object for permissions_object in permissions_objects }
+            self._access_keys_to_permissions = { api_permissions.GetAccessKey() : api_permissions for api_permissions in api_permissions_objects }
             
             self._SetDirty()
             
@@ -141,14 +161,29 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_NAME = 'Client API Permissions'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name = 'new api permissions' ):
+    def __init__( self, name = 'new api permissions', access_key = None, basic_permissions = None, search_tag_filter = None ):
+        
+        if access_key is None:
+            
+            access_key = HydrusData.GenerateKey()
+            
+        
+        if basic_permissions is None:
+            
+            basic_permissions = set()
+            
+        
+        if search_tag_filter is None:
+            
+            search_tag_filter = ClientTags.TagFilter()
+            
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._access_key = HydrusData.GenerateKey()
+        self._access_key = access_key
         
-        self._basic_permissions = set()
-        self._search_tag_filter = ClientTags.TagFilter()
+        self._basic_permissions = basic_permissions
+        self._search_tag_filter = search_tag_filter
         
         self._last_search_results = None
         self._search_results_timeout = 0
@@ -164,6 +199,11 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_search_tag_filter = self._search_tag_filter.GetSerialisableTuple()
         
         return ( serialisable_access_key, serialisable_basic_permissions, serialisable_search_tag_filter )
+        
+    
+    def _HasPermission( self, permission ):
+        
+        return permission in self._basic_permissions
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -191,6 +231,14 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def CheckPermission( self, permission ):
+        
+        if not self.HasPermission( permission ):
+            
+            raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to: {}'.format( basic_permission_to_str_lookup[ permission ] ) )
+            
+        
+    
     def CheckPermissionToSeeFiles( self, hash_ids ):
         
         with self._lock:
@@ -202,7 +250,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             if self._last_search_results is None:
                 
-                raise HydrusExceptions.PermissionException( 'It looks like those search results are no longer available--please run the search again!' )
+                raise HydrusExceptions.InsufficientCredentialsException( 'It looks like those search results are no longer available--please run the search again!' )
                 
             
             num_files_asked_for = len( hash_ids )
@@ -214,7 +262,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 error_text = error_text.format( HydrusData.ToHumanInt( num_files_asked_for ), HydrusData.ToHumanInt( num_files_allowed_to_see ) )
                 
-                raise HydrusExceptions.PermissionException( error_text )
+                raise HydrusExceptions.InsufficientCredentialsException( error_text )
                 
             
             self._search_results_timeout = HydrusData.GetNow() + SEARCH_RESULTS_CACHE_TIMEOUT
@@ -243,7 +291,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             p_strings = []
             
-            if self.HasPermission( CLIENT_API_PERMISSION_SEARCH_FILES ):
+            if self._HasPermission( CLIENT_API_PERMISSION_SEARCH_FILES ):
                 
                 p_strings.append( 'Can search: ' + self._search_tag_filter.ToPermittedString() )
                 
@@ -272,7 +320,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def GetTagFilter( self ):
+    def GetSearchTagFilter( self ):
         
         with self._lock:
             
@@ -284,7 +332,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
-            return permission in self._basic_permissions
+            return self._HasPermission( permission )
             
         
     
@@ -312,6 +360,38 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._search_results_timeout = HydrusData.GetNow() + SEARCH_RESULTS_CACHE_TIMEOUT
             
+        
+    
+    def SetSearchTagFilter( self, search_tag_filter ):
+        
+        with self._lock:
+            
+            self._search_tag_filter = search_tag_filter
+            
+        
+    
+    def ToHumanString( self ):
+        
+        s = 'API Permissions ({}): '.format( self._name )
+        
+        basic_string = self.GetBasicPermissionsString()
+        advanced_string = self.GetAdvancedPermissionsString()
+        
+        if len( basic_string ) == '':
+            
+            s += 'does not have permission to do anything'
+            
+        else:
+            
+            s += basic_string
+            
+            if len( advanced_string ) > 0:
+                
+                s += ': ' + advanced_string
+                
+            
+        
+        return s
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS ] = APIPermissions

@@ -309,14 +309,12 @@ class ClientFilesManager( object ):
             
             try:
                 
-                file_path = self._LookForFilePath( hash )
+                ( file_path, mime ) = self._LookForFilePath( hash )
                 
             except HydrusExceptions.FileMissingException:
                 
                 raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
                 
-            
-            mime = HydrusFileHandling.GetMime( file_path )
             
         else:
             
@@ -613,7 +611,7 @@ class ClientFilesManager( object ):
             
             if os.path.exists( potential_path ):
                 
-                return potential_path
+                return ( potential_path, potential_mime )
                 
             
         
@@ -1017,7 +1015,7 @@ class ClientFilesManager( object ):
                     
                     try:
                         
-                        path = self._LookForFilePath( hash )
+                        ( path, mime ) = self._LookForFilePath( hash )
                         
                     except HydrusExceptions.FileMissingException:
                         
@@ -1115,6 +1113,41 @@ class ClientFilesManager( object ):
         return ( import_status, hash, note )
         
     
+    def LocklessChangeFileExt( self, hash, old_mime, mime ):
+        
+        old_path = self._GenerateExpectedFilePath( hash, old_mime )
+        new_path = self._GenerateExpectedFilePath( hash, mime )
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Changing file ext: ' + str( ( old_path, new_path ) ) )
+            
+        
+        if HydrusPaths.PathIsFree( old_path ):
+            
+            try:
+                
+                HydrusPaths.MergeFile( old_path, new_path )
+                
+                needed_to_copy_file = False
+                
+            except:
+                
+                HydrusPaths.MirrorFile( old_path, new_path )
+                
+                needed_to_copy_file = True
+                
+            
+        else:
+            
+            HydrusPaths.MirrorFile( old_path, new_path )
+            
+            needed_to_copy_file = True
+            
+        
+        return needed_to_copy_file
+        
+    
     def LocklessGetFilePath( self, hash, mime = None, check_file_exists = True ):
         
         if HG.file_report_mode:
@@ -1124,21 +1157,34 @@ class ClientFilesManager( object ):
         
         if mime is None:
             
-            path = self._LookForFilePath( hash )
+            ( path, mime ) = self._LookForFilePath( hash )
             
         else:
             
             path = self._GenerateExpectedFilePath( hash, mime )
             
+            if check_file_exists and not os.path.exists( path ):
+                
+                try:
+                    
+                    # let's see if the file exists, but with the wrong ext!
+                    
+                    ( actual_path, old_mime ) = self._LookForFilePath( hash )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
+                    
+                
+                self.LocklessChangeFileExt( hash, old_mime, mime )
+                
+                # we have now fixed the path, it is good to return
+                
+            
         
         if HG.file_report_mode:
             
             HydrusData.ShowText( 'File path request success: ' + path )
-            
-        
-        if check_file_exists and not os.path.exists( path ):
-            
-            raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
             
         
         return path
@@ -1672,7 +1718,7 @@ class LocalBooruCache( object ):
         
         if not self._local_booru_service.BandwidthOK():
             
-            raise HydrusExceptions.ForbiddenException( 'This booru has used all its monthly data. Please try again next month.' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'This booru has used all its monthly data. Please try again next month.' )
             
         
     
@@ -1698,7 +1744,7 @@ class LocalBooruCache( object ):
         
         if timeout is not None and HydrusData.TimeHasPassed( timeout ):
             
-            raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'This share has expired.' )
             
         
     

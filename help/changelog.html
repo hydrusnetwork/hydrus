@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 339</h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>wrote some ui to handle client api permissions adding and editing</li>
+					<li>wrote a 'catch a permissions request' mini-dialog for external api permissions adding</li>
+					<li>wrote api calls:</li>
+					<li>GET</li>
+					<li>/api_version</li>
+					<li>/request_new_permissions</li>
+					<li>/verify_access_key</li>
+					<li>/add_urls/get_url_info</li>
+					<li>POST</li>
+					<li>/add_urls/add_url</li>
+					<li>and made a new 'client api' help page to describe in detail what these do</li>
+					<li>wrote fairly comprehensive unit tests for the new client api</li>
+					<li>refactored a bunch of 'hydrus network' specific stuff away from general server code that the client api now uses</li>
+					<li>neatened up 401 vs 403 error handling across the program, and replaced some clientside error handling that was inelegantly borrowing these network errors</li>
+					<li>deleted very old prototype file/thumbnail client server fetch code, which was no longer in use</li>
+					<li>.</li>
+					<li>misc and bug fixes:</li>
+					<li>added a 'clear ratings' button to the ratings service 'review services' panels. it can clear out ratings for deleted, non-local, or _all_ files</li>
+					<li>the '3 downloaders are working, is it ok to close the client?' message is now folded into the 'confirm client exit (auto-yes in 15s)' dialog. this merged dialog will still appear for users who have the regular confirm client exit dialog turned off (and still auto-yeses in 15s)</li>
+					<li>the file url downloader now reports 'downloading file' and 'importing url' text status separately</li>
+					<li>fixed a typo bug from last week that was breaking asc/desc ratings service sorting</li>
+					<li>fixed a typo bug from last week that was stopping manage import folders from opening</li>
+					<li>fixed a typo bug from last week that was breaking setting upnp port on the local booru/client api service management panel</li>
+					<li>the advanced file reparse-and-re-thumbnailing routine now correctly moves a file to its new extension if its mime changes (e.g. png->apng, or webm/mkv distinctions)</li>
+					<li>the client file manager now silently detects and auto-repairs instances of missing files where the file actually does exist, just with the wrong extension</li>
+					<li>fixed a url parsing issue that was normalise-mangling url classes with no path but some query parameters</li>
+					<li>the network engine now uses utf-8 decoding when no specific encoding is set (previously ISO-8859-1)</li>
+					<li>fixed an ffmpeg video parsing bug when the video included Shift-JIS metadata. it should work for other unusual encodings as well</li>
+					<li>maybe cleaned up some menubar management code</li>
+					<li>the filename tagging dialog now uses a notebook for service choice, like the manage tags dialog, rather than the janky old listbook</li>
+					<li>fixed a py2-to-3 issue with the admin-only 'is server currently busy' check while a backup is running</li>
+					<li>improved some dialog button event handling. it may completely fix the 'trytoendmodal' issue some users run into</li>
+					<li>improved some JSON db serialisation error reporting code, trying to pin down an issue several users have seen with session save</li>
+					<li>improved thread-safety of serialisable objects as they serialise</li>
+					<li>misc improvements and cleanup</li>
+				</ul>
 				<li><h3>version 338</h3></li>
 				<ul>
 					<li>after talking with some users, put a bit of time into tag autocomplete wolkflow. both read (search pages) and write (manage tags) autocomplete inputs now operate ~asynchronously~, with the tag fetch working on a separate thread. tag jobs can also now cancel at certain checkpoints in the tag search process if overwritten by a new request. therefore, a variety of tag lookup scenarios _should_ be less painful. this change was executed in a semi-inelegant way, so please report if you encounter bugs from fast typing etc...</li>

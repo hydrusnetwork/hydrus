@@ -226,7 +226,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        return list(self._tag_slices_to_rules.items())
+        return list( self._tag_slices_to_rules.items() )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -314,7 +314,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             blacklist = []
             whitelist = []
             
-            for ( tag_slice, rule ) in list(self._tag_slices_to_rules.items()):
+            for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
                 
                 if rule == CC.FILTER_BLACKLIST:
                     

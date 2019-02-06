@@ -110,11 +110,11 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
             
         
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
+    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
     proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
     
-    info = proc.stderr.read()
+    data_bytes = proc.stderr.read()
     
     proc.wait()
     
@@ -122,7 +122,10 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     del proc
     
-    lines = info.splitlines()
+    # deal with Shift-JIS and other fun by just doing ????. We don't care about that metadata here
+    text = str( data_bytes, 'utf-8', errors = 'replace' )
+    
+    lines = text.splitlines()
     
     try:
         

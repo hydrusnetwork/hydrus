@@ -508,7 +508,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._CheckTagsBlacklist( self._tags, tag_import_options )
         
     
-    def DownloadAndImportRawFile( self, file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, override_bandwidth = False ):
+    def DownloadAndImportRawFile( self, file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False ):
         
         self.AddURL( file_url )
         
@@ -525,6 +525,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 referral_url = self._referral_url
                 
             
+            status_hook( 'downloading file' )
+            
             network_job = network_job_factory( 'GET', file_url, temp_path = temp_path, referral_url = referral_url )
             
             if override_bandwidth:
@@ -540,6 +542,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 network_job.WaitUntilDone()
                 
+            
+            status_hook( 'importing file' )
             
             self.Import( temp_path, file_import_options )
             
@@ -1136,9 +1140,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 if should_download_file:
                                     
-                                    status_hook( 'downloading file' )
-                                    
-                                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, override_bandwidth = True )
+                                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = True )
                                     
                                 
                             elif url_type == HC.URL_TYPE_POST and can_parse:
@@ -1206,9 +1208,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     file_url = self.file_seed_data
                     
-                    status_hook( 'downloading file' )
-                    
-                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory )
+                    self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, status_hook )
                     
                 
             
@@ -1233,7 +1233,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 time.sleep( 2 )
                 
             
-        except HydrusExceptions.ForbiddenException:
+        except HydrusExceptions.InsufficientCredentialsException:
             
             status = CC.STATUS_VETOED
             note = '403'
@@ -1385,10 +1385,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        with self._lock:
-            
-            return self._file_seeds.GetSerialisableTuple()
-            
+        return self._file_seeds.GetSerialisableTuple()
         
     
     def _GetSourceTimestamp( self, file_seed ):

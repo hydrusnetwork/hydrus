@@ -1269,11 +1269,11 @@ class TestServerDB( unittest.TestCase ):
         
         self.assertNotEqual( access_key, access_key_2 )
         
-        self.assertRaises( HydrusExceptions.ForbiddenException, self._read, 'account_key_from_access_key', self._tag_service_key, access_key )
+        self.assertRaises( HydrusExceptions.InsufficientCredentialsException, self._read, 'account_key_from_access_key', self._tag_service_key, access_key )
         
         account_key = self._read( 'account_key_from_access_key', self._tag_service_key, access_key_2 )
         
-        self.assertRaises( HydrusExceptions.ForbiddenException, self._read, 'access_key', r_key )
+        self.assertRaises( HydrusExceptions.InsufficientCredentialsException, self._read, 'access_key', r_key )
         
     
     def _test_content_creation( self ):

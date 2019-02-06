@@ -1,7 +1,10 @@
+from . import ClientConstants as CC
+from . import ClientAPI
 from . import ClientLocalServer
 from . import ClientMedia
 from . import ClientRatings
 from . import ClientServices
+from . import ClientTags
 import hashlib
 import http.client
 from . import HydrusConstants as HC
@@ -10,6 +13,8 @@ from . import HydrusNetwork
 from . import HydrusPaths
 from . import HydrusServer
 from . import HydrusServerResources
+from . import HydrusText
+import json
 import os
 import random
 from . import ServerFiles
@@ -18,6 +23,7 @@ import ssl
 from . import TestConstants
 import time
 import unittest
+import urllib
 from twisted.internet import reactor
 #from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 from twisted.internet.defer import deferredGenerator, waitForDeferred
@@ -54,7 +60,8 @@ class TestServer( unittest.TestCase ):
         cls._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT, cls._access_key ) )
         cls._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, cls._access_key ) )
         
-        cls._local_booru = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.LOCAL_BOORU, 'local booru' )
+        cls._local_booru = ClientServices.GenerateService( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' )
+        cls._client_api = ClientServices.GenerateService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' )
         
         services_manager = HG.test_controller.services_manager
         
@@ -91,6 +98,7 @@ class TestServer( unittest.TestCase ):
             reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryTag( cls._serverside_tag_service ), context_factory )
             
             reactor.listenTCP( 45866, ClientLocalServer.HydrusServiceBooru( cls._local_booru, allow_non_local_connections = False ) )
+            reactor.listenTCP( 45869, ClientLocalServer.HydrusServiceClientAPI( cls._client_api, allow_non_local_connections = False ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -209,6 +217,225 @@ class TestServer( unittest.TestCase ):
         
         try: os.remove( path )
         except: pass
+        
+    
+    def _test_client_api( self, host, port ):
+        
+        connection = http.client.HTTPConnection( host, port, timeout = 10 )
+        
+        # /api_version
+        
+        connection.request( 'GET', '/api_version' )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( text, str( HC.CLIENT_API_VERSION ) )
+        
+        # /request_new_permissions
+        
+        def format_request_new_permissions_query( name, basic_permissions ):
+            
+            return '/request_new_permissions?name={}&basic_permissions={}'.format( urllib.parse.quote( name ), urllib.parse.quote( json.dumps( basic_permissions ) ) )
+            
+        
+        # fail
+        
+        ClientAPI.api_request_dialog_open = False
+        
+        connection.request( 'GET', format_request_new_permissions_query( 'test', [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertIn( 'dialog', text )
+        
+        self.assertEqual( response.status, 403 )
+        
+        # success
+        
+        permissions_to_set_up = []
+        
+        permissions_to_set_up.append( ( 'everything', list( ClientAPI.ALLOWED_PERMISSIONS ) ) )
+        permissions_to_set_up.append( ( 'add_files', [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
+        permissions_to_set_up.append( ( 'add_tags', [ ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS ] ) )
+        permissions_to_set_up.append( ( 'add_urls', [ ClientAPI.CLIENT_API_PERMISSION_ADD_URLS ] ) )
+        permissions_to_set_up.append( ( 'search_all_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
+        permissions_to_set_up.append( ( 'search_green_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
+        
+        set_up_permissions = {}
+        
+        for ( name, basic_permissions ) in permissions_to_set_up:
+            
+            ClientAPI.api_request_dialog_open = True
+            
+            connection.request( 'GET', format_request_new_permissions_query( name, basic_permissions ) )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            ClientAPI.api_request_dialog_open = False
+            
+            self.assertEqual( response.status, 200 )
+            
+            access_key_hex = str( data, 'utf-8' )
+            
+            self.assertEqual( len( access_key_hex ), 64 )
+            
+            access_key_hex = HydrusText.HexFilter( access_key_hex )
+            
+            self.assertEqual( len( access_key_hex ), 64 )
+            
+            api_permissions = ClientAPI.last_api_permissions_request
+            
+            if 'green' in name:
+                
+                search_tag_filter = ClientTags.TagFilter()
+                
+                search_tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+                search_tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+                search_tag_filter.SetRule( 'green', CC.FILTER_WHITELIST )
+                
+                api_permissions.SetSearchTagFilter( search_tag_filter )
+                
+            
+            self.assertEqual( bytes.fromhex( access_key_hex ), api_permissions.GetAccessKey() )
+            
+            set_up_permissions[ name ] = api_permissions
+            
+            HG.test_controller.client_api_manager.AddAccess( api_permissions )
+            
+        
+        # /verify_access_key
+        
+        # missing
+        
+        connection.request( 'GET', '/verify_access_key' )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 401 )
+        
+        # fail
+        
+        incorrect_headers = { 'Hydrus-Client-API-Access-Key' : 'abcd' }
+        
+        connection.request( 'GET', '/verify_access_key', headers = incorrect_headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        # success
+        
+        for ( name, api_permissions ) in set_up_permissions.items():
+            
+            access_key_hex = api_permissions.GetAccessKey().hex()
+            
+            headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+            
+            connection.request( 'GET', '/verify_access_key', headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            text = str( data, 'utf-8' )
+            
+            body_dict = json.loads( text )
+            
+            self.assertEqual( response.status, 200 )
+            
+            self.assertEqual( set( body_dict[ 'basic_permissions' ] ), set( api_permissions.GetBasicPermissions() ) )
+            self.assertEqual( body_dict[ 'human_description' ], api_permissions.ToHumanString() )
+            
+        
+        # add files
+        
+        # add tags
+        
+        # add urls
+        
+        # get url info
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        # unknown
+        
+        path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( 'https://muhsite.wew/help_compute', safe = '' ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = { 'url_type' : HC.URL_TYPE_UNKNOWN, 'url_type_string' : 'unknown url', 'match_name' : 'unknown url', 'can_parse' : False }
+        
+        self.assertEqual( d, expected_answer )
+        
+        # known
+        
+        path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( 'https://8ch.net/tv/res/1846574.html', safe = '' ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = { 'url_type' : HC.URL_TYPE_WATCHABLE, 'url_type_string' : 'watchable url', 'match_name' : '8chan thread', 'can_parse' : True }
+        
+        # add url
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        request_dict = { 'url' : 'https://8ch.net/tv/res/1846574.html' }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/add_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( text, 'Success!' )
+        
+        # search files
+        
+        # failed permission tests
         
     
     def _test_local_booru( self, host, port ):
@@ -598,6 +825,16 @@ class TestServer( unittest.TestCase ):
         self._test_basics( host, port, https = False )
         self._test_local_booru( host, port )
         
+    
+    def test_client_api( self ):
+        
+        host = '127.0.0.1'
+        port = 45869
+        
+        self._test_basics( host, port, https = False )
+        self._test_client_api( host, port )
+        
+    
     '''
 class TestAMP( unittest.TestCase ):
     

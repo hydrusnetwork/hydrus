@@ -1,5 +1,6 @@
 from . import ClientLocalServerResources
 from . import HydrusServer
+from twisted.web.resource import NoResource
 
 class HydrusClientService( HydrusServer.HydrusService ):
     
@@ -38,7 +39,16 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         root = HydrusClientService._InitRoot( self )
         
-        # api calls here
+        root.putChild( b'api_version', ClientLocalServerResources.HydrusResourceClientAPIVersion( self._service, self._client_requests_domain ) )
+        root.putChild( b'request_new_permissions', ClientLocalServerResources.HydrusResourceClientAPIPermissionsRequest( self._service, self._client_requests_domain ) )
+        root.putChild( b'verify_access_key', ClientLocalServerResources.HydrusResourceClientAPIVerify( self._service, self._client_requests_domain ) )
+        
+        add_urls = NoResource()
+        
+        root.putChild( b'add_urls', add_urls )
+        
+        add_urls.putChild( b'get_url_info', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddURLsGetURLParsingCapability( self._service, self._client_requests_domain ) )
+        add_urls.putChild( b'add_url', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddURLsImportURL( self._service, self._client_requests_domain ) )
         
         return root
         

@@ -8,6 +8,7 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusThreading
+from . import HydrusText
 import os
 import requests
 import threading
@@ -36,11 +37,11 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
     elif status_code == 401:
         
-        eclass = HydrusExceptions.PermissionException
+        eclass = HydrusExceptions.MissingCredentialsException
         
     elif status_code == 403:
         
-        eclass = HydrusExceptions.ForbiddenException
+        eclass = HydrusExceptions.InsufficientCredentialsException
         
     elif status_code == 404:
         
@@ -135,6 +136,7 @@ class NetworkJob( object ):
         self._content_type = None
         
         self._encoding = 'utf-8'
+        self._encoding_confirmed = False
         
         self._stream_io = io.BytesIO()
         
@@ -625,7 +627,16 @@ class NetworkJob( object ):
             
         except UnicodeDecodeError:
             
-            raise Exception( 'Could not convert the downloaded data to unicode!' )
+            try:
+                
+                text = str( data, 'utf-8' )
+                
+                self._encoding = 'utf-8'
+                
+            except UnicodeDecodeError:
+                
+                raise Exception( 'Could not convert the downloaded data to unicode!' )
+                
             
         
         return text
@@ -934,7 +945,15 @@ class NetworkJob( object ):
                         
                         if response.encoding is not None:
                             
-                            self._encoding = response.encoding
+                            encoding = response.encoding
+                            
+                            # we'll default to utf-8 rather than ISO-8859-1
+                            we_got_lame_iso_default_from_requests = encoding == 'ISO-8859-1' and ( self._content_type is None or encoding not in self._content_type )
+                            
+                            if not we_got_lame_iso_default_from_requests:
+                                
+                                self._encoding = encoding
+                                
                             
                         
                         if self._temp_path is None:

@@ -493,7 +493,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.ForbiddenException( 'The service could not find that registration key in its database.' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that registration key in its database.' )
             
         
         new_access_key = os.urandom( HC.HYDRUS_KEY_LENGTH )
@@ -552,7 +552,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             except:
                 
-                raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
+                raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account in its database.' )
                 
             
             self._c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
@@ -584,7 +584,7 @@ class DB( HydrusDB.HydrusDB ):
     def _GetAccountKeyFromAccountId( self, account_id ):
         
         try: ( account_key, ) = self._c.execute( 'SELECT account_key FROM accounts WHERE account_id = ?;', ( account_id, ) ).fetchone()
-        except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account_id in its database.' )
+        except: raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account_id in its database.' )
         
         return account_key
         
@@ -692,7 +692,7 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT account_id FROM accounts WHERE account_key = ?;', ( sqlite3.Binary( account_key ), ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.ForbiddenException( 'The service could not find that account key in its database.' )
+        if result is None: raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account key in its database.' )
         
         ( account_id, ) = result
         
@@ -1709,7 +1709,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if True not in ( account.HasPermission( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ):
             
-            raise HydrusExceptions.PermissionException( 'You do not have permission to generate an immediate update!' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to generate an immediate update!' )
             
         
         service_id = self._GetServiceId( service_key )
@@ -1974,7 +1974,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.ForbiddenException( 'Did not find ip information for that hash.' )
+            raise HydrusExceptions.InsufficientCredentialsException( 'Did not find ip information for that hash.' )
             
         
         return result
@@ -2621,7 +2621,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if total_current_storage + total_pending_storage + file_dict[ 'size' ] > max_storage:
                         
-                        raise HydrusExceptions.PermissionException( 'This repository is full up and cannot take any more files!' )
+                        raise HydrusExceptions.InsufficientCredentialsException( 'This repository is full up and cannot take any more files!' )
                         
                     
                 

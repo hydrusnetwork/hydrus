@@ -445,6 +445,20 @@ class NewDialog( wx.Dialog ):
             return
             
         
+        event_object = event.GetEventObject()
+        
+        if event_object is not None:
+            
+            tlp = event_object.GetTopLevelParent()
+            
+            if tlp != self:
+                
+                event.Skip()
+                
+                return
+                
+            
+        
         self._TryEndModal( event_id )
         
     

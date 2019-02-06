@@ -44,7 +44,7 @@ def ProcessStartingAction( db_dir, action ):
                     
                 
             
-            raise HydrusExceptions.PermissionException( 'Exiting!' )
+            raise HydrusExceptions.ShutdownException( 'Exiting!' )
             
         else:
             
@@ -59,7 +59,7 @@ def ProcessStartingAction( db_dir, action ):
             
         else:
             
-            raise HydrusExceptions.PermissionException( 'The server is not running, so it cannot be stopped!' )
+            raise HydrusExceptions.ShutdownException( 'The server is not running, so it cannot be stopped!' )
             
         
     elif action == 'restart':
@@ -82,7 +82,7 @@ def ShutdownSiblingInstance( db_dir ):
     
     if ports is None:
         
-        raise HydrusExceptions.PermissionException( 'Could not figure out the existing server\'s ports, so could not shut it down!' )
+        raise HydrusExceptions.ShutdownException( 'Could not figure out the existing server\'s ports, so could not shut it down!' )
         
     
     session = requests.Session()
@@ -103,7 +103,7 @@ def ShutdownSiblingInstance( db_dir ):
             text += os.linesep
             text += traceback.format_exc()
             
-            raise HydrusExceptions.PermissionException( text )
+            raise HydrusExceptions.ShutdownException( text )
             
         
         if 'server administration' in server_name:
@@ -120,7 +120,7 @@ def ShutdownSiblingInstance( db_dir ):
                 text += os.linesep
                 text += r.text
                 
-                raise HydrusExceptions.PermissionException( text )
+                raise HydrusExceptions.ShutdownException( text )
                 
             
             time_waited = 0
@@ -133,7 +133,7 @@ def ShutdownSiblingInstance( db_dir ):
                 
                 if time_waited > 20:
                     
-                    raise HydrusExceptions.PermissionException( 'Attempted to shut the existing server down, but it took too long!' )
+                    raise HydrusExceptions.ShutdownException( 'Attempted to shut the existing server down, but it took too long!' )
                     
                 
             
@@ -143,7 +143,7 @@ def ShutdownSiblingInstance( db_dir ):
     
     if not port_found:
         
-        raise HydrusExceptions.PermissionException( 'The existing server did not have an administration service!' )
+        raise HydrusExceptions.ShutdownException( 'The existing server did not have an administration service!' )
         
     
     HydrusData.Print( 'The existing server is shut down!' )

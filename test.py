@@ -8,6 +8,7 @@ except: pass
 from include import HydrusConstants as HC
 from include import ClientConstants as CC
 from include import HydrusGlobals as HG
+from include import ClientAPI
 from include import ClientDefaults
 from include import ClientNetworking
 from include import ClientNetworkingBandwidth
@@ -110,6 +111,7 @@ class Controller( object ):
         services = []
         
         services.append( ClientServices.GenerateService( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' ) )
+        services.append( ClientServices.GenerateService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' ) )
         services.append( ClientServices.GenerateService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'all local files' ) )
         services.append( ClientServices.GenerateService( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ) )
         services.append( ClientServices.GenerateService( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ) )
@@ -150,6 +152,9 @@ class Controller( object ):
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+        
+        ClientDefaults.SetDefaultDomainManagerData( domain_manager )
+        
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, domain_manager, login_manager )
@@ -163,6 +168,7 @@ class Controller( object ):
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
+        self.client_api_manager = ClientAPI.APIManager()
         
         self._cookies = {}
         
@@ -239,11 +245,7 @@ class Controller( object ):
                 
                 job_key.SetVariable( 'result', result )
                 
-            except HydrusExceptions.WXDeadWindowException as e:
-                
-                job_key.SetVariable( 'error', e )
-                
-            except HydrusExceptions.PermissionException as e:
+            except ( HydrusExceptions.WXDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
                 job_key.SetVariable( 'error', e )
                 
@@ -375,6 +377,11 @@ class Controller( object ):
         del self._writes[ name ]
         
         return write
+        
+    
+    def ImportURL( self, url ):
+        
+        return 'Success!'
         
     
     def IsBooted( self ):

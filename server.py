@@ -101,7 +101,7 @@ try:
                 controller.Run()
                 
             
-        except HydrusExceptions.PermissionException as e:
+        except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
             
             error = str( e )
             
@@ -127,7 +127,7 @@ try:
             
         
     
-except HydrusExceptions.PermissionException as e:
+except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
     
     HydrusData.Print( e )
     

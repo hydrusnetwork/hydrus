@@ -154,11 +154,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'result', result )
                 
-            except HydrusExceptions.WXDeadWindowException as e:
-                
-                job_key.SetVariable( 'error', e )
-                
-            except HydrusExceptions.PermissionException as e:
+            except ( HydrusExceptions.WXDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
                 job_key.SetVariable( 'error', e )
                 
@@ -252,7 +248,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     if dlg.ShowModal() != wx.ID_YES:
                         
-                        raise HydrusExceptions.PermissionException()
+                        raise HydrusExceptions.ShutdownException()
                         
                     
                 
@@ -580,7 +576,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 else:
                     
-                    raise HydrusExceptions.PermissionException( 'File system failed, user chose to quit.' )
+                    raise HydrusExceptions.ShutdownException( 'File system failed, user chose to quit.' )
                     
                 
             
@@ -766,7 +762,7 @@ class Controller( HydrusController.HydrusController ):
                             
                         else:
                             
-                            raise HydrusExceptions.PermissionException( 'Bad password check' )
+                            raise HydrusExceptions.InsufficientCredentialsException( 'Bad password check' )
                             
                         
                     
@@ -1015,6 +1011,7 @@ class Controller( HydrusController.HydrusController ):
     def RestartClientServerService( self, service_key ):
         
         service = self.services_manager.GetService( service_key )
+        service_type = service.GetServiceType()
         
         name = service.GetName()
         
@@ -1042,7 +1039,16 @@ class Controller( HydrusController.HydrusController ):
                     
                     from . import ClientLocalServer
                     
-                    listening_connection = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( service, allow_non_local_connections = allow_non_local_connections ) )
+                    if service_type == HC.LOCAL_BOORU:
+                        
+                        twisted_server = ClientLocalServer.HydrusServiceBooru( service, allow_non_local_connections = allow_non_local_connections )
+                        
+                    elif service_type == HC.CLIENT_API_SERVICE:
+                        
+                        twisted_server = ClientLocalServer.HydrusServiceClientAPI( service, allow_non_local_connections = allow_non_local_connections )
+                        
+                    
+                    listening_connection = reactor.listenTCP( port, twisted_server )
                     
                     self._listening_services[ service_key ] = listening_connection
                     
@@ -1304,7 +1310,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._is_booted = True
             
-        except HydrusExceptions.PermissionException as e:
+        except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
             
             HydrusData.Print( e )
             
@@ -1352,11 +1358,7 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.CleanRunningFile( self.db_dir, 'client' )
             
-        except HydrusExceptions.PermissionException:
-            
-            pass
-            
-        except HydrusExceptions.ShutdownException:
+        except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ):
             
             pass
             

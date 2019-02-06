@@ -1,4 +1,6 @@
+from . import ClientAPI
 from . import ClientConstants as CC
+from . import ClientGUIAPI
 from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIListCtrl
@@ -238,8 +240,12 @@ class ReviewServicePanel( wx.Panel ):
             
             permissions_list_panel.SetListCtrl( self._permissions_list )
             
-            # make this add a menu with manual add vs. listen to request
-            permissions_list_panel.AddButton( 'add', self._Add )
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'manually', 'Enter the details of the share manually.', self._AddManually ) )
+            menu_items.append( ( 'normal', 'from api request', 'Listen for an access permission request from an external program via the API.', self._AddFromAPI ) )
+            
+            permissions_list_panel.AddMenuButton( 'add', menu_items )
             permissions_list_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
             permissions_list_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
             permissions_list_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
@@ -261,14 +267,14 @@ class ReviewServicePanel( wx.Panel ):
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
-        def _ConvertDataToListCtrlTuples( self, permissions_object ):
+        def _ConvertDataToListCtrlTuples( self, api_permissions ):
             
-            name = permissions_object.GetName()
+            name = api_permissions.GetName()
             
             pretty_name = name
             
-            basic_permissions_string = permissions_object.GetBasicPermissionsString()
-            advanced_permissions_string = permissions_object.GetAdvancedPermissionsString()
+            basic_permissions_string = api_permissions.GetBasicPermissionsString()
+            advanced_permissions_string = api_permissions.GetAdvancedPermissionsString()
             
             sort_basic_permissions = basic_permissions_string
             sort_advanced_permissions = advanced_permissions_string
@@ -288,24 +294,74 @@ class ReviewServicePanel( wx.Panel ):
                 return
                 
             
-            permissions_object = selected[0]
+            api_permissions = selected[0]
             
-            access_key = permissions_object.GetAccessKey()
+            access_key = api_permissions.GetAccessKey()
             
             text = access_key.hex()
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             
         
-        def _Add( self ):
+        def _AddFromAPI( self ):
             
-            wx.MessageBox( 'Sorry, this is still under construction!' )
+            port = self._service.GetPort()
             
-            # throw up panel to allow editing key and all permissions
+            if port is None:
+                
+                wx.MessageBox( 'The service is not running, so you cannot add new access via the API!' )
+                
+                return
+                
             
-            # careful of funky edit process here. update the manager and then let the list refresh itself
+            title = 'waiting for API access permissions request'
             
-            # self._Refresh()
+            with ClientGUITopLevelWindows.DialogNullipotent( self, title ) as dlg:
+                
+                panel = ClientGUIAPI.CaptureAPIAccessPermissionsRequestPanel( dlg )
+                
+                dlg.SetPanel( panel )
+                
+                ClientAPI.last_api_permissions_request = None
+                ClientAPI.api_request_dialog_open = True
+                
+                dlg.ShowModal()
+                
+                ClientAPI.api_request_dialog_open = False
+                
+                api_permissions = panel.GetAPIAccessPermissions()
+                
+                if api_permissions is not None:
+                    
+                    self._AddManually( api_permissions = api_permissions )
+                    
+                
+            
+        
+        def _AddManually( self, api_permissions = None ):
+            
+            if api_permissions is None:
+                
+                api_permissions = ClientAPI.APIPermissions()
+                
+            
+            title = 'edit api access permissions'
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                
+                panel = ClientGUIAPI.EditAPIPermissionsPanel( dlg, api_permissions )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    api_permissions = panel.GetValue()
+                    
+                    HG.client_controller.client_api_manager.AddAccess( api_permissions )
+                    
+                    self._Refresh()
+                    
+                
             
         
         def _Delete( self ):
@@ -314,7 +370,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    access_keys = [ permissions_object.GetAccessKey() for permissions_object in self._permissions_list.GetData( only_selected = True ) ]
+                    access_keys = [ api_permissions.GetAccessKey() for api_permissions in self._permissions_list.GetData( only_selected = True ) ]
                     
                     HG.client_controller.client_api_manager.DeleteAccess( access_keys )
                     
@@ -325,9 +381,9 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Duplicate( self ):
             
-            selected_permissions_objects = self._permissions_list.GetData( only_selected = True )
+            selected_api_permissions_objects = self._permissions_list.GetData( only_selected = True )
             
-            dupes = [ permissions_object.Duplicate() for permissions_object in selected_permissions_objects ]
+            dupes = [ api_permissions.Duplicate() for api_permissions in selected_api_permissions_objects ]
             
             # permissions objects do not need unique names, but let's dedupe the dupe objects' names here to make it easy to see which is which in this step
             
@@ -353,16 +409,30 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Edit( self ):
             
-            selected_permissions_objects = self._permissions_list.GetData( only_selected = True )
+            selected_api_permissions_objects = self._permissions_list.GetData( only_selected = True )
             
-            for permissions_object in selected_permissions_objects:
+            for api_permissions in selected_api_permissions_objects:
                 
-                # throw up panel to allow editing key and all permissions
+                title = 'edit api access permissions'
                 
-                pass
+                with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                    
+                    panel = ClientGUIAPI.EditAPIPermissionsPanel( dlg, api_permissions )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        api_permissions = panel.GetValue()
+                        
+                        HG.client_controller.client_api_manager.OverwriteAccess( api_permissions )
+                        
+                    else:
+                        
+                        break
+                        
+                    
                 
-            
-            # careful of funky edit process here. update the manager and then let the list refresh itself
             
             self._Refresh()
             
@@ -410,9 +480,9 @@ class ReviewServicePanel( wx.Panel ):
             
             self._service_status.SetLabelText( status )
             
-            permissions_objects = HG.client_controller.client_api_manager.GetPermissions()
+            api_permissions_objects = HG.client_controller.client_api_manager.GetPermissions()
             
-            self._permissions_list.SetData( permissions_objects )
+            self._permissions_list.SetData( api_permissions_objects )
             
             self._permissions_list.Sort()
             
@@ -1627,6 +1697,15 @@ class ReviewServicePanel( wx.Panel ):
             
             self._rating_info_st = ClientGUICommon.BetterStaticText( self )
             
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'for deleted files', 'delete all set ratings for files that have since been deleted', HydrusData.Call( self._ClearRatings, 'delete_for_deleted_files', 'deleted files' ) ) )
+            menu_items.append( ( 'normal', 'for all non-local files', 'delete all set ratings for files that are not in this client right now', HydrusData.Call( self._ClearRatings, 'delete_for_non_local_files', 'non-local files' ) ) )
+            menu_items.append( ( 'separator', None, None, None ) )
+            menu_items.append( ( 'normal', 'for all files', 'delete all set ratings for all files', HydrusData.Call( self._ClearRatings, 'delete_for_all_files', 'ALL FILES' ) ) )
+            
+            self._clear_deleted = ClientGUICommon.MenuButton( self, 'clear ratings', menu_items )
+            
             #
             
             self._Refresh()
@@ -1634,8 +1713,32 @@ class ReviewServicePanel( wx.Panel ):
             #
             
             self.Add( self._rating_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._clear_deleted, CC.FLAGS_LONE_BUTTON )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
+            
+        
+        def _ClearRatings( self, advanced_action, action_description ):
+            
+            message = 'Delete any ratings on this service for {}? THIS CANNOT BE UNDONE'.format( action_description )
+            message += os.linesep * 2
+            message += 'Please note a client restart is needed to see the ratings disappear in media views.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+                
+                result = dlg_add.ShowModal()
+                
+                if result == wx.ID_YES:
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
+                    
+                    service_keys_to_content_updates = { self._service.GetServiceKey() : [ content_update ] }
+                    
+                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates, do_pubsubs = False )
+                    
+                    HG.client_controller.pub( 'service_updated', self._service )
+                    
+                
             
         
         def _Refresh( self ):
