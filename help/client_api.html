@@ -1,0 +1,180 @@
+<html>
+	<head>
+		<title>client api</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<p class="warning">This is all currently under construction!</p>
+			<h3>client api</h3>
+			<p>The hydrus client now supports a very simple API so you can automate certain actions with external programs.</p>
+			<p>(info here about setting it up under manage/review services)</p>
+			<h3>API</h3>
+			<p>For now, the client api is http only. By default, the base address you are looking at is:</p>
+			<a href="http://127.0.0.1:45869"><pre>http://127.0.0.1:45869</pre></a>
+			<h3>Access Management</h3>
+			<div class="apiborder">
+				<h3><b>GET /api_version</b></h3>
+				<p><i>Gets the current API version. I don't expect this to change much, but it might be important later.</i></p>
+				<ul>
+					<li><p>Headers: n/a</p></li>
+					<li><p>Arguments: n/a</p></li>
+					<li><p>Response description: The current API version as a simple number.</p></li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li><pre>1</pre></li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder">
+				<h3><b>GET /request_new_permissions</b></h3>
+				<p><i>Register a new external program with the client. This requires the 'add from api request' mini-dialog under </i>services->review services<i> to be open, otherwise it will 403.</i></p>
+				<ul>
+					<li><p>Headers: n/a</p></li>
+					<li>
+						<p>Arguments:</p>
+						<ul>
+							<li>name : (descriptive name of your access)</li>
+							<li>basic_permissions : A json-encoded list of numerical permission identifiers you want to request.</li>
+						</ul>
+					</li>
+					<li>
+						<p>The permissions are currently:</p>
+						<ul>
+							<li>0 - Import files</li>
+							<li>1 - Add tags</li>
+							<li>2 - Import URLs</li>
+							<li>3 - Search for files</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example request:</p>
+						<ul>
+							<li><p>/request_access_permissions?name=my%20import%20script&basic_permissions=[0,1]</p></li>
+						</ul>
+					</li>
+					<li><p>Response description: Your access key, 64 characters of hex. This will not be valid until the user approves the request in the client ui.</p></li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li><pre>73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57</pre></li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder">
+				<h3><b>GET /verify_access_key</b></h3>
+				<p><i>Check your access key is valid.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li><p>Arguments: n/a</p></li>
+					<li><p>Response description: 403 and some error text if the access key is invalid, otherwise some JSON with basic permission info.</p></li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li><pre>{"basic_permissions": [0, 1, 3], "human_description": "API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this"}</pre></li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+			<h3>Adding Files</h3>
+			<div class="apiborder">
+				<h3><b>POST add file</b></h3>
+			</div>
+			<h3>Adding Tags</h3>
+			<div class="apiborder">
+				<h3><b>POST add tags</b></h3>
+			</div>
+			<h3>Adding URLs</h3>
+			<div class="apiborder">
+				<h3><b>GET /add_urls/get_url_info</b></h3>
+				<p><i>Ask the client for information about a URL.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments:</p>
+						<ul>
+							<li>url : (the url you want to ask about)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example request (for URL https://8ch.net/tv/res/1846574.html):</p>
+						<ul>
+							<li><p>/add_urls/get_url_info?url=https%3A%2F%2F8ch.net%2Ftv%2Fres%2F1846574.html</p></li>
+						</ul>
+					</li>
+					<li>
+						<p>Response description: Some JSON describing what the client thinks of the URL.</p>
+						<p>The url types are currently:</p>
+						<ul>
+							<li>0 - Post URL</li>
+							<li>2 - File URL</li>
+							<li>3 - Gallery URL</li>
+							<li>4 - Watchable URL</li>
+							<li>5 - Unknown URL (i.e. no matching URL Class)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li><pre>{"url_type": 4, "url_type_string": "watchable url", "match_name": "8chan thread", "can_parse": true}</pre></li>
+						</ul>
+					</li>
+				</ul>
+			</div>
+			<div class="apiborder">
+				<h3><b>POST /add_urls/add_url</b></h3>
+				<p><i>Tell the client to 'import' a URL. This triggers the exact same routine as drag-and-dropping a text URL onto the main client window.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in JSON):</p>
+						<ul>
+							<li>url : (the url you want to add)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example request body:</p>
+						<ul>
+							<li><p>{"url": "https://8ch.net/tv/res/1846574.html"}</p></li>
+						</ul>
+					</li>
+					<li><p>Response description: "Success!" if successful, otherwise human-readable error text.</p></li>
+				</ul>
+			</div>
+			<h3>Searching Files</h3>
+			<div class="apiborder">
+				<h3><b>GET file search</b></h3>
+			</div>
+			<div class="apiborder">
+				<h3><b>GET file metadata</b></h3>
+			</div>
+			<div class="apiborder">
+				<h3><b>GET file</b></h3>
+			</div>
+			
+			<div class="apiborder">
+				<h3><b>GET thumbnail</b></h3>
+			</div>
+		</div>
+	</body>
+</html>

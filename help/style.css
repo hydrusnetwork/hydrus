@@ -17,6 +17,7 @@ tr { text-align: center; }
 5px 5px 0 #6600ff,
 6px 6px 0 #8b00ff; }
 .warning { color: #d00 }
+.apiborder { border-left: 5px; border-left-color: #333377; border-style: hidden hidden hidden solid; padding: 0.5em; margin: 1.0em; }
 .lololol { text-decoration: line-through; }
 .right { text-align: right; }
 .screenshot { float: right; clear: both; margin: 10px; }
