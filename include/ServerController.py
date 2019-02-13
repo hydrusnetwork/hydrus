@@ -7,7 +7,6 @@ from . import HydrusNetworking
 from . import HydrusSessions
 from . import HydrusThreading
 import os
-from . import ServerDaemons
 from . import ServerDB
 from . import ServerServer
 import requests
@@ -161,6 +160,11 @@ class Controller( HydrusController.HydrusController ):
         HG.server_controller = self
         
     
+    def _GetUPnPServices( self ):
+        
+        return self._services
+        
+    
     def _InitDB( self ):
         
         return ServerDB.DB( self, self.db_dir, 'server', no_wal = self._no_wal )
@@ -248,6 +252,11 @@ class Controller( HydrusController.HydrusController ):
         reactor.callFromThread( TWISTEDDoIt )
         
     
+    def DeleteOrphans( self ):
+        
+        self.WriteSynchronous( 'delete_orphans' )
+        
+    
     def Exit( self ):
         
         HydrusData.Print( 'Shutting down daemons and services\u2026' )
@@ -275,6 +284,10 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
+        self._services = self.Read( 'services' )
+        
+        [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
+        
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self._service_keys_to_connected_ports = {}
@@ -283,20 +296,6 @@ class Controller( HydrusController.HydrusController ):
     def InitView( self ):
         
         HydrusController.HydrusController.InitView( self )
-        
-        if not self._no_daemons:
-            
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DeleteOrphans', ServerDaemons.DAEMONDeleteOrphans, period = 86400 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'GenerateUpdates', ServerDaemons.DAEMONGenerateUpdates, period = 600, init_wait = 10 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SaveDirtyObjects', ServerDaemons.DAEMONSaveDirtyObjects, period = 30 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 ) )
-            
-        
-        #
-        
-        self._services = self.Read( 'services' )
-        
-        [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
         
         port = self._admin_service.GetPort()
         
@@ -311,6 +310,20 @@ class Controller( HydrusController.HydrusController ):
                 self.StartService( service )
                 
             
+        
+        #
+        
+        job = self.CallRepeating( 5.0, 600.0, self.SyncRepositories )
+        
+        self._daemon_jobs[ 'sync_repositories' ] = job
+        
+        job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjects )
+        
+        self._daemon_jobs[ 'save_dirty_objects' ] = job
+        
+        job = self.CallRepeating( 0.0, 86400.0, self.DeleteOrphans )
+        
+        self._daemon_jobs[ 'delete_orphans' ] = job
         
     
     def JustWokeFromSleep( self ):
@@ -397,6 +410,8 @@ class Controller( HydrusController.HydrusController ):
         
         self._services = services
         
+        self.CallToThread( self.services_upnp_manager.SetServices, self._services )
+        
         [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
         
         current_service_keys = set( self._service_keys_to_connected_ports.keys() )
@@ -438,6 +453,11 @@ class Controller( HydrusController.HydrusController ):
         
     
     def SyncRepositories( self ):
+        
+        if HG.server_busy:
+            
+            return
+            
         
         repositories = [ service for service in self._services if service.GetServiceType() in HC.REPOSITORIES ]
         

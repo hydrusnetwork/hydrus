@@ -58,28 +58,28 @@ def CanVacuum( db_path, stop_time = None ):
     
 def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
     
-    table_name = 'mem.tempbigread' + os.urandom( 32 ).hex()
+    table_name = 'tempbigread' + os.urandom( 32 ).hex()
     
-    cursor.execute( 'CREATE TABLE ' + table_name + ' ( temp_id INTEGER PRIMARY KEY );' )
+    cursor.execute( 'CREATE TEMPORARY TABLE ' + table_name + ' ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, temp_id INTEGER );' )
     
     cursor.execute( 'INSERT INTO ' + table_name + ' ( temp_id ) ' + select_statement ) # given statement should end in semicolon, so we are good
     
-    finished = False
+    num_to_do = cursor.rowcount
     
-    while not finished:
+    if num_to_do is None or num_to_do == -1:
         
-        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' LIMIT ?;', ( chunk_size, ) ) ]
+        num_to_do = 0
         
-        if len( chunk ) == 0:
-            
-            finished = True
-            
-        else:
-            
-            cursor.executemany( 'DELETE FROM ' + table_name + ' WHERE temp_id = ?;', ( ( temp_id, ) for temp_id in chunk ) )
-            
-            yield chunk
-            
+    
+    i = 0
+    
+    while i < num_to_do:
+        
+        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' WHERE job_id BETWEEN ? AND ?;', ( i, i + chunk_size - 1 ) ) ]
+        
+        yield chunk
+        
+        i += chunk_size
         
     
     cursor.execute( 'DROP TABLE ' + table_name + ';' )
@@ -206,6 +206,11 @@ class HydrusDB( object ):
         if version > HC.SOFTWARE_VERSION:
             
             self._ReportOverupdatedDB( version )
+            
+        
+        if version < ( HC.SOFTWARE_VERSION - 15 ):
+            
+            self._ReportUnderupdatedDB( version )
             
         
         if version < HC.SOFTWARE_VERSION - 50:
@@ -632,6 +637,11 @@ class HydrusDB( object ):
         
     
     def _ReportOverupdatedDB( self, version ):
+        
+        pass
+        
+    
+    def _ReportUnderupdatedDB( self, version ):
         
         pass
         

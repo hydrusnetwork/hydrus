@@ -116,6 +116,11 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def _GetUPnPServices( self ):
+        
+        return self.services_manager.GetServices( ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) )
+        
+    
     def _ReportShutdownDaemonsStatus( self ):
         
         names = { daemon.name for daemon in self._daemons if daemon.is_alive() }
@@ -793,20 +798,35 @@ class Controller( HydrusController.HydrusController ):
         
         if not self._no_daemons:
             
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'notify_unknown_accounts', ) ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SaveDirtyObjects', ClientDaemons.DAEMONSaveDirtyObjects, ( 'important_dirt_to_clean', ), period = 30 ) )
-            
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 4 * 3600, init_wait = 60, pre_call_wait = 3 ) )
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 4 * 3600, pre_call_wait = 1 ) )
             
-            self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_call_wait = 6 ) )
-            
         
-        self.CallRepeatingWXSafe( self, 10.0, 10.0, self.CheckMouseIdle )
+        job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
+        job.WakeOnPubSub( 'notify_restart_import_folders_daemon' )
+        job.WakeOnPubSub( 'notify_new_import_folders' )
+        job.ShouldDelayOnWakeup( True )
+        self._daemon_jobs[ 'import_folders' ] = job
+        
+        job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckExportFolders )
+        job.WakeOnPubSub( 'notify_restart_export_folders_daemon' )
+        job.WakeOnPubSub( 'notify_new_export_folders' )
+        job.ShouldDelayOnWakeup( True )
+        self._daemon_jobs[ 'export_folders' ] = job
+        
+        job = self.CallRepeating( 0.0, 30.0, self.SaveDirtyObjects )
+        job.WakeOnPubSub( 'important_dirt_to_clean' )
+        self._daemon_jobs[ 'save_dirty_objects' ] = job
+        
+        job = self.CallRepeating( 5.0, 3600.0, self.SynchroniseAccounts )
+        job.ShouldDelayOnWakeup( True )
+        job.WakeOnPubSub( 'notify_unknown_accounts' )
+        self._daemon_jobs[ 'synchronise_accounts' ] = job
+        
+        job = self.CallRepeatingWXSafe( self, 10.0, 10.0, self.CheckMouseIdle )
+        self._daemon_jobs[ 'check_mouse_idle' ] = job
         
         if self.db.IsFirstStart():
             
@@ -1217,6 +1237,10 @@ class Controller( HydrusController.HydrusController ):
         
         with HG.dirty_object_lock:
             
+            upnp_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) ]
+            
+            self.CallToThread( self.services_upnp_manager.SetServices, upnp_services )
+            
             self.WriteSynchronous( 'update_services', services )
             
             self.services_manager.RefreshServices()
@@ -1257,6 +1281,21 @@ class Controller( HydrusController.HydrusController ):
             
         
         HydrusController.HydrusController.ShutdownView( self )
+        
+    
+    def SynchroniseAccounts( self ):
+        
+        services = self.services_manager.GetServices( HC.RESTRICTED_SERVICES )
+        
+        for service in services:
+            
+            if HydrusThreading.IsThreadShuttingDown():
+                
+                return
+                
+            
+            service.SyncAccount()
+            
         
     
     def SystemBusy( self ):

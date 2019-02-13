@@ -266,6 +266,8 @@ class ClientFilesManager( object ):
     
     def _GenerateExpectedFilePath( self, hash, mime ):
         
+        self._WaitOnWakeup()
+        
         hash_encoded = hash.hex()
         
         prefix = 'f' + hash_encoded[:2]
@@ -278,6 +280,8 @@ class ClientFilesManager( object ):
         
     
     def _GenerateExpectedFullSizeThumbnailPath( self, hash ):
+        
+        self._WaitOnWakeup()
         
         hash_encoded = hash.hex()
         
@@ -292,6 +296,8 @@ class ClientFilesManager( object ):
     
     def _GenerateExpectedResizedThumbnailPath( self, hash ):
         
+        self._WaitOnWakeup()
+        
         hash_encoded = hash.hex()
         
         prefix = 'r' + hash_encoded[:2]
@@ -303,23 +309,9 @@ class ClientFilesManager( object ):
         return path
         
     
-    def _GenerateFullSizeThumbnail( self, hash, mime = None ):
+    def _GenerateFullSizeThumbnail( self, hash, mime ):
         
-        if mime is None:
-            
-            try:
-                
-                ( file_path, mime ) = self._LookForFilePath( hash )
-                
-            except HydrusExceptions.FileMissingException:
-                
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
-                
-            
-        else:
-            
-            file_path = self._GenerateExpectedFilePath( hash, mime )
-            
+        file_path = self._GenerateExpectedFilePath( hash, mime )
         
         try:
             
@@ -718,6 +710,19 @@ class ClientFilesManager( object ):
                     wx.MessageBox( text )
                     HydrusData.DebugPrint( text )
                     
+                
+            
+        
+    
+    def _WaitOnWakeup( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'file_system_waits_on_wakeup' ):
+            
+            while HG.client_controller.JustWokeFromSleep():
+                
+                HydrusThreading.CheckIfThreadShuttingDown()
+                
+                time.sleep( 1.0 )
                 
             
         
@@ -2698,6 +2703,22 @@ class ServicesManager( object ):
         with self._lock:
             
             return self._GetService( service_key ).GetServiceType()
+            
+        
+    
+    def GetServiceKeyFromName( self, allowed_types, service_name ):
+        
+        with self._lock:
+            
+            for service in self._services_sorted:
+                
+                if service.GetServiceType() in allowed_types and service.GetName() == service_name:
+                    
+                    return service.GetServiceKey()
+                    
+                
+            
+            raise HydrusExceptions.DataMissing()
             
         
     

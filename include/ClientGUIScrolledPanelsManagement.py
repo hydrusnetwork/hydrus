@@ -2221,6 +2221,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
+            self._file_system_waits_on_wakeup = wx.CheckBox( self, label = '' )
+            self._file_system_waits_on_wakeup.SetToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' )
+            
             self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
             
             self._confirm_trash = wx.CheckBox( self )
@@ -2253,6 +2256,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     self._export_location.SetPath( abs_path )
                     
                 
+            
+            self._file_system_waits_on_wakeup.SetValue( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
             
             self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
             
@@ -2300,6 +2305,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
+            rows.append( ( 'Wait 15s after computer resume before accessing files: ', self._file_system_waits_on_wakeup ) )
             rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
@@ -2406,6 +2412,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
             
+            self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.GetValue() )
+            
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
             HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
             HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
@@ -2471,6 +2479,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._discord_dnd_fix = wx.CheckBox( self )
             self._discord_dnd_fix.SetToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
+            self._secret_discord_dnd_fix = wx.CheckBox( self )
+            self._secret_discord_dnd_fix.SetToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
+            
             self._always_show_hover_windows = wx.CheckBox( self )
             self._always_show_hover_windows.SetToolTip( 'If your window manager doesn\'t like showing the hover windows on mouse-over (typically on some Linux flavours), please try this out and give the dev feedback on this forced size and position accuracy!' )
             
@@ -2507,6 +2518,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._discord_dnd_fix.SetValue( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
             
+            self._secret_discord_dnd_fix.SetValue( self._new_options.GetBoolean( 'secret_discord_dnd_fix' ) )
+            
             self._always_show_hover_windows.SetValue( self._new_options.GetBoolean( 'always_show_hover_windows' ) )
             
             self._hide_message_manager_on_gui_iconise.SetValue( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
@@ -2534,7 +2547,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
             rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
-            rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
+            rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=25, <200MB file DnDs): ', self._discord_dnd_fix ) )
+            rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
@@ -2620,6 +2634,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.pub( 'main_gui_title', title )
             
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.GetValue() )
+            self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.GetValue() )
             self._new_options.SetBoolean( 'always_show_hover_windows', self._always_show_hover_windows.GetValue() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.GetValue() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.GetValue() )

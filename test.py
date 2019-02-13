@@ -22,6 +22,7 @@ from include import HydrusPubSub
 from include import HydrusSessions
 from include import HydrusTags
 from include import HydrusThreading
+from include import TestClientAPI
 from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestClientData
@@ -48,6 +49,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 import unittest
 import wx
 from twisted.internet import reactor
@@ -350,6 +352,14 @@ class Controller( object ):
         return job
         
     
+    def ClearWrites( self, name ):
+        
+        if name in self._writes:
+            
+            del self._writes[ name ]
+            
+        
+    
     def DBCurrentlyDoingJob( self ):
         
         return False
@@ -379,9 +389,13 @@ class Controller( object ):
         return write
         
     
-    def ImportURL( self, url ):
+    def ImportURLFromAPI( self, url, service_keys_to_tags ):
         
-        return 'Success!'
+        normalised_url = self.network_engine.domain_manager.NormaliseURL( url )
+        
+        human_result_text = '"{}" URL added successfully.'.format( normalised_url )
+        
+        return ( normalised_url, human_result_text )
         
     
     def IsBooted( self ):
@@ -451,8 +465,9 @@ class Controller( object ):
     
     def ResetIdleTimer( self ): pass
     
-    def Run( self ):
+    def Run( self, window ):
         
+        # we are in wx thread here, we can do this
         self._SetupWx()
         
         suites = []
@@ -466,6 +481,10 @@ class Controller( object ):
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )
+            
+        if run_all or only_run == 'client_api':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientAPI ) )
             
         if run_all or only_run == 'daemons':
             
@@ -511,7 +530,23 @@ class Controller( object ):
         
         runner = unittest.TextTestRunner( verbosity = 2 )
         
-        runner.run( suite )
+        def do_it():
+            
+            try:
+                
+                runner.run( suite )
+                
+            finally:
+                
+                wx.CallAfter( win.Destroy )
+                
+            
+        
+        win.Show()
+        
+        test_thread = threading.Thread( target = do_it )
+        
+        test_thread.start()
         
     
     def SetRead( self, name, value ):
@@ -570,7 +605,7 @@ class Controller( object ):
                 
             else:
                 
-                return ( CC.STATUS_SUCCESSFUL_AND_NEW, '' )
+                return ( CC.STATUS_SUCCESSFUL_AND_NEW, 'test note' )
                 
             
         
@@ -598,13 +633,11 @@ if __name__ == '__main__':
             # we run the tests on the wx thread atm
             # keep a window alive the whole time so the app doesn't finish its mainloop
             
-            win = wx.Frame( None )
+            win = wx.Frame( None, title = 'Running tests...' )
             
             def do_it():
                 
-                controller.Run()
-                
-                win.DestroyLater()
+                controller.Run( win )
                 
             
             wx.CallAfter( do_it )

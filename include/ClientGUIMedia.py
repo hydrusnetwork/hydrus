@@ -3006,9 +3006,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( media ) > 0:
                     
-                    cmd_down = event.CmdDown()
+                    alt_down = event.AltDown()
                     
-                    result = ClientDragDrop.DoFileExportDragDrop( self, self._page_key, media, cmd_down )
+                    result = ClientDragDrop.DoFileExportDragDrop( self, self._page_key, media, alt_down )
                     
                     if result not in ( wx.DragError, wx.DragNone ):
                         

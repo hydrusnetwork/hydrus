@@ -68,6 +68,37 @@ def ConvertWildcardToSQLiteLikeParameter( wildcard ):
     
     return like_param
     
+def DealWithBrokenJSONDump( db_dir, dump, dump_descriptor ):
+    
+    timestamp_string = time.strftime( '%Y-%m-%d %H-%M-%S' )
+    hex_chars = os.urandom( 4 ).hex()
+    
+    filename = '({}) at {} {}.json'.format( dump_descriptor, timestamp_string, hex_chars )
+    
+    path = os.path.join( db_dir, filename )
+    
+    with open( path, 'wb' ) as f:
+        
+        if isinstance( dump, str ):
+            
+            dump = bytes( dump, 'utf-8', errors = 'replace' )
+            
+        
+        f.write( dump )
+        
+    
+    message = 'A serialised object failed to load! Its description is "{}".'.format( dump_descriptor )
+    message += os.linesep * 2
+    message += 'This error could be due to several factors, but is most likely a hard drive fault (perhaps your computer recently had a bad power cut?).'
+    message += os.linesep * 2
+    message += 'The database has attempted to delete the broken object, errors have been written to the log, and the object\'s dump written to {}. Depending on the object, your client may no longer be able to boot, or it may have lost something like a session or a subscription.'.format( path )
+    message += os.linesep * 2
+    message += 'Please review the \'help my db is broke.txt\' file in your install_dir/db directory as background reading, and if the situation or fix here is not obvious, please contact hydrus dev.'
+    
+    HydrusData.ShowText( message )
+    
+    raise HydrusExceptions.SerialisationException( message )
+    
 def GenerateCombinedFilesMappingsCacheTableName( service_id ):
     
     return 'external_caches.combined_files_ac_cache_' + str( service_id )
@@ -2413,11 +2444,11 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( file_service_id, ) ) )
+        select_statement = 'SELECT hash_id FROM current_files WHERE service_id = {};'.format( file_service_id )
         
-        if len( hash_ids ) > 0:
+        for group_of_hash_ids in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, select_statement, 10000 ):
             
-            self._CacheSpecificMappingsAddFiles( file_service_id, tag_service_id, hash_ids )
+            self._CacheSpecificMappingsAddFiles( file_service_id, tag_service_id, group_of_hash_ids )
             
         
         self._CreateIndex( cache_current_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
@@ -5800,12 +5831,28 @@ class DB( HydrusDB.HydrusDB ):
             
             ( version, dump ) = result
             
-            if isinstance( dump, bytes ):
+            try:
                 
-                dump = str( dump, 'utf-8' )
+                if isinstance( dump, bytes ):
+                    
+                    dump = str( dump, 'utf-8' )
+                    
                 
-            
-            serialisable_info = json.loads( dump )
+                serialisable_info = json.loads( dump )
+                
+            except:
+                
+                self._c.execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
+                
+                if self._in_transaction:
+                    
+                    self._Commit()
+                    
+                    self._BeginImmediate()
+                    
+                
+                DealWithBrokenJSONDump( self._db_dir, dump, 'dump_type {}'.format( dump_type ) )
+                
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
             
@@ -5815,20 +5862,36 @@ class DB( HydrusDB.HydrusDB ):
         
         if dump_name is None:
             
-            results = self._c.execute( 'SELECT dump_name, version, dump FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ).fetchall()
+            results = self._c.execute( 'SELECT dump_name, version, dump, timestamp FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ).fetchall()
             
             objs = []
             
-            for ( dump_name, version, dump ) in results:
+            for ( dump_name, version, dump, object_timestamp ) in results:
                 
-                if isinstance( dump, bytes ):
+                try:
                     
-                    dump = str( dump, 'utf-8' )
+                    if isinstance( dump, bytes ):
+                        
+                        dump = str( dump, 'utf-8' )
+                        
                     
-                
-                serialisable_info = json.loads( dump )
-                
-                objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) ) )
+                    serialisable_info = json.loads( dump )
+                    
+                    objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) ) )
+                    
+                except:
+                    
+                    self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, object_timestamp ) )
+                    
+                    if self._in_transaction:
+                        
+                        self._Commit()
+                        
+                        self._BeginImmediate()
+                        
+                    
+                    DealWithBrokenJSONDump( self._db_dir, dump, 'dump_type {} dump_name {} timestamp {}'.format( dump_type, dump_name[:10], timestamp ) )
+                    
                 
             
             return objs
@@ -5837,19 +5900,35 @@ class DB( HydrusDB.HydrusDB ):
             
             if timestamp is None:
                 
-                ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp DESC;', ( dump_type, dump_name ) ).fetchone()
+                ( version, dump, object_timestamp ) = self._c.execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp DESC;', ( dump_type, dump_name ) ).fetchone()
                 
             else:
                 
-                ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
+                ( version, dump, object_timestamp ) = self._c.execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
                 
             
-            if isinstance( dump, bytes ):
+            try:
                 
-                dump = str( dump, 'utf-8' )
+                if isinstance( dump, bytes ):
+                    
+                    dump = str( dump, 'utf-8' )
+                    
                 
-            
-            serialisable_info = json.loads( dump )
+                serialisable_info = json.loads( dump )
+                
+            except:
+                
+                self._c.execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, object_timestamp ) )
+                
+                if self._in_transaction:
+                    
+                    self._Commit()
+                    
+                    self._BeginImmediate()
+                    
+                
+                DealWithBrokenJSONDump( self._db_dir, dump, 'dump_type {} dump_name {} timestamp {}'.format( dump_type, dump_name[:10], object_timestamp ) )
+                
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )
             
@@ -8090,8 +8169,8 @@ class DB( HydrusDB.HydrusDB ):
                                         self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ' WHERE ' + ' AND '.join( predicates ) + ';' )
                                         
                                     
-                                
-                                num_to_do += self._GetRowCount()
+                                    num_to_do += self._GetRowCount()
+                                    
                                 
                                 i = 0
                                 
@@ -9482,6 +9561,16 @@ class DB( HydrusDB.HydrusDB ):
         self._controller.CallBlockingToWX( None, wx_code )
         
     
+    def _ReportUnderupdatedDB( self, version ):
+        
+        def wx_code():
+            
+            wx.MessageBox( 'This client\'s database is version ' + HydrusData.ToHumanInt( version ) + ', but the software is significantly later, ' + HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) + '! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
+            
+        
+        self._controller.CallBlockingToWX( None, wx_code )
+        
+    
     def _ResetRepository( self, service ):
         
         self._Commit()
@@ -9906,155 +9995,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
         
-        if version == 281:
-            
-            try:
-                
-                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-                
-                for subscription in subscriptions:
-                    
-                    g_i = subscription._gallery_identifier
-                    
-                    if g_i.GetSiteType() in ( HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ):
-                        
-                        subscription._paused = True
-                        
-                        self._SetJSONDump( subscription )
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'While attempting to pause all pixiv subs, I had this problem:' )
-                HydrusData.PrintException( e )
-                
-            
-            message = 'The pixiv downloader is currently broken due to a dynamic result loading rewrite on their end. Pixiv has been hidden from the available downloader page choices, and any existing pixiv subscriptions have been paused.'
-            message += os.linesep * 2
-            message += 'Hopefully, the new downloader engine will be clever enough to fix this.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 283:
-            
-            have_heavy_subs = False
-            
-            some_revived = False
-            
-            try:
-                
-                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-                
-                for subscription in subscriptions:
-                    
-                    save_it = False
-                    
-                    if len( subscription._queries ) > 1:
-                        
-                        have_heavy_subs = True
-                        
-                    
-                    for query in subscription._queries:
-                        
-                        if query.IsDead():
-                            
-                            query.CheckNow()
-                            
-                            save_it = True
-                            
-                        
-                    
-                    if save_it:
-                        
-                        self._SetJSONDump( subscription )
-                        
-                        some_revived = True
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'While attempting to revive dead subscription queries, I had this problem:' )
-                HydrusData.PrintException( e )
-                
-            
-            if some_revived:
-                
-                message = 'The old subscription syncing code was setting many new queries \'dead\' after their first sync. All your dead subscription queries have been set to check again in case they can revive.'
-                
-                self.pub_initial_message( message )
-                
-            
-            if have_heavy_subs:
-                
-                message = 'The way subscriptions consume bandwidth has changed to stop heavy subs with many queries from being throttled so often. If you have big subscriptions with a bunch of work to do, they may catch up right now!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 286:
-            
-            message = '\'File import options\' now support different \'presentation\' options that change which import files\' thumbnails appear in import pages. Although _new_ import pages will continue to show everything by default, all _existing_ file import options will update to a conservative, \'quiet\' default that will only show new files. Please double-check any existing import pages if you want to see thumbnails for files that are \'already in db\'. I apologise for the inconvenience.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 287:
-            
-            if HC.PLATFORM_WINDOWS:
-                
-                message = 'The wx (user interface) library has been updated. I could not get the flash window embed working without crashes, so I have disabled it for now. Instead of the embeds, you will see \'open externally\' buttons. I am going to continue working on this and hope to have support back in the coming weeks.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 288:
-            
-            domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-            
-            domain_manager.SetURLMatches( ClientDefaults.GetDefaultURLMatches() )
-            
-            self._SetJSONDump( domain_manager )
-            
-        
-        if version == 289:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                old_url_matches = domain_manager.GetURLMatches()
-                
-                pertinent_urls = [ 'https://boards.4chan.org/m/thread/16086187/ssg-super-sentai-general-651', 'https://a.4cdn.org/m/thread/16086187.json', 'https://8ch.net/tv/res/1002432.html', 'https://8ch.net/tv/res/1002432.json' ]
-                
-                # clear out the old 4chan/8chan thread url matches
-                
-                url_matches = [ url_match for url_match in old_url_matches if True not in ( url_match.Matches( url ) for url in pertinent_urls ) ]
-                
-                new_url_matches = ClientDefaults.GetDefaultURLMatches()
-                
-                # select the new 4chan/chan thread html/api url matches
-                
-                new_url_matches = [ url_match for url_match in new_url_matches if True in ( url_match.Matches( url ) for url in pertinent_urls ) ]
-                
-                url_matches.extend( new_url_matches )
-                
-                domain_manager.SetURLMatches( url_matches )
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                self.pub_initial_message( 'The client was unable to update your url classes. Please check them under _networking->manage url classes_ and restore to defaults.' )
-                
-            
-        
         if version == 292:
             
             if HC.SOFTWARE_VERSION < 296: # I don't need this info fifty weeks from now, so we'll just do it for a bit
@@ -10262,7 +10202,7 @@ class DB( HydrusDB.HydrusDB ):
             
             dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.LOCAL_NOTES )
             
-            self._AddService( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, CC.LOCAL_NOTES_SERVICE_KEY, dictionary )
+            self._AddService( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, 'local notes', dictionary )
             
         
         if version == 300:
@@ -11716,6 +11656,58 @@ class DB( HydrusDB.HydrusDB ):
             client_api_manager = ClientAPI.APIManager()
             
             self._SetJSONDump( client_api_manager )
+            
+        
+        if version == 339:
+            
+            try:
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.OverwriteDefaultLoginScripts( [ 'nijie.info login script' ] )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+                #
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( [ 'nijie artist lookup' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ 'nijie artist page', 'nijie view', 'nijie view popup' ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'gelbooru 0.1.11 file page parser', 'nijie artist gallery parser', 'nijie view parser', 'nijie view popup parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

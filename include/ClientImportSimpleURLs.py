@@ -937,7 +937,12 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PendURLs( self, urls ):
+    def PendURLs( self, urls, service_keys_to_tags = None ):
+        
+        if service_keys_to_tags is None:
+            
+            service_keys_to_tags = {}
+            
         
         with self._lock:
             

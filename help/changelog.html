@@ -8,6 +8,56 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 340</h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>fixed up some api permissions object stuff so that /verify_access_key response can always serialise correctly</li>
+					<li>fixed the 'add_url' api call's instability</li>
+					<li>the API will now always return JSON on 200. anything else should be presumed to be raw text</li>
+					<li>'/api_version' now returns JSON, and after talking with users, it will now start incrementing with every api change. it remains 1 just for this week</li>
+					<li>'/request_access_permissions' now returns JSON</li>
+					<li>'/add_url' now results JSON on success with more info, 403 on failure</li>
+					<li>'/get_url_info' now returns the 'normalised_url' in the response JSON</li>
+					<li>added '/get_url_files', which returns 'url_file_statuses', listing known hashes and file import status for that url</li>
+					<li>added '/add_files/add_file', which can import a file from a path or bytes</li>
+					<li>added '/add_tags/get_tag_services', which will return info on the client's tag services</li>
+					<li>updated client api help to reflect the above changes and fleshed out the intro a bit</li>
+					<li>fixed the client api permissions enum values in the help, which I somehow transcribed wrong first time</li>
+					<li>updated the client api tests to check the above</li>
+					<li>refactored client api tests to be neater and in their own file</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed the page of pages close bug</li>
+					<li>added a downloader for nijie.info to the client defaults (it needs a login)</li>
+					<li>updated danbooru file page parsers to get 'rating' tag</li>
+					<li>added gelbooru 0.1.11 parser for future application</li>
+					<li>fixed an issue that was stopping advanced content updates from fully copying all the desired mappings in the transaction</li>
+					<li>added a semi-hacky checkbox to 'options->files and trash' that will delay all new file/thumb requests for 15s after the computer resumes from sleep (useful if your files are on a NAS that takes a few seconds to reconnect on wake)</li>
+					<li>wrote some more graceful fallback decoding handling code that attempts original assumed encoding and 'utf-8' if different and returns the one with the fewest ' 'replacement characters</li>
+					<li>the network engine and the ffmpeg info parsing now use this new 'safe' decoding, so even if a site has borked bytes or the video file has unexpected Shift-JIS title metadata, it'll still go through, albeit with some question marks</li>
+					<li>moved some more old daemons to the new job scheduler, deleted some old daemon code</li>
+					<li>improved some daemon job wake and shutdown code</li>
+					<li>wrote a proper upnp manager object and improved all-around reliability of the auto upnp-service-mapping code</li>
+					<li>simplified the upnp check code so it now only ever checks/does anything if the respective services actually want upnp mappings. surplus mappings are now wiped immediately on service update</li>
+					<li>fixed upnp mapping fetching to cope with ipv6 results</li>
+					<li>improved some memory clearing code to deal with some semi-stubborn objects</li>
+					<li>improved some 'iterate through this giant list of single numbers from the db without using a lot of memory' code and applied it to the autocomplete cache regeneration routine</li>
+					<li>improved menubar stability, both in finding menus and swapping them out</li>
+					<li>if a serialised json object fails to load from the db, this is now caught, the bad object deleted and written to a new file in the db dir, and all logging info captured along with an explanatory popup thrown on screen. so, if a subscription fails to load, it will now be extracted so that a subsequent subscription edit/run will work with the remaining good objects. in the case of backed-up objects (gui sessions atm), reattempting the load should restore the next most recent backup</li>
+					<li>fixed an issue with login script validation when the given credentials have surplus ( key, value ) pairs to the script's credential definitions</li>
+					<li>fixed two login invalid cookie error handling bugs</li>
+					<li>maybe made some dupe filter searching more stable</li>
+					<li>fixed a py2 datatype issue that made the client unbootable when updating the client from <296</li>
+					<li>the client now pauses to nag and moan about backups if you try to update more than 15 versions in one go</li>
+					<li>slightly sped up discord bugfix file drag and drops and expanded file limit up to 25 files/200MB</li>
+					<li>added experimental secret discord bugfix dnd mode checkbox</li>
+					<li>improved how html parsing deals with some unexpected bad tag data</li>
+					<li>turned on primitive high-dpi support for OS X. let me know if it fixes any blurry issues on retina displays</li>
+					<li>wrote a new 'ui test' under the debug->gui menu to help catch common-action bugs that slipped through weekly work</li>
+					<li>improved how the test code does some wx/ui stuff, but also broke some more and ran out of time to clean it up--this is an ongoing project</li>
+					<li>improved how some text import line splitting works</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 339</h3></li>
 				<ul>
 					<li>client api:</li>

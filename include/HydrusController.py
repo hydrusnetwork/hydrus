@@ -1,11 +1,11 @@
 import collections
 import gc
 from . import HydrusConstants as HC
-from . import HydrusDaemons
 from . import HydrusData
 from . import HydrusDB
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
+from . import HydrusNATPunch
 from . import HydrusPaths
 from . import HydrusPubSub
 from . import HydrusThreading
@@ -42,6 +42,7 @@ class HydrusController( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         self._daemons = []
+        self._daemon_jobs = {}
         self._caches = {}
         self._managers = {}
         
@@ -144,6 +145,11 @@ class HydrusController( object ):
             
         
     
+    def _GetUPnPServices( self ):
+        
+        return []
+        
+    
     def _InitDB( self ):
         
         raise NotImplementedError()
@@ -194,6 +200,13 @@ class HydrusController( object ):
         
     
     def _ShutdownDaemons( self ):
+        
+        for job in self._daemon_jobs.values():
+            
+            job.Cancel()
+            
+        
+        self._daemon_jobs = {}
         
         for daemon in self._daemons:
             
@@ -490,14 +503,31 @@ class HydrusController( object ):
     
     def InitView( self ):
         
-        if not self._no_daemons:
-            
-            self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300, init_wait = 60 ) )
-            
+        job = self.CallRepeating( 60.0, 300.0, self.MaintainDB )
         
-        self.CallRepeating( 10.0, 120.0, self.SleepCheck )
-        self.CallRepeating( 10.0, 60.0, self.MaintainMemoryFast )
-        self.CallRepeating( 10.0, 300.0, self.MaintainMemorySlow )
+        job.ShouldDelayOnWakeup( True )
+        
+        self._daemon_jobs[ 'maintain_db' ] = job
+        
+        job = self.CallRepeating( 10.0, 120.0, self.SleepCheck )
+        
+        self._daemon_jobs[ 'sleep_check' ] = job
+        
+        job = self.CallRepeating( 10.0, 60.0, self.MaintainMemoryFast )
+        
+        self._daemon_jobs[ 'maintain_memory_fast' ] = job
+        
+        job = self.CallRepeating( 10.0, 300.0, self.MaintainMemorySlow )
+        
+        self._daemon_jobs[ 'maintain_memory_slow' ] = job
+        
+        upnp_services = self._GetUPnPServices()
+        
+        self.services_upnp_manager = HydrusNATPunch.ServicesUPnPManager( upnp_services )
+        
+        job = self.CallRepeating( 10.0, 43200.0, self.services_upnp_manager.RefreshUPnP )
+        
+        self._daemon_jobs[ 'services_upnp' ] = job
         
     
     def IsFirstStart( self ):
@@ -529,6 +559,11 @@ class HydrusController( object ):
         
         sys.stdout.flush()
         sys.stderr.flush()
+        
+        gc.collect()
+        
+        #
+        del gc.garbage[:]
         
         gc.collect()
         
@@ -734,6 +769,14 @@ class HydrusController( object ):
                 
                 time.sleep( 0.00001 )
                 
+            
+        
+    
+    def WakeDaemon( self, name ):
+        
+        if name in self._daemon_jobs:
+            
+            self._daemon_jobs[ name ].Wake()
             
         
     

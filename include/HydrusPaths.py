@@ -436,9 +436,11 @@ def LaunchFile( path, launch_path = None ):
                 preexec_fn = os.setsid
                 
             
-            if HG.callto_report_mode:
+            if HG.subprocess_report_mode:
                 
                 message = 'Attempting to launch ' + path + ' using command ' + repr( cmd ) + '.'
+                
+                HydrusData.ShowText( message )
                 
             
             try:
@@ -451,9 +453,7 @@ def LaunchFile( path, launch_path = None ):
                 
                 ( stdout, stderr ) = process.communicate()
                 
-                if HG.callto_report_mode:
-                    
-                    HydrusData.ShowText( message )
+                if HG.subprocess_report_mode:
                     
                     if stdout is None and stderr is None:
                         

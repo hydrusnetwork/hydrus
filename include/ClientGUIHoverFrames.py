@@ -518,9 +518,9 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         media = [ self._current_media ]
         
-        cmd_down = event.CmdDown()
+        alt_down = event.AltDown()
         
-        result = ClientDragDrop.DoFileExportDragDrop( self, page_key, media, cmd_down )
+        result = ClientDragDrop.DoFileExportDragDrop( self, page_key, media, alt_down )
         
         if result not in ( wx.DragError, wx.DragNone ):
             

@@ -518,7 +518,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Management Controller: ' + self._management_type + ' - ' + self._page_name
+        return 'Management Controller: {} - {}'.format( self._management_type, self._page_name )
         
     
     def _GetSerialisableInfo( self ):
@@ -877,6 +877,22 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
+def WaitOnDupeFilterJob( job_key, win, callable ):
+    
+    while not job_key.IsDone():
+        
+        if HydrusThreading.IsThreadShuttingDown():
+            
+            return
+            
+        
+        time.sleep( 0.25 )
+        
+    
+    time.sleep( 1.0 )
+    
+    HG.client_controller.CallLaterWXSafe( win, 0.0, callable )
+    
 class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -1111,7 +1127,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._controller.pub( 'modal_message', job_key )
         
-        self._controller.CallToThread( self._THREADWaitOnJob, job_key )
+        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key, self, self.RefreshAndUpdateStatus )
         
     
     def _RefreshAndUpdateStatus( self ):
@@ -1131,7 +1147,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._controller.pub( 'modal_message', job_key )
         
-        self._controller.CallToThread( self._THREADWaitOnJob, job_key )
+        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key, self, self.RefreshAndUpdateStatus )
         
     
     def _ResetUnknown( self ):
@@ -1160,7 +1176,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._controller.pub( 'modal_message', job_key )
         
-        self._controller.CallToThread( self._THREADWaitOnJob, job_key )
+        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key, self, self.RefreshAndUpdateStatus )
         
     
     def _SetCurrentMediaAs( self, duplicate_type ):
@@ -1346,31 +1362,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._show_some_dupes.Disable()
             self._launch_filter.Disable()
             
-        
-    
-    def _THREADWaitOnJob( self, job_key ):
-        
-        def wx_done():
-            
-            if not self:
-                
-                return
-                
-            
-            self._RefreshAndUpdateStatus()
-            
-        
-        while not job_key.IsDone():
-            
-            if HydrusThreading.IsThreadShuttingDown():
-                
-                return
-                
-            
-            time.sleep( 0.25 )
-            
-        
-        wx.CallAfter( wx_done )
         
     
     def EventSearchDistanceChanged( self, event ):
@@ -2308,13 +2299,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
         
     
-    def _AddURLs( self, urls ):
+    def _AddURLs( self, urls, service_keys_to_tags = None ):
+        
+        if service_keys_to_tags is None:
+            
+            service_keys_to_tags = {}
+            
         
         first_result = None
         
         for url in urls:
             
-            result = self._multiple_watcher_import.AddURL( url )
+            result = self._multiple_watcher_import.AddURL( url, service_keys_to_tags )
             
             if result is not None and first_result is None:
                 
@@ -2886,11 +2882,16 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
-    def PendURL( self, page_key, url ):
+    def PendURL( self, page_key, url, service_keys_to_tags = None ):
         
         if page_key == self._page_key:
             
-            self._AddURLs( ( url, ) )
+            if service_keys_to_tags is None:
+                
+                service_keys_to_tags = {}
+                
+            
+            self._AddURLs( ( url, ), service_keys_to_tags )
             
         
     
@@ -3416,11 +3417,16 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
         
     
-    def _PendURLs( self, urls ):
+    def _PendURLs( self, urls, service_keys_to_tags = None ):
+        
+        if service_keys_to_tags is None:
+            
+            service_keys_to_tags = {}
+            
         
         urls = [ url for url in urls if url.startswith( 'http' ) ]
         
-        self._urls_import.PendURLs( urls )
+        self._urls_import.PendURLs( urls, service_keys_to_tags )
         
         self._UpdateImportStatus()
         
@@ -3460,11 +3466,16 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
     
-    def PendURL( self, page_key, url ):
+    def PendURL( self, page_key, url, service_keys_to_tags = None ):
         
         if page_key == self._page_key:
             
-            self._PendURLs( ( url, ) )
+            if service_keys_to_tags is None:
+                
+                service_keys_to_tags = {}
+                
+            
+            self._PendURLs( ( url, ), service_keys_to_tags )
             
         
     

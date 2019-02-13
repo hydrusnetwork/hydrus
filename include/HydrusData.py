@@ -555,6 +555,13 @@ def GetSubprocessEnv():
     
     if HC.RUNNING_FROM_FROZEN_BUILD:
         
+        if HG.subprocess_report_mode:
+            
+            env = os.environ.copy()
+            
+            ShowText( 'Your pyinstaller env is: {}'.format( env ) )
+            
+        
         # let's make a proper env for subprocess that doesn't have pyinstaller woo woo in it
         
         env = os.environ.copy()
@@ -650,6 +657,11 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False ):
     if hide_terminal:
         
         sbp_kwargs[ 'startupinfo' ] = GetSubprocessHideTerminalStartupInfo()
+        
+    
+    if HG.subprocess_report_mode:
+        
+        message = 'KWargs are: {}'.format( sbp_kwargs )
         
     
     return sbp_kwargs

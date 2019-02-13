@@ -1509,7 +1509,7 @@ class PagesNotebook( wx.Notebook ):
             destination = self
             
         
-        page_tuples = session.GetPages()
+        page_tuples = session.GetPageTuples()
         
         destination.AppendSessionPageTuples( page_tuples )
         
@@ -1539,7 +1539,7 @@ class PagesNotebook( wx.Notebook ):
             destination = self
             
         
-        page_tuples = session.GetPages()
+        page_tuples = session.GetPageTuples()
         
         destination.AppendSessionPageTuples( page_tuples )
         
@@ -2425,9 +2425,7 @@ class PagesNotebook( wx.Notebook ):
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
-            current_page.NewPagesNotebook( name = name, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook, give_it_a_blank_page = give_it_a_blank_page )
-            
-            return
+            return current_page.NewPagesNotebook( name = name, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook, give_it_a_blank_page = give_it_a_blank_page )
             
         
         self._controller.ResetIdleTimer()
@@ -2799,7 +2797,7 @@ class PagesNotebook( wx.Notebook ):
         
         for page in self._GetPages():
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
         
         #
@@ -2852,6 +2850,26 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def TestAbleToClose( self ):
+        
+        statement = self.GetTestAbleToCloseStatement()
+        
+        if statement is not None:
+            
+            message = 'Are you sure you want to close this page of pages?'
+            message += os.linesep * 2
+            message += statement
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
+        
+    
     def REPEATINGPageUpdate( self ):
         
         pass
@@ -2867,7 +2885,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._pages = []
+        self._page_tuples = []
         
     
     def _GetPageTuple( self, page ):
@@ -2943,7 +2961,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_info = []
         
-        for page_tuple in self._pages:
+        for page_tuple in self._page_tuples:
             
             try:
                 
@@ -3017,7 +3035,7 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 page_tuple = GetPageTuple( serialisable_page_tuple )
                 
-                self._pages.append( page_tuple )
+                self._page_tuples.append( page_tuple )
                 
             except Exception as e:
                 
@@ -3059,16 +3077,16 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def AddPage( self, page ):
+    def AddPageTuple( self, page ):
         
         page_tuple = self._GetPageTuple( page )
         
-        self._pages.append( page_tuple )
+        self._page_tuples.append( page_tuple )
         
     
-    def GetPages( self ):
+    def GetPageTuples( self ):
         
-        return self._pages
+        return self._page_tuples
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION ] = GUISession

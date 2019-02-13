@@ -593,7 +593,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -601,7 +601,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -613,7 +613,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -621,7 +621,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -629,7 +629,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -639,7 +639,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -649,7 +649,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -659,7 +659,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -669,7 +669,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -679,7 +679,7 @@ class TestClientDB( unittest.TestCase ):
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
-            session.AddPage( page )
+            session.AddPageTuple( page )
             
             #
             
@@ -689,7 +689,7 @@ class TestClientDB( unittest.TestCase ):
             
             page_names = []
             
-            for ( page_type, page_data ) in result.GetPages():
+            for ( page_type, page_data ) in result.GetPageTuples():
                 
                 if page_type == 'page':
                     

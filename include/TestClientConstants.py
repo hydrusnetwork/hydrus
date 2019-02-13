@@ -87,6 +87,8 @@ class TestManagers( unittest.TestCase ):
         
         #
         
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
         undo_manager.AddCommand( 'content_updates', command_1 )
         
         self.assertEqual( ( 'undo archive 1 files', None ), undo_manager.GetUndoRedoStrings() )

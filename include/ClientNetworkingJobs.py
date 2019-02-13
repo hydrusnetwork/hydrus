@@ -18,14 +18,7 @@ import urllib
 
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
-    try:
-        
-        error_text = str( data, 'utf-8' )
-        
-    except UnicodeDecodeError:
-        
-        error_text = repr( data )
-        
+    ( error_text, encoding ) = HydrusText.NonFailingUnicodeDecode( data, 'utf-8' )
     
     print_long_error_text = True
     
@@ -621,23 +614,7 @@ class NetworkJob( object ):
         
         data = self.GetContentBytes()
         
-        try:
-            
-            text = str( data, self._encoding )
-            
-        except UnicodeDecodeError:
-            
-            try:
-                
-                text = str( data, 'utf-8' )
-                
-                self._encoding = 'utf-8'
-                
-            except UnicodeDecodeError:
-                
-                raise Exception( 'Could not convert the downloaded data to unicode!' )
-                
-            
+        ( text, self._encoding ) = HydrusText.NonFailingUnicodeDecode( data, self._encoding )
         
         return text
         

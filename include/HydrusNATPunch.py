@@ -58,8 +58,7 @@ def GetExternalIP():
                 
                 i = lines.index( 'i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
                 
-                '''ExternalIPAddress = ip'''
-                
+                # ExternalIPAddress = ip
                 ( gumpf, external_ip_address ) = lines[ i - 1 ].split( ' = ' )
                 
             except ValueError:
@@ -160,18 +159,43 @@ def GetUPnPMappings():
             
             for line in data_lines:
                 
-                ''' 0 UDP 65533->192.168.0.197:65533 'Skype UDP at 192.168.0.197:65533 (2665)' '' 0'''
+                # 0 UDP 65533->192.168.0.197:65533 'Skype UDP at 192.168.0.197:65533 (2665)' '' 0
                 
-                while '  ' in line: line = line.replace( '  ', ' ' )
+                if line.count( ':' ) != 1:
+                    
+                    continue
+                    
                 
-                if line.startswith( ' ' ): ( empty, number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 4 )
-                else: ( number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 3 )
+                while '  ' in line:
+                    
+                    line = line.replace( '  ', ' ' )
+                    
+                
+                if line.startswith( ' ' ):
+                    
+                    ( empty, number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 4 )
+                    
+                else:
+                    
+                    ( number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 3 )
+                    
                 
                 ( external_port, rest_of_mapping_data ) = mapping_data.split( '->' )
                 
                 external_port = int( external_port )
                 
-                ( internal_client, internal_port ) = rest_of_mapping_data.split( ':' )
+                if rest_of_mapping_data.count( ':' ) == 1:
+                    
+                    ( internal_client, internal_port ) = rest_of_mapping_data.split( ':' )
+                    
+                else:
+                    
+                    parts = rest_of_mapping_data.split( ':' )
+                    
+                    internal_port = parts.pop( -1 )
+                    
+                    internal_client = ':'.join( parts )
+                    
                 
                 internal_port = int( internal_port )
                 
@@ -208,4 +232,105 @@ def RemoveUPnPMapping( external_port, protocol ):
     ( output, error ) = p.communicate()
     
     if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + error )
+    
+
+class ServicesUPnPManager( object ):
+    
+    def __init__( self, services ):
+        
+        self._lock = threading.Lock()
+        
+        self._services = services
+        
+    
+    def _RefreshUPnP( self, force_wipe = False ):
+        
+        if not force_wipe:
+            
+            running_service_with_upnp = True in ( service.GetPort() is not None and service.GetUPnPPort() is not None for service in self._services )
+            
+            if not running_service_with_upnp:
+                
+                return
+                
+            
+        
+        try:
+            
+            local_ip = GetLocalIP()
+            
+            current_mappings = GetUPnPMappings()
+            
+            our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
+            
+        except:
+            
+            return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
+            
+        
+        for service in self._services:
+            
+            internal_port = service.GetPort()
+            upnp_port = service.GetUPnPPort()
+            
+            if ( local_ip, internal_port ) in our_mappings:
+                
+                current_external_port = our_mappings[ ( local_ip, internal_port ) ]
+                
+                port_is_incorrect = upnp_port is None or upnp_port != current_external_port
+                
+                if port_is_incorrect or force_wipe:
+                    
+                    RemoveUPnPMapping( current_external_port, 'TCP' )
+                    
+                
+            
+            
+        
+        for service in self._services:
+            
+            internal_port = service.GetPort()
+            upnp_port = service.GetUPnPPort()
+            
+            if upnp_port is not None:
+                
+                service_type = service.GetServiceType()
+                
+                protocol = 'TCP'
+                
+                description = HC.service_string_lookup[ service_type ] + ' at ' + local_ip + ':' + str( internal_port )
+                
+                duration = 86400
+                
+                try:
+                    
+                    AddUPnPMapping( local_ip, internal_port, upnp_port, protocol, description, duration = duration )
+                    
+                except HydrusExceptions.FirewallException:
+                    
+                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + upnp_port + ' but it failed due to router error. Please try it manually to get a full log of what happened.' )
+                    
+                    return
+                    
+                
+            
+        
+    
+    def SetServices( self, services ):
+        
+        with self._lock:
+            
+            self._services = services
+            
+            self._RefreshUPnP( force_wipe = True )
+            
+        
+    
+    def RefreshUPnP( self ):
+        
+        with self._lock:
+            
+            self._RefreshUPnP()
+            
+        
     

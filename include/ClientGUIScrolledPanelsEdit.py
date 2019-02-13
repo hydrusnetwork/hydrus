@@ -4905,7 +4905,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'fetch tags even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
         rows.append( ( 'fetch tags even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
-        rows.append( ( 'set blacklist: ', self._tag_filter_button ) )
+        rows.append( ( 'set file blacklist: ', self._tag_filter_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( downloader_options_panel, rows )
         

@@ -182,7 +182,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._access_key = access_key
         
-        self._basic_permissions = basic_permissions
+        self._basic_permissions = set( basic_permissions )
         self._search_tag_filter = search_tag_filter
         
         self._last_search_results = None

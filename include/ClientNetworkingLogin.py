@@ -1119,7 +1119,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 value_string_match.Test( cookie_text )
                 
-            except HydrusExceptions.StringMatchException:
+            except HydrusExceptions.StringMatchException as e:
                 
                 if validation_check:
                     
@@ -1154,7 +1154,12 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         cred_names_to_definitions = { credential_definition.GetName() : credential_definition for credential_definition in self._credential_definitions }
         
-        for ( pretty_name, text ) in list(given_credentials.items()):
+        for ( pretty_name, text ) in given_credentials.items():
+            
+            if pretty_name not in cred_names_to_definitions:
+                
+                continue
+                
             
             credential_definition = cred_names_to_definitions[ pretty_name ]
             
@@ -1688,7 +1693,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     string_match.Test( cookie_text )
                     
-                except HydrusExceptions.StringMatchException as d:
+                except HydrusExceptions.StringMatchException as e:
                     
                     raise HydrusExceptions.ValidationException( 'Cookie "' + cookie_name_string_match.ToString() + '" failed on step "' + self._name + '": ' + str( e ) + '!' )
                     

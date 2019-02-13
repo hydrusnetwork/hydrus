@@ -17,7 +17,9 @@ import threading
 import time
 import wx
 
-def DAEMONCheckExportFolders( controller ):
+def DAEMONCheckExportFolders():
+    
+    controller = HG.client_controller
     
     if not controller.options[ 'pause_export_folders_sync' ]:
         
@@ -45,7 +47,9 @@ def DAEMONCheckExportFolders( controller ):
             
         
     
-def DAEMONCheckImportFolders( controller ):
+def DAEMONCheckImportFolders():
+    
+    controller = HG.client_controller
     
     if not controller.options[ 'pause_import_folders_sync' ]:
         
@@ -273,24 +277,6 @@ def DAEMONMaintainTrash( controller ):
             
         
     
-def DAEMONSaveDirtyObjects( controller ):
-    
-    controller.SaveDirtyObjects()
-    
-def DAEMONSynchroniseAccounts( controller ):
-    
-    services = controller.services_manager.GetServices( HC.RESTRICTED_SERVICES )
-    
-    for service in services:
-        
-        if HydrusThreading.IsThreadShuttingDown():
-            
-            return
-            
-        
-        service.SyncAccount()
-        
-    
 def DAEMONSynchroniseRepositories( controller ):
     
     if not controller.options[ 'pause_repo_sync' ]:
@@ -475,74 +461,5 @@ def DAEMONSynchroniseSubscriptions( controller ):
     finally:
         
         HG.subscriptions_running = False
-        
-    
-def DAEMONUPnP( controller ):
-    
-    try:
-        
-        local_ip = HydrusNATPunch.GetLocalIP()
-        
-        current_mappings = HydrusNATPunch.GetUPnPMappings()
-        
-        our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
-        
-    except:
-        
-        return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
-        
-    
-    services = controller.services_manager.GetServices( ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) )
-    
-    for service in services:
-        
-        internal_port = service.GetPort()
-        
-        if ( local_ip, internal_port ) in our_mappings:
-            
-            current_external_port = our_mappings[ ( local_ip, internal_port ) ]
-            
-            upnp_port = service.GetUPnPPort()
-            
-            if upnp_port is None or current_external_port != upnp_port:
-                
-                HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
-                
-            
-        
-    
-    for service in services:
-        
-        internal_port = service.GetPort()
-        upnp_port = service.GetUPnPPort()
-        
-        if upnp_port is not None:
-            
-            if ( local_ip, internal_port ) not in our_mappings:
-                
-                service_type = service.GetServiceType()
-                
-                protocol = 'TCP'
-                
-                description = HC.service_string_lookup[ service_type ] + ' at ' + local_ip + ':' + str( internal_port )
-                
-                duration = 3600
-                
-                try:
-                    
-                    HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, upnp_port, protocol, description, duration = duration )
-                    
-                except HydrusExceptions.FirewallException:
-                    
-                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + upnp_port + ' but it failed due to router error. Please try it manually to get a full log of what happened.' )
-                    
-                    return
-                    
-                except:
-                    
-                    raise
-                    
-                
-            
         
     

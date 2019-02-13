@@ -1015,6 +1015,10 @@ class ServiceRestricted( ServiceRemote ):
                     raise
                     
                 
+            except HydrusExceptions.ShutdownException:
+                
+                return
+                
             except Exception:
                 
                 HydrusData.Print( 'Failed to refresh account for ' + name + ':' )

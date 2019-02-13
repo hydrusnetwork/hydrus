@@ -625,6 +625,8 @@ class SchedulableJob( object ):
         self._scheduler = scheduler
         self._work_callable = work_callable
         
+        self._should_delay_on_wakeup = False
+        
         self._next_work_time = HydrusData.GetNowFloat() + initial_delay
         
         self._thread_slot_type = None
@@ -682,9 +684,19 @@ class SchedulableJob( object ):
         return HydrusData.TimeHasPassedFloat( self._next_work_time )
         
     
+    def PubSubWake( self, *args, **kwargs ):
+        
+        self.Wake()
+        
+    
     def SetThreadSlotType( self, thread_type ):
         
         self._thread_slot_type = thread_type
+        
+    
+    def ShouldDelayOnWakeup( self, value ):
+        
+        self._should_delay_on_wakeup = value
         
     
     def SlotOK( self ):
@@ -730,9 +742,27 @@ class SchedulableJob( object ):
         self._scheduler.WorkTimesHaveChanged()
         
     
+    def WakeOnPubSub( self, topic ):
+        
+        HG.controller.sub( self, 'PubSubWake', topic )
+        
+    
     def Work( self ):
         
         try:
+            
+            if self._should_delay_on_wakeup:
+                
+                while HG.controller.JustWokeFromSleep():
+                    
+                    if IsThreadShuttingDown():
+                        
+                        return
+                        
+                    
+                    time.sleep( 1 )
+                    
+                
             
             with self._work_lock:
                 

@@ -55,6 +55,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
         
         self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
+        self._dictionary[ 'booleans' ][ 'secret_discord_dnd_fix' ] = False
         
         self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
@@ -115,6 +116,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'delete_files_after_export' ] = False
         
         self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'file_system_waits_on_wakeup' ] = False
         
         #
         

@@ -54,6 +54,8 @@ class TestSessions( unittest.TestCase ):
         
         # test adding a session
         
+        HG.test_controller.ClearWrites( 'session' )
+        
         expires = HydrusData.GetNow() + 300
         
         account_key_2 = HydrusData.GenerateKey()

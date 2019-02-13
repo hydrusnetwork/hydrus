@@ -5,7 +5,7 @@ import json
 import os
 import wx
 
-def DoFileExportDragDrop( window, page_key, media, cmd_down ):
+def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     drop_source = wx.DropSource( window )
     
@@ -44,10 +44,14 @@ def DoFileExportDragDrop( window, page_key, media, cmd_down ):
     
     original_paths = []
     
+    total_size = 0
+    
     for m in media:
         
         hash = m.GetHash()
         mime = m.GetMime()
+        
+        total_size += m.GetSize()
         
         original_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
         
@@ -56,21 +60,21 @@ def DoFileExportDragDrop( window, page_key, media, cmd_down ):
     
     #
     
-    do_temp_dnd = False
-    
     new_options = HG.client_controller.new_options
     
-    if new_options.GetBoolean( 'discord_dnd_fix' ):
-        
-        if len( original_paths ) <= 10 and sum( ( os.path.getsize( path ) for path in original_paths ) ) < 50 * 1048576:
-            
-            do_temp_dnd = True
-            
-        
+    secret_discord_dnd_fix_possible = new_options.GetBoolean( 'secret_discord_dnd_fix' ) and alt_down
+    
+    discord_dnd_fix_possible = new_options.GetBoolean( 'discord_dnd_fix' ) and len( original_paths ) <= 50 and total_size < 200 * 1048576
     
     temp_dir = HG.client_controller.temp_dir
     
-    if do_temp_dnd and os.path.exists( temp_dir ):
+    if secret_discord_dnd_fix_possible:
+        
+        dnd_paths = original_paths
+        
+        flags = wx.Drag_AllowMove
+        
+    elif discord_dnd_fix_possible and os.path.exists( temp_dir ):
         
         dnd_paths = []
         
@@ -93,16 +97,7 @@ def DoFileExportDragDrop( window, page_key, media, cmd_down ):
     else:
         
         dnd_paths = original_paths
-        
-        if cmd_down:
-            
-            # secret dangerous discord compat mode
-            flags = wx.Drag_AllowMove
-            
-        else:
-            
-            flags = wx.Drag_CopyOnly
-            
+        flags = wx.Drag_CopyOnly
         
     
     for path in dnd_paths:

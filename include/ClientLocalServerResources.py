@@ -1,6 +1,7 @@
 from . import ClientAPI
 from . import ClientConstants as CC
 from . import ClientFiles
+from . import ClientImportFileSeeds
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -10,6 +11,7 @@ from . import HydrusPaths
 from . import HydrusServerResources
 import json
 import os
+import traceback
 from twisted.web.static import File as FileResource
 
 local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
@@ -77,10 +79,8 @@ def ParseClientAPIPOSTArgs( request ):
             
         else:
             
-            raise NotImplementedError( 'Not yet ready!' )
+            hydrus_args = {}
             
-            pass
-            '''
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
             request.temp_file_info = ( os_file_handle, temp_path )
@@ -95,10 +95,6 @@ def ParseClientAPIPOSTArgs( request ):
                     
                 
             
-            decompression_bombs_ok = self._DecompressionBombsOK( request )
-            
-            hydrus_args = HydrusServerResources.ParseFileArguments( temp_path, decompression_bombs_ok )
-            '''
         
     
     return ( hydrus_args, total_bytes_read )
@@ -462,9 +458,13 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
         
         access_key = api_permissions.GetAccessKey()
         
-        body = access_key.hex()
+        body_dict = {}
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.TEXT_PLAIN, body = body )
+        body_dict[ 'access_key' ] = access_key.hex()
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
         
@@ -486,7 +486,7 @@ class HydrusResourceClientAPIVerify( HydrusResourceClientAPI ):
             
             body_dict = {}
             
-            body_dict[ 'basic_permissions' ] = basic_permissions
+            body_dict[ 'basic_permissions' ] = list( basic_permissions ) # set->list for json
             body_dict[ 'human_description' ] = human_description
             
             body = json.dumps( body_dict )
@@ -505,7 +505,13 @@ class HydrusResourceClientAPIVersion( HydrusResourceClientAPI ):
     
     def _threadDoGETJob( self, request ):
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.TEXT_PLAIN, body = str( HC.CLIENT_API_VERSION ) )
+        body_dict = {}
+        
+        body_dict[ 'version' ] = HC.CLIENT_API_VERSION
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
         
@@ -544,7 +550,7 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         request.client_api_permissions = api_permissions
         
     
-class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestricted ):
+class HydrusResourceClientAPIRestrictedAddFile( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request ):
         
@@ -553,15 +559,44 @@ class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestrict
     
     def _threadDoPOSTJob( self, request ):
         
-        # grab path from POST
-        # grab actual file from POST
+        if not hasattr( request, 'temp_file_info' ):
+            
+            path = request.hydrus_args[ 'path' ]
+            
+            if not os.path.exists( path ):
+                
+                raise HydrusExceptions.InsufficientCredentialsException( 'Path "{}" does not exist!'.format( path ) )
+                
+            
+            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            
+            request.temp_file_info = ( os_file_handle, temp_path )
+            
+            HydrusPaths.MirrorFile( path, temp_path )
+            
         
-        # do import, get hash(?) and id back
+        ( os_file_handle, temp_path ) = request.temp_file_info
         
-        file_hash = b'abcd' #
-        hash_id = 1 #
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
         
-        body_dict = { 'file_hash' : file_hash.hex(), 'file_id' : hash_id }
+        file_import_job = ClientImportFileSeeds.FileImportJob( temp_path, file_import_options )
+        
+        try:
+            
+            ( status, hash, note ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+            
+        except:
+            
+            status = CC.STATUS_ERROR
+            hash = file_import_job.GetHash()
+            note = traceback.format_exc()
+            
+        
+        body_dict = {}
+        
+        body_dict[ 'status' ] = status
+        body_dict[ 'hash' ] = hash.hex()
+        body_dict[ 'note' ] = note
         
         body = json.dumps( body_dict )
         
@@ -577,6 +612,8 @@ class HydrusResourceClientAPIRestrictedAddTags( HydrusResourceClientAPIRestricte
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
         
     
+class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRestrictedAddTags ):
+    
     def _threadDoPOSTJob( self, request ):
         
         # grab hash and tags from POST args
@@ -588,6 +625,25 @@ class HydrusResourceClientAPIRestrictedAddTags( HydrusResourceClientAPIRestricte
         return response_context
         
     
+class HydrusResourceClientAPIRestrictedAddTagsGetTagServices( HydrusResourceClientAPIRestrictedAddTags ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        local_tags = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
+        tag_repos = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+        
+        body_dict = {}
+        
+        body_dict[ 'local_tags' ] = [ service.GetName() for service in local_tags ]
+        body_dict[ 'tag_repositories' ] = [ service.GetName() for service in tag_repos ]
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+        
+    
 class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request ):
@@ -595,15 +651,49 @@ class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricte
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_URLS )
         
     
-class HydrusResourceClientAPIRestrictedAddURLsGetURLParsingCapability( HydrusResourceClientAPIRestrictedAddURLs ):
+class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientAPIRestrictedAddURLs ):
     
     def _threadDoGETJob( self, request ):
         
         url = request.hydrus_args[ 'url' ]
         
-        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( url )
+        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
-        body_dict = { 'url_type' : url_type, 'url_type_string' : HC.url_type_string_lookup[ url_type ], 'match_name' : match_name, 'can_parse' : can_parse }
+        url_statuses = HG.client_controller.Read( 'url_statuses', normalised_url )
+        
+        json_happy_url_statuses = []
+        
+        for ( status, hash, note ) in url_statuses:
+            
+            d = {}
+            
+            d[ 'status' ] = status
+            d[ 'hash' ] = hash.hex()
+            d[ 'note' ] = note
+            
+            json_happy_url_statuses.append( d )
+            
+        
+        body_dict = { 'normalised_url' : normalised_url, 'url_file_statuses' : json_happy_url_statuses }
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAPIRestrictedAddURLs ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        url = request.hydrus_args[ 'url' ]
+        
+        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        
+        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
+        
+        body_dict = { 'normalised_url' : normalised_url, 'url_type' : url_type, 'url_type_string' : HC.url_type_string_lookup[ url_type ], 'match_name' : match_name, 'can_parse' : can_parse }
         
         body = json.dumps( body_dict )
         
@@ -618,9 +708,38 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         url = request.hydrus_args[ 'url' ]
         
-        result_text = HG.client_controller.gui.ImportURL( url )
+        service_keys_to_tags = {}
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.TEXT_PLAIN, body = result_text )
+        if 'service_names_to_tags' in request.hydrus_args:
+            
+            request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
+            
+            service_names_to_tags = request.hydrus_args
+            
+            for ( service_name, tags ) in service_names_to_tags.items():
+                
+                try:
+                    
+                    service_key = HG.client_controller.service_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    
+                except:
+                    
+                    raise KeyError( 'Could not find the service "{}"!'.format( service_name ) )
+                    
+                
+                service_keys_to_tags[ service_key ] = tags
+                
+            
+        
+        gui = HG.client_controller.gui
+        
+        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags )
+        
+        body_dict = { 'human_result_text' : result_text, 'normalised_url' : normalised_url }
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
         

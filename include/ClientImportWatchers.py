@@ -197,11 +197,16 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AddURL( self, url ):
+    def AddURL( self, url, service_keys_to_tags ):
         
         if url == '':
             
             return None
+            
+        
+        if service_keys_to_tags is None:
+            
+            service_keys_to_tags = {}
             
         
         url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )

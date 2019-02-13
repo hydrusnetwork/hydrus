@@ -19,9 +19,7 @@ def HexFilter( text ):
     
 def DeserialiseNewlinedTexts( text ):
     
-    text = text.replace( '\r', '' )
-    
-    texts = text.split( '\n' )
+    texts = text.splitlines()
     
     texts = [ StripTrailingAndLeadingSpaces( line ) for line in texts ]
     
@@ -68,6 +66,35 @@ def LooksLikeJSON( file_data ):
         
         return False
         
+    
+def NonFailingUnicodeDecode( data, encoding ):
+    
+    try:
+        
+        text = str( data, encoding )
+        
+    except UnicodeDecodeError:
+        
+        unicode_replacement_character = u'\ufffd'
+        
+        text = str( data, encoding, errors = 'replace' )
+        
+        error_count = text.count( unicode_replacement_character )
+        
+        if encoding not in ( 'utf-8', 'utf8', 'UTF-8', 'UTF8' ):
+            
+            utf8_text = str( data, 'utf-8', errors = 'replace' )
+            
+            utf8_error_count = utf8_text.count( unicode_replacement_character )
+            
+            if utf8_error_count < error_count:
+                
+                return ( utf8_text, 'utf-8' )
+                
+            
+        
+    
+    return ( text, encoding )
     
 def RemoveNewlines( text ):
     

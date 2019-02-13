@@ -3,6 +3,7 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusImageHandling
 from . import HydrusPaths
+from . import HydrusText
 from . import HydrusThreading
 import numpy
 import os
@@ -122,8 +123,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     del proc
     
-    # deal with Shift-JIS and other fun by just doing ????. We don't care about that metadata here
-    text = str( data_bytes, 'utf-8', errors = 'replace' )
+    ( text, encoding ) = HydrusText.NonFailingUnicodeDecode( data_bytes, 'utf-8' )
     
     lines = text.splitlines()
     
