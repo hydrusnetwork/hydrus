@@ -82,7 +82,7 @@ def LocalPortInUse( port ):
     
 def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_params, json_params ):
     
-    args = {}
+    args = ParsedRequestArguments()
     
     for name_bytes in requests_args:
         
@@ -116,7 +116,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
                 
             except:
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
                 
             
         elif name in byte_params:
@@ -127,7 +127,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
                 
             except:
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a hex-encoded bytestring, but it failed.' )
                 
             
         elif name in string_params:
@@ -138,7 +138,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
                 
             except:
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a percent-encdode string, but it failed.' )
                 
             
         elif name in json_params:
@@ -149,12 +149,19 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
                 
             except:
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'I was expecting to parse \'' + name + '\' as a json-encoded string, but it failed.' )
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a json-encoded string, but it failed.' )
                 
             
         
     
     return args
+    
+class ParsedRequestArguments( dict ):
+    
+    def __missing__( self, key ):
+        
+        raise HydrusExceptions.BadRequestException( 'It looks like the parameter "{}" was missing!'.format( key ) )
+        
     
 class BandwidthRules( HydrusSerialisable.SerialisableBase ):
     

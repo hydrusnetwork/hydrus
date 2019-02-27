@@ -290,7 +290,7 @@ def StripTextOfGumpf( t ):
     
     t = HydrusText.re_multiple_spaces.sub( ' ', t )
     
-    t = HydrusText.re_trailing_space.sub( '', t )
+    t = t.strip()
     
     t = HydrusText.re_leading_space_or_garbage.sub( '', t )
     

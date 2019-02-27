@@ -348,7 +348,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    service.CheckFunctional( including_account = False )
+                    service.CheckFunctional( including_bandwidth = False, including_account = False )
                     
                 except Exception as e:
                     

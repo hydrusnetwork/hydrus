@@ -485,6 +485,11 @@ class Page( wx.SplitterWindow ):
         return self._management_controller
         
     
+    def GetManagementPanel( self ):
+        
+        return self._management_panel
+        
+    
     # used by autocomplete
     def GetMedia( self ):
         
@@ -1898,14 +1903,33 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def GetOrMakeMultipleWatcherPage( self ):
+    def GetOrMakeMultipleWatcherPage( self, desired_page_name = None ):
         
-        current_page = self.GetCurrentPage()
+        current_media_page = self.GetCurrentMediaPage()
         
-        if current_page is not None and isinstance( current_page, Page ) and current_page.IsMultipleWatcherPage():
+        if current_media_page is not None and current_media_page.IsMultipleWatcherPage():
             
-            return current_page
+            has_wrong_name = desired_page_name is not None and current_media_page.GetName() != desired_page_name
             
+            if not has_wrong_name:
+                
+                return current_media_page
+                
+            
+        
+        # first do a search for the page name, if asked for
+        
+        if desired_page_name is not None:
+            
+            page = self._GetPageFromName( desired_page_name )
+            
+            if page is not None and page.IsMultipleWatcherPage():
+                
+                return page
+                
+            
+        
+        # failing that, find/generate one with default name
         
         for page in self._GetPages():
             
@@ -1913,7 +1937,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 if page.HasMultipleWatcherPage():
                     
-                    return page.GetOrMakeMultipleWatcherPage()
+                    return page.GetOrMakeMultipleWatcherPage( desired_page_name = desired_page_name )
                     
                 
             elif page.IsMultipleWatcherPage():
@@ -1924,10 +1948,36 @@ class PagesNotebook( wx.Notebook ):
         
         # import page does not exist
         
-        return self.NewPageImportMultipleWatcher( on_deepest_notebook = True )
+        return self.NewPageImportMultipleWatcher( page_name = desired_page_name, on_deepest_notebook = True )
         
     
-    def GetOrMakeURLImportPage( self ):
+    def GetOrMakeURLImportPage( self, desired_page_name = None ):
+        
+        current_media_page = self.GetCurrentMediaPage()
+        
+        if current_media_page is not None and current_media_page.IsURLImportPage():
+            
+            has_wrong_name = desired_page_name is not None and current_media_page.GetName() != desired_page_name
+            
+            if not has_wrong_name:
+                
+                return current_media_page
+                
+            
+        
+        # first do a search for the page name, if asked for
+        
+        if desired_page_name is not None:
+            
+            page = self._GetPageFromName( desired_page_name )
+            
+            if page is not None and page.IsURLImportPage():
+                
+                return page
+                
+            
+        
+        # failing that, find/generate one with default name
         
         for page in self._GetPages():
             
@@ -1935,7 +1985,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 if page.HasURLImportPage():
                     
-                    return page.GetOrMakeURLImportPage()
+                    return page.GetOrMakeURLImportPage( desired_page_name = desired_page_name )
                     
                 
             elif page.IsURLImportPage():
@@ -1946,7 +1996,7 @@ class PagesNotebook( wx.Notebook ):
         
         # import page does not exist
         
-        return self.NewPageImportURLs( on_deepest_notebook = True )
+        return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True )
         
     
     def GetPageKey( self ):
@@ -2114,7 +2164,17 @@ class PagesNotebook( wx.Notebook ):
         return False
         
     
+    def IsMultipleWatcherPage( self ):
+        
+        return False
+        
+    
     def IsImporter( self ):
+        
+        return False
+        
+    
+    def IsURLImportPage( self ):
         
         return False
         
@@ -2356,16 +2416,16 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportMultipleWatcher( self, url = None, on_deepest_notebook = False ):
+    def NewPageImportMultipleWatcher( self, page_name = None, url = None, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( url )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( page_name = page_name, url = url )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportURLs( self, on_deepest_notebook = False ):
+    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportURLs()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportURLs( page_name = page_name )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         

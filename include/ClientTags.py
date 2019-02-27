@@ -1,4 +1,5 @@
 from . import ClientConstants as CC
+import collections
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 from . import HydrusTags
@@ -183,6 +184,33 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         tags_list.sort( key = key, reverse = reverse )
         
     
+class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaultdict ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS
+    SERIALISABLE_NAME = 'Service Keys To Tags'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, *args, **kwargs ):
+        
+        collections.defaultdict.__init__( self, set, *args, **kwargs )
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return [ ( service_key.hex(), list( tags ) ) for ( service_key, tags ) in self.items() ]
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        for ( service_key_hex, tags_list ) in serialisable_info:
+            
+            self[ bytes.fromhex( service_key_hex ) ] = set( tags_list )
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS ] = ServiceKeysToTags
+
 class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER

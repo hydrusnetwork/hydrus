@@ -1086,7 +1086,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         parsed_tags = HydrusTags.CleanTags( parsed_tags )
         
-        service_keys_to_tags = collections.defaultdict( set )
+        service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
         for ( service_key, service_tag_import_options ) in list(self._service_keys_to_service_tag_import_options.items()):
             

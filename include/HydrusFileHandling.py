@@ -71,7 +71,7 @@ def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
         
-        thumbnail = GenerateThumbnailFromStaticImage( path, dimensions, mime )
+        thumbnail = GenerateThumbnailFileBytesFromStaticImagePath( path, dimensions, mime )
         
     else:
         
@@ -139,7 +139,7 @@ def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS
     
     return thumbnail
     
-def GenerateThumbnailFromStaticImagePIL( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
+def GenerateThumbnailFileBytesFromStaticImagePathPIL( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
     
     f = io.BytesIO()
     
@@ -155,7 +155,7 @@ def GenerateThumbnailFromStaticImagePIL( path, dimensions = HC.UNSCALED_THUMBNAI
     
     return thumbnail
     
-GenerateThumbnailFromStaticImage = GenerateThumbnailFromStaticImagePIL
+GenerateThumbnailFileBytesFromStaticImagePath = GenerateThumbnailFileBytesFromStaticImagePathPIL
 
 def GetExtraHashesFromPath( path ):
     

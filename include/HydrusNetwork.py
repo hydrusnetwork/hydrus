@@ -231,7 +231,7 @@ def DumpToGETQuery( args ):
     
     return query
     
-def ParseNetworkBytesToHydrusArgs( network_bytes ):
+def ParseNetworkBytesToParsedHydrusArgs( network_bytes ):
     
     if len( network_bytes ) == 0:
         
@@ -239,6 +239,13 @@ def ParseNetworkBytesToHydrusArgs( network_bytes ):
         
     
     args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes )
+    
+    if not isinstance( args, dict ):
+        
+        raise HydrusExceptions.BadRequestException( 'The given parameter did not seem to be a JSON Object!' )
+        
+    
+    args = HydrusNetworking.ParsedRequestArguments( args )
     
     if 'access_key' in args:
         

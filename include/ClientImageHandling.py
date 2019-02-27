@@ -272,7 +272,7 @@ def GenerateShapePerceptualHashes( path, mime ):
     
     return phashes
     
-def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
+def GenerateThumbnailFileBytesFromStaticImagePathCV( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
     
     if mime is None:
         
@@ -281,7 +281,7 @@ def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL
     
     if mime == HC.IMAGE_GIF:
         
-        return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions, mime )
+        return HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePathPIL( path, dimensions, mime )
         
     
     numpy_image = GenerateNumpyImage( path, mime )
@@ -324,12 +324,18 @@ def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL
         
     else:
         
-        return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions, mime )
+        return HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePathPIL( path, dimensions, mime )
         
     
 from . import HydrusFileHandling
 
-HydrusFileHandling.GenerateThumbnailFromStaticImage = GenerateThumbnailFromStaticImageCV
+HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath = GenerateThumbnailFileBytesFromStaticImagePathCV
+    
+def GetNumPyImageResolution( numpy_image ):
+    
+    ( image_y, image_x, depth ) = numpy_image.shape
+    
+    return ( image_x, image_y )
     
 def ResizeNumpyImage( mime, numpy_image, target_resolution ):
     

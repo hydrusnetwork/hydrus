@@ -250,7 +250,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             if self._last_search_results is None:
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'It looks like those search results are no longer available--please run the search again!' )
+                raise HydrusExceptions.BadRequestException( 'It looks like those search results are no longer available--please run the search again!' )
                 
             
             num_files_asked_for = len( hash_ids )
@@ -262,7 +262,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 error_text = error_text.format( HydrusData.ToHumanInt( num_files_asked_for ), HydrusData.ToHumanInt( num_files_allowed_to_see ) )
                 
-                raise HydrusExceptions.InsufficientCredentialsException( error_text )
+                raise HydrusExceptions.BadRequestException( error_text )
                 
             
             self._search_results_timeout = HydrusData.GetNow() + SEARCH_RESULTS_CACHE_TIMEOUT

@@ -5,6 +5,7 @@ from . import ClientImporting
 from . import ClientImportFileSeeds
 from . import ClientImportOptions
 from . import ClientPaths
+from . import ClientTags
 from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -21,9 +22,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT
     SERIALISABLE_NAME = 'Local File Import'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, paths = None, file_import_options = None, paths_to_tags = None, delete_after_success = None ):
+    def __init__( self, paths = None, file_import_options = None, paths_to_service_keys_to_tags = None, delete_after_success = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -52,6 +53,11 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     pass
                     
                 
+                if path in paths_to_service_keys_to_tags:
+                    
+                    file_seed.SetFixedServiceKeysToTags( paths_to_service_keys_to_tags[ path ] )
+                    
+                
                 file_seeds.append( file_seed )
                 
             
@@ -59,7 +65,6 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
         self._file_import_options = file_import_options
-        self._paths_to_tags = paths_to_tags
         self._delete_after_success = delete_after_success
         
         self._current_action = ''
@@ -76,18 +81,44 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
         serialisable_options = self._file_import_options.GetSerialisableTuple()
-        serialisable_paths_to_tags = { path : { service_key.hex() : tags for ( service_key, tags ) in list(service_keys_to_tags.items()) } for ( path, service_keys_to_tags ) in list(self._paths_to_tags.items()) }
         
-        return ( serialisable_file_seed_cache, serialisable_options, serialisable_paths_to_tags, self._delete_after_success, self._paused )
+        return ( serialisable_file_seed_cache, serialisable_options, self._delete_after_success, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_file_seed_cache, serialisable_options, serialisable_paths_to_tags, self._delete_after_success, self._paused ) = serialisable_info
+        ( serialisable_file_seed_cache, serialisable_options, self._delete_after_success, self._paused ) = serialisable_info
         
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_options )
-        self._paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in list(service_keys_to_tags.items()) } for ( path, service_keys_to_tags ) in list(serialisable_paths_to_tags.items()) }
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( serialisable_file_seed_cache, serialisable_options, serialisable_paths_to_tags, delete_after_success, paused ) = old_serialisable_info
+            
+            file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+            
+            paths_to_service_keys_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in serialisable_paths_to_tags.items() }
+            
+            for file_seed in file_seed_cache.GetFileSeeds():
+                
+                path = file_seed.file_seed_data
+                
+                if path in paths_to_service_keys_to_tags:
+                    
+                    file_seed.SetFixedServiceKeysToTags( paths_to_service_keys_to_tags[ path ] )
+                    
+                
+            
+            serialisable_file_seed_cache = file_seed_cache.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_file_seed_cache, serialisable_options, delete_after_success, paused )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def _WorkOnFiles( self, page_key ):
@@ -105,18 +136,6 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if path in self._paths_to_tags:
-                
-                service_keys_to_tags = self._paths_to_tags[ path ]
-                
-            else:
-                
-                service_keys_to_tags = {}
-                
-            
-        
-        with self._lock:
-            
             self._current_action = 'importing'
             
         
@@ -125,20 +144,6 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         did_substantial_work = True
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
-            
-            if file_seed.HasHash():
-                
-                hash = file_seed.GetHash()
-                
-                service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-                
-                if len( service_keys_to_content_updates ) > 0:
-                    
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                    
-                    did_substantial_work = True
-                    
-                
             
             if file_seed.ShouldPresent( self._file_import_options ):
                 
@@ -610,7 +615,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                         
                     
-                    service_keys_to_tags = {}
+                    service_keys_to_tags = ClientTags.ServiceKeysToTags()
                     
                     for ( tag_service_key, filename_tagging_options ) in list(self._tag_service_keys_to_filename_tagging_options.items()):
                         

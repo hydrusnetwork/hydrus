@@ -1390,8 +1390,6 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) )
             
-            pairs_found = 0
-            
             total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
             
             for ( i, hash_id ) in enumerate( hash_ids ):
@@ -1429,8 +1427,6 @@ class DB( HydrusDB.HydrusDB ):
                 # double-check the files exist in shape_search_cache, as I think stale branches are producing deleted file pairs here
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( ( min( hash_id, duplicate_hash_id ), max( hash_id, duplicate_hash_id ), HC.DUPLICATE_UNKNOWN ) for duplicate_hash_id in duplicate_hash_ids ) )
-                
-                pairs_found += self._GetRowCount()
                 
                 self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
                 
@@ -1888,16 +1884,16 @@ class DB( HydrusDB.HydrusDB ):
             
             search_radius = max_hamming_distance
             
-            result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
+            top_node_result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
             
-            if result is None:
+            if top_node_result is None:
                 
                 return []
                 
             
-            ( root_node_phash_id, ) = result
+            ( root_node_phash_id, ) = top_node_result
             
-            search_phashes = [ phash for ( phash, ) in self._c.execute( 'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) ]
+            search_phashes = self._STL( self._c.execute( 'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
             
             if len( search_phashes ) == 0:
                 
@@ -4835,8 +4831,14 @@ class DB( HydrusDB.HydrusDB ):
             
             duration = simple_preds[ 'duration' ]
             
-            if duration == 0: files_info_predicates.append( '( duration IS NULL OR duration = 0 )' )
-            else: files_info_predicates.append( 'duration = ' + str( duration ) )
+            if duration == 0:
+                
+                files_info_predicates.append( '( duration IS NULL OR duration = 0 )' )
+                
+            else:
+                
+                files_info_predicates.append( 'duration = ' + str( duration ) )
+                
             
         if 'max_duration' in simple_preds:
             
@@ -8967,6 +8969,7 @@ class DB( HydrusDB.HydrusDB ):
                     larger_precise_timestamp = HydrusData.GetNowPrecise()
                     
                     total_definitions_rows = 0
+                    transaction_rows = 0
                     
                     try:
                         
@@ -9008,6 +9011,23 @@ class DB( HydrusDB.HydrusDB ):
                             report_speed_to_job_key( job_key, precise_timestamp, num_rows, 'definitions' )
                             
                             total_definitions_rows += num_rows
+                            transaction_rows += num_rows
+                            
+                            been_a_minute = HydrusData.TimeHasPassed( self._transaction_started + 60 )
+                            been_a_hundred_k = transaction_rows > 100000
+                            
+                            if been_a_minute or been_a_hundred_k:
+                                
+                                job_key.SetVariable( 'popup_text_1', 'committing' )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                time.sleep( 0.5 )
+                                
+                                transaction_rows = 0
+                                
                             
                         
                         # let's atomically save our progress here to avoid the desync issue some people had.
@@ -9036,6 +9056,7 @@ class DB( HydrusDB.HydrusDB ):
                     precise_timestamp = HydrusData.GetNowPrecise()
                     
                     total_content_rows = 0
+                    transaction_rows = 0
                     
                     try:
                         
@@ -9080,6 +9101,23 @@ class DB( HydrusDB.HydrusDB ):
                             num_rows = content_update.GetNumRows()
                             
                             total_content_rows += num_rows
+                            transaction_rows += num_rows
+                            
+                            been_a_minute = HydrusData.TimeHasPassed( self._transaction_started + 60 )
+                            been_a_million = transaction_rows > 1000000
+                            
+                            if been_a_minute or been_a_million:
+                                
+                                job_key.SetVariable( 'popup_text_1', 'committing' )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                transaction_rows = 0
+                                
+                                time.sleep( 0.5 )
+                                
                             
                         
                     finally:

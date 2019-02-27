@@ -299,7 +299,6 @@ class HydrusDB( object ):
             
             self._transaction_started = HydrusData.GetNow()
             self._in_transaction = True
-            self._transaction_contains_writes = False
             
         
     
@@ -408,6 +407,19 @@ class HydrusDB( object ):
             
             create_db = True
             
+            external_db_paths = [ os.path.join( self._db_dir, self._db_filenames[ db_name ] ) for db_name in self._db_filenames if db_name != 'main' ]
+            
+            existing_external_db_paths = [ external_db_path for external_db_path in external_db_paths if os.path.exists( external_db_path ) ]
+            
+            if len( existing_external_db_paths ) > 0:
+                
+                message = 'Although the external files, "{}" do exist, the main database file, "{}", does not! This makes for an invalid database, and the program will now quit. Please contact hydrus_dev if you do not know how this happened or need help recovering from hard drive failure.'
+                
+                message = message.format( ', '.join( existing_external_db_paths ), db_path )
+                
+                raise HydrusExceptions.DBException( message )
+                
+            
         
         self._InitDBCursor()
         
@@ -443,8 +455,6 @@ class HydrusDB( object ):
         self._connection_timestamp = HydrusData.GetNow()
         
         self._c = self._db.cursor()
-        
-        self._c.execute( 'PRAGMA temp_store = 2;' )
         
         self._c.execute( 'PRAGMA main.cache_size = -10000;' )
         
@@ -580,6 +590,8 @@ class HydrusDB( object ):
                 
                 self._BeginImmediate()
                 
+                self._transaction_contains_writes = False
+                
             else:
                 
                 self._Save()
@@ -711,6 +723,11 @@ class HydrusDB( object ):
     def _SelectFromListFetchAll( self, select_statement, xs ):
         
         return [ row for row in self._SelectFromList( select_statement, xs ) ]
+        
+    
+    def _ShrinkMemory( self ):
+        
+        self._c.execute( 'PRAGMA shrink_memory;' )
         
     
     def _STI( self, iterable_cursor ):
@@ -890,6 +907,8 @@ class HydrusDB( object ):
                     self._Commit()
                     
                     self._BeginImmediate()
+                    
+                    self._transaction_contains_writes = False
                     
                 
             

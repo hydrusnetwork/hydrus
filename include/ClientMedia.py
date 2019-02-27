@@ -608,11 +608,6 @@ class LocationsManager( object ):
         self._petitioned.discard( service_key )
         
     
-    def ShouldDefinitelyHaveThumbnail( self ): # local only
-        
-        return HC.COMBINED_LOCAL_FILE in self._current
-        
-    
     def ShouldIdeallyHaveThumbnail( self ): # file repo or local
         
         return len( self._current ) > 0
@@ -2068,7 +2063,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     duration = x.GetDuration()
                     
-                    if duration is None:
+                    if duration is None or duration == 0:
                         
                         return 0
                         
@@ -2076,7 +2071,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                         
                         size = x.GetSize()
                         
-                        if size is None:
+                        if size is None or size == 0:
                             
                             return -1
                             

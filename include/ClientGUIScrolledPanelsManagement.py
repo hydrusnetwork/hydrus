@@ -854,9 +854,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             network_bytes = network_job.GetContentBytes()
                             
-                            hydrus_args = HydrusNetwork.ParseNetworkBytesToHydrusArgs( network_bytes )
+                            parsed_request_args = HydrusNetwork.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
                             
-                            access_key_encoded = hydrus_args[ 'access_key' ].hex()
+                            access_key_encoded = parsed_request_args[ 'access_key' ].hex()
                             
                             wx.CallAfter( wx_setkey, access_key_encoded )
                             

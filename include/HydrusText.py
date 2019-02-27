@@ -1,10 +1,18 @@
+try:
+    
+    import chardet
+    
+    CHARDET_OK = True
+    
+except:
+    
+    CHARDET_OK = False
+    
 import json
 import re
 
 re_newlines = re.compile( '[\r\n]+' )
 re_multiple_spaces = re.compile( '\\s+' )
-re_trailing_space = re.compile( '\\s+$' )
-re_leading_space = re.compile( '^\\s+' )
 re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)+' )
 re_leading_single_colon = re.compile( '^:(?!:)' )
 re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew
@@ -21,7 +29,7 @@ def DeserialiseNewlinedTexts( text ):
     
     texts = text.splitlines()
     
-    texts = [ StripTrailingAndLeadingSpaces( line ) for line in texts ]
+    texts = [ StripIOInputLine( line ) for line in texts ]
     
     texts = [ line for line in texts if line != '' ]
     
@@ -81,15 +89,22 @@ def NonFailingUnicodeDecode( data, encoding ):
         
         error_count = text.count( unicode_replacement_character )
         
-        if encoding not in ( 'utf-8', 'utf8', 'UTF-8', 'UTF8' ):
+        if CHARDET_OK:
             
-            utf8_text = str( data, 'utf-8', errors = 'replace' )
+            chardet_result = chardet.detect( data )
             
-            utf8_error_count = utf8_text.count( unicode_replacement_character )
-            
-            if utf8_error_count < error_count:
+            if chardet_result[ 'confidence' ] > 0.85:
                 
-                return ( utf8_text, 'utf-8' )
+                chardet_encoding = chardet_result[ 'encoding' ]
+                
+                chardet_text = str( data, chardet_encoding, errors = 'replace' )
+                
+                chardet_error_count = chardet_text.count( unicode_replacement_character )
+                
+                if chardet_error_count < error_count:
+                    
+                    return ( chardet_text, chardet_encoding )
+                    
                 
             
         
@@ -106,13 +121,11 @@ def SortStringsIgnoringCase( list_of_strings ):
     
     list_of_strings.sort( key = lambda s: s.lower() )
     
-def StripTrailingAndLeadingSpaces( t ):
+def StripIOInputLine( t ):
     
     t = re_leading_byte_order_mark.sub( '', t )
     
-    t = re_trailing_space.sub( '', t )
-    
-    t = re_leading_space.sub( '', t )
+    t = t.strip()
     
     return t
     

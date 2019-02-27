@@ -37,6 +37,8 @@ shutdown_complete = False
 restart = False
 emergency_exit = False
 
+thumbnail_experiment_mode = False
+
 twisted_is_broke = False
 
 do_not_catch_char_hook = False

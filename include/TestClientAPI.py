@@ -3,8 +3,10 @@ from . import ClientAPI
 from . import ClientLocalServer
 from . import ClientServices
 from . import ClientTags
+import collections
 import http.client
 from . import HydrusConstants as HC
+from . import HydrusTags
 from . import HydrusText
 import json
 import os
@@ -309,7 +311,7 @@ class TestClientAPI( unittest.TestCase ):
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
         
-        # none
+        #
         
         path = '/add_tags/get_tag_services'
         
@@ -331,6 +333,117 @@ class TestClientAPI( unittest.TestCase ):
         expected_answer[ 'tag_repositories' ] = [ "example tag repo" ]
         
         self.assertEqual( d, expected_answer )
+        
+        # clean tags
+        
+        tags = [ " bikini ", "blue    eyes", " character : samus aran ", ":)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]
+        
+        json_tags = json.dumps( tags )
+        
+        path = '/add_tags/clean_tags?tags={}'.format( urllib.parse.quote( json_tags, safe = '' ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = {}
+        
+        clean_tags = [ "bikini", "blue eyes", "character:samus aran", "::)", "10", "11", "9", "wew", "flower" ]
+        
+        clean_tags = HydrusTags.SortNumericTags( clean_tags )
+        
+        expected_answer[ 'tags' ] = clean_tags
+        
+        self.assertEqual( d, expected_answer )
+        
+        # add tags
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        hash = os.urandom( 32 )
+        hash_hex = hash.hex()
+        
+        hash2 = os.urandom( 32 )
+        hash2_hex = hash2.hex()
+        
+        # missing hashes
+        
+        path = '/add_tags/add_tags'
+        
+        body_dict = { 'service_names_to_tags' : { 'local tags' : [ 'test' ] } }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 )
+        
+        # invalid service key
+        
+        path = '/add_tags/add_tags'
+        
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'bad tag service' : [ 'test' ] } }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 )
+        
+        # add tags to local
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_tags/add_tags'
+        
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash ] ) ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertEqual( len( service_keys_to_content_updates ), len( expected_service_keys_to_content_updates ) )
+        
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            
+            expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
+            
+            c_u_tuples = [ c_u.ToTuple() for c_u in content_updates ]
+            e_c_u_tuples = [ e_c_u.ToTuple() for e_c_u in expected_content_updates ]
+            
+            c_u_tuples.sort()
+            e_c_u_tuples.sort()
+            
+            self.assertEqual( c_u_tuples, e_c_u_tuples )
+            
         
     
     def _test_add_urls( self, connection, set_up_permissions ):
@@ -504,9 +617,13 @@ class TestClientAPI( unittest.TestCase ):
         
         # add url
         
+        HG.test_controller.ClearWrites( 'import_url_test' )
+        
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
         
-        request_dict = { 'url' : 'http://8ch.net/tv/res/1846574.html' }
+        url = 'http://8ch.net/tv/res/1846574.html'
+        
+        request_dict = { 'url' : url }
         
         request_body = json.dumps( request_dict )
         
@@ -524,6 +641,176 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, None, None ), {} ) ] )
+        
+        # with name
+        
+        HG.test_controller.ClearWrites( 'import_url_test' )
+        
+        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/' }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/add_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        self.assertEqual( response.status, 200 )
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        response_json = json.loads( text )
+        
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, None, 'muh /tv/' ), {} ) ] )
+        
+        # add tags and name
+        
+        HG.test_controller.ClearWrites( 'import_url_test' )
+        
+        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'service_names_to_tags' : { 'local tags' : [ '/tv/ thread' ] } }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/add_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        self.assertEqual( response.status, 200 )
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        response_json = json.loads( text )
+        
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        
+        service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
+        
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, service_keys_to_tags, 'muh /tv/' ), {} ) ] )
+        
+        # associate url
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        
+        request_dict = { 'url_to_add' : url, 'hash' : hash.hex() }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], [ hash ] ) ) ]
+        
+        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
+        
+        result = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        
+        request_dict = { 'urls_to_add' : [ url ], 'hashes' : [ hash.hex() ] }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], [ hash ] ) ) ]
+        
+        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
+        
+        result = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        url = 'http://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        
+        request_dict = { 'url_to_delete' : url, 'hash' : hash.hex() }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], [ hash ] ) ) ]
+        
+        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
+        
+        result = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        url = 'http://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        
+        request_dict = { 'urls_to_delete' : [ url ], 'hashes' : [ hash.hex() ] }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], [ hash ] ) ) ]
+        
+        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
+        
+        result = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self.assertEqual( result, expected_result )
         
     
     def _test_search_files( self, connection, set_up_permissions ):

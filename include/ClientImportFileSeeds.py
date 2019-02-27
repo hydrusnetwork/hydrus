@@ -1,9 +1,11 @@
 from . import ClientConstants as CC
+from . import ClientData
 from . import ClientImageHandling
 from . import ClientImporting
 from . import ClientNetworkingDomain
 from . import ClientParsing
 from . import ClientPaths
+from . import ClientTags
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -304,7 +306,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
     SERIALISABLE_NAME = 'File Import'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, file_seed_type = None, file_seed_data = None ):
         
@@ -330,6 +332,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.note = ''
         
         self._referral_url = None
+        
+        self._fixed_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
         self._urls = set()
         self._tags = set()
@@ -358,16 +362,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
+        serialisable_fixed_service_keys_to_tags = self._fixed_service_keys_to_tags.GetSerialisableTuple()
+        
         serialisable_urls = list( self._urls )
         serialisable_tags = list( self._tags )
         serialisable_hashes = [ ( hash_type, hash.hex() ) for ( hash_type, hash ) in list(self._hashes.items()) if hash is not None ]
         
-        return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
+        return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_fixed_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
+        ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_fixed_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
+        
+        self._fixed_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_fixed_service_keys_to_tags )
         
         self._urls = set( serialisable_urls )
         self._tags = set( serialisable_tags )
@@ -443,6 +451,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_urls, serialisable_tags, serialisable_hashes ) = old_serialisable_info
+            
+            fixed_service_keys_to_tags = ClientTags.ServiceKeysToTags()
+            
+            serialisable_fixed_service_keys_to_tags = fixed_service_keys_to_tags.GetSerialisableTuple()
+            
+            new_serialisable_info = ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_fixed_service_keys_to_tags, serialisable_urls, serialisable_tags, serialisable_hashes )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -814,6 +835,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                 
             
+            self.WriteContentUpdates()
+            
         except HydrusExceptions.MimeException as e:
             
             self.SetStatus( CC.STATUS_ERROR, exception = e )
@@ -922,6 +945,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
             
+        
+    
+    def SetFixedServiceKeysToTags( self, service_keys_to_tags ):
+        
+        self._fixed_service_keys_to_tags = ClientTags.ServiceKeysToTags( service_keys_to_tags )
         
     
     def SetHash( self, hash ):
@@ -1287,6 +1315,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             return did_work
             
         
+        # changed this to say that urls alone are not 'did work' since all url results are doing this, and when they have no tags, they are usually superfast db hits anyway
+        # better to scream through an 'already in db' import list that flicker
+        
         service_keys_to_content_updates = collections.defaultdict( list )
         
         urls = set( self._urls )
@@ -1314,17 +1345,24 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             in_inbox = HG.client_controller.Read( 'in_inbox', hash )
             
-            for ( service_key, content_updates ) in list(tag_import_options.GetServiceKeysToContentUpdates( self.status, in_inbox, hash, set( self._tags ) ).items()):
+            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, in_inbox, hash, set( self._tags ) ).items():
                 
                 service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
+                did_work = True
+                
+            
+        
+        for ( service_key, content_updates ) in ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( ( hash, ), self._fixed_service_keys_to_tags ).items():
+            
+            service_keys_to_content_updates[ service_key ].extend( content_updates )
+            
+            did_work = True
             
         
         if len( service_keys_to_content_updates ) > 0:
             
             HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-            
-            did_work = True
             
         
         return did_work

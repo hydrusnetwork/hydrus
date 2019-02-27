@@ -19,6 +19,7 @@ from . import ClientGUIShortcuts
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
 from . import ClientImporting
+from . import ClientTags
 from . import ClientThreading
 import collections
 import gc
@@ -135,6 +136,7 @@ class Dialog( wx.Dialog ):
         self.SetIcon( HG.client_controller.frame_icon )
         
         self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         if parent is not None and position == 'center':
             
@@ -142,6 +144,20 @@ class Dialog( wx.Dialog ):
             
         
         HG.client_controller.ResetIdleTimer()
+        
+    
+    def EventCharHook( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key == wx.WXK_ESCAPE:
+            
+            self.EndModal( wx.ID_CANCEL )
+            
+        else:
+            
+            event.Skip()
+            
         
     
     def EventDialogButton( self, event ):
@@ -174,8 +190,6 @@ class DialogChooseNewServiceMethod( Dialog ):
     def __init__( self, parent ):
         
         Dialog.__init__( self, parent, 'how to set up the account?', position = 'center' )
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
         register_message = 'I want to initialise a new account with the server. I have a registration key (a key starting with \'r\').'
         
@@ -759,11 +773,11 @@ class FrameInputLocalFiles( wx.Frame ):
             
             file_import_options = self._file_import_options.GetValue()
             
-            paths_to_tags = {}
+            paths_to_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
             
         
         self.Close()
@@ -783,11 +797,11 @@ class FrameInputLocalFiles( wx.Frame ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    paths_to_tags = panel.GetValue()
+                    paths_to_service_keys_to_tags = panel.GetValue()
                     
                     delete_after_success = self._delete_after_success.GetValue()
                     
-                    HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
                     
                     self.Close()
                     
@@ -1757,8 +1771,6 @@ class DialogSelectImageboard( Dialog ):
         
         Dialog.__init__( self, parent, 'select imageboard' )
         
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
         self._tree = wx.TreeCtrl( self )
         self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventActivate )
         
@@ -1947,8 +1959,6 @@ class DialogYesNo( Dialog ):
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
         
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -2002,8 +2012,6 @@ class DialogYesYesNo( Dialog ):
         self._no = wx.Button( self, id = wx.ID_NO )
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
-        
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
         #
         

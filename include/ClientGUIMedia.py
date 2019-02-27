@@ -357,7 +357,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
-        wx.ScrolledCanvas.__init__( self, parent, size = ( 0, 0 ), style = wx.BORDER_SUNKEN )
+        wx.ScrolledCanvas.__init__( self, parent, size = ( 20, 20 ), style = wx.BORDER_SUNKEN )
         ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._UpdateBackgroundColour()
@@ -2338,7 +2338,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         MediaPanel.__init__( self, parent, page_key, file_service_key, media_results )
         
-        self._last_client_size = ( 0, 0 )
+        self._last_client_size = ( 20, 20 )
         self._num_columns = 1
         
         self._drag_init_coordinates = None

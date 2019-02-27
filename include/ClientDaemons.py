@@ -21,6 +21,11 @@ def DAEMONCheckExportFolders():
     
     controller = HG.client_controller
     
+    if HG.daemon_report_mode:
+        
+        HydrusData.ShowText( 'Export folders daemon started: paused = {}'.format( controller.options[ 'pause_export_folders_sync' ] ) )
+        
+    
     if not controller.options[ 'pause_export_folders_sync' ]:
         
         HG.export_folders_running = True
@@ -30,6 +35,11 @@ def DAEMONCheckExportFolders():
             export_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
             
             for name in export_folder_names:
+                
+                if HG.daemon_report_mode:
+                    
+                    HydrusData.ShowText( 'Export folders daemon running: {}'.format( name ) )
+                    
                 
                 export_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
                 

@@ -43,6 +43,7 @@ class NetworkVersionException( NetworkException ): pass
 class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
+class BadRequestException( NetworkException ): pass
 class MissingCredentialsException( NetworkException ): pass
 class InsufficientCredentialsException( NetworkException ): pass
 class RedirectionException( NetworkException ): pass

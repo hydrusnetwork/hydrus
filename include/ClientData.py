@@ -156,7 +156,12 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
     
     service_keys_to_content_updates = {}
     
-    for ( service_key, tags ) in list(service_keys_to_tags.items()):
+    for ( service_key, tags ) in service_keys_to_tags.items():
+        
+        if len( tags ) == 0:
+            
+            continue
+            
         
         if service_key == CC.LOCAL_TAG_SERVICE_KEY:
             
@@ -414,8 +419,8 @@ def ReportShutdownException():
     
     HydrusData.DebugPrint( traceback.format_exc() )
     
-    wx.CallAfter( wx.MessageBox, traceback.format_exc() )
-    wx.CallAfter( wx.MessageBox, text )
+    wx.SafeShowMessage( 'shutdown error', text )
+    wx.SafeShowMessage( 'shutdown error', traceback.format_exc() )
     
 def ShowExceptionClient( e, do_wait = True ):
     

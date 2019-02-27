@@ -28,6 +28,10 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.NotModifiedException
         
+    elif status_code == 400:
+        
+        eclass = HydrusExceptions.BadRequestException
+        
     elif status_code == 401:
         
         eclass = HydrusExceptions.MissingCredentialsException

@@ -3,6 +3,7 @@ from . import HydrusExceptions
 from . import HydrusFileHandling
 from . import HydrusImageHandling
 from . import HydrusNetwork
+from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusSerialisable
 import os
@@ -230,10 +231,10 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
         
     except Exception as e:
         
-        raise HydrusExceptions.InsufficientCredentialsException( 'File ' + hash.hex() + ' could not parse: ' + str( e ) )
+        raise HydrusExceptions.BadRequestException( 'File ' + hash.hex() + ' could not parse: ' + str( e ) )
         
     
-    args = {}
+    args = HydrusNetworking.ParsedRequestArguments()
     
     args[ 'path' ] = path
     args[ 'hash' ] = hash
@@ -256,7 +257,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             
             tb = traceback.format_exc()
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
+            raise HydrusExceptions.BadRequestException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
             
         
         args[ 'thumbnail' ] = thumbnail
@@ -540,13 +541,9 @@ class HydrusResource( Resource ):
         default_mime = HC.TEXT_HTML
         default_encoding = str
         
-        if failure.type == KeyError:
+        if failure.type == HydrusExceptions.BadRequestException:
             
-            response_context = ResponseContext( 400, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
-            
-        elif failure.type == HydrusExceptions.BandwidthException:
-            
-            response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
+            response_context = ResponseContext( 400, mime = default_mime, body = default_encoding( failure.value ) )
             
         elif failure.type == HydrusExceptions.MissingCredentialsException:
             
@@ -560,6 +557,10 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
             
+        elif failure.type == HydrusExceptions.SessionException:
+            
+            response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
+            
         elif failure.type == HydrusExceptions.NetworkVersionException:
             
             response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
@@ -568,9 +569,9 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( failure.value ) )
             
-        elif failure.type == HydrusExceptions.SessionException:
+        elif failure.type == HydrusExceptions.BandwidthException:
             
-            response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
+            response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
             
         else:
             

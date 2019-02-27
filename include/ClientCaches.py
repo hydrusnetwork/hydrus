@@ -1,3 +1,4 @@
+from . import ClientImageHandling
 from . import ClientParsing
 from . import ClientPaths
 from . import ClientRendering
@@ -7,6 +8,7 @@ from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusExceptions
 from . import HydrusFileHandling
+from . import HydrusImageHandling
 from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusThreading
@@ -313,6 +315,11 @@ class ClientFilesManager( object ):
         
         file_path = self._GenerateExpectedFilePath( hash, mime )
         
+        if not os.path.exists( file_path ):
+            
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
+            
+        
         try:
             
             percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
@@ -358,7 +365,7 @@ class ClientFilesManager( object ):
         
         try:
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions, fullsize_thumbnail_mime )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath( full_size_path, thumbnail_dimensions, fullsize_thumbnail_mime )
             
         except:
             
@@ -373,7 +380,7 @@ class ClientFilesManager( object ):
             
             self._GenerateFullSizeThumbnail( hash, mime )
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions, fullsize_thumbnail_mime )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath( full_size_path, thumbnail_dimensions, fullsize_thumbnail_mime )
             
         
         resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
@@ -631,7 +638,7 @@ class ClientFilesManager( object ):
                 
                 text = 'Attempting to create the database\'s client_files folder structure failed!'
                 
-                wx.MessageBox( text )
+                wx.SafeShowMessage( 'unable to create file structure', text )
                 
                 raise
                 
@@ -693,7 +700,7 @@ class ClientFilesManager( object ):
                     text += os.linesep * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
-                    wx.MessageBox( text )
+                    wx.SafeShowMessage( 'missing locations', text )
                     
                     HydrusData.DebugPrint( text )
                     HydrusData.DebugPrint( 'Missing locations follow:' )
@@ -707,7 +714,7 @@ class ClientFilesManager( object ):
                     text += os.linesep * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
-                    wx.MessageBox( text )
+                    wx.SafeShowMessage( 'missing locations', text )
                     HydrusData.DebugPrint( text )
                     
                 
@@ -1341,22 +1348,30 @@ class ClientFilesManager( object ):
             
         
     
+    def RegenerateFullSizeThumbnail( self, hash, mime ):
+        
+        with self._lock:
+            
+            if HG.file_report_mode:
+                
+                HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
+                
+            
+            self._GenerateFullSizeThumbnail( hash, mime )
+            
+        
+    
     def RegenerateResizedThumbnail( self, hash, mime ):
         
         with self._lock:
             
-            self.LocklessRegenerateResizedThumbnail( hash, mime )
+            if HG.file_report_mode:
+                
+                HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
+                
             
-        
-    
-    def LocklessRegenerateResizedThumbnail( self, hash, mime ):
-        
-        if HG.file_report_mode:
+            self._GenerateResizedThumbnail( hash, mime )
             
-            HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
-            
-        
-        self._GenerateResizedThumbnail( hash, mime )
         
     
     def RegenerateThumbnails( self, only_do_missing = False ):
@@ -2276,6 +2291,87 @@ class ThumbnailCache( object ):
         self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
         
     
+    def _GetResizedHydrusBitmap( self, display_media ):
+        
+        if not HG.thumbnail_experiment_mode:
+            
+            return self._GetResizedHydrusBitmapFromHardDrive( display_media )
+            
+        else:
+            
+            return self._GetResizedHydrusBitmapFromFullSize( display_media )
+            
+        
+    
+    def _GetResizedHydrusBitmapFromFullSize( self, display_media ):
+        
+        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+        
+        hash = display_media.GetHash()
+        mime = display_media.GetMime()
+        
+        locations_manager = display_media.GetLocationsManager()
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException as e:
+            
+            if locations_manager.IsLocal():
+                
+                HydrusData.ShowException( e )
+                
+            
+            return self._special_thumbs[ 'hydrus' ]
+            
+        
+        try:
+            
+            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+            
+        except Exception as e:
+            
+            try:
+                
+                # file is malformed, let's force a regen
+                self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
+                
+                try:
+                    
+                    numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was broken. It was regenerated, but the new file would not render for the above reason. Please inform the hydrus developer what has happened.' )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                return self._special_thumbs[ 'hydrus' ]
+                
+            
+        
+        ( fullsize_x, fullsize_y ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
+        
+        ( resized_x, resized_y ) = HydrusImageHandling.GetThumbnailResolution( ( fullsize_x, fullsize_y ), thumbnail_dimensions )
+        
+        already_correct = fullsize_x == resized_x and fullsize_y == resized_y
+        
+        if not already_correct:
+            
+            numpy_image = ClientImageHandling.EfficientlyThumbnailNumpyImage( numpy_image, ( resized_x, resized_y ) )
+            
+        
+        hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+        
+        return hydrus_bitmap
+        
+    
     def _GetResizedHydrusBitmapFromHardDrive( self, display_media ):
         
         thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
@@ -2315,8 +2411,6 @@ class ThumbnailCache( object ):
             return self._special_thumbs[ 'hydrus' ]
             
         
-        mime = display_media.GetMime()
-        
         try:
             
             hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
@@ -2325,7 +2419,8 @@ class ThumbnailCache( object ):
             
             try:
                 
-                self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
+                # file is malformed, let's force a regen
+                self._controller.client_files_manager.RegenerateFullSizeThumbnail( hash, mime )
                 
                 try:
                     
@@ -2412,7 +2507,7 @@ class ThumbnailCache( object ):
                     
                     thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
                     
-                    thumbnail_bytes = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, thumbnail_dimensions, HC.IMAGE_PNG )
+                    thumbnail_bytes = HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath( path, thumbnail_dimensions, HC.IMAGE_PNG )
                     
                     with open( temp_path, 'wb' ) as f:
                         
@@ -2478,24 +2573,13 @@ class ThumbnailCache( object ):
                 
                 if result is None:
                     
-                    if locations_manager.ShouldDefinitelyHaveThumbnail():
+                    try:
                         
-                        # local file, should be able to regen if needed
+                        hydrus_bitmap = self._GetResizedHydrusBitmap( display_media )
                         
-                        hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
+                    except:
                         
-                    else:
-                        
-                        # repository file, maybe not actually available yet
-                        
-                        try:
-                            
-                            hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
-                            
-                        except:
-                            
-                            hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
-                            
+                        hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
                         
                     
                     self._data_cache.AddData( hash, hydrus_bitmap )

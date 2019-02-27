@@ -401,7 +401,7 @@ class Controller( HydrusController.HydrusController ):
         
         stop_time = HydrusData.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
         
-        self.MaintainDB( stop_time = stop_time )
+        self.MaintainDB( only_if_idle = False, stop_time = stop_time )
         
         if not self.options[ 'pause_repo_sync' ]:
             
@@ -643,7 +643,7 @@ class Controller( HydrusController.HydrusController ):
             
             client_api_manager._dirty = True
             
-            wx.MessageBox( 'Your client api manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            wx.SafeShowMessage( 'Problem loading object', 'Your client api manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         self.client_api_manager = client_api_manager
@@ -658,7 +658,7 @@ class Controller( HydrusController.HydrusController ):
             
             bandwidth_manager._dirty = True
             
-            wx.MessageBox( 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            wx.SafeShowMessage( 'Problem loading object', 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         session_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
@@ -669,7 +669,7 @@ class Controller( HydrusController.HydrusController ):
             
             session_manager._dirty = True
             
-            wx.MessageBox( 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            wx.SafeShowMessage( 'Problem loading object', 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         domain_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
@@ -682,7 +682,7 @@ class Controller( HydrusController.HydrusController ):
             
             domain_manager._dirty = True
             
-            wx.MessageBox( 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            wx.SafeShowMessage( 'Problem loading object', 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         domain_manager.Initialise()
@@ -697,7 +697,7 @@ class Controller( HydrusController.HydrusController ):
             
             login_manager._dirty = True
             
-            wx.MessageBox( 'Your login manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            wx.SafeShowMessage( 'Problem loading object', 'Your login manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         login_manager.Initialise()
@@ -860,7 +860,12 @@ class Controller( HydrusController.HydrusController ):
         return self._last_shutdown_was_bad
         
     
-    def MaintainDB( self, stop_time = None ):
+    def MaintainDB( self, only_if_idle = True, stop_time = None ):
+        
+        if only_if_idle and not self.GoodTimeToDoBackgroundWork():
+            
+            return
+            
         
         if self.new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
@@ -1139,8 +1144,6 @@ class Controller( HydrusController.HydrusController ):
                         
                         def THREADRestart():
                             
-                            wx.CallAfter( self.gui.Exit )
-                            
                             while not self.db.LoopIsFinished():
                                 
                                 time.sleep( 0.1 )
@@ -1157,6 +1160,8 @@ class Controller( HydrusController.HydrusController ):
                             
                         
                         self.CallToThreadLongRunning( THREADRestart )
+                        
+                        wx.CallAfter( self.gui.Exit )
                         
                     
                 
@@ -1366,8 +1371,8 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.DebugPrint( traceback.format_exc() )
             
-            wx.CallAfter( wx.MessageBox, traceback.format_exc() )
-            wx.CallAfter( wx.MessageBox, text )
+            wx.SafeShowMessage( 'boot error', text )
+            wx.SafeShowMessage( 'boot error', traceback.format_exc() )
             
             HG.emergency_exit = True
             
@@ -1436,7 +1441,10 @@ class Controller( HydrusController.HydrusController ):
                 
                 wx.TheClipboard.Close()
                 
-            else: wx.MessageBox( 'Could not get permission to access the clipboard!' )
+            else:
+                
+                wx.MessageBox( 'Could not get permission to access the clipboard!' )
+                
             
         elif data_type == 'text':
             
@@ -1450,7 +1458,10 @@ class Controller( HydrusController.HydrusController ):
                 
                 wx.TheClipboard.Close()
                 
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            else:
+                
+                wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                
             
         elif data_type == 'bmp':
             

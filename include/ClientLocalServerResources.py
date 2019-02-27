@@ -1,7 +1,9 @@
+import collections
 from . import ClientAPI
 from . import ClientConstants as CC
 from . import ClientFiles
 from . import ClientImportFileSeeds
+from . import ClientTags
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -9,6 +11,7 @@ from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusServerResources
+from . import HydrusTags
 import json
 import os
 import traceback
@@ -24,7 +27,7 @@ LOCAL_BOORU_JSON_PARAMS = set()
 CLIENT_API_INT_PARAMS = set()
 CLIENT_API_BYTE_PARAMS = set()
 CLIENT_API_STRING_PARAMS = { 'name', 'url' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags' }
 
 def ParseLocalBooruGETArgs( requests_args ):
     
@@ -38,15 +41,68 @@ def ParseClientAPIGETArgs( requests_args ):
     
     return args
     
-def ParseClientAPIPOSTArgs( request ):
+def ParseClientAPIPOSTHashesArgs( args ):
     
-    # this is a mangled dupe of the hydrus parsing stuff. I should refactor it all to something neater and pull out the HydrusNetwork.ParseNetworkBytesToHydrusArgs
+    if not isinstance( args, dict ):
+        
+        raise HydrusExceptions.BadRequestException( 'The given parameter did not seem to be a JSON Object!' )
+        
+    
+    parsed_request_args = HydrusNetworking.ParsedRequestArguments( args )
+    
+    if 'hash' in parsed_request_args:
+        
+        try:
+            
+            hash = bytes.fromhex( parsed_request_args[ 'hash' ] )
+            
+            if len( hash ) == 0:
+                
+                del parsed_request_args[ 'hash' ]
+                
+            else:
+                
+                parsed_request_args[ 'hash' ] = hash
+                
+            
+        except:
+            
+            raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + 'hash' + '\' as a hex-encoded bytestring, but it failed.' )
+            
+        
+    
+    if 'hashes' in parsed_request_args:
+        
+        try:
+            
+            hashes = [ bytes.fromhex( hash_hex ) for hash_hex in parsed_request_args[ 'hashes' ] ]
+            
+            hashes = [ hash for hash in hashes if len( hash ) > 0 ]
+            
+            if len( hashes ) == 0:
+                
+                del parsed_request_args[ 'hashes' ]
+                
+            else:
+                
+                parsed_request_args[ 'hashes' ] = hashes
+                
+            
+        except:
+            
+            raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + 'hashes' + '\' as a list of hex-encoded bytestrings, but it failed.' )
+            
+        
+    
+    return parsed_request_args
+    
+def ParseClientAPIPOSTArgs( request ):
     
     request.content.seek( 0 )
     
     if not request.requestHeaders.hasHeader( 'Content-Type' ):
         
-        hydrus_args = {}
+        parsed_request_args = HydrusNetworking.ParsedRequestArguments()
         
         total_bytes_read = 0
         
@@ -62,7 +118,7 @@ def ParseClientAPIPOSTArgs( request ):
             
         except:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Did not recognise Content-Type header!' )
+            raise HydrusExceptions.BadRequestException( 'Did not recognise Content-Type header!' )
             
         
         total_bytes_read = 0
@@ -75,11 +131,13 @@ def ParseClientAPIPOSTArgs( request ):
             
             json_string = str( json_bytes, 'utf-8' )
             
-            hydrus_args = json.loads( json_string )
+            args = json.loads( json_string )
+            
+            parsed_request_args = ParseClientAPIPOSTHashesArgs( args )
             
         else:
             
-            hydrus_args = {}
+            parsed_request_args = HydrusNetworking.ParsedRequestArguments()
             
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
@@ -97,15 +155,15 @@ def ParseClientAPIPOSTArgs( request ):
             
         
     
-    return ( hydrus_args, total_bytes_read )
+    return ( parsed_request_args, total_bytes_read )
     
 class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
     
     def _callbackParseGETArgs( self, request ):
         
-        hydrus_args = ParseLocalBooruGETArgs( request.args )
+        parsed_request_args = ParseLocalBooruGETArgs( request.args )
         
-        request.hydrus_args = hydrus_args
+        request.parsed_request_args = parsed_request_args
         
         return request
         
@@ -139,8 +197,8 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
-        share_key = request.hydrus_args[ 'share_key' ]
-        hash = request.hydrus_args[ 'hash' ]
+        share_key = request.parsed_request_args[ 'share_key' ]
+        hash = request.parsed_request_args[ 'hash' ]
         
         HG.client_controller.local_booru_manager.CheckFileAuthorised( share_key, hash )
         
@@ -164,7 +222,7 @@ class HydrusResourceBooruGallery( HydrusResourceBooru ):
         # in future, make this a standard frame with a search key that'll load xml or yaml AJAX stuff
         # with file info included, so the page can sort and whatever
         
-        share_key = request.hydrus_args[ 'share_key' ]
+        share_key = request.parsed_request_args[ 'share_key' ]
         
         local_booru_manager = HG.client_controller.local_booru_manager
         
@@ -245,8 +303,8 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
-        share_key = request.hydrus_args[ 'share_key' ]
-        hash = request.hydrus_args[ 'hash' ]
+        share_key = request.parsed_request_args[ 'share_key' ]
+        hash = request.parsed_request_args[ 'hash' ]
         
         local_booru_manager = HG.client_controller.local_booru_manager
         
@@ -334,8 +392,8 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
-        share_key = request.hydrus_args[ 'share_key' ]
-        hash = request.hydrus_args[ 'hash' ]
+        share_key = request.parsed_request_args[ 'share_key' ]
+        hash = request.parsed_request_args[ 'hash' ]
         
         local_booru_manager = HG.client_controller.local_booru_manager
         
@@ -377,20 +435,20 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
     
     def _callbackParseGETArgs( self, request ):
         
-        hydrus_args = ParseClientAPIGETArgs( request.args )
+        parsed_request_args = ParseClientAPIGETArgs( request.args )
         
-        request.hydrus_args = hydrus_args
+        request.parsed_request_args = parsed_request_args
         
         return request
         
     
     def _callbackParsePOSTArgs( self, request ):
         
-        ( hydrus_args, total_bytes_read ) = ParseClientAPIPOSTArgs( request )
+        ( parsed_request_args, total_bytes_read ) = ParseClientAPIPOSTArgs( request )
         
         self._reportDataUsed( request, total_bytes_read )
         
-        request.hydrus_args = hydrus_args
+        request.parsed_request_args = parsed_request_args
         
         return request
         
@@ -447,8 +505,8 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
             raise HydrusExceptions.InsufficientCredentialsException( 'The permission registration dialog is not open. Please open it under "review services" in the hydrus client.' )
             
         
-        name = request.hydrus_args[ 'name' ]
-        basic_permissions = request.hydrus_args[ 'basic_permissions' ]
+        name = request.parsed_request_args[ 'name' ]
+        basic_permissions = request.parsed_request_args[ 'basic_permissions' ]
         
         basic_permissions = [ int( value ) for value in basic_permissions ]
         
@@ -561,11 +619,11 @@ class HydrusResourceClientAPIRestrictedAddFile( HydrusResourceClientAPIRestricte
         
         if not hasattr( request, 'temp_file_info' ):
             
-            path = request.hydrus_args[ 'path' ]
+            path = request.parsed_request_args[ 'path' ]
             
             if not os.path.exists( path ):
                 
-                raise HydrusExceptions.InsufficientCredentialsException( 'Path "{}" does not exist!'.format( path ) )
+                raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
                 
             
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
@@ -616,9 +674,134 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
     
     def _threadDoPOSTJob( self, request ):
         
-        # grab hash and tags from POST args
+        hashes = set()
         
-        # do it to db
+        if 'hash' in request.parsed_request_args:
+            
+            hash = request.parsed_request_args[ 'hash' ]
+            
+            hashes.add( hash )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            more_hashes = request.parsed_request_args[ 'hashes' ]
+            
+            hashes.update( hashes )
+            
+        
+        if len( hashes ) == 0:
+            
+            raise HydrusExceptions.BadRequestException( 'There were no hashes given!' )
+            
+        
+        #
+        
+        service_keys_to_content_updates = collections.defaultdict( list )
+        
+        if 'service_names_to_tags' in request.parsed_request_args:
+            
+            service_names_to_tags = request.parsed_request_args[ 'service_names_to_tags' ]
+            
+            for ( service_name, tags ) in service_names_to_tags.items():
+                
+                try:
+                    
+                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    
+                except:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
+                    
+                
+                tags = HydrusTags.CleanTags( tags )
+                
+                if len( tags ) == 0:
+                    
+                    continue
+                    
+                
+                if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                    
+                    content_action = HC.CONTENT_UPDATE_ADD
+                    
+                else:
+                    
+                    content_action = HC.CONTENT_UPDATE_PEND
+                    
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
+                
+                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                
+            
+        
+        if 'service_names_to_actions_to_tags' in request.parsed_request_args:
+            
+            service_names_to_actions_to_tags = request.parsed_request_args[ 'service_names_to_actions_to_tags' ]
+            
+            for ( service_name, actions_to_tags ) in service_names_to_actions_to_tags.items():
+                
+                try:
+                    
+                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    
+                except:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
+                    
+                
+                for ( content_action, tags ) in actions_to_tags.items():
+                    
+                    tags = HydrusTags.CleanTags( tags )
+                    
+                    if len( tags ) == 0:
+                        
+                        continue
+                        
+                    
+                    if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                        
+                        if content_action not in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
+                            
+                            continue
+                            
+                        
+                    else:
+                        
+                        if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
+                            
+                            continue
+                            
+                        
+                    
+                    if content_action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        if isinstance( tags[0], str ):
+                            
+                            tags_and_reasons = [ ( tag, 'Petitioned from API' ) for tag in tags ]
+                            
+                        else:
+                            
+                            tags_and_reasons = tags
+                            
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes, reason ) ) for ( tag, reason ) in tags_and_reasons ]
+                        
+                    else:
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
+                        
+                    
+                    service_keys_to_content_updates[ service_key ].extend( content_updates )
+                    
+                
+            
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -644,6 +827,27 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagServices( HydrusResourceClie
         return response_context
         
     
+class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPIRestrictedAddTags ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        tags = request.parsed_request_args[ 'tags' ]
+        
+        tags = list( HydrusTags.CleanTags( tags ) )
+        
+        tags = HydrusTags.SortNumericTags( tags )
+        
+        body_dict = {}
+        
+        body_dict[ 'tags' ] = tags
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+        
+    
 class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request ):
@@ -651,11 +855,123 @@ class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricte
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_URLS )
         
     
+class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClientAPIRestrictedAddURLs ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        urls_to_add = []
+        
+        if 'url_to_add' in request.parsed_request_args:
+            
+            url = request.parsed_request_args[ 'url_to_add' ]
+            
+            if not isinstance( url, str ):
+                
+                raise HydrusExceptions.BadRequestException( 'Did not understand the given URL "{}"!'.format( url ) )
+                
+            
+            urls_to_add.append( url )
+            
+        
+        if 'urls_to_add' in request.parsed_request_args:
+            
+            urls = request.parsed_request_args[ 'urls_to_add' ]
+            
+            if not isinstance( urls, list ):
+                
+                raise HydrusExceptions.BadRequestException( 'Did not understand the given URLs!' )
+                
+            
+            for url in urls:
+                
+                if not isinstance( url, str ):
+                    
+                    continue
+                    
+                
+                urls_to_add.append( url )
+                
+            
+        
+        urls_to_delete = []
+        
+        if 'url_to_delete' in request.parsed_request_args:
+            
+            url = request.parsed_request_args[ 'url_to_delete' ]
+            
+            if not isinstance( url, str ):
+                
+                raise HydrusExceptions.BadRequestException( 'Did not understand the given URL "{}"!'.format( url ) )
+                
+            
+            urls_to_delete.append( url )
+            
+        
+        if 'urls_to_delete' in request.parsed_request_args:
+            
+            urls = request.parsed_request_args[ 'urls_to_delete' ]
+            
+            if not isinstance( urls, list ):
+                
+                raise HydrusExceptions.BadRequestException( 'Did not understand the given URLs!' )
+                
+            
+            for url in urls:
+                
+                if not isinstance( url, str ):
+                    
+                    continue
+                    
+                
+                urls_to_delete.append( url )
+                
+            
+        
+        applicable_hashes = []
+        
+        if 'hash' in request.parsed_request_args:
+            
+            applicable_hashes.append( request.parsed_request_args[ 'hash' ] )
+            
+        
+        if 'hashes' in request.parsed_request_args:
+            
+            applicable_hashes.extend( request.parsed_request_args[ 'hashes' ] )
+            
+        
+        if len( urls_to_add ) == 0 and len( urls_to_delete ) == 0:
+            
+            raise HydrusExceptions.BadRequestException( 'Did not find any URLs to add!' )
+            
+        
+        service_keys_to_content_updates = collections.defaultdict( list )
+        
+        if len( urls_to_add ) > 0:
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls_to_add, applicable_hashes ) )
+            
+            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+            
+        
+        if len( urls_to_delete ) > 0:
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( urls_to_delete, applicable_hashes ) )
+            
+            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+            
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
 class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientAPIRestrictedAddURLs ):
     
     def _threadDoGETJob( self, request ):
         
-        url = request.hydrus_args[ 'url' ]
+        url = request.parsed_request_args[ 'url' ]
         
         normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
@@ -687,7 +1003,7 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
     
     def _threadDoGETJob( self, request ):
         
-        url = request.hydrus_args[ 'url' ]
+        url = request.parsed_request_args[ 'url' ]
         
         normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
@@ -706,34 +1022,55 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
     
     def _threadDoPOSTJob( self, request ):
         
-        url = request.hydrus_args[ 'url' ]
+        url = request.parsed_request_args[ 'url' ]
         
-        service_keys_to_tags = {}
+        service_keys_to_tags = None
         
-        if 'service_names_to_tags' in request.hydrus_args:
+        if 'service_names_to_tags' in request.parsed_request_args:
+            
+            service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
             request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
             
-            service_names_to_tags = request.hydrus_args
+            service_names_to_tags = request.parsed_request_args[ 'service_names_to_tags' ]
             
             for ( service_name, tags ) in service_names_to_tags.items():
                 
                 try:
                     
-                    service_key = HG.client_controller.service_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
+                    service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.TAG_SERVICES, service_name )
                     
                 except:
                     
-                    raise KeyError( 'Could not find the service "{}"!'.format( service_name ) )
+                    raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
+                    
+                
+                tags = HydrusTags.CleanTags( tags )
+                
+                if len( tags ) == 0:
+                    
+                    continue
                     
                 
                 service_keys_to_tags[ service_key ] = tags
                 
             
         
+        destination_page_name = None
+        
+        if 'destination_page_name' in request.parsed_request_args:
+            
+            destination_page_name = request.parsed_request_args[ 'destination_page_name' ]
+            
+            if not isinstance( destination_page_name, str ):
+                
+                raise HydrusExceptions.BadRequestException( '"destination_page_name" did not seem to be a string!' )
+                
+            
+        
         gui = HG.client_controller.gui
         
-        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags )
+        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags, destination_page_name )
         
         body_dict = { 'human_result_text' : result_text, 'normalised_url' : normalised_url }
         
@@ -778,7 +1115,7 @@ class HydrusResourceClientAPIRestrictedSearchFilesGetFile( HydrusResourceClientA
     
     def _threadDoGETJob( self, request ):
         
-        file_id = request.hydrus_args[ 'file_id' ]
+        file_id = request.parsed_request_args[ 'file_id' ]
         
         request.client_api_permissions.CheckPermissionToSeeFiles( ( file_id, ) )
         
@@ -799,7 +1136,7 @@ class HydrusResourceClientAPIRestrictedSearchFilesGetMetadata( HydrusResourceCli
     
     def _threadDoGETJob( self, request ):
         
-        file_ids = request.hydrus_args[ 'file_ids' ]
+        file_ids = request.parsed_request_args[ 'file_ids' ]
         
         request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
         
@@ -819,7 +1156,7 @@ class HydrusResourceClientAPIRestrictedSearchFilesGetThumbnail( HydrusResourceCl
     
     def _threadDoGETJob( self, request ):
         
-        file_id = request.hydrus_args[ 'file_id' ]
+        file_id = request.parsed_request_args[ 'file_id' ]
         
         request.client_api_permissions.CheckPermissionToSeeFiles( ( file_id, ) )
         

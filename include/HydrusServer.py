@@ -17,7 +17,7 @@ class HydrusRequest( Request ):
         
         self.start_time = time.clock()
         self.is_hydrus_client = True
-        self.hydrus_args = None
+        self.parsed_request_args = None
         self.hydrus_response_context = None
         
     

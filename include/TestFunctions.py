@@ -1,6 +1,7 @@
 import collections
 from . import HydrusConstants as HC
 from . import ClientData
+from . import ClientTags
 import os
 from . import TestConstants
 import unittest
@@ -18,19 +19,19 @@ class TestFunctions( unittest.TestCase ):
         local_key = CC.LOCAL_TAG_SERVICE_KEY
         remote_key = HydrusData.GenerateKey()
         
-        service_keys_to_tags = { local_key : { 'a' } }
+        service_keys_to_tags = ClientTags.ServiceKeysToTags( { local_key : { 'a' } } )
         
         content_updates = { local_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'a', hashes ) ) ] }
         
         self.assertEqual( ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags ), content_updates )
         
-        service_keys_to_tags = { remote_key : { 'c' } }
+        service_keys_to_tags = ClientTags.ServiceKeysToTags( { remote_key : { 'c' } } )
         
         content_updates = { remote_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'c', hashes ) ) ] }
         
         self.assertEqual( ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags ), content_updates )
         
-        service_keys_to_tags = { local_key : [ 'a', 'character:b' ], remote_key : [ 'c', 'series:d' ] }
+        service_keys_to_tags = ClientTags.ServiceKeysToTags( { local_key : [ 'a', 'character:b' ], remote_key : [ 'c', 'series:d' ] } )
         
         content_updates = {}
         

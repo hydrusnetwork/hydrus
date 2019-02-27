@@ -313,6 +313,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         try:
             
+            if HG.daemon_report_mode:
+                
+                HydrusData.ShowText( 'Export folder start check: {} {} {} {}'.format( HydrusData.GetNow(), self._last_checked, self._period, HydrusData.TimeHasPassed( self._last_checked + self._period ) ) )
+                
+            
             if HydrusData.TimeHasPassed( self._last_checked + self._period ):
                 
                 if self._path != '' and os.path.exists( self._path ) and os.path.isdir( self._path ):

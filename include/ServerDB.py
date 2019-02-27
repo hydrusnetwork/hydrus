@@ -1974,7 +1974,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Did not find ip information for that hash.' )
+            raise HydrusExceptions.NotFoundException( 'Did not find ip information for that hash.' )
             
         
         return result

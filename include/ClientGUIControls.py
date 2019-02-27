@@ -1997,7 +1997,7 @@ class TextAndPasteCtrl( wx.Panel ):
             
             text = self._text_input.GetValue()
             
-            text = HydrusText.StripTrailingAndLeadingSpaces( text )
+            text = HydrusText.StripIOInputLine( text )
             
             if text == '' and not self._allow_empty_input:
                 

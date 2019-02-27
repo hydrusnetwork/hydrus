@@ -34,6 +34,7 @@ from . import ClientPaths
 from . import ClientRendering
 from . import ClientSearch
 from . import ClientServices
+from . import ClientTags
 from . import ClientThreading
 import collections
 import cv2
@@ -97,10 +98,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         
-        self._focus_holder = wx.Window( self )
-        
-        self._focus_holder.SetSize( ( 0, 0 ) )
-        
         self._closed_pages = []
         
         self._lock = threading.Lock()
@@ -146,8 +143,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
         self._controller.sub( self, 'SyncToTagArchive', 'sync_to_tag_archive' )
-        
-        self._menus = {}
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1157,11 +1152,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if name not in self._dirty_menus:
             
-            ( label, show ) = self._menus[ name ]
+            menu_index = self._FindMenuBarIndex( name )
             
-            if show:
-                
-                menu_index = self._FindMenuBarIndex( label, name )
+            if menu_index != wx.NOT_FOUND:
                 
                 self._menubar.EnableTop( menu_index, False )
                 
@@ -1213,18 +1206,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _FindMenuBarIndex( self, label, name ):
+    def _FindMenuBarIndex( self, name ):
         
-        for index in range( self._menubar.GetMenuCount() ):
-            
-            # not GetMenuLabelText, which will ignore '&'
-            if self._menubar.GetMenuLabel( index ) == label:
-                
-                return index
-                
-            
-        
-        # backup wew in case things get muddled
         for index in range( self._menubar.GetMenuCount() ):
             
             if self._menubar.GetMenu( index ).hydrus_menubar_name == name:
@@ -1233,7 +1216,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             
         
-        raise HydrusExceptions.DataMissing( 'Menu not found!' )
+        return wx.NOT_FOUND
         
     
     def _ForceFitAllNonGUITLWs( self ):
@@ -2085,6 +2068,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             gui_actions = wx.Menu()
             
+            ClientGUIMenus.AppendMenuCheckItem( self, gui_actions, 'thumbnail experiment mode', 'Try the new experiment.', HG.thumbnail_experiment_mode, self._SwitchBoolean, 'thumbnail_experiment_mode' )
             ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
@@ -2315,11 +2299,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ImportURL( self, url, service_keys_to_tags = None ):
+    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None ):
         
         if service_keys_to_tags is None:
             
-            service_keys_to_tags = {}
+            service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
         url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
@@ -2337,30 +2321,30 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
             
-            page = self._notebook.GetOrMakeURLImportPage()
+            page = self._notebook.GetOrMakeURLImportPage( destination_page_name )
             
             if page is not None:
                 
                 self._notebook.ShowPage( page )
                 
-                page_key = page.GetPageKey()
+                management_panel = page.GetManagementPanel()
                 
-                HG.client_controller.pub( 'pend_url', page_key, url, service_keys_to_tags )
+                management_panel.PendURL( url, service_keys_to_tags = service_keys_to_tags )
                 
                 return ( url, '"{}" URL added successfully.'.format( match_name ) )
                 
             
         elif url_type == HC.URL_TYPE_WATCHABLE:
             
-            page = self._notebook.GetOrMakeMultipleWatcherPage()
+            page = self._notebook.GetOrMakeMultipleWatcherPage( destination_page_name )
             
             if page is not None:
                 
                 self._notebook.ShowPage( page )
                 
-                page_key = page.GetPageKey()
+                management_panel = page.GetManagementPanel()
                 
-                HG.client_controller.pub( 'pend_url', page_key, url, service_keys_to_tags )
+                management_panel.PendURL( url, service_keys_to_tags = service_keys_to_tags )
                 
                 return ( url, '"{}" URL added successfully.'.format( match_name ) )
                 
@@ -2388,8 +2372,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 self._menubar.Append( menu, label )
                 
-            
-            self._menus[ name ] = ( label, show )
             
         
     
@@ -3867,6 +3849,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
             
+        elif name == 'thumbnail_experiment_mode':
+            
+            HG.thumbnail_experiment_mode = not HG.thumbnail_experiment_mode
+            
         elif name == 'ui_timer_profile_mode':
             
             HG.ui_timer_profile_mode = not HG.ui_timer_profile_mode
@@ -4281,7 +4267,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._DestroyPages( deletee_pages )
             
-            self._focus_holder.SetFocus()
+            self._notebook.SetFocus()
             
             self._controller.pub( 'notify_new_undo' )
             
@@ -4633,11 +4619,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ImportFiles( paths )
         
     
-    def ImportURLFromAPI( self, url, service_keys_to_tags ):
+    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name ):
         
         try:
             
-            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags )
+            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name )
             
             return ( normalised_url, result_text )
             
@@ -4675,9 +4661,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewPageImportHDD( self, paths, file_import_options, paths_to_tags, delete_after_success ):
+    def NewPageImportHDD( self, paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, paths_to_tags, delete_after_success )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
         
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         
@@ -4707,7 +4693,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self._notebook.GetNumPages() == 0:
             
-            self._focus_holder.SetFocus()
+            self._notebook.SetFocus()
             
         
         self._DirtyMenu( 'pages' )
@@ -4719,7 +4705,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self._notebook.GetNumPages() == 0:
             
-            self._focus_holder.SetFocus()
+            self._notebook.SetFocus()
             
         
         self._DestroyPages( ( page, ) )
@@ -4931,44 +4917,54 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             name = self._dirty_menus.pop()
             
-            ( old_label, old_show ) = self._menus[ name ]
+            ( menu_or_none, label, show ) = self._GenerateMenuInfo( name )
             
-            if old_show:
+            old_menu_index = self._FindMenuBarIndex( name )
+            
+            if old_menu_index == wx.NOT_FOUND:
                 
-                old_menu_index = self._FindMenuBarIndex( old_label, name )
+                if show:
+                    
+                    menu = menu_or_none
+                    
+                    insert_index = 0
+                    
+                    # for every menu that may display, if it is displayed now, bump up insertion index up one
+                    for possible_name in MENU_ORDER:
+                        
+                        if possible_name == name:
+                            
+                            break
+                            
+                        
+                        possible_menu_index = self._FindMenuBarIndex( possible_name )
+                        
+                        if possible_menu_index != wx.NOT_FOUND:
+                            
+                            insert_index += 1
+                            
+                        
+                    
+                    self._menubar.Insert( insert_index, menu, label )
+                    
                 
-                old_menu = self._menubar.Remove( old_menu_index )
+            else:
+                
+                old_menu = self._menubar.GetMenu( old_menu_index )
+                
+                if show:
+                    
+                    menu = menu_or_none
+                    
+                    self._menubar.Replace( old_menu_index, menu, label )
+                    
+                else:
+                    
+                    self._menubar.Remove( old_menu_index )
+                    
                 
                 ClientGUIMenus.DestroyMenu( self, old_menu )
                 
-            
-            ( menu_or_none, label, show ) = self._GenerateMenuInfo( name )
-            
-            if show:
-                
-                menu = menu_or_none
-                
-                insert_index = 0
-                
-                for temp_name in MENU_ORDER:
-                    
-                    if temp_name == name:
-                        
-                        break
-                        
-                    
-                    ( temp_label, temp_show ) = self._menus[ temp_name ]
-                    
-                    if temp_show:
-                        
-                        insert_index += 1
-                        
-                    
-                
-                self._menubar.Insert( insert_index, menu, label )
-                
-            
-            self._menus[ name ] = ( label, show )
             
         
         if len( self._dirty_menus ) > 0:

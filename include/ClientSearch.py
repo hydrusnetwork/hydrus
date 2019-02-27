@@ -447,7 +447,10 @@ class FileSystemPredicates( object ):
                 elif operator == '=': self._common_info[ 'duration' ] = duration
                 elif operator == '\u2248':
                     
-                    if duration == 0: self._common_info[ 'duration' ] = 0
+                    if duration == 0:
+                        
+                        self._common_info[ 'duration' ] = 0
+                        
                     else:
                         
                         self._common_info[ 'min_duration' ] = int( duration * 0.85 )

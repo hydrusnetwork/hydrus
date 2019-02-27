@@ -14,6 +14,7 @@ from . import ClientImportFileSeeds
 from . import ClientRatings
 from . import ClientSearch
 from . import ClientServices
+from . import ClientTags
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -605,7 +606,7 @@ class TestClientDB( unittest.TestCase ):
             
             #
             
-            service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
+            service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
             
             management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
             

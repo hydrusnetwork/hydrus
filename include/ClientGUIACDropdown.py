@@ -346,7 +346,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         not_main_gui = tlp.GetParent() is not None
         
-        if not_main_gui or HC.options[ 'always_embed_autocompletes' ]:
+        if not_main_gui or HC.options[ 'always_embed_autocompletes' ] or not HC.PLATFORM_WINDOWS:
             
             self._float_mode = False
             

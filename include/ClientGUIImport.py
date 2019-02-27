@@ -22,6 +22,7 @@ from . import ClientImportFileSeeds
 from . import ClientImportGallerySeeds
 from . import ClientImportLocal
 from . import ClientImportOptions
+from . import ClientTags
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -1495,7 +1496,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        paths_to_tags = collections.defaultdict( dict )
+        paths_to_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
         
         for page in self._tag_repositories.GetPages():
             
@@ -1508,11 +1509,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                     continue
                     
                 
-                paths_to_tags[ path ][ service_key ] = tags
+                paths_to_service_keys_to_tags[ path ][ service_key ] = tags
                 
             
         
-        return paths_to_tags
+        return paths_to_service_keys_to_tags
         
     
     class _Panel( wx.Panel ):

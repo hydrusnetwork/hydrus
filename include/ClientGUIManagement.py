@@ -27,6 +27,7 @@ from . import ClientImportWatchers
 from . import ClientMedia
 from . import ClientParsing
 from . import ClientPaths
+from . import ClientTags
 from . import ClientThreading
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -109,19 +110,24 @@ def CreateManagementControllerImportSimpleDownloader():
     
     return management_controller
     
-def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_tags, delete_after_success ):
+def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success ):
     
     management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD )
     
-    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_service_keys_to_tags = paths_to_service_keys_to_tags, delete_after_success = delete_after_success )
     
     management_controller.SetVariable( 'hdd_import', hdd_import )
     
     return management_controller
     
-def CreateManagementControllerImportMultipleWatcher( url = None ):
+def CreateManagementControllerImportMultipleWatcher( page_name = None, url = None ):
     
-    management_controller = CreateManagementController( 'watcher', MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
+    if page_name is None:
+        
+        page_name = 'watcher'
+        
+    
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
     
     multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport( url = url )
     
@@ -129,9 +135,14 @@ def CreateManagementControllerImportMultipleWatcher( url = None ):
     
     return management_controller
     
-def CreateManagementControllerImportURLs():
+def CreateManagementControllerImportURLs( page_name = None ):
     
-    management_controller = CreateManagementController( 'url import', MANAGEMENT_TYPE_IMPORT_URLS )
+    if page_name is None:
+        
+        page_name = 'url import'
+        
+    
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS )
     
     urls_import = ClientImportSimpleURLs.URLsImport()
     
@@ -598,7 +609,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 paths_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in list(paths_to_tags.items()) }
                 
-                hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_service_keys_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                 
                 serialisable_serialisables[ 'hdd_import' ] = hdd_import.GetSerialisableTuple()
                 
@@ -877,7 +888,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
-def WaitOnDupeFilterJob( job_key, win, callable ):
+def WaitOnDupeFilterJob( job_key ):
     
     while not job_key.IsDone():
         
@@ -891,7 +902,7 @@ def WaitOnDupeFilterJob( job_key, win, callable ):
     
     time.sleep( 1.0 )
     
-    HG.client_controller.CallLaterWXSafe( win, 0.0, callable )
+    HG.client_controller.pub( 'refresh_dupe_numbers' )
     
 class ManagementPanelDuplicateFilter( ManagementPanel ):
     
@@ -1123,11 +1134,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
+        job_key.SetVariable( 'popup_title', 'initialising' )
+        
         self._controller.Write( 'maintain_similar_files_tree', job_key = job_key )
         
         self._controller.pub( 'modal_message', job_key )
         
-        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key, self, self.RefreshAndUpdateStatus )
+        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
         
     
     def _RefreshAndUpdateStatus( self ):
@@ -1143,11 +1156,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
+        job_key.SetVariable( 'popup_title', 'initialising' )
+        
         self._controller.Write( 'maintain_similar_files_phashes', job_key = job_key )
         
         self._controller.pub( 'modal_message', job_key )
         
-        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key, self, self.RefreshAndUpdateStatus )
+        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
         
     
     def _ResetUnknown( self ):
@@ -1163,6 +1178,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 self._controller.Write( 'delete_unknown_duplicate_pairs' )
                 
                 self._RefreshAndUpdateStatus()
+                
             
         
     
@@ -1170,13 +1186,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
+        job_key.SetVariable( 'popup_title', 'initialising' )
+        
         search_distance = self._search_distance_spinctrl.GetValue()
         
         self._controller.Write( 'maintain_similar_files_duplicate_pairs', search_distance, job_key = job_key )
         
         self._controller.pub( 'modal_message', job_key )
         
-        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key, self, self.RefreshAndUpdateStatus )
+        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
         
     
     def _SetCurrentMediaAs( self, duplicate_type ):
@@ -1268,11 +1286,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count ) = self._similar_files_maintenance_status
         
         self._cog_button.Enable()
-        
+        '''
         ClientGUICommon.SetBitmapButtonBitmap( self._phashes_button, CC.GlobalBMPs.play )
         ClientGUICommon.SetBitmapButtonBitmap( self._branches_button, CC.GlobalBMPs.play )
         ClientGUICommon.SetBitmapButtonBitmap( self._search_button, CC.GlobalBMPs.play )
-        
+        '''
         total_num_files = max( num_phashes_to_regen, sum( searched_distances_to_count.values() ) )
         
         if num_phashes_to_regen == 0:
@@ -2295,7 +2313,6 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._UpdateImportStatus()
         
-        HG.client_controller.sub( self, 'PendURL', 'pend_url' )
         HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
         
     
@@ -2303,7 +2320,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if service_keys_to_tags is None:
             
-            service_keys_to_tags = {}
+            service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
         first_result = None
@@ -2882,17 +2899,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         
     
-    def PendURL( self, page_key, url, service_keys_to_tags = None ):
+    def PendURL( self, url, service_keys_to_tags = None ):
         
-        if page_key == self._page_key:
+        if service_keys_to_tags is None:
             
-            if service_keys_to_tags is None:
-                
-                service_keys_to_tags = {}
-                
+            service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
-            self._AddURLs( ( url, ), service_keys_to_tags )
-            
+        
+        self._AddURLs( ( url, ), service_keys_to_tags )
         
     
     def SetSearchFocus( self ):
@@ -3414,14 +3428,12 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._UpdateImportStatus()
         
-        HG.client_controller.sub( self, 'PendURL', 'pend_url' )
-        
     
     def _PendURLs( self, urls, service_keys_to_tags = None ):
         
         if service_keys_to_tags is None:
             
-            service_keys_to_tags = {}
+            service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
         urls = [ url for url in urls if url.startswith( 'http' ) ]
@@ -3466,17 +3478,14 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateImportStatus()
         
     
-    def PendURL( self, page_key, url, service_keys_to_tags = None ):
+    def PendURL( self, url, service_keys_to_tags = None ):
         
-        if page_key == self._page_key:
+        if service_keys_to_tags is None:
             
-            if service_keys_to_tags is None:
-                
-                service_keys_to_tags = {}
-                
+            service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
-            self._PendURLs( ( url, ), service_keys_to_tags )
-            
+        
+        self._PendURLs( ( url, ), service_keys_to_tags )
         
     
     def SetSearchFocus( self ):

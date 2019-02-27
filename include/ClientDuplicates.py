@@ -208,6 +208,19 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        def worth_updating_rating( source_rating, dest_rating ):
+            
+            if source_rating is not None:
+                
+                if dest_rating is None or source_rating > dest_rating:
+                    
+                    return True
+                    
+                
+            
+            return False
+            
+        
         for ( service_key, action ) in self._rating_service_actions:
             
             content_updates = []
@@ -226,28 +239,18 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
-                if first_current_value == second_current_value:
-                    
-                    continue
-                    
-                
-                if first_current_value is None and second_current_value is not None:
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
-                    
-                elif first_current_value is not None and second_current_value is None:
+                if worth_updating_rating( first_current_value, second_current_value ):
                     
                     content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( first_current_value, second_hashes ) ) )
+                    
+                elif worth_updating_rating( second_current_value, first_current_value ):
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                     
                 
             elif action == HC.CONTENT_MERGE_ACTION_COPY:
                 
-                if first_current_value == second_current_value:
-                    
-                    continue
-                    
-                
-                if first_current_value is None and second_current_value is not None:
+                if worth_updating_rating( second_current_value, first_current_value ):
                     
                     content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                     
@@ -256,7 +259,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if second_current_value is not None:
                     
-                    if first_current_value is None:
+                    if worth_updating_rating( second_current_value, first_current_value ):
                         
                         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                         
