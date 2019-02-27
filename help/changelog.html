@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 341</h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>added /add_tags/add_tags, which does several kinds of tag content updates</li>
+					<li>added /add_tags/clean_tags, which shows how hydrus will handle potential tags</li>
+					<li>added /add_urls/associate_url, which allows you to associate urls with files</li>
+					<li>added 'destination_page_name' to /add_urls/add_url, which will choose which destination watcher/url importer to place the url (or create a new one with that name)</li>
+					<li>updated client api version to 2</li>
+					<li>updated client help and unit tests for the above</li>
+					<li>added a linked contents to the client api help</li>
+					<li>improved some server error handling, mostly moving 403s to more correct 400s</li>
+					<li>improved how missing parameter 400 errors are reported from the server vs deeper keyerrors that should be 500</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>tag repository update processing now saves progress to disk every million rows or every minute, whichever comes first. this reduces journaling bloat, improves recovery when the process quits unexpectedly, and makes for significantly faster cancel when requested by the user</li>
+					<li>when processing duplicates and copying/merging/moving ratings, the 'source' file will now also overwrite the 'destination' file's rating if that destination rating is lower (previously, the rating would only go over if the dest had no rating set)</li>
+					<li>added a new 'thumbnail experiment mode' under help->debug->gui. this will load fullsize thumbs and resize them in memory, please see release post for more details</li>
+					<li>reduced menubar replacement flicker while, I believe, keeping and strengthening recent menubar indexing stability improvements</li>
+					<li>the tag autocomplete dropdown will now always embed (instead of floating) in non-Windows</li>
+					<li>when data seems non-decodable, the fallback encoding format is now that given by chardet, rather than utf-8</li>
+					<li>improved serialisability of some pending tag data</li>
+					<li>watchers can now hold and pass on fixed pending tag data</li>
+					<li>gallery log objects can now hold and pass on fixed pending tag data</li>
+					<li>file import objects can now hold and action fixed pending tag data</li>
+					<li>hard drive imports now store their paths-to-tags info in this new format, directly in the file import objects</li>
+					<li>improved some url-import page drop-target-selection logic</li>
+					<li>improved error reporting when dropping/api-adding urls</li>
+					<li>adjusted some url import workflow so big 'already in db' download lists should work a bit faster</li>
+					<li>attempting to start the program with some external database files but not the main 'client.db/server.db' file will now cause a boot-fail exception with an explanation before any stub db files can be made</li>
+					<li>tightened up some hydrus service login-capability-testing code that was previously stopping certain error states from recovering promptly, even on a force account refresh, while the service was maxed on bandwidth</li>
+					<li>fixed a source of linux CRITICAL logspam related to several common dialogs</li>
+					<li>improved ui stability on boot when file folders are missing (particularly for linux)</li>
+					<li>improved stability for the various async tasks on the duplicates processing page, particularly for linux. I am not sure I got everything here, but it is definitely better</li>
+					<li>did some more misc stability improvements, particularly in various boot fail scenarios</li>
+					<li>completely removed an ancient and janky focus catcher widget from the main gui frame</li>
+					<li>now various db caching is improved on the python side, removed a sqlite instruction to force temp information to always stay in memory--hot data returns to staying mostly in memory to start and then spools to disk if the transaction gets too large</li>
+					<li>fixed approx bitrate sorting for malformed video files with explicitly '0' duration</li>
+					<li>daemon_profile_mode now spams some more info about export folders</li>
+					<li>fixed an issue that meant client db maintenance was firing its jobs too aggressively, regardless of idle status</li>
+					<li>updated windows build to cv 4.0</li>
+					<li>misc refactoring and fixes</li>
+				</ul>
 				<li><h3>version 340</h3></li>
 				<ul>
 					<li>client api:</li>
@@ -33,7 +75,7 @@
 					<li>added gelbooru 0.1.11 parser for future application</li>
 					<li>fixed an issue that was stopping advanced content updates from fully copying all the desired mappings in the transaction</li>
 					<li>added a semi-hacky checkbox to 'options->files and trash' that will delay all new file/thumb requests for 15s after the computer resumes from sleep (useful if your files are on a NAS that takes a few seconds to reconnect on wake)</li>
-					<li>wrote some more graceful fallback decoding handling code that attempts original assumed encoding and 'utf-8' if different and returns the one with the fewest ' 'replacement characters</li>
+					<li>wrote some more graceful fallback decoding handling code that attempts original assumed encoding and 'utf-8' if different and returns the one with the fewest '�' replacement characters</li>
 					<li>the network engine and the ffmpeg info parsing now use this new 'safe' decoding, so even if a site has borked bytes or the video file has unexpected Shift-JIS title metadata, it'll still go through, albeit with some question marks</li>
 					<li>moved some more old daemons to the new job scheduler, deleted some old daemon code</li>
 					<li>improved some daemon job wake and shutdown code</li>
