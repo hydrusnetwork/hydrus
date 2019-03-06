@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 342</h3></li>
+				<ul>
+					<li>added support for webp import. it does not yet support animated webps, which, if the local platform supports, will import like apngs used to: just the first frame</li>
+					<li>added support for tiff import. it works ok for 24bit and 8bit (monochrome) tiffs, but I am not sure how well it will do with 48bit</li>
+					<li>both webp and tiff should work on the duplicate files system</li>
+					<li>improved webm detection to include opus audio (previously, these files were falling back to mkv)</li>
+					<li>fixed an issue where unusual formats with duration but no frames or frames but no duration were being sorted and otherwise presented incorrectly</li>
+					<li>improved autocomplete job cancelability. this job can now cancel much faster on large jobs, meaning typing searches with large result sets will hit less CPU and return faster on subsequent keystrokes</li>
+					<li>_all_ of the complicated 'copy url' commands from the thumbnail right-click->known urls menu are now available on the 'open' submenu! if there is more than one url to open (e.g. 'open all of these files blahbooru post urls' on a selection of 50 files), you will be presented with a yes/no dialog to confirm, and it will open one url in your browser every second (with a cancellable popup if num_urls > 5)</li>
+					<li>by default, system:everything is now hidden if its total files is >10k. you can force it to always show under options->default system predicates</li>
+					<li>the gallery downloader's list's status column now shows gallery status (deferring to active file status) when appropriate and shows 'done!' when all work is complete</li>
+					<li>after working back and forth with a user, I _believe_ the linux similar files >0 distance search crash is finally fixed</li>
+					<li>fixed sorting by media views/viewtiming with collections</li>
+					<li>a single-selected collection right-click now shows total media views for all files in the collection! you can now see how long you have been viewing an artist!</li>
+					<li>fixed an issue that lead to export folders not running on always-on clients as often as they should</li>
+					<li>updated the gelbooru 0.2.5 file page parser to pull rating tag from the correct location (previously, it was pulling from what appears to be a site-wide 'mature' browser hint)</li>
+					<li>improved memory cleanup stability when animations and other parts of the video rendering pipeline are deleted--this _may_ fix some rare crashes</li>
+					<li>increased animation rendering aggression overall and particularly in 'future' of frame buffer</li>
+					<li>if a video renderer that is asked to start some way into the video fails to render anything, it will now fall back to trying to render from the beginning. this is slightly hacky atm and leads to out of phase rendering frames, but it is better than an error</li>
+					<li>added a '--no_db_temp_files' launch parameter that will force the client or server to return to the recent old behaviour of exclusively using memory for journalling. this is useful if your temp directory is small and/or your available ram is very large. if running in this mode, the client will attempt to check available memory (instead of free space on your temp dir) before performing very large transactions</li>
+					<li>with the new lighter-weight update transactions, the client now tests for less free space for journalling before running repository update processing</li>
+					<li>added /get_files/search_files to the client api, which does the first half of file searching. it allows tag search (including -tag negation) and system inbox/archive. since the second half, which will fetch file metadata, is not yet in, this can't do anything interesting yet</li>
+					<li>updated help and unit tests to support this, client api version is now 3</li>
+					<li>some misc refactoring</li>
+				</ul>
 				<li><h3>version 341</h3></li>
 				<ul>
 					<li>client api:</li>
