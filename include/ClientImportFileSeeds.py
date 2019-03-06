@@ -1079,7 +1079,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                     
-                    status_hook( 'downloading page' )
+                    status_hook( 'downloading file page' )
                     
                     if self._referral_url not in ( post_url, url_to_check ):
                         

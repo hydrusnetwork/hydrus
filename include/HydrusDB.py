@@ -456,6 +456,11 @@ class HydrusDB( object ):
         
         self._c = self._db.cursor()
         
+        if HG.no_db_temp_files:
+            
+            self._c.execute( 'PRAGMA temp_store = 2;' ) # use memory for temp store exclusively
+            
+        
         self._c.execute( 'PRAGMA main.cache_size = -10000;' )
         
         self._c.execute( 'ATTACH ":memory:" AS mem;' )

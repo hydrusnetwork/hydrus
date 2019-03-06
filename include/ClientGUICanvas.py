@@ -281,36 +281,6 @@ class Animation( wx.Window ):
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
-    def __del__( self ):
-        
-        if self._video_container is not None:
-            
-            self._video_container.Stop()
-            
-            self._video_container = None
-            
-        
-        if self._frame_bmp is not None:
-            
-            if wx.App.IsMainLoopRunning():
-                
-                wx.CallAfter( self._frame_bmp.Destroy )
-                
-            
-            self._frame_bmp = None
-            
-        
-        if self._canvas_bmp is not None:
-            
-            if wx.App.IsMainLoopRunning():
-                
-                wx.CallAfter( self._canvas_bmp.Destroy )
-                
-            
-            self._canvas_bmp = None
-            
-        
-    
     def _DrawFrame( self, dc ):
         
         current_frame = self._video_container.GetFrame( self._current_frame_index )
@@ -597,7 +567,7 @@ class Animation( wx.Window ):
         self._paused = not self._paused
         
     
-    def SetMedia( self, media, start_paused ):
+    def SetMedia( self, media, start_paused = False ):
         
         self._media = media
         
@@ -607,7 +577,14 @@ class Animation( wx.Window ):
         self._a_frame_has_been_drawn = False
         self._has_played_once_through = False
         
-        self._num_frames = self._media.GetNumFrames()
+        if self._media is not None:
+            
+            self._num_frames = self._media.GetNumFrames()
+            
+        else:
+            
+            self._num_frames = 1
+            
         
         self._current_frame_index = int( ( self._num_frames - 1 ) * HC.options[ 'animation_start_position' ] )
         self._current_frame_drawn = False
@@ -625,9 +602,12 @@ class Animation( wx.Window ):
         
         self._frame_bmp = None
         
-        HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
-        
-        self.Refresh()
+        if self._media is not None:
+            
+            HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+            
+            self.Refresh()
+            
         
     
     def TIMERAnimationUpdate( self ):
@@ -1026,7 +1006,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
             
         
-        self._canvas_window.CleanBeforeClose()
+        self._canvas_window.CleanBeforeDestroy()
         
         self.DestroyLater()
         
@@ -2052,9 +2032,11 @@ class Canvas( wx.Window ):
             
         
     
-    def CleanBeforeClose( self ):
+    def CleanBeforeDestroy( self ):
         
         self._SaveCurrentMediaViewTime()
+        
+        self.SetMedia( None )
         
     
     def EventCharHook( self, event ):
@@ -3967,7 +3949,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
+            if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
@@ -4960,6 +4942,11 @@ class MediaContainer( wx.Window ):
         
         if media_window is not None:
             
+            if isinstance( media_window, Animation ):
+                
+                media_window.SetMedia( None )
+                
+            
             media_window.DestroyLater()
             
         
@@ -5037,7 +5024,7 @@ class MediaContainer( wx.Window ):
                         self._media_window = Animation( self )
                         
                     
-                    self._media_window.SetMedia( self._media, start_paused )
+                    self._media_window.SetMedia( self._media, start_paused = start_paused )
                     
                 
                 if ShouldHaveAnimationBar( self._media ):

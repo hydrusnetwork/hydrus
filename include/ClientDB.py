@@ -1915,53 +1915,63 @@ class DB( HydrusDB.HydrusDB ):
                     
                     num_cycles += 1
                     
-                    select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id IN %s;'
-                    
-                    for ( node_phash_id, node_phash, node_radius, inner_phash_id, outer_phash_id ) in self._SelectFromList( select_statement, current_potentials ):
+                    for group_of_current_potentials in HydrusData.SplitListIntoChunks( current_potentials, 1024 ):
                         
-                        # first check the node itself--is it similar?
+                        # this is split into fixed lists of results of subgroups because as an iterable it was causing crashes on linux!!
+                        # after investigation, it seemed to be SQLite having a problem with part of Get64BitHammingDistance touching phashes it presumably was still hanging on to
+                        # the crash was in sqlite code, again presumably on subsequent fetch
+                        # adding a delay in seemed to fix it as well. guess it was some memory maintenance buffer/bytes thing
+                        # anyway, we now just get the whole lot of results first and then work on the whole lot
                         
-                        node_hamming_distance = HydrusData.Get64BitHammingDistance( search_phash, node_phash )
+                        select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id IN %s;'
                         
-                        if node_hamming_distance <= search_radius:
+                        results = list( self._SelectFromList( select_statement, group_of_current_potentials ) )
+                        
+                        for ( node_phash_id, node_phash, node_radius, inner_phash_id, outer_phash_id ) in results:
                             
-                            similar_phash_ids.add( node_phash_id )
+                            # first check the node itself--is it similar?
                             
-                        
-                        # now how about its children?
-                        
-                        if node_radius is not None:
+                            node_hamming_distance = HydrusData.Get64BitHammingDistance( search_phash, node_phash )
                             
-                            # we have two spheres--node and search--their centers separated by node_hamming_distance
-                            # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
-                            # there are four possibles:
-                            # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
-                            # (----N---(-)-S--)      intersects with both
-                            # (----N-(--S-)-)        intersects with both
-                            # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
-                            
-                            if inner_phash_id is not None:
+                            if node_hamming_distance <= search_radius:
                                 
-                                spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
+                                similar_phash_ids.add( node_phash_id )
                                 
-                                if not spheres_disjoint: # i.e. they intersect at some point
+                            
+                            # now how about its children?
+                            
+                            if node_radius is not None:
+                                
+                                # we have two spheres--node and search--their centers separated by node_hamming_distance
+                                # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
+                                # there are four possibles:
+                                # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
+                                # (----N---(-)-S--)      intersects with both
+                                # (----N-(--S-)-)        intersects with both
+                                # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                                
+                                if inner_phash_id is not None:
                                     
-                                    next_potentials.append( inner_phash_id )
+                                    spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
+                                    
+                                    if not spheres_disjoint: # i.e. they intersect at some point
+                                        
+                                        next_potentials.append( inner_phash_id )
+                                        
                                     
                                 
-                            
-                            if outer_phash_id is not None:
-                                
-                                search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
-                                
-                                if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
+                                if outer_phash_id is not None:
                                     
-                                    next_potentials.append( outer_phash_id )
+                                    search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
+                                    
+                                    if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
+                                        
+                                        next_potentials.append( outer_phash_id )
+                                        
                                     
                                 
                             
                         
-                    
                 
             
             if HG.db_report_mode:
@@ -3718,7 +3728,7 @@ class DB( HydrusDB.HydrusDB ):
         return ids_to_count
         
     
-    def _GetAutocompleteTagIds( self, service_key, search_text, exact_match ):
+    def _GetAutocompleteTagIds( self, service_key, search_text, exact_match, job_key = None ):
         
         if exact_match:
             
@@ -3821,7 +3831,23 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        tag_ids = self._STS( self._c.execute( 'SELECT tag_id FROM tags WHERE ' + predicates_phrase + ';' ) )
+        tag_ids = set()
+        
+        cursor = self._c.execute( 'SELECT tag_id FROM tags WHERE ' + predicates_phrase + ';' )
+        
+        group_of_tag_id_tuples = cursor.fetchmany( 1000 )
+        
+        while len( group_of_tag_id_tuples ) > 0:
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return set()
+                
+            
+            tag_ids.update( ( tag_id for ( tag_id, ) in group_of_tag_id_tuples ) )
+            
+            group_of_tag_id_tuples = cursor.fetchmany( 1000 )
+            
         
         # now fetch siblings, add to set
         
@@ -3843,7 +3869,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAutocompletePredicates( self, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, search_text = '', exact_match = False, inclusive = True, include_current = True, include_pending = True, add_namespaceless = False, collapse_siblings = False, job_key = None ):
         
-        tag_ids = self._GetAutocompleteTagIds( tag_service_key, search_text, exact_match )
+        tag_ids = self._GetAutocompleteTagIds( tag_service_key, search_text, exact_match, job_key = job_key )
         
         if job_key is not None and job_key.IsCancelled():
             
@@ -3870,31 +3896,34 @@ class DB( HydrusDB.HydrusDB ):
         
         for search_tag_service_id in search_tag_service_ids:
             
-            if job_key is not None and job_key.IsCancelled():
+            for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1000 ):
                 
-                return []
+                if job_key is not None and job_key.IsCancelled():
+                    
+                    return []
+                    
                 
-            
-            search_tag_service_key = self._GetService( search_tag_service_id ).GetServiceKey()
-            
-            ids_to_count = self._GetAutocompleteCounts( search_tag_service_id, file_service_id, tag_ids, include_current, include_pending )
-            
-            #
-            
-            self._PopulateTagIdsToTagsCache( list(ids_to_count.keys()) )
-            
-            tags_and_counts_generator = ( ( self._tag_ids_to_tags_cache[ id ], ids_to_count[ id ] ) for id in list(ids_to_count.keys()) )
-            
-            predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
-            
-            if collapse_siblings:
+                search_tag_service_key = self._GetService( search_tag_service_id ).GetServiceKey()
                 
-                predicates = siblings_manager.CollapsePredicates( search_tag_service_key, predicates )
+                ids_to_count = self._GetAutocompleteCounts( search_tag_service_id, file_service_id, group_of_tag_ids, include_current, include_pending )
                 
-            
-            predicates = tag_censorship_manager.FilterPredicates( search_tag_service_key, predicates )
-            
-            all_predicates.extend( predicates )
+                #
+                
+                self._PopulateTagIdsToTagsCache( list( ids_to_count.keys() ) )
+                
+                tags_and_counts_generator = ( ( self._tag_ids_to_tags_cache[ id ], ids_to_count[ id ] ) for id in ids_to_count.keys() )
+                
+                predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, min_current_count = min_current_count, min_pending_count = min_pending_count, max_current_count = max_current_count, max_pending_count = max_pending_count ) for ( tag, ( min_current_count, max_current_count, min_pending_count, max_pending_count ) ) in tags_and_counts_generator ]
+                
+                if collapse_siblings:
+                    
+                    predicates = siblings_manager.CollapsePredicates( search_tag_service_key, predicates )
+                    
+                
+                predicates = tag_censorship_manager.FilterPredicates( search_tag_service_key, predicates )
+                
+                all_predicates.extend( predicates )
+                
             
         
         if job_key is not None and job_key.IsCancelled():
@@ -4101,6 +4130,8 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = []
         
+        system_everything_limit = 10000
+        
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
             
             predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
@@ -4111,7 +4142,10 @@ class DB( HydrusDB.HydrusDB ):
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+            if num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
+                
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                
             
             predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
             
@@ -4139,7 +4173,10 @@ class DB( HydrusDB.HydrusDB ):
                 num_archive = num_local - num_inbox
                 
             
-            predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+            if num_everything <= system_everything_limit or self._controller.new_options.GetBoolean( 'always_show_system_everything' ):
+                
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
+                
             
             show_inbox_and_archive = True
             
@@ -8877,7 +8914,9 @@ class DB( HydrusDB.HydrusDB ):
         
         db_size = os.path.getsize( db_path )
         
-        ( has_space, reason ) = HydrusPaths.HasSpaceForDBTransaction( self._db_dir, db_size / 2 )
+        size_needed = min( db_size // 10, 400 * 1024 * 1024 )
+        
+        ( has_space, reason ) = HydrusPaths.HasSpaceForDBTransaction( self._db_dir, size_needed )
         
         if not has_space:
             
@@ -11729,6 +11768,36 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 domain_manager.OverwriteDefaultParsers( [ 'danbooru file page parser', 'danbooru file page parser - get webm ugoira', 'gelbooru 0.1.11 file page parser', 'nijie artist gallery parser', 'nijie view parser', 'nijie view popup parser' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 341:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [ 'gelbooru 0.2.5 file page parser' ] )
                 
                 #
                 

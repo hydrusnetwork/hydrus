@@ -437,6 +437,8 @@ class Page( wx.SplitterWindow ):
         
         self._management_panel.CleanBeforeDestroy()
         
+        self._preview_panel.CleanBeforeDestroy()
+        
         self._controller.ReleasePageKey( self._page_key )
         
     

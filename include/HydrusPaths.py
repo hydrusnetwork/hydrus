@@ -333,29 +333,15 @@ def GetTempPath( suffix = '', dir = None ):
     
 def HasSpaceForDBTransaction( db_dir, num_bytes ):
     
-    temp_dir = tempfile.gettempdir()
-    
-    temp_disk_free_space = GetFreeSpace( temp_dir )
-    
-    a = GetDevice( temp_dir )
-    b = GetDevice( db_dir )
-    
-    if GetDevice( temp_dir ) == GetDevice( db_dir ):
-        
-        space_needed = int( num_bytes * 2.2 )
-        
-        if temp_disk_free_space < space_needed:
-            
-            return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s partition, which I think also holds your temporary path, but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
-            
-        
-    else:
+    if HG.no_db_temp_files:
         
         space_needed = int( num_bytes * 1.1 )
         
-        if temp_disk_free_space < space_needed:
+        approx_available_memory = psutil.virtual_memory().available * 4 / 5
+        
+        if approx_available_memory < num_bytes:
             
-            return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your temporary path\'s partition, which I think is ' + temp_dir + ', but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
+            return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' available memory, since you are running in no_db_temp_files mode, but you only seem to have ' + HydrusData.ToHumanBytes( approx_available_memory ) + '.' )
             
         
         db_disk_free_space = GetFreeSpace( db_dir )
@@ -363,6 +349,40 @@ def HasSpaceForDBTransaction( db_dir, num_bytes ):
         if db_disk_free_space < space_needed:
             
             return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s partition, but you only seem to have ' + HydrusData.ToHumanBytes( db_disk_free_space ) + '.' )
+            
+        
+    else:
+        
+        temp_dir = tempfile.gettempdir()
+        
+        temp_disk_free_space = GetFreeSpace( temp_dir )
+        
+        temp_and_db_on_same_device = GetDevice( temp_dir ) == GetDevice( db_dir )
+        
+        if temp_and_db_on_same_device:
+            
+            space_needed = int( num_bytes * 2.2 )
+            
+            if temp_disk_free_space < space_needed:
+                
+                return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s partition, which I think also holds your temporary path, but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
+                
+            
+        else:
+            
+            space_needed = int( num_bytes * 1.1 )
+            
+            if temp_disk_free_space < space_needed:
+                
+                return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your temporary path\'s partition, which I think is ' + temp_dir + ', but you only seem to have ' + HydrusData.ToHumanBytes( temp_disk_free_space ) + '.' )
+                
+            
+            db_disk_free_space = GetFreeSpace( db_dir )
+            
+            if db_disk_free_space < space_needed:
+                
+                return ( False, 'I believe you need about ' + HydrusData.ToHumanBytes( space_needed ) + ' on your db\'s partition, but you only seem to have ' + HydrusData.ToHumanBytes( db_disk_free_space ) + '.' )
+                
             
         
     

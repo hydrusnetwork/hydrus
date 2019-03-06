@@ -262,3 +262,8 @@ class GIFRenderer( object ):
         #self._cv_video.set( CV_CAP_PROP_POS_FRAMES, index )
         
     
+    def Stop( self ):
+        
+        pass
+        
+    

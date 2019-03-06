@@ -251,7 +251,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
             
-            status_hook( 'downloading page' )
+            status_hook( 'downloading gallery page' )
             
             if self._referral_url not in ( self.url, url_to_check ):
                 

@@ -313,126 +313,125 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         try:
             
-            if HG.daemon_report_mode:
+            if not HydrusData.TimeHasPassed( self._last_checked + self._period ):
                 
-                HydrusData.ShowText( 'Export folder start check: {} {} {} {}'.format( HydrusData.GetNow(), self._last_checked, self._period, HydrusData.TimeHasPassed( self._last_checked + self._period ) ) )
+                return
                 
             
-            if HydrusData.TimeHasPassed( self._last_checked + self._period ):
+            if self._path != '' and os.path.exists( self._path ) and os.path.isdir( self._path ):
                 
-                if self._path != '' and os.path.exists( self._path ) and os.path.isdir( self._path ):
+                query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context )
+                
+                media_results = []
+                
+                i = 0
+                
+                base = 256
+                
+                while i < len( query_hash_ids ):
                     
-                    query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context )
-                    
-                    media_results = []
-                    
-                    i = 0
-                    
-                    base = 256
-                    
-                    while i < len( query_hash_ids ):
+                    if HC.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
                         
-                        if HC.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+                        return
+                        
+                    
+                    if i == 0: ( last_i, i ) = ( 0, base )
+                    else: ( last_i, i ) = ( i, i + base )
+                    
+                    sub_query_hash_ids = query_hash_ids[ last_i : i ]
+                    
+                    more_media_results = HG.client_controller.Read( 'media_results_from_ids', sub_query_hash_ids )
+                    
+                    media_results.extend( more_media_results )
+                    
+                
+                #
+                
+                terms = ParseExportPhrase( self._phrase )
+                
+                previous_filenames = set( os.listdir( self._path ) )
+                
+                sync_filenames = set()
+                
+                client_files_manager = HG.client_controller.client_files_manager
+                
+                num_copied = 0
+                
+                for media_result in media_results:
+                    
+                    if HC.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+                        
+                        return
+                        
+                    
+                    hash = media_result.GetHash()
+                    mime = media_result.GetMime()
+                    size = media_result.GetSize()
+                    
+                    source_path = client_files_manager.GetFilePath( hash, mime )
+                    
+                    filename = GenerateExportFilename( self._path, media_result, terms )
+                    
+                    dest_path = os.path.join( self._path, filename )
+                    
+                    dest_path_dir = os.path.dirname( dest_path )
+                    
+                    HydrusPaths.MakeSureDirectoryExists( dest_path_dir )
+                    
+                    if filename not in sync_filenames:
+                        
+                        copied = HydrusPaths.MirrorFile( source_path, dest_path )
+                        
+                        if copied:
                             
-                            return
+                            num_copied += 1
                             
-                        
-                        if i == 0: ( last_i, i ) = ( 0, base )
-                        else: ( last_i, i ) = ( i, i + base )
-                        
-                        sub_query_hash_ids = query_hash_ids[ last_i : i ]
-                        
-                        more_media_results = HG.client_controller.Read( 'media_results_from_ids', sub_query_hash_ids )
-                        
-                        media_results.extend( more_media_results )
-                        
-                    
-                    #
-                    
-                    terms = ParseExportPhrase( self._phrase )
-                    
-                    previous_filenames = set( os.listdir( self._path ) )
-                    
-                    sync_filenames = set()
-                    
-                    client_files_manager = HG.client_controller.client_files_manager
-                    
-                    num_copied = 0
-                    
-                    for media_result in media_results:
-                        
-                        if HC.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
-                            
-                            return
-                            
-                        
-                        hash = media_result.GetHash()
-                        mime = media_result.GetMime()
-                        size = media_result.GetSize()
-                        
-                        source_path = client_files_manager.GetFilePath( hash, mime )
-                        
-                        filename = GenerateExportFilename( self._path, media_result, terms )
-                        
-                        dest_path = os.path.join( self._path, filename )
-                        
-                        dest_path_dir = os.path.dirname( dest_path )
-                        
-                        HydrusPaths.MakeSureDirectoryExists( dest_path_dir )
-                        
-                        if filename not in sync_filenames:
-                            
-                            copied = HydrusPaths.MirrorFile( source_path, dest_path )
-                            
-                            if copied:
-                                
-                                num_copied += 1
-                                
-                                try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
-                                except: pass
-                                
-                            
-                        
-                        sync_filenames.add( filename )
-                        
-                    
-                    if num_copied > 0:
-                        
-                        HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusData.ToHumanInt( num_copied ) + ' files.' )
-                        
-                    
-                    if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
-                        
-                        deletee_filenames = previous_filenames.difference( sync_filenames )
-                        
-                        for deletee_filename in deletee_filenames:
-                            
-                            deletee_path = os.path.join( self._path, deletee_filename )
-                            
-                            ClientPaths.DeletePath( deletee_path )
-                            
-                        
-                        if len( deletee_filenames ) > 0:
-                            
-                            HydrusData.Print( 'Export folder ' + self._name + ' deleted ' + HydrusData.ToHumanInt( len( deletee_filenames ) ) + ' files.' )
+                            try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
+                            except: pass
                             
                         
                     
-                    if self._delete_from_client_after_export:
+                    sync_filenames.add( filename )
+                    
+                
+                if num_copied > 0:
+                    
+                    HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusData.ToHumanInt( num_copied ) + ' files.' )
+                    
+                
+                if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+                    
+                    deletee_filenames = previous_filenames.difference( sync_filenames )
+                    
+                    for deletee_filename in deletee_filenames:
                         
-                        deletee_hashes = { media_result.GetHash() for media_result in media_results }
+                        deletee_path = os.path.join( self._path, deletee_filename )
                         
-                        chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                        ClientPaths.DeletePath( deletee_path )
                         
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                    
+                    if len( deletee_filenames ) > 0:
                         
-                        for content_update in content_updates:
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
-                            
+                        HydrusData.Print( 'Export folder ' + self._name + ' deleted ' + HydrusData.ToHumanInt( len( deletee_filenames ) ) + ' files.' )
                         
                     
                 
+                if self._delete_from_client_after_export:
+                    
+                    deletee_hashes = { media_result.GetHash() for media_result in media_results }
+                    
+                    chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                    
+                    for content_update in content_updates:
+                        
+                        HG.client_controller.WriteSynchronous( 'content_updates', { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                        
+                    
+                
+            
+            self._last_checked = HydrusData.GetNow()
             
         except Exception as e:
             
@@ -442,8 +441,6 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             HydrusData.ShowException( e )
             
-        
-        self._last_checked = HydrusData.GetNow()
         
         HG.client_controller.WriteSynchronous( 'serialisable', self )
         

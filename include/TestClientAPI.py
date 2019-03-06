@@ -1,11 +1,14 @@
 from . import ClientConstants as CC
 from . import ClientAPI
 from . import ClientLocalServer
+from . import ClientLocalServerResources
+from . import ClientSearch
 from . import ClientServices
 from . import ClientTags
 import collections
 import http.client
 from . import HydrusConstants as HC
+from . import HydrusExceptions
 from . import HydrusTags
 from . import HydrusText
 import json
@@ -815,9 +818,138 @@ class TestClientAPI( unittest.TestCase ):
     
     def _test_search_files( self, connection, set_up_permissions ):
         
-        pass
+        hash_ids = [ 1, 2, 3, 4, 5, 10 ]
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( hash_ids ) )
+        
+        # search files failed tag permission
+        
+        api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        tags = [ 'kino' ]
+        
+        path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
         
         # search files
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        expected_answer = { 'file_ids' : hash_ids }
+        
+        self.assertEqual( d, expected_answer )
+        
+        # some file search param parsing
+        
+        class PretendRequest( object ): pass
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = {}
+        pretend_request.client_api_permissions = set_up_permissions[ 'everything' ]
+        
+        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        
+        self.assertEqual( predicates, [] )
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'system_inbox' : True }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ '-green' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        with self.assertRaises( HydrusExceptions.InsufficientCredentialsException ):
+            
+            ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+            
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'green', '-kino' ] }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        
+        expected_predicates = []
+        
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'kino', inclusive = False ) )
+        
+        self.assertEqual( set( predicates ), set( expected_predicates ) )
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'green' ], 'system_inbox' : True }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        
+        expected_predicates = []
+        
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        
+        self.assertEqual( set( predicates ), set( expected_predicates ) )
+        
+        #
+        
+        pretend_request = PretendRequest()
+        
+        pretend_request.parsed_request_args = { 'tags' : [ 'green' ], 'system_archive' : True }
+        pretend_request.client_api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        predicates = ClientLocalServerResources.ParseClientAPISearchPredicates( pretend_request )
+        
+        expected_predicates = []
+        
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = 'green' ) )
+        expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+        self.assertEqual( set( predicates ), set( expected_predicates ) )
         
     
     def _test_permission_failures( self, connection, set_up_permissions ):

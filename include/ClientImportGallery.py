@@ -79,10 +79,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
+        self._file_status = ''
         self._gallery_status = ''
         self._gallery_status_can_change_timestamp = 0
         
-        self._current_action = ''
+        self._all_work_finished = False
         
         self._file_network_job = None
         self._gallery_network_job = None
@@ -218,7 +219,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 with self._lock:
                     
-                    self._current_action = text
+                    self._file_status = text
                     
                 
             
@@ -280,7 +281,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._current_action = ''
+            self._file_status = ''
             
         
         if did_substantial_work:
@@ -443,7 +444,22 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._current_action
+            if self._file_status != '':
+                
+                return self._file_status
+                
+            elif self._gallery_status != '':
+                
+                return self._gallery_status
+                
+            elif not self._gallery_seed_log.WorkToDo() and not self._file_seed_cache.WorkToDo():
+                
+                return 'done!'
+                
+            else:
+                
+                return ''
+                
             
         
     
@@ -573,17 +589,17 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             if HydrusData.TimeHasPassed( self._no_work_until ):
                 
                 gallery_status = self._gallery_status
-                current_action = self._current_action
+                file_status = self._file_status
                 
             else:
                 
                 no_work_text = HydrusData.ConvertTimestampToPrettyExpires( self._no_work_until ) + ': ' + self._no_work_until_reason
                 
                 gallery_status = no_work_text
-                current_action = no_work_text
+                file_status = no_work_text
                 
             
-            return ( gallery_status, current_action, self._files_paused, self._gallery_paused )
+            return ( gallery_status, file_status, self._files_paused, self._gallery_paused )
             
         
     

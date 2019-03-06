@@ -216,18 +216,26 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_search_tag_filter )
         
     
-    def CanSearchThis( self, tags ):
-        
-        # this is very simple, but a simple tag filter works for our v1.0 purposes
-        # you say 'only allow "for my script" tag' and then any file tagged with that is one you have allowed, nice
-        # also, if you blacklist "my secrets", then len filtered_tags reduces
-        # this doesn't support tag negation or OR
+    def CheckCanSearchTags( self, tags ):
         
         with self._lock:
             
-            filtered_tags = self._search_tag_filter.Filter( tags )
+            if self._search_tag_filter.AllowsEverything():
+                
+                return
+                
             
-            return len( filtered_tags ) == len( tags )
+            if len( tags ) > 0:
+                
+                filtered_tags = self._search_tag_filter.Filter( tags )
+                
+                if len( filtered_tags ) > 0:
+                    
+                    return len( filtered_tags ) == len( tags )
+                    
+                
+            
+            raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to do this search. Your tag search permissions are: {}'.format( self._search_tag_filter.ToPermittedString() ) )
             
         
     

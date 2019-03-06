@@ -3,6 +3,7 @@ from . import ClientAPI
 from . import ClientConstants as CC
 from . import ClientFiles
 from . import ClientImportFileSeeds
+from . import ClientSearch
 from . import ClientTags
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -14,6 +15,7 @@ from . import HydrusServerResources
 from . import HydrusTags
 import json
 import os
+import time
 import traceback
 from twisted.web.static import File as FileResource
 
@@ -27,7 +29,7 @@ LOCAL_BOORU_JSON_PARAMS = set()
 CLIENT_API_INT_PARAMS = set()
 CLIENT_API_BYTE_PARAMS = set()
 CLIENT_API_STRING_PARAMS = { 'name', 'url' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags' }
 
 def ParseLocalBooruGETArgs( requests_args ):
     
@@ -156,6 +158,57 @@ def ParseClientAPIPOSTArgs( request ):
         
     
     return ( parsed_request_args, total_bytes_read )
+    
+def ParseClientAPISearchPredicates( request ):
+    
+    default_search_values = {}
+    
+    default_search_values[ 'tags' ] = []
+    default_search_values[ 'system_inbox' ] = False
+    default_search_values[ 'system_archive' ] = False
+    
+    for ( key, value ) in default_search_values.items():
+        
+        if key not in request.parsed_request_args:
+            
+            request.parsed_request_args[ key ] = value
+            
+        
+    
+    tags = request.parsed_request_args[ 'tags' ]
+    system_inbox = request.parsed_request_args[ 'system_inbox' ]
+    system_archive = request.parsed_request_args[ 'system_archive' ]
+    
+    negated_tags = [ tag for tag in tags if tag.startswith( '-' ) ]
+    tags = [ tag for tag in tags if not tag.startswith( '-' ) ]
+    
+    negated_tags = HydrusTags.CleanTags( negated_tags )
+    tags = HydrusTags.CleanTags( tags )
+    
+    request.client_api_permissions.CheckCanSearchTags( tags )
+    
+    predicates = []
+    
+    for tag in negated_tags:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = tag, inclusive = False ) )
+        
+    
+    for tag in tags:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_TAG, value = tag ) )
+        
+    
+    if system_inbox:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_INBOX ) )
+        
+    elif system_archive:
+        
+        predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
+        
+    
+    return predicates
     
 class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
     
@@ -1072,6 +1125,8 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags, destination_page_name )
         
+        time.sleep( 0.05 ) # yield and give the ui time to catch up with new URL pubsubs in case this is being spammed
+        
         body_dict = { 'human_result_text' : result_text, 'normalised_url' : normalised_url }
         
         body = json.dumps( body_dict )
@@ -1081,37 +1136,33 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedSearchFiles( HydrusResourceClientAPIRestricted ):
+class HydrusResourceClientAPIRestrictedGetFiles( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES )
         
     
-class HydrusResourceClientAPIRestrictedSearchFilesDoSearch( HydrusResourceClientAPIRestrictedSearchFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClientAPIRestrictedGetFiles ):
     
     def _threadDoGETJob( self, request ):
         
-        # get tags from GET args
+        predicates = ParseClientAPISearchPredicates( request )
         
-        tags = { 'blah' }
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, predicates = predicates )
         
-        # maybe checkcansearchtags
-        request.client_api_permissions.CanSearchTags( tags )
+        hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context )
         
-        # do the search, get file_ids back
+        body_dict = { 'file_ids' : list( hash_ids ) }
         
-        # turn media results into json/xml result. maybe start with json to keep it simple
+        body = json.dumps( body_dict )
         
-        mime = HC.APPLICATION_JSON
-        body = 'blah'
-        
-        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedSearchFilesGetFile( HydrusResourceClientAPIRestrictedSearchFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIRestrictedGetFiles ):
     
     def _threadDoGETJob( self, request ):
         
@@ -1132,7 +1183,7 @@ class HydrusResourceClientAPIRestrictedSearchFilesGetFile( HydrusResourceClientA
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedSearchFilesGetMetadata( HydrusResourceClientAPIRestrictedSearchFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesGetMetadata( HydrusResourceClientAPIRestrictedGetFiles ):
     
     def _threadDoGETJob( self, request ):
         
@@ -1152,7 +1203,7 @@ class HydrusResourceClientAPIRestrictedSearchFilesGetMetadata( HydrusResourceCli
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedSearchFilesGetThumbnail( HydrusResourceClientAPIRestrictedSearchFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClientAPIRestrictedGetFiles ):
     
     def _threadDoGETJob( self, request ):
         

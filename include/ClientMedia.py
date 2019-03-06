@@ -1352,6 +1352,7 @@ class MediaCollection( MediaList, Media ):
         self._num_words = None
         self._tags_manager = None
         self._locations_manager = None
+        self._file_viewing_stats_manager = None
         
         self._RecalcInternals()
         
@@ -1394,6 +1395,23 @@ class MediaCollection( MediaList, Media ):
         
         self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
         
+        preview_views = 0
+        preview_viewtime = 0.0
+        media_views = 0
+        media_viewtime = 0.0
+        
+        for m in self._sorted_media:
+            
+            fvsm = m.GetFileViewingStatsManager()
+            
+            preview_views += fvsm.preview_views
+            preview_viewtime += fvsm.preview_viewtime
+            media_views += fvsm.media_views
+            media_viewtime += fvsm.media_viewtime
+            
+        
+        self._file_viewing_stats_manager = FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
+        
     
     def AddMedia( self, new_media, append = True ):
         
@@ -1412,6 +1430,11 @@ class MediaCollection( MediaList, Media ):
     def GetDisplayMedia( self ): return self._GetFirst().GetDisplayMedia()
     
     def GetDuration( self ): return self._duration
+    
+    def GetFileViewingStatsManager( self ):
+        
+        return self._file_viewing_stats_manager
+        
     
     def GetHash( self ): return self.GetDisplayMedia().GetHash()
     
@@ -1527,6 +1550,11 @@ class MediaSingleton( Media ):
     def GetDuration( self ):
         
         return self._media_result.GetDuration()
+        
+    
+    def GetFileViewingStatsManager( self ):
+        
+        return self._media_result.GetFileViewingStatsManager()
         
     
     def GetHash( self ):
@@ -1699,7 +1727,27 @@ class MediaSingleton( Media ):
     
     def HasArchive( self ): return not self._media_result.GetInbox()
     
-    def HasDuration( self ): return self._media_result.GetDuration() is not None and self._media_result.GetNumFrames() > 1
+    def HasDuration( self ):
+        
+        # some funky formats have duration but no frames
+        # some have a single 'frame' but no reported duration
+        
+        duration = self._media_result.GetDuration()
+        
+        if duration is None or duration == 0:
+            
+            return False
+            
+        
+        num_frames = self._media_result.GetNumFrames()
+        
+        if num_frames is None or num_frames == 0:
+            
+            return False
+            
+        
+        return True
+        
     
     def HasImages( self ): return self.IsImage()
     
@@ -2178,7 +2226,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    fvsm = x.GetMediaResult().GetFileViewingStatsManager()
+                    fvsm = x.GetFileViewingStatsManager()
                     
                     return ( fvsm.media_views, fvsm.media_viewtime )
                     
@@ -2187,7 +2235,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    fvsm = x.GetMediaResult().GetFileViewingStatsManager()
+                    fvsm = x.GetFileViewingStatsManager()
                     
                     return ( fvsm.media_viewtime, fvsm.media_views )
                     

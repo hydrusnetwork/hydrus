@@ -1711,7 +1711,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
         
-        self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, style = wx.ST_ELLIPSIZE_END )
+        self._file_status = ClientGUICommon.BetterStaticText( self._import_queue_panel, style = wx.ST_ELLIPSIZE_END )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
@@ -1756,7 +1756,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1806,7 +1806,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             self._query_text.SetValue( '' )
             
-            self._current_action.SetLabelText( '' )
+            self._file_status.SetLabelText( '' )
             
             self._gallery_status.SetLabelText( '' )
             
@@ -1856,7 +1856,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         if self._gallery_import is not None:
             
-            ( gallery_status, current_action, files_paused, gallery_paused ) = self._gallery_import.GetStatus()
+            ( gallery_status, file_status, files_paused, gallery_paused ) = self._gallery_import.GetStatus()
             
             if files_paused:
                 
@@ -1892,17 +1892,17 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             if files_paused:
                 
-                if current_action == '':
+                if file_status == '':
                     
-                    current_action = 'paused'
+                    file_status = 'paused'
                     
                 else:
                     
-                    current_action = 'pausing - ' + current_action
+                    file_status = 'pausing - ' + file_status
                     
                 
             
-            self._current_action.SetLabelText( current_action )
+            self._file_status.SetLabelText( file_status )
             
             ( file_network_job, gallery_network_job ) = self._gallery_import.GetNetworkJobs()
             
@@ -2244,7 +2244,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._files_pause_button = wx.BitmapButton( imports_panel, bitmap = CC.GlobalBMPs.pause )
         self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
-        self._current_action = ClientGUICommon.BetterStaticText( imports_panel, style = wx.ST_ELLIPSIZE_END )
+        self._file_status = ClientGUICommon.BetterStaticText( imports_panel, style = wx.ST_ELLIPSIZE_END )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
         
@@ -2282,7 +2282,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
         
         imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2364,7 +2364,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
             self._watcher_url.SetValue( '' )
             
-            self._current_action.SetLabelText( '' )
+            self._file_status.SetLabelText( '' )
             
             self._file_velocity_status.SetLabelText( '' )
             
@@ -2421,17 +2421,17 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         if self._watcher is not None:
             
-            ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, subject, checking_status, check_now, checking_paused ) = self._watcher.GetStatus()
+            ( file_status, files_paused, file_velocity_status, next_check_time, watcher_status, subject, checking_status, check_now, checking_paused ) = self._watcher.GetStatus()
             
             if files_paused:
                 
-                if current_action == '':
+                if file_status == '':
                     
-                    current_action = 'paused'
+                    file_status = 'paused'
                     
                 else:
                     
-                    current_action = 'pausing, ' + current_action
+                    file_status = 'pausing, ' + file_status
                     
                 
                 ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
@@ -2441,7 +2441,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                 ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
                 
             
-            self._current_action.SetLabelText( current_action )
+            self._file_status.SetLabelText( file_status )
             
             self._file_velocity_status.SetLabelText( file_velocity_status )
             

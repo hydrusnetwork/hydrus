@@ -7,6 +7,8 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+no_db_temp_files = False
+
 import_folders_running = False
 export_folders_running = False
 subscriptions_running = False

@@ -540,7 +540,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._creation_time = HydrusData.GetNow()
         
         self._file_velocity_status = ''
-        self._current_action = ''
+        self._file_status = ''
         self._watcher_status = ''
         
         self._watcher_key = HydrusData.GenerateKey()
@@ -894,7 +894,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                self._current_action = text
+                self._file_status = text
                 
             
         
@@ -916,7 +916,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._current_action = ''
+            self._file_status = ''
             
         
         if did_substantial_work:
@@ -1097,7 +1097,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            current_action = self._current_action
+            file_status = self._file_status
             
             if self._checking_status == ClientImporting.CHECKER_STATUS_404:
                 
@@ -1111,7 +1111,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 no_work_text = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
                 
-                current_action = no_work_text
+                file_status = no_work_text
                 watcher_status = no_work_text
                 
             else:
@@ -1119,7 +1119,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 watcher_status = self._watcher_status
                 
             
-            return ( current_action, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._subject, self._checking_status, self._check_now, self._checking_paused )
+            return ( file_status, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._subject, self._checking_status, self._check_now, self._checking_paused )
             
         
     

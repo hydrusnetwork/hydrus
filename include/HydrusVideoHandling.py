@@ -243,7 +243,7 @@ def GetMime( path ):
         # a webm has at least vp8/vp9 video and optionally vorbis audio
         
         has_webm_video = False
-        has_webm_audio = True
+        has_webm_audio = False
         
         if ParseFFMPEGHasVideo( lines ):
             
@@ -256,9 +256,11 @@ def GetMime( path ):
         
         ( has_audio, audio_format ) = ParseFFMPEGAudio( lines )
         
-        if has_audio and 'vorbis' not in audio_format:
+        if has_audio:
             
-            has_webm_audio = False
+            webm_audio_formats = ( 'vorbis', 'opus' )
+            
+            has_webm_audio = True in ( webm_audio_format in audio_format for webm_audio_format in webm_audio_formats )
             
         
         if has_webm_video and has_webm_audio:
@@ -626,12 +628,7 @@ class VideoRendererFFMPEG( object ):
         self.initialize()
         
     
-    def __del__( self ):
-        
-        self.close()
-        
-    
-    def close(self):
+    def close( self ):
         
         if self.process is not None:
             
@@ -735,11 +732,25 @@ class VideoRendererFFMPEG( object ):
             
             nbytes = self.depth * w * h
             
-            s = self.process.stdout.read(nbytes)
+            s = self.process.stdout.read( nbytes )
             
             if len(s) != nbytes:
                 
                 if self.lastread is None:
+                    
+                    if self.pos != 0:
+                        
+                        # this renderer was asked to render starting from mid-vid and this was not possible due to broken key frame index whatever
+                        # lets try and render from the vid start before we say the whole vid is broke
+                        # I tried doing 'start from 0 and skip n frames', but this is super laggy so would need updates further up the pipe to display this to the user
+                        # atm this error states does not communicate to the videocontainer that the current frame num has changed, so the frames are henceforth out of phase
+                        
+                        frames_to_jump = self.pos
+                        
+                        self.set_position( 0 )
+                        
+                        return self.read_frame()
+                        
                     
                     raise Exception( 'Unable to render that video! Please send it to hydrus dev so he can look at it!' )
                     
@@ -776,3 +787,7 @@ class VideoRendererFFMPEG( object ):
             
         
     
+    def Stop( self ):
+        
+        self.close()
+        

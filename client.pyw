@@ -47,6 +47,7 @@ try:
     argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
     argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'run without WAL db journalling' )
+    argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run the db entirely in memory' )
     
     result = argparser.parse_args()
     
@@ -77,6 +78,7 @@ try:
     
     no_daemons = result.no_daemons
     no_wal = result.no_wal
+    HG.no_db_temp_files = result.no_db_temp_files
     
     #
     

@@ -2321,7 +2321,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
             
-            page = self._notebook.GetOrMakeURLImportPage( destination_page_name )
+            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name )
             
             if page is not None:
                 
@@ -2336,7 +2336,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         elif url_type == HC.URL_TYPE_WATCHABLE:
             
-            page = self._notebook.GetOrMakeMultipleWatcherPage( destination_page_name )
+            page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name )
             
             if page is not None:
                 

@@ -47,6 +47,10 @@
 						<li><a href="#add_urls_add_url">POST /add_urls/add_url</a></li>
 						<li><a href="#add_urls_associate_url">POST /add_urls/associate_url</a></li>
 					</ul>
+					<h4>Searching and Fetching Files</h4>
+					<ul>
+						<li><a href="#get_files_search_files">POST /get_files/search_files</a></li>
+					</ul>
 			</ul>
 			<h3>Access Management</h3>
 			<div class="apiborder" id="api_version">
@@ -471,7 +475,7 @@
 							<li>hashes : (a list of SHA256 hashes)</li>
 						</ul>
 					</li>
-					<p>All of these are optional, but you obviously need to have at least one of 'url' arguments and one of the 'hash' arguments. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.</p>
+					<p>All of these are optional, but you obviously need to have at least one of 'url' arguments and one of the 'hash' arguments. The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.</p>
 					<li>
 						<p>Example request body:</p>
 						<ul>
@@ -479,7 +483,6 @@
 <pre>{
 	"url_to_add": "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
 	"hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
-	}
 }</pre>
 							</li>
 						</ul>
@@ -488,11 +491,51 @@
 				</ul>
 			</div>
 			<h3>Searching Files</h3>
-			<div class="apiborder">
-				<h3><b>GET file search</b></h3>
+			
+			<div class="apiborder" id="get_files_search_files">
+				<h3><b>POST /get_files/search_files</b></h3>
+				<p><i>Search for the client's files.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in percent-encoded JSON):</p>
+						<ul>
+							<li>tags : (a list of tags you wish to search for)</li>
+							<li>system_inbox : true or false (optional, defaulting to false)
+							<li>system_archive : true or false (optional, defaulting to false)
+						</ul>
+					</li>
+					<li>
+						<p>Example request for all files in the inbox with tags "blue eyes", "blonde hair", and "&#1082;&#1080;&#1085;&#1086;":</p>
+						<ul>
+							<li><p>/get_files/search_files?system_inbox=true&tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%5D</p></li>
+						</ul>
+					</li>
+					<p>If the access key's permissions only permit search for certain tags, at least one whitelisted/non-blacklisted tag must be in the "tags" list or this will 403. Tags can be prepended with a hyphen to make a negated tag (e.g. "-green eyes"), but these will not be eligible for the permissions whitelist check.</p>
+					<p>Response description: The full list of numerical file ids that match the search.</p>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{
+	"file_ids": [ 125462, 4852415, 123, 591415 ]
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<p>The search will be performed on the 'local files' file domain and 'all known tags' tag domain.</p>
+					<p>Note that most clients will have an invisible system:limit of 10,000 files on all queries. I expect to add more system predicates to help searching for untagged files, but it is tricky to fetch all files under any circumstance. Large queries may take several seconds to respond.</p>
+				</ul>
 			</div>
 			<div class="apiborder">
 				<h3><b>GET file metadata</b></h3>
+				# id to info objects
+				# hashes only arg
 			</div>
 			<div class="apiborder">
 				<h3><b>GET file</b></h3>

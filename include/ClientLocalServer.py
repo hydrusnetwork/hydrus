@@ -66,6 +66,12 @@ class HydrusServiceClientAPI( HydrusClientService ):
         add_urls.putChild( b'add_url', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddURLsImportURL( self._service, self._client_requests_domain ) )
         add_urls.putChild( b'associate_url', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddURLsAssociateURL( self._service, self._client_requests_domain ) )
         
+        get_files = NoResource()
+        
+        root.putChild( b'get_files', get_files )
+        
+        get_files.putChild( b'search_files', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesSearchFiles( self._service, self._client_requests_domain ) )
+        
         return root
         
     

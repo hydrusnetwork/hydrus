@@ -22,6 +22,8 @@ header_and_mime = [
     ( 0, b'GIF87a', HC.IMAGE_GIF ),
     ( 0, b'GIF89a', HC.IMAGE_GIF ),
     ( 0, b'\x89PNG', HC.UNDETERMINED_PNG ),
+    ( 8, b'WEBP', HC.IMAGE_WEBP ),
+    ( 0, b'II*', HC.IMAGE_TIFF ),
     ( 0, b'BM', HC.IMAGE_BMP ),
     ( 0, b'CWS', HC.APPLICATION_FLASH ),
     ( 0, b'FWS', HC.APPLICATION_FLASH ),
@@ -69,7 +71,7 @@ def SaveThumbnailToStreamPIL( pil_image, dimensions, f ):
     
 def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, percentage_in = 35 ):
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
         
         thumbnail = GenerateThumbnailFileBytesFromStaticImagePath( path, dimensions, mime )
         
@@ -128,6 +130,10 @@ def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS
             pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
             
             SaveThumbnailToStreamPIL( pil_image, dimensions, f )
+            
+            renderer.Stop()
+            
+            del renderer
             
         
         f.seek( 0 )
@@ -215,7 +221,7 @@ def GetFileInfo( path, mime = None ):
     num_frames = None
     num_words = None
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         

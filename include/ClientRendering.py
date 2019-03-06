@@ -220,6 +220,8 @@ class RasterContainerVideo( RasterContainer ):
         
         self._initialised = False
         
+        self._renderer = None
+        
         self._frames = {}
         
         self._buffer_start_index = -1
@@ -337,6 +339,15 @@ class RasterContainerVideo( RasterContainer ):
             
             if self._stop or HG.view_shutdown:
                 
+                self._renderer.Stop()
+                
+                self._renderer = None
+                
+                with self._lock:
+                    
+                    self._frames = {}
+                    
+                
                 return
                 
             
@@ -427,12 +438,12 @@ class RasterContainerVideo( RasterContainer ):
                 
                 with self._lock:
                     
-                    we_have_the_ideal_next_frame = self._HasFrame( self._ideal_next_frame )
+                    work_still_to_do = self._last_index_rendered != self._buffer_end_index
                     
                 
-                if not we_have_the_ideal_next_frame: # there is work to do!
+                if work_still_to_do:
                     
-                    time.sleep( 0.00001 )
+                    time.sleep( 0.0001 )
                     
                 else:
                     
