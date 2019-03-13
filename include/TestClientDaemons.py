@@ -7,7 +7,6 @@ from . import HydrusConstants as HC
 import os
 import shutil
 import stat
-from . import TestConstants
 import unittest
 from . import HydrusData
 from . import ClientConstants as CC

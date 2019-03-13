@@ -2,7 +2,6 @@ import collections
 from . import HydrusConstants as HC
 from . import HydrusTags
 import os
-from . import TestConstants
 import unittest
 from . import HydrusData
 from . import ClientCaches

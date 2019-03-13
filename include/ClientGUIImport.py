@@ -1715,15 +1715,13 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
-        self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
-        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventFilesPause )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.pause, self.PauseFiles )
         
         self._gallery_panel = ClientGUICommon.StaticBox( self, 'gallery parser' )
         
         self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, style = wx.ST_ELLIPSIZE_END )
         
-        self._gallery_pause_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.pause )
-        self._gallery_pause_button.Bind( wx.EVT_BUTTON, self.EventGalleryPause )
+        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.GlobalBMPs.pause, self.PauseGallery )
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, page_key = self._page_key )
         
@@ -1922,7 +1920,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         event.Skip()
         
     
-    def EventFilesPause( self, event ):
+    def PauseFiles( self ):
         
         if self._gallery_import is not None:
             
@@ -1932,7 +1930,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         
     
-    def EventGalleryPause( self, event ):
+    def PauseGallery( self ):
         
         if self._gallery_import is not None:
             
@@ -2241,8 +2239,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'file imports' )
         
-        self._files_pause_button = wx.BitmapButton( imports_panel, bitmap = CC.GlobalBMPs.pause )
-        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalBMPs.pause, self.PauseFiles )
         
         self._file_status = ClientGUICommon.BetterStaticText( imports_panel, style = wx.ST_ELLIPSIZE_END )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
@@ -2254,8 +2251,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
         
-        self._checking_pause_button = wx.BitmapButton( checker_panel, bitmap = CC.GlobalBMPs.pause )
-        self._checking_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecking )
+        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.GlobalBMPs.pause, self.PauseChecking )
         
         self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
         
@@ -2520,21 +2516,21 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
         
     
-    def EventPauseFiles( self, event ):
+    def PauseChecking( self ):
         
         if self._watcher is not None:
             
-            self._watcher.PausePlayFiles()
+            self._watcher.PausePlayChecking()
             
             self._UpdateStatus()
             
         
     
-    def EventPauseChecking( self, event ):
+    def PauseFiles( self ):
         
         if self._watcher is not None:
             
-            self._watcher.PausePlayChecking()
+            self._watcher.PausePlayFiles()
             
             self._UpdateStatus()
             

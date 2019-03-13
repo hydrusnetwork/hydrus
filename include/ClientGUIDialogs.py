@@ -585,9 +585,11 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self._AddPathsToList ) )
         
-        listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._paths_list = ClientGUIListCtrl.SaneListCtrl( listctrl_panel, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
+        columns = [ ( '#', 4 ), ( 'path', -1 ), ( 'guessed mime', 16 ), ( 'size', 10 ) ]
+        
+        self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'input_local_files', 28, 36, columns, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
         
         listctrl_panel.SetListCtrl( self._paths_list )
         
@@ -675,8 +677,7 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self._lock = threading.Lock()
         
-        self._current_paths = []
-        self._current_paths_set = set()
+        self._current_path_data = {}
         
         self._job_key = ClientThreading.JobKey()
         
@@ -713,6 +714,20 @@ class FrameInputLocalFiles( wx.Frame ):
             
         
         self._unparsed_paths_queue.put( paths )
+        
+    
+    def _ConvertListCtrlDataToTuple( self, path ):
+        
+        ( index, mime, size ) = self._current_path_data[ path ]
+        
+        pretty_index = HydrusData.ToHumanInt( index )
+        pretty_mime = HC.mime_string_lookup[ mime ]
+        pretty_size = HydrusData.ToHumanBytes( size )
+        
+        display_tuple = ( pretty_index, path, pretty_mime, pretty_size )
+        sort_tuple = ( index, path, pretty_mime, size )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _TidyUp( self ):
@@ -769,7 +784,9 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self._TidyUp()
         
-        if len( self._current_paths ) > 0:
+        paths = self._paths_list.GetData()
+        
+        if len( paths ) > 0:
             
             file_import_options = self._file_import_options.GetValue()
             
@@ -777,7 +794,7 @@ class FrameInputLocalFiles( wx.Frame ):
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
             
         
         self.Close()
@@ -785,13 +802,15 @@ class FrameInputLocalFiles( wx.Frame ):
     
     def EventTags( self, event ):
         
-        if len( self._current_paths ) > 0:
+        paths = self._paths_list.GetData()
+        
+        if len( paths ) > 0:
             
             file_import_options = self._file_import_options.GetValue()
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
                 
-                panel = ClientGUIImport.EditLocalImportFilenameTaggingPanel( dlg, self._current_paths )
+                panel = ClientGUIImport.EditLocalImportFilenameTaggingPanel( dlg, paths )
                 
                 dlg.SetPanel( panel )
                 
@@ -801,7 +820,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                     delete_after_success = self._delete_after_success.GetValue()
                     
-                    HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
                     
                     self.Close()
                     
@@ -832,10 +851,29 @@ class FrameInputLocalFiles( wx.Frame ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._paths_list.RemoveAllSelected()
+                paths_to_delete = self._paths_list.GetData( only_selected = True )
                 
-                self._current_paths = [ row[0] for row in self._paths_list.GetClientData() ]
-                self._current_paths_set = set( self._current_paths )
+                self._paths_list.DeleteSelected()
+                
+                for path in paths_to_delete:
+                    
+                    del self._current_path_data[ path ]
+                    
+                
+                flat_path_data = [ ( index, path, mime, size ) for ( path, ( index, mime, size ) ) in self._current_path_data.items() ]
+                
+                flat_path_data.sort()
+                
+                new_index = 1
+                
+                for ( old_index, path, mime, size ) in flat_path_data:
+                    
+                    self._current_path_data[ path ] = ( new_index, mime, size )
+                    
+                    new_index += 1
+                    
+                
+                self._paths_list.UpdateDatas()
                 
             
         
@@ -1051,20 +1089,25 @@ class FrameInputLocalFiles( wx.Frame ):
     
     def TIMERUIUpdate( self ):
         
+        good_paths = list()
+        
         while not self._parsed_path_queue.empty():
             
             ( path, mime, size ) = self._parsed_path_queue.get()
             
-            pretty_mime = HC.mime_string_lookup[ mime ]
-            pretty_size = HydrusData.ToHumanBytes( size )
+            if not self._paths_list.HasData( path ):
+                
+                good_paths.append( path )
+                
+                index = len( self._current_path_data ) + 1
+                
+                self._current_path_data[ path ] = ( index, mime, size )
+                
             
-            if path not in self._current_paths_set:
-                
-                self._current_paths_set.add( path )
-                self._current_paths.append( path )
-                
-                self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
-                
+        
+        if len( good_paths ) > 0:
+            
+            self._paths_list.AddDatas( good_paths )
             
         
         #

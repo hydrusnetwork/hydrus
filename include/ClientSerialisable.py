@@ -267,27 +267,50 @@ def LoadFromPng( path ):
     
     try:
         
-        ( height, width ) = numpy_image.shape
+        try:
+            
+            ( height, width ) = numpy_image.shape
+            
+        except:
+            
+            raise Exception( 'The file did not appear to be monochrome!' )
+            
         
-        complete_data = numpy_image.tostring()
+        try:
+            
+            complete_data = numpy_image.tostring()
+            
+            top_height_header = complete_data[:2]
+            
+            ( top_height, ) = struct.unpack( '!H', top_height_header )
+            
+            payload_and_header_bytes = complete_data[ width * top_height : ]
+            
+        except:
+            
+            raise Exception( 'Header bytes were invalid!' )
+            
         
-        top_height_header = complete_data[:2]
-        
-        ( top_height, ) = struct.unpack( '!H', top_height_header )
-        
-        payload_and_header_bytes = complete_data[ width * top_height : ]
-        
-        payload_length_header = payload_and_header_bytes[:4]
-        
-        ( payload_bytes_length, ) = struct.unpack( '!I', payload_length_header )
-        
-        payload_bytes = payload_and_header_bytes[ 4 : 4 + payload_bytes_length ]
+        try:
+            
+            payload_length_header = payload_and_header_bytes[:4]
+            
+            ( payload_bytes_length, ) = struct.unpack( '!I', payload_length_header )
+            
+            payload_bytes = payload_and_header_bytes[ 4 : 4 + payload_bytes_length ]
+            
+        except:
+            
+            raise Exception( 'Payload bytes were invalid!' )
+            
         
     except Exception as e:
         
-        HydrusData.ShowException( e )
+        message = 'The image loaded, but it did not seem to be a hydrus serialised png! The error was: {}'.format( str( e ) )
+        message += os.linesep * 2
+        message += 'If you believe this is a legit non-resized, non-converted hydrus serialised png, please send it to hydrus_dev.'
         
-        raise Exception( 'The image loaded, but it did not seem to be a hydrus serialised png!' )
+        raise Exception( message )
         
     
     return payload_bytes

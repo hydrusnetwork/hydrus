@@ -2,10 +2,13 @@ from . import ClientConstants as CC
 from . import ClientAPI
 from . import ClientLocalServer
 from . import ClientLocalServerResources
+from . import ClientMedia
+from . import ClientRatings
 from . import ClientSearch
 from . import ClientServices
 from . import ClientTags
 import collections
+import hashlib
 import http.client
 from . import HydrusConstants as HC
 from . import HydrusExceptions
@@ -13,6 +16,8 @@ from . import HydrusTags
 from . import HydrusText
 import json
 import os
+import random
+import shutil
 import time
 import unittest
 import urllib
@@ -832,6 +837,20 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
+        tags = []
+        
+        path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        #
+        
         tags = [ 'kino' ]
         
         path = '/get_files/search_files?tags={}'.format( urllib.parse.quote( json.dumps( tags ) ) )
@@ -868,7 +887,10 @@ class TestClientAPI( unittest.TestCase ):
         
         # some file search param parsing
         
-        class PretendRequest( object ): pass
+        class PretendRequest( object ):
+            
+            pass
+            
         
         pretend_request = PretendRequest()
         
@@ -950,6 +972,407 @@ class TestClientAPI( unittest.TestCase ):
         expected_predicates.append( ClientSearch.Predicate( predicate_type = HC.PREDICATE_TYPE_SYSTEM_ARCHIVE ) )
         
         self.assertEqual( set( predicates ), set( expected_predicates ) )
+        
+        # test file metadata
+        
+        api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        file_ids_to_hashes = { 1 : bytes.fromhex( 'a' * 64 ), 2 : bytes.fromhex( 'b' * 64 ), 3 : bytes.fromhex( 'c' * 64 ) }
+        
+        metadata = []
+        
+        for ( file_id, hash ) in file_ids_to_hashes.items():
+            
+            metadata_row = { 'file_id' : file_id, 'hash' : hash.hex() }
+            
+            metadata.append( metadata_row )
+            
+        
+        expected_identifier_result = { 'metadata' : metadata }
+        
+        media_results = []
+        
+        for ( file_id, hash ) in file_ids_to_hashes.items():
+            
+            size = random.randint( 8192, 20 * 1048576 )
+            mime = random.choice( [ HC.IMAGE_JPEG, HC.VIDEO_WEBM, HC.APPLICATION_PDF ] )
+            width = random.randint( 200, 4096 )
+            height = random.randint( 200, 4096 )
+            duration = random.choice( [ 220, 16.66667, None ] )
+            
+            file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+            
+            service_keys_to_statuses_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+            
+            tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+            
+            locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set() )
+            ratings_manager = ClientRatings.RatingsManager( {} )
+            file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
+            
+            media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+            
+            media_results.append( media_result )
+            
+        
+        metadata = []
+        
+        services_manager = HG.client_controller.services_manager
+        
+        service_keys_to_names = {}
+        
+        for media_result in media_results:
+            
+            metadata_row = {}
+            
+            file_info_manager = media_result.GetFileInfoManager()
+            
+            metadata_row[ 'file_id' ] = file_info_manager.hash_id
+            metadata_row[ 'hash' ] = file_info_manager.hash.hex()
+            metadata_row[ 'size' ] = file_info_manager.size
+            metadata_row[ 'mime' ] = HC.mime_string_lookup[ file_info_manager.mime ]
+            metadata_row[ 'width' ] = file_info_manager.width
+            metadata_row[ 'height' ] = file_info_manager.height
+            metadata_row[ 'duration' ] = file_info_manager.duration
+            metadata_row[ 'num_frames' ] = file_info_manager.num_frames
+            metadata_row[ 'num_words' ] = file_info_manager.num_words
+            
+            tags_manager = media_result.GetTagsManager()
+            
+            service_names_to_statuses_to_tags = {}
+            
+            service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags()
+            
+            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                
+                if service_key not in service_keys_to_names:
+                    
+                    service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                    
+                
+                service_name = service_keys_to_names[ service_key ]
+                
+                service_names_to_statuses_to_tags[ service_name ] = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() }
+                
+            
+            metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+            
+            metadata.append( metadata_row )
+            
+        
+        expected_metadata_result = { 'metadata' : metadata }
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
+        HG.test_controller.SetRead( 'media_results', media_results )
+        HG.test_controller.SetRead( 'media_results_from_ids', media_results )
+        
+        api_permissions.SetLastSearchResults( [ 1, 2, 3, 4, 5, 6 ] )
+        
+        # fail on non-permitted files
+        
+        path = '/get_files/file_metadata?file_ids={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3, 7 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        # fails on hashes even if the hashes are 'good'
+        
+        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        # identifiers from file_ids
+        
+        path = '/get_files/file_metadata?file_ids={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_identifier_result )
+        
+        # metadata from file_ids
+        
+        path = '/get_files/file_metadata?file_ids={}'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_metadata_result )
+        
+        # now from hashes
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        # identifiers from hashes
+        
+        path = '/get_files/file_metadata?hashes={}&only_return_identifiers=true'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_identifier_result )
+        
+        # metadata from hashes
+        
+        path = '/get_files/file_metadata?hashes={}'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in file_ids_to_hashes.values() ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_metadata_result )
+        
+        # files and thumbs
+        
+        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
+        hash_hex = hash.hex()
+        
+        size = 100
+        mime = HC.IMAGE_PNG
+        width = 20
+        height = 20
+        duration = None
+        
+        file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+        
+        service_keys_to_statuses_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+        
+        tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        
+        locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set() )
+        ratings_manager = ClientRatings.RatingsManager( {} )
+        file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
+        
+        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+        
+        HG.test_controller.SetRead( 'media_results', ( media_result, ) )
+        HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
+        
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        
+        file_path = HG.test_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_PNG, check_file_exists = False )
+        
+        shutil.copy2( path, file_path )
+        
+        thumb_hash = b'\x17\xde\xd6\xee\x1b\xfa\x002\xbdj\xc0w\x92\xce5\xf0\x12~\xfe\x915\xb3\xb3tA\xac\x90F\x95\xc2T\xc5'
+        
+        path = os.path.join( HC.STATIC_DIR, 'hydrus_small.png' )
+        
+        thumb_path = HG.test_controller.client_files_manager._GenerateExpectedFullSizeThumbnailPath( hash )
+        
+        shutil.copy2( path, thumb_path )
+        
+        api_permissions = set_up_permissions[ 'search_green_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        # let's fail first
+        
+        path = '/get_files/file?file_id={}'.format( 10 )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        #
+        
+        path = '/get_files/thumbnail?file_id={}'.format( 10 )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        #
+        
+        path = '/get_files/file?hash={}'.format( hash_hex )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        #
+        
+        path = '/get_files/thumbnail?hash={}'.format( hash_hex )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        # now succeed
+        
+        path = '/get_files/file?file_id={}'.format( 1 )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( hashlib.sha256( data ).digest(), hash )
+        
+        #
+        
+        path = '/get_files/thumbnail?file_id={}'.format( 1 )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( hashlib.sha256( data ).digest(), thumb_hash )
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/get_files/file?hash={}'.format( hash_hex )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( hashlib.sha256( data ).digest(), hash )
+        
+        #
+        
+        path = '/get_files/thumbnail?hash={}'.format( hash_hex )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( hashlib.sha256( data ).digest(), thumb_hash )
+        
+        # now 404
+        
+        hash_404 = os.urandom( 32 )
+        
+        file_info_manager = ClientMedia.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
+        
+        media_result = ClientMedia.MediaResult( file_info_manager, tags_manager, locations_manager, ratings_manager, file_viewing_stats_manager )
+        
+        HG.test_controller.SetRead( 'media_results', ( media_result, ) )
+        HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
+        
+        #
+        
+        path = '/get_files/file?hash={}'.format( hash_404.hex() )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 404 )
+        
+        #
+        
+        path = '/get_files/thumbnail?hash={}'.format( hash_404.hex() )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 404 )
+        
+        #
+        
+        os.unlink( file_path )
+        os.unlink( thumb_path )
         
     
     def _test_permission_failures( self, connection, set_up_permissions ):

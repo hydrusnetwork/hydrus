@@ -2,7 +2,6 @@ import collections
 from . import HydrusConstants as HC
 import os
 import random
-from . import TestConstants
 import time
 import unittest
 from . import HydrusData

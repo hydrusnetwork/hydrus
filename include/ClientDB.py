@@ -5680,6 +5680,22 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _GetHashIdsToHashes( self, hash_ids = None, hashes = None ):
+        
+        if hash_ids is not None:
+            
+            self._PopulateHashIdsToHashesCache( hash_ids, exception_on_error = True )
+            
+            hash_ids_to_hashes = { hash_id : self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids }
+            
+        elif hashes is not None:
+            
+            hash_ids_to_hashes = { self._GetHashId( hash ) : hash for hash in hashes }
+            
+        
+        return hash_ids_to_hashes
+        
+    
     def _GetHashIdStatus( self, hash_id, prefix = '' ):
         
         hash = self._GetHash( hash_id )
@@ -7796,7 +7812,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _PopulateHashIdsToHashesCache( self, hash_ids ):
+    def _PopulateHashIdsToHashesCache( self, hash_ids, exception_on_error = False ):
         
         if len( self._hash_ids_to_hashes_cache ) > 25000:
             
@@ -7818,6 +7834,11 @@ class DB( HydrusDB.HydrusDB ):
                 for hash_id in uncached_hash_ids:
                     
                     if hash_id not in uncached_hash_ids_to_hashes:
+                        
+                        if exception_on_error:
+                            
+                            raise HydrusExceptions.DataMissing( 'Did not find all entries for those hash ids!' )
+                            
                         
                         HydrusData.DebugPrint( 'Database hash error: hash_id ' + str( hash_id ) + ' was missing!' )
                         
@@ -9223,6 +9244,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'filter_existing_tags': result = self._FilterExistingTags( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
         elif action == 'force_refresh_tags_managers': result = self._GetForceRefreshTagsManagers( *args, **kwargs )
+        elif action == 'hash_ids_to_hashes': result = self._GetHashIdsToHashes( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'in_inbox': result = self._InInbox( *args, **kwargs )

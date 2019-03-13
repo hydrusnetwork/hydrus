@@ -2,7 +2,6 @@ from . import ClientImageHandling
 import collections
 from . import HydrusConstants as HC
 import os
-from . import TestConstants
 import unittest
 
 class TestImageHandling( unittest.TestCase ):

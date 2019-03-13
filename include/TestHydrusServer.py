@@ -20,7 +20,7 @@ import random
 from . import ServerFiles
 from . import ServerServer
 import ssl
-from . import TestConstants
+from . import TestController
 import time
 import unittest
 import urllib
@@ -79,8 +79,8 @@ class TestServer( unittest.TestCase ):
         
         def TWISTEDSetup():
             
-            cls._ssl_cert_path = os.path.join( TestConstants.DB_DIR, 'server.crt' )
-            cls._ssl_key_path = os.path.join( TestConstants.DB_DIR, 'server.key' )
+            cls._ssl_cert_path = os.path.join( TestController.DB_DIR, 'server.crt' )
+            cls._ssl_key_path = os.path.join( TestController.DB_DIR, 'server.key' )
             
             # if db test ran, this is still hanging around and read-only, so don't bother to fail overwriting
             if not os.path.exists( cls._ssl_cert_path ):
@@ -243,7 +243,7 @@ class TestServer( unittest.TestCase ):
         share_key = HydrusData.GenerateKey()
         hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
         
-        client_files_default = os.path.join( TestConstants.DB_DIR, 'client_files' )
+        client_files_default = os.path.join( TestController.DB_DIR, 'client_files' )
         
         hash_encoded = hashes[0].hex()
         

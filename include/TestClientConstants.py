@@ -6,7 +6,6 @@ from . import ClientServices
 import collections
 from . import HydrusConstants as HC
 import os
-from . import TestConstants
 import unittest
 from . import HydrusData
 from . import HydrusGlobals as HG

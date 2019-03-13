@@ -17,7 +17,7 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusNetwork
 from . import HydrusSerialisable
-from . import TestConstants as TC
+from . import TestController as TC
 import os
 import unittest
 import wx

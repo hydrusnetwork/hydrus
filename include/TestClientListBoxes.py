@@ -5,7 +5,7 @@ import collections
 from . import HydrusConstants as HC
 import os
 import random
-from . import TestConstants
+from . import TestController
 import time
 import unittest
 import wx
@@ -69,154 +69,159 @@ class TestListBoxes( unittest.TestCase ):
     
     def test_listbox_colour_options( self ):
         
-        frame = TestConstants.TestFrame()
-        
-        try:
+        def wx_code():
             
-            initial_namespace_colours = { 'series' : ( 153, 101, 21 ), '' : ( 0, 111, 250 ), None : ( 114, 160, 193 ), 'creator' : ( 170, 0, 0 ) }
+            frame = TestController.TestFrame()
             
-            panel = ClientGUIListBoxes.ListBoxTagsColourOptions( frame, initial_namespace_colours )
-            
-            frame.SetPanel( panel )
-            
-            self.assertEqual( panel.GetNamespaceColours(), initial_namespace_colours )
-            
-            #
-            
-            new_namespace_colours = dict( initial_namespace_colours )
-            new_namespace_colours[ 'character' ] = ( 0, 170, 0 )
-            
-            colour = wx.Colour( 0, 170, 0 )
-            
-            panel.SetNamespaceColour( 'character', colour )
-            
-            self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
-            
-            #
-            
-            terms = set( panel._terms )
-            ordered_terms = list( panel._ordered_terms )
-            
-            self.assertEqual( len( terms ), len( ordered_terms ) )
-            
-            #
-            
-            all_clickable_indices = GetAllClickableIndices( panel )
-            
-            self.assertEqual( len( list(all_clickable_indices.keys()) ), len( terms ) )
-            self.assertEqual( set( all_clickable_indices.keys() ), set( range( len( list(all_clickable_indices.keys()) ) ) ) )
-            
-            #
-            
-            for ( index, y ) in list(all_clickable_indices.items()):
+            try:
+                
+                initial_namespace_colours = { 'series' : ( 153, 101, 21 ), '' : ( 0, 111, 250 ), None : ( 114, 160, 193 ), 'creator' : ( 170, 0, 0 ) }
+                
+                panel = ClientGUIListBoxes.ListBoxTagsColourOptions( frame, initial_namespace_colours )
+                
+                frame.SetPanel( panel )
+                
+                self.assertEqual( panel.GetNamespaceColours(), initial_namespace_colours )
+                
+                #
+                
+                new_namespace_colours = dict( initial_namespace_colours )
+                new_namespace_colours[ 'character' ] = ( 0, 170, 0 )
+                
+                colour = wx.Colour( 0, 170, 0 )
+                
+                panel.SetNamespaceColour( 'character', colour )
+                
+                self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
+                
+                #
+                
+                terms = set( panel._terms )
+                ordered_terms = list( panel._ordered_terms )
+                
+                self.assertEqual( len( terms ), len( ordered_terms ) )
+                
+                #
+                
+                all_clickable_indices = GetAllClickableIndices( panel )
+                
+                self.assertEqual( len( list(all_clickable_indices.keys()) ), len( terms ) )
+                self.assertEqual( set( all_clickable_indices.keys() ), set( range( len( list(all_clickable_indices.keys()) ) ) ) )
+                
+                #
+                
+                for ( index, y ) in list(all_clickable_indices.items()):
+                    
+                    click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                    
+                    click.SetX( 10 )
+                    click.SetY( y )
+                    
+                    DoClick( click, panel )
+                    
+                    self.assertEqual( panel.GetSelectedNamespaceColours(), dict( [ ordered_terms[ index ] ] ) )
+                    
+                
+                #
+                
+                current_y = 5
                 
                 click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
                 
                 click.SetX( 10 )
-                click.SetY( y )
+                click.SetY( current_y )
+                
+                while panel._GetIndexUnderMouse( click ) is not None:
+                    
+                    current_y += 5
+                    
+                    click.SetY( current_y )
+                    
                 
                 DoClick( click, panel )
                 
-                self.assertEqual( panel.GetSelectedNamespaceColours(), dict( [ ordered_terms[ index ] ] ) )
+                self.assertEqual( panel.GetSelectedNamespaceColours(), {} )
                 
-            
-            #
-            
-            current_y = 5
-            
-            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-            
-            click.SetX( 10 )
-            click.SetY( current_y )
-            
-            while panel._GetIndexUnderMouse( click ) is not None:
+                #
                 
-                current_y += 5
                 
-                click.SetY( current_y )
                 
-            
-            DoClick( click, panel )
-            
-            self.assertEqual( panel.GetSelectedNamespaceColours(), {} )
-            
-            #
-            
-            
-            
-            if len( list(all_clickable_indices.keys()) ) > 2:
-                
-                indices = random.sample( list(all_clickable_indices.keys()), len( list(all_clickable_indices.keys()) ) - 1 )
-                
-                for index in indices:
+                if len( list(all_clickable_indices.keys()) ) > 2:
                     
-                    click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                    indices = random.sample( list(all_clickable_indices.keys()), len( list(all_clickable_indices.keys()) ) - 1 )
                     
-                    click.SetControlDown( True )
+                    for index in indices:
+                        
+                        click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                        
+                        click.SetControlDown( True )
+                        
+                        click.SetX( 10 )
+                        click.SetY( all_clickable_indices[ index ] )
+                        
+                        DoClick( click, panel )
+                        
                     
-                    click.SetX( 10 )
-                    click.SetY( all_clickable_indices[ index ] )
+                    expected_selected_terms = [ ordered_terms[ index ] for index in indices ]
                     
-                    DoClick( click, panel )
+                    self.assertEqual( panel.GetSelectedNamespaceColours(), dict( expected_selected_terms ) )
                     
                 
-                expected_selected_terms = [ ordered_terms[ index ] for index in indices ]
-                
-                self.assertEqual( panel.GetSelectedNamespaceColours(), dict( expected_selected_terms ) )
-                
-            
-            #
-            
-            random_index = random.choice( list(all_clickable_indices.keys()) )
-            
-            while ordered_terms[ random_index ][0] in panel.PROTECTED_TERMS:
+                #
                 
                 random_index = random.choice( list(all_clickable_indices.keys()) )
                 
-            
-            del new_namespace_colours[ ordered_terms[ random_index ][0] ]
-            
-            # select nothing
-            
-            current_y = 5
-            
-            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-            
-            click.SetX( 10 )
-            click.SetY( current_y )
-            
-            while panel._GetIndexUnderMouse( click ) is not None:
+                while ordered_terms[ random_index ][0] in panel.PROTECTED_TERMS:
+                    
+                    random_index = random.choice( list(all_clickable_indices.keys()) )
+                    
                 
-                current_y += 5
+                del new_namespace_colours[ ordered_terms[ random_index ][0] ]
                 
+                # select nothing
+                
+                current_y = 5
+                
+                click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                
+                click.SetX( 10 )
                 click.SetY( current_y )
                 
+                while panel._GetIndexUnderMouse( click ) is not None:
+                    
+                    current_y += 5
+                    
+                    click.SetY( current_y )
+                    
+                
+                DoClick( click, panel )
+                
+                # select the random index
+                
+                click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                
+                click.SetX( 10 )
+                click.SetY( all_clickable_indices[ random_index ] )
+                
+                DoClick( click, panel )
+                
+                # now double-click to activate and hence remove
+                
+                doubleclick = wx.MouseEvent( wx.wxEVT_LEFT_DCLICK )
+                
+                doubleclick.SetX( 5 )
+                doubleclick.SetY( all_clickable_indices[ random_index ] )
+                
+                DoClick( doubleclick, panel, do_delayed_ok_afterwards = True )
+                
+                self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
+                
+            finally:
+                
+                frame.DestroyLater()
+                
             
-            DoClick( click, panel )
-            
-            # select the random index
-            
-            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-            
-            click.SetX( 10 )
-            click.SetY( all_clickable_indices[ random_index ] )
-            
-            DoClick( click, panel )
-            
-            # now double-click to activate and hence remove
-            
-            doubleclick = wx.MouseEvent( wx.wxEVT_LEFT_DCLICK )
-            
-            doubleclick.SetX( 5 )
-            doubleclick.SetY( all_clickable_indices[ random_index ] )
-            
-            DoClick( doubleclick, panel, do_delayed_ok_afterwards = True )
-            
-            self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
-            
-        finally:
-            
-            frame.DestroyLater()
-            
+        
+        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
         
     

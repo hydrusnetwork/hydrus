@@ -118,7 +118,7 @@ def OpenURLs( urls ):
         
         if num_urls > 5:
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
             
             job_key.SetVariable( 'popup_title', 'Opening URLs' )
             
@@ -131,7 +131,9 @@ def OpenURLs( urls ):
                 
                 if job_key is not None:
                     
-                    if job_key.IsCancelled():
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
                         
                         return
                         

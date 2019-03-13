@@ -106,8 +106,6 @@ class ImageRenderer( object ):
     
     def _Initialise( self ):
         
-        time.sleep( 0.00001 )
-        
         self._numpy_image = ClientImageHandling.GenerateNumpyImage( self._path, self._mime )
         
     

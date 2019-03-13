@@ -12,7 +12,7 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusNetworking
 import os
-from . import TestConstants
+from . import TestController
 import threading
 import time
 import unittest
@@ -66,7 +66,7 @@ class TestSubscription( unittest.TestCase ):
     
     def _PrepEngine( self ):
         
-        mock_controller = TestConstants.MockController()
+        mock_controller = TestController.MockController()
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()

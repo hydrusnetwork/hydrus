@@ -26,10 +26,10 @@ LOCAL_BOORU_BYTE_PARAMS = { 'share_key', 'hash' }
 LOCAL_BOORU_STRING_PARAMS = set()
 LOCAL_BOORU_JSON_PARAMS = set()
 
-CLIENT_API_INT_PARAMS = set()
-CLIENT_API_BYTE_PARAMS = set()
+CLIENT_API_INT_PARAMS = { 'file_id' }
+CLIENT_API_BYTE_PARAMS = { 'hash' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'hashes', 'only_return_identifiers' }
 
 def ParseLocalBooruGETArgs( requests_args ):
     
@@ -806,6 +806,8 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 for ( content_action, tags ) in actions_to_tags.items():
                     
+                    content_action = int( content_action )
+                    
                     tags = HydrusTags.CleanTags( tags )
                     
                     if len( tags ) == 0:
@@ -1153,6 +1155,8 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
         
         hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context )
         
+        request.client_api_permissions.SetLastSearchResults( hash_ids )
+        
         body_dict = { 'file_ids' : list( hash_ids ) }
         
         body = json.dumps( body_dict )
@@ -1166,37 +1170,170 @@ class HydrusResourceClientAPIRestrictedGetFilesGetFile( HydrusResourceClientAPIR
     
     def _threadDoGETJob( self, request ):
         
-        file_id = request.parsed_request_args[ 'file_id' ]
+        try:
+            
+            if 'file_id' in request.parsed_request_args:
+                
+                file_id = request.parsed_request_args[ 'file_id' ]
+                
+                request.client_api_permissions.CheckPermissionToSeeFiles( ( file_id, ) )
+                
+                ( media_result, ) = HG.client_controller.Read( 'media_results_from_ids', ( file_id, ) )
+                
+            elif 'hash' in request.parsed_request_args:
+                
+                request.client_api_permissions.CheckCanSeeAllFiles()
+                
+                hash = request.parsed_request_args[ 'hash' ]
+                
+                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                
+            else:
+                
+                raise HydrusExceptions.BadRequestException( 'Please include a file_id or hash parameter!' )
+                
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers was missing!' )
+            
         
-        request.client_api_permissions.CheckPermissionToSeeFiles( ( file_id, ) )
-        
-        media_result = 'blah' # get it from controller
-        
-        mime = media_result.GetMime()
-        
-        client_files_manager = HG.client_controller.client_files_manager
-        
-        path = client_files_manager.GetFilePath( hash, mime )
+        try:
+            
+            hash = media_result.GetHash()
+            mime = media_result.GetMime()
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
         
         return response_context
         
     
-class HydrusResourceClientAPIRestrictedGetFilesGetMetadata( HydrusResourceClientAPIRestrictedGetFiles ):
+class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClientAPIRestrictedGetFiles ):
     
     def _threadDoGETJob( self, request ):
         
-        file_ids = request.parsed_request_args[ 'file_ids' ]
+        only_return_identifiers = False
         
-        request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
+        if 'only_return_identifiers' in request.parsed_request_args:
+            
+            only_return_identifiers = request.parsed_request_args[ 'only_return_identifiers' ]
+            
         
-        media_results = 'blah' # get it from controller
+        try:
+            
+            if 'file_ids' in request.parsed_request_args:
+                
+                file_ids = request.parsed_request_args[ 'file_ids' ]
+                
+                request.client_api_permissions.CheckPermissionToSeeFiles( file_ids )
+                
+                if only_return_identifiers:
+                    
+                    file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', file_ids = file_ids )
+                    
+                else:
+                    
+                    media_results = HG.client_controller.Read( 'media_results_from_ids', file_ids )
+                    
+                
+            elif 'hashes' in request.parsed_request_args:
+                
+                request.client_api_permissions.CheckCanSeeAllFiles()
+                
+                hashes = request.parsed_request_args[ 'hashes' ]
+                
+                if only_return_identifiers:
+                    
+                    file_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hashes = hashes )
+                    
+                else:
+                    
+                    media_results = HG.client_controller.Read( 'media_results', hashes )
+                    
+                
+            else:
+                
+                raise HydrusExceptions.BadRequestException( 'Please include a file_ids or hashes parameter!' )
+                
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers was missing!' )
+            
         
-        # turn media results into json/xml result. maybe start with json to keep it simple
+        body_dict = {}
+        
+        metadata = []
+        
+        if only_return_identifiers:
+            
+            for ( file_id, hash ) in file_ids_to_hashes.items():
+                
+                metadata_row = {}
+                
+                metadata_row[ 'file_id' ] = file_id
+                metadata_row[ 'hash' ] = hash.hex()
+                
+                metadata.append( metadata_row )
+                
+            
+        else:
+            
+            services_manager = HG.client_controller.services_manager
+            
+            service_keys_to_names = {}
+            
+            for media_result in media_results:
+                
+                metadata_row = {}
+                
+                file_info_manager = media_result.GetFileInfoManager()
+                
+                metadata_row[ 'file_id' ] = file_info_manager.hash_id
+                metadata_row[ 'hash' ] = file_info_manager.hash.hex()
+                metadata_row[ 'size' ] = file_info_manager.size
+                metadata_row[ 'mime' ] = HC.mime_string_lookup[ file_info_manager.mime ]
+                metadata_row[ 'width' ] = file_info_manager.width
+                metadata_row[ 'height' ] = file_info_manager.height
+                metadata_row[ 'duration' ] = file_info_manager.duration
+                metadata_row[ 'num_frames' ] = file_info_manager.num_frames
+                metadata_row[ 'num_words' ] = file_info_manager.num_words
+                
+                tags_manager = media_result.GetTagsManager()
+                
+                service_names_to_statuses_to_tags = {}
+                
+                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags()
+                
+                for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
+                    
+                    if service_key not in service_keys_to_names:
+                        
+                        service_keys_to_names[ service_key ] = services_manager.GetName( service_key )
+                        
+                    
+                    service_name = service_keys_to_names[ service_key ]
+                    
+                    service_names_to_statuses_to_tags[ service_name ] = { str( status ) : list( tags ) for ( status, tags ) in statuses_to_tags.items() }
+                    
+                
+                metadata_row[ 'service_names_to_statuses_to_tags' ] = service_names_to_statuses_to_tags
+                
+                metadata.append( metadata_row )
+                
+            
+        
+        body_dict[ 'metadata' ] = metadata
         
         mime = HC.APPLICATION_JSON
-        body = 'blah'
+        body = json.dumps( body_dict )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
         
@@ -1207,19 +1344,47 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
     
     def _threadDoGETJob( self, request ):
         
-        file_id = request.parsed_request_args[ 'file_id' ]
+        try:
+            
+            if 'file_id' in request.parsed_request_args:
+                
+                file_id = request.parsed_request_args[ 'file_id' ]
+                
+                request.client_api_permissions.CheckPermissionToSeeFiles( ( file_id, ) )
+                
+                ( media_result, ) = HG.client_controller.Read( 'media_results_from_ids', ( file_id, ) )
+                
+            elif 'hash' in request.parsed_request_args:
+                
+                request.client_api_permissions.CheckCanSeeAllFiles()
+                
+                hash = request.parsed_request_args[ 'hash' ]
+                
+                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                
+            else:
+                
+                raise HydrusExceptions.BadRequestException( 'Please include a file_id or hash parameter!' )
+                
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers was missing!' )
+            
         
-        request.client_api_permissions.CheckPermissionToSeeFiles( ( file_id, ) )
+        try:
+            
+            hash = media_result.GetHash()
+            mime = media_result.GetMime()
+            
+            path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
+            
         
-        media_result = 'blah' # get it from controller
-        
-        mime = media_result.GetMime() # jpg or png
-        
-        client_files_manager = HG.client_controller.client_files_manager
-        
-        path = client_files_manager.GetFilePath( hash, mime )
-        
-        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, path = path )
         
         return response_context
         

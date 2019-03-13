@@ -13,7 +13,7 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusNetworking
 import os
-from . import TestConstants
+from . import TestController
 import threading
 import time
 import unittest
@@ -224,7 +224,7 @@ class TestNetworkingEngine( unittest.TestCase ):
     
     def test_engine_shutdown_app( self ):
         
-        mock_controller = TestConstants.MockController()
+        mock_controller = TestController.MockController()
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
@@ -254,7 +254,7 @@ class TestNetworkingEngine( unittest.TestCase ):
     
     def test_engine_shutdown_manual( self ):
         
-        mock_controller = TestConstants.MockController()
+        mock_controller = TestController.MockController()
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
@@ -282,7 +282,7 @@ class TestNetworkingEngine( unittest.TestCase ):
     
     def test_engine_simple_job( self ):
         
-        mock_controller = TestConstants.MockController()
+        mock_controller = TestController.MockController()
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
@@ -335,7 +335,7 @@ class TestNetworkingJob( unittest.TestCase ):
         
         job.SetForLogin( for_login )
         
-        mock_controller = TestConstants.MockController()
+        mock_controller = TestController.MockController()
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
@@ -544,11 +544,11 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         job.SetForLogin( for_login )
         
-        mock_controller = TestConstants.MockController()
+        mock_controller = TestController.MockController()
         
         mock_service = ClientServices.GenerateService( MOCK_HYDRUS_SERVICE_KEY, HC.TAG_REPOSITORY, 'test tag repo' )
         
-        mock_services_manager = TestConstants.MockServicesManager( ( mock_service, ) )
+        mock_services_manager = TestController.MockServicesManager( ( mock_service, ) )
         
         mock_controller.services_manager = mock_services_manager
         

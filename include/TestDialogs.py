@@ -8,7 +8,6 @@ from . import ClientThreading
 import collections
 from . import HydrusConstants as HC
 import os
-from . import TestConstants
 import unittest
 import wx
 from . import HydrusGlobals as HG
@@ -61,114 +60,134 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_manage_subs( self ):
         
-        title = 'subs test'
+        def wx_code():
+            
+            title = 'subs test'
+            
+            with ClientGUITopLevelWindows.DialogEdit( None, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, [] )
+                
+                dlg.SetPanel( panel )
+                
+                HG.test_controller.CallLaterWXSafe( dlg, 2, panel.Add )
+                
+                HG.test_controller.CallLaterWXSafe( dlg, 4, OKChildDialog, panel )
+                
+                HG.test_controller.CallLaterWXSafe( dlg, 6, HitCancelButton, dlg )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_CANCEL )
+                
+            
         
-        with ClientGUITopLevelWindows.DialogEdit( None, title ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, [] )
-            
-            dlg.SetPanel( panel )
-            
-            HG.test_controller.CallLaterWXSafe( dlg, 2, panel.Add )
-            
-            HG.test_controller.CallLaterWXSafe( dlg, 4, OKChildDialog, panel )
-            
-            HG.test_controller.CallLaterWXSafe( dlg, 6, HitCancelButton, dlg )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_CANCEL )
-            
+        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
         
     
 class TestNonDBDialogs( unittest.TestCase ):
     
     def test_dialog_choose_new_service_method( self ):
         
-        with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
+        def wx_code():
             
-            HitButton( dlg._register )
+            with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
+                
+                HitButton( dlg._register )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_OK )
+                
+                register = dlg.GetRegister()
+                
+                self.assertEqual( register, True )
+                
             
-            result = dlg.ShowModal()
+            with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
+                
+                HitButton( dlg._setup )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_OK )
+                
+                register = dlg.GetRegister()
+                
+                self.assertEqual( register, False )
+                
             
-            self.assertEqual( result, wx.ID_OK )
-            
-            register = dlg.GetRegister()
-            
-            self.assertEqual( register, True )
+            with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
+                
+                HitCancelButton( dlg )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_CANCEL )
+                
             
         
-        with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
-            
-            HitButton( dlg._setup )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_OK )
-            
-            register = dlg.GetRegister()
-            
-            self.assertEqual( register, False )
-            
-        
-        with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
-            
-            HitCancelButton( dlg )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_CANCEL )
-            
+        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
         
     
     def test_dialog_finish_filtering( self ):
         
-        with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
+        def wx_code():
             
-            HitButton( dlg._back )
+            with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
+                
+                HitButton( dlg._back )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_CANCEL )
+                
             
-            result = dlg.ShowModal()
+            with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
+                
+                HitButton( dlg._commit )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_YES )
+                
             
-            self.assertEqual( result, wx.ID_CANCEL )
+            with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
+                
+                HitButton( dlg._forget )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_NO )
+                
             
         
-        with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
-            
-            HitButton( dlg._commit )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_YES )
-            
-        
-        with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
-            
-            HitButton( dlg._forget )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_NO )
-            
+        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
         
     
     def test_dialog_yes_no( self ):
         
-        with ClientGUIDialogs.DialogYesNo( None, 'hello' ) as dlg:
+        def wx_code():
             
-            HitButton( dlg._yes )
+            with ClientGUIDialogs.DialogYesNo( None, 'hello' ) as dlg:
+                
+                HitButton( dlg._yes )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_YES )
+                
             
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_YES )
+            with ClientGUIDialogs.DialogYesNo( None, 'hello' ) as dlg:
+                
+                HitButton( dlg._no )
+                
+                result = dlg.ShowModal()
+                
+                self.assertEqual( result, wx.ID_NO )
+                
             
         
-        with ClientGUIDialogs.DialogYesNo( None, 'hello' ) as dlg:
-            
-            HitButton( dlg._no )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_NO )
-            
+        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
         
     

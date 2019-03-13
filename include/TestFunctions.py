@@ -3,7 +3,6 @@ from . import HydrusConstants as HC
 from . import ClientData
 from . import ClientTags
 import os
-from . import TestConstants
 import unittest
 from . import HydrusData
 from . import ClientConstants as CC

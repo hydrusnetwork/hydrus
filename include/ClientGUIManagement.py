@@ -1444,8 +1444,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
-        self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.pause, self.Pause )
         
         self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
@@ -1518,7 +1517,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
             
         
     
-    def EventPause( self, event ):
+    def Pause( self ):
         
         self._hdd_import.PausePlay()
         
@@ -2937,8 +2936,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'imports' )
         
-        self._pause_files_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_files_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
+        self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.pause, self.PauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, style = wx.ST_ELLIPSIZE_END )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
@@ -2950,8 +2948,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'simple parsing urls' )
         
-        self._pause_queue_button = wx.BitmapButton( self._simple_parsing_jobs_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_queue_button.Bind( wx.EVT_BUTTON, self.EventPauseQueue )
+        self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.GlobalBMPs.pause, self.PauseQueue )
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel, style = wx.ST_ELLIPSIZE_END )
         
@@ -3333,14 +3330,14 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         event.Skip()
         
     
-    def EventPauseQueue( self, event ):
+    def PauseQueue( self ):
         
         self._simple_downloader_import.PausePlayQueue()
         
         self._UpdateImportStatus()
         
     
-    def EventPauseFiles( self, event ):
+    def PauseFiles( self ):
         
         self._simple_downloader_import.PausePlayFiles()
         
@@ -3369,8 +3366,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_panel = ClientGUICommon.StaticBox( self, 'url downloader' )
         
-        self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalBMPs.pause, self.Pause )
         
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
         
@@ -3471,7 +3467,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             
         
     
-    def EventPause( self, event ):
+    def Pause( self ):
         
         self._urls_import.PausePlay()
         

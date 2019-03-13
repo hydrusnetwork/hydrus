@@ -4099,12 +4099,10 @@ class ScriptManagementControl( wx.Panel ):
         self._status = ClientGUICommon.BetterStaticText( main_panel )
         self._gauge = ClientGUICommon.Gauge( main_panel )
         
-        self._link_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.link )
-        self._link_button.Bind( wx.EVT_BUTTON, self.EventLinkButton )
+        self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalBMPs.link, self.LinkButton )
         self._link_button.SetToolTip( 'urls found by the script' )
         
-        self._cancel_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.stop )
-        self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalBMPs.stop, self.CancelButton )
         
         #
         
@@ -4218,7 +4216,7 @@ class ScriptManagementControl( wx.Panel ):
             
         
     
-    def EventCancelButton( self, event ):
+    def CancelButton( self ):
         
         with self._lock:
             
@@ -4229,7 +4227,7 @@ class ScriptManagementControl( wx.Panel ):
             
         
     
-    def EventLinkButton( self, event ):
+    def LinkButton( self ):
         
         with self._lock:
             

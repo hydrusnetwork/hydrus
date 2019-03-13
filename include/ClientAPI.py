@@ -231,11 +231,22 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if len( filtered_tags ) > 0:
                     
-                    return len( filtered_tags ) == len( tags )
+                    return
                     
                 
             
             raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to do this search. Your tag search permissions are: {}'.format( self._search_tag_filter.ToPermittedString() ) )
+            
+        
+    
+    def CheckCanSeeAllFiles( self ):
+        
+        with self._lock:
+            
+            if not ( self._HasPermission( CLIENT_API_PERMISSION_SEARCH_FILES ) and self._search_tag_filter.AllowsEverything() ):
+                
+                raise HydrusExceptions.InsufficientCredentialsException( 'You do not have permission to see all files, so you cannot do this.' )
+                
             
         
     
@@ -270,7 +281,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 error_text = error_text.format( HydrusData.ToHumanInt( num_files_asked_for ), HydrusData.ToHumanInt( num_files_allowed_to_see ) )
                 
-                raise HydrusExceptions.BadRequestException( error_text )
+                raise HydrusExceptions.InsufficientCredentialsException( error_text )
                 
             
             self._search_results_timeout = HydrusData.GetNow() + SEARCH_RESULTS_CACHE_TIMEOUT

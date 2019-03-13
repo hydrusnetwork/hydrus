@@ -5,7 +5,6 @@ from . import HydrusExceptions
 from . import HydrusNetwork
 from . import HydrusSessions
 import os
-from . import TestConstants
 import unittest
 from . import HydrusData
 from . import HydrusGlobals as HG

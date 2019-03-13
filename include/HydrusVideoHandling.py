@@ -262,6 +262,11 @@ def GetMime( path ):
             
             has_webm_audio = True in ( webm_audio_format in audio_format for webm_audio_format in webm_audio_formats )
             
+        else:
+            
+            # no audio at all is not a vote against webm
+            has_webm_audio = True
+            
         
         if has_webm_video and has_webm_audio:
             
