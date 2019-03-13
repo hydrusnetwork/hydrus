@@ -6,7 +6,6 @@
 	</head>
 	<body>
 		<div class="content">
-			<p class="warning">This is all currently under construction!</p>
 			<h3>client api</h3>
 			<p>The hydrus client now supports a very simple API so you can access it with external programs.</p>
 			<p>By default, the Client API is not turned on. Go to <i>services->manage services</i> and give it a port to get it started. I recommend you not allow non-local connections (i.e. only requests from the same computer will work) to start with.</p>
@@ -50,6 +49,9 @@
 					<h4>Searching and Fetching Files</h4>
 					<ul>
 						<li><a href="#get_files_search_files">POST /get_files/search_files</a></li>
+						<li><a href="#get_files_file_metadata">POST /get_files/file_metadata</a></li>
+						<li><a href="#get_files_file">POST /get_files/file</a></li>
+						<li><a href="#get_files_thumbnail">POST /get_files/thumbnail</a></li>
 					</ul>
 			</ul>
 			<h3>Access Management</h3>
@@ -285,18 +287,19 @@
 	"hash" : "df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56",
 	"service_names_to_actions_to_tags" : {
 		"local tags" : {
-			0 : [ "character:supergirl", "rating:safe" ],
-			1 : [ "character:superman" ]
+			"0" : [ "character:supergirl", "rating:safe" ],
+			"1" : [ "character:superman" ]
 		},
 		"public tag repository" : {
-			2 : [ "character:supergirl", "rating:safe" ],
-			3 : [ "filename:image.jpg" ],
-			4 : [ [ "creator:danban faga", "typo" ], [ "character:super_girl", "underscore" ] ]
-			5 : [ "skirt" ]
+			"2" : [ "character:supergirl", "rating:safe" ],
+			"3" : [ "filename:image.jpg" ],
+			"4" : [ [ "creator:danban faga", "typo" ], [ "character:super_girl", "underscore" ] ]
+			"5" : [ "skirt" ]
 		}
 	}
 }</pre>
 					<p>This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.</p>
+					<p>Note that the enumerated status keys in the service_names_to_actions_to_tags structure are strings, not ints (JSON does not support int keys for Objects).</p>
 					<p>Response description: 200 and no content.</p>
 					<p>Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended and not worry about an error--it will be discarded. The same for other reasonable logical scenarios: deleting a tag that does not exist will silently make no change, pending a tag that is already 'current' will again be passed over. It is fine to just throw 'process this' tags at every file import you add and not have to worry about checking which files you already added it to.</p>
 				</ul>
@@ -491,9 +494,9 @@
 				</ul>
 			</div>
 			<h3>Searching Files</h3>
-			
+			<p>File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.</p>
 			<div class="apiborder" id="get_files_search_files">
-				<h3><b>POST /get_files/search_files</b></h3>
+				<h3><b>GET /get_files/search_files</b></h3>
 				<p><i>Search for the client's files.</i></p>
 				<ul>
 					<li>
@@ -506,8 +509,8 @@
 						<p>Arguments (in percent-encoded JSON):</p>
 						<ul>
 							<li>tags : (a list of tags you wish to search for)</li>
-							<li>system_inbox : true or false (optional, defaulting to false)
-							<li>system_archive : true or false (optional, defaulting to false)
+							<li>system_inbox : true or false (optional, defaulting to false)</li>
+							<li>system_archive : true or false (optional, defaulting to false)</li>
 						</ul>
 					</li>
 					<li>
@@ -528,21 +531,173 @@
 							</li>
 						</ul>
 					</li>
+					<p>File ids are internal and specific to an individual client. For a client, a file with hash H always has the same file id N, but two clients will have different ideas about which N goes with which H. They are a bit faster than hashes to retrieve and search with <i>en masse</i>, which is why they are exposed here.</p>
 					<p>The search will be performed on the 'local files' file domain and 'all known tags' tag domain.</p>
 					<p>Note that most clients will have an invisible system:limit of 10,000 files on all queries. I expect to add more system predicates to help searching for untagged files, but it is tricky to fetch all files under any circumstance. Large queries may take several seconds to respond.</p>
 				</ul>
 			</div>
-			<div class="apiborder">
-				<h3><b>GET file metadata</b></h3>
-				# id to info objects
-				# hashes only arg
+			<div class="apiborder" id="get_files_file_metadata">
+				<h3><b>GET /get_files/file_metadata</b></h3>
+				<p><i>Get metadata about files in the client.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in percent-encoded JSON):</p>
+						<ul>
+							<li>file_ids : (a list of numerical file ids)</li>
+							<li>hashes : (a list of hexadecimal SHA256 hashes)</li>
+							<li>only_return_identifiers : true or false (optional, defaulting to false)</li>
+						</ul>
+					</li>
+					<p>You need one of file_ids or hashes. If your access key is restricted by tag, you cannot search by hashes, and <b>the file_ids you search for must have been in the most recent search result</b>.</p>
+					<li>
+						<p>Example request for two files with ids 123 and 4567:</p>
+						<ul>
+							<li><p>/get_files/file_metadata?file_ids=%5B123%2C%204567%5D</p></li>
+						</ul>
+					</li>
+					<li>
+						<p>The same, but only wants hashes back:</p>
+						<ul>
+							<li><p>/get_files/file_metadata?file_ids=%5B123%2C%204567%5D&only_return_identifiers=true</p></li>
+						</ul>
+					</li>
+					<li>
+						<p>And one that fetches two hashes, 4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2 and 3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82:</p>
+						<ul>
+							<li><p>/get_files/file_metadata?hashes=%5B%224c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2%22%2C%20%223e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82%22%5D</p></li>
+						</ul>
+					</li>
+					<p>This request string can obviously get pretty ridiculously long. It also takes a bit of time to fetch metadata from the database. In its normal searches, the client usually fetches file metadata in batches of 256.</p>
+					<p>Response description: A list of JSON Objects that store a variety of file metadata.</p>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{
+	"metadata" : [
+		{
+			"file_id" : 123,
+			"hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
+			"size" : 63405,
+			"mime" : "image/jpg",
+			"width" : 640,
+			"height" : 480,
+			"duration" : null,
+			"num_frames" : null,
+			"num_words" : null,
+			"service_names_to_statuses_to_tags" : {}
+		},
+		{
+			"file_id" : 4567,
+			"hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
+			"size" : 199713,
+			"mime" : "video/webm",
+			"width" : 1920,
+			"height" : 1080,
+			"duration" : 4040,
+			"num_frames" : 102,
+			"num_words" : null
+			"service_names_to_statuses_to_tags" : {
+				"local tags" : {
+					"0" : [ "blonde hair", "blue eyes", "looking at viewer" ]
+					"1" : [ "bodysuit" ]
+				}
+			}
+		}
+	]
+}</pre>
+							</li>
+						</ul>
+						<p>And one where only_return_identifiers is true:</p>
+						<ul>
+							<li>
+<pre>{
+	"metadata" : [
+		{
+			"file_id" : 123,
+			"hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2"
+		},
+		{
+			"file_id" : 4567,
+			"hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82"
+		}
+	]
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<p>Size is in bytes. Duration is in milliseconds, and may be an int or a float.</p>
+					<p>The tags structure is similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
+					<ul>
+						<li>0 - current</li>
+						<li>1 - pending</li>
+						<li>2 - deleted</li>
+						<li>3 - petitioned</li>
+					</ul>
+					<p>Note that since JSON Object keys must be strings, these status numbers are strings, not ints.</p>
+				</ul>
 			</div>
-			<div class="apiborder">
-				<h3><b>GET file</b></h3>
+			<div class="apiborder" id="get_files_file">
+				<h3><b>GET /get_files/file</b></h3>
+				<p><i>Get a file.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments :</p>
+						<ul>
+							<li>file_id : (numerical file id for the file)</li>
+							<li>hash : (a hexadecimal SHA256 hash for the file)</li>
+						</ul>
+					</li>
+					<p>Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
+					<li>
+						<p>Example requests:</p>
+						<ul>
+							<li><p>/get_files/file?file_id=452158</p></li>
+							<li><p>/get_files/file?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a</p></li>
+						</ul>
+					</li>
+					<li><p>Response description: The file itself. You should get the correct mime type as the Content-Type header.</p></li>
+				</ul>
 			</div>
-			
-			<div class="apiborder">
-				<h3><b>GET thumbnail</b></h3>
+			<div class="apiborder" id="get_files_thumbnail">
+				<h3><b>GET /get_files/thumbnail</b></h3>
+				<p><i>Get a file's thumbnail.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments :</p>
+						<ul>
+							<li>file_id : (numerical file id for the file)</li>
+							<li>hash : (a hexadecimal SHA256 hash for the file)</li>
+						</ul>
+					</li>
+					<p>Only use one. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
+					<li>
+						<p>Example requests:</p>
+						<ul>
+							<li><p>/get_files/thumbnail?file_id=452158</p></li>
+							<li><p>/get_files/thumbnail?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a</p></li>
+						</ul>
+					</li>
+					<li><p>Response description: The thumbnail for the file. It will give application/octet-stream as the mime type. Some hydrus thumbs are jpegs, some are pngs.</p></li>
+				</ul>
 			</div>
 		</div>
 	</body>

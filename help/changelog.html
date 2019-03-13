@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 343</h3></li>
+				<ul>
+					<li>fixed an int/str type mismatch issue with service_names_to_actions_to_tags in /add_tags/add_tags in the client api that meant that argument was not working</li>
+					<li>fixed up some last /get_files/search_files stuff</li>
+					<li>added /get_files/file_metadata</li>
+					<li>added /get_files/file</li>
+					<li>added /get_files/thumbnail</li>
+					<li>added help and unit tests to reflect the above</li>
+					<li>updated client api version to 4</li>
+					<li>the list of paths in the manual file import dialog is now sortable. this order will be preserved in regular and 'add tags' ok events for this dialog. it has a new '#' column so you can return to 'parse' order if desired</li>
+					<li>animation and static image windows in the media viewer canvas are now recycled through media type transitions, making for slightly smoother browsing between mixed media</li>
+					<li>increased aggression of media viewer image prefetch</li>
+					<li>added support for 'MM' Tiffs</li>
+					<li>fixed webm mime parsing for webms with no audio (these were falling back to mkv)</li>
+					<li>improved the error reports when a serialised png fails to import</li>
+					<li>the mass-open-urls popup is now pausable as well as cancellable</li>
+					<li>fixed several recently broken ui unit tests</li>
+					<li>misc old code cleanup</li>
+					<li>some misc test controller/constant refactoring</li>
+				</ul>
 				<li><h3>version 342</h3></li>
 				<ul>
 					<li>added support for webp import. it does not yet support animated webps, which, if the local platform supports, will import like apngs used to: just the first frame</li>
