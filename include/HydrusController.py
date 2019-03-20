@@ -18,22 +18,13 @@ import traceback
 
 class HydrusController( object ):
     
-    def __init__( self, db_dir, no_daemons, no_wal ):
+    def __init__( self, db_dir ):
         
         HG.controller = self
         
         self._name = 'hydrus'
         
         self.db_dir = db_dir
-        self._no_daemons = no_daemons
-        self._no_wal = no_wal
-        
-        self._no_wal_path = os.path.join( self.db_dir, 'no-wal' )
-        
-        if os.path.exists( self._no_wal_path ):
-            
-            self._no_wal = True
-            
         
         self.db = None
         
@@ -353,14 +344,6 @@ class HydrusController( object ):
     def ClearCaches( self ):
         
         for cache in list(self._caches.values()): cache.Clear()
-        
-    
-    def CreateNoWALFile( self ):
-        
-        with open( self._no_wal_path, 'w', encoding = 'utf-8' ) as f:
-            
-            f.write( 'This file was created because the database failed to set WAL journalling. It will not reattempt WAL as long as this file exists.' )
-            
         
     
     def CurrentlyIdle( self ):

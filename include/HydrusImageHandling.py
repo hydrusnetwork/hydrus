@@ -234,8 +234,14 @@ def GetGIFFrameDurations( path ):
     
     while True:
         
-        try: pil_image.seek( i )
-        except: break
+        try:
+            
+            pil_image.seek( i )
+            
+        except:
+            
+            break
+            
         
         if 'duration' not in pil_image.info:
             
@@ -276,6 +282,21 @@ def GetImageProperties( path, mime ):
         
     
     return ( ( width, height ), duration, num_frames )
+    
+def GetPSDResolution( path ):
+    
+    with open( path, 'rb' ) as f:
+        
+        f.seek( 14 )
+        
+        height_bytes = f.read( 4 )
+        width_bytes = f.read( 4 )
+        
+    
+    height = struct.unpack( '>L', height_bytes )[0]
+    width = struct.unpack( '>L', width_bytes )[0]
+    
+    return ( width, height )
     
 def GetResolutionAndNumFrames( path, mime ):
     
@@ -343,7 +364,8 @@ def GetThumbnailResolution( image_resolution, target_resolution ):
     
 def IsDecompressionBomb( path ):
     
-    PILImage.MAX_IMAGE_PIXELS = OLD_PIL_MAX_IMAGE_PIXELS
+    # I boosted this up x2 as a temp test
+    PILImage.MAX_IMAGE_PIXELS = OLD_PIL_MAX_IMAGE_PIXELS * 2
     
     warnings.simplefilter( 'error', PILImage.DecompressionBombWarning )
     

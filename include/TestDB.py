@@ -477,13 +477,12 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        like_rating_service_key = HydrusData.GenerateKey()
-        numerical_rating_service_key = HydrusData.GenerateKey()
+        from . import TestController
         
         services = self._read( 'services' )
         
-        services.append( ClientServices.GenerateService( like_rating_service_key, HC.LOCAL_RATING_LIKE, 'test like rating service' ) )
-        services.append( ClientServices.GenerateService( numerical_rating_service_key, HC.LOCAL_RATING_NUMERICAL, 'test numerical rating service' ) )
+        services.append( ClientServices.GenerateService( TestController.LOCAL_RATING_LIKE_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'test like rating service' ) )
+        services.append( ClientServices.GenerateService( TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'test numerical rating service' ) )
         
         self._write( 'update_services', services )
         
@@ -493,7 +492,7 @@ class TestClientDB( unittest.TestCase ):
         
         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ like_rating_service_key ] = content_updates
+        service_keys_to_content_updates[ TestController.LOCAL_RATING_LIKE_SERVICE_KEY ] = content_updates
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -503,23 +502,23 @@ class TestClientDB( unittest.TestCase ):
         
         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.6, ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ numerical_rating_service_key ] = content_updates
+        service_keys_to_content_updates[ TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = content_updates
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, like_rating_service_key ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.0, like_rating_service_key ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', like_rating_service_key ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', like_rating_service_key ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.0, TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_LIKE_SERVICE_KEY ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.6, numerical_rating_service_key ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, numerical_rating_service_key ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.6, numerical_rating_service_key ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.4, numerical_rating_service_key ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', numerical_rating_service_key ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', numerical_rating_service_key ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.6, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.4, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ), 0 ) )
         
         run_system_predicate_tests( tests )
         

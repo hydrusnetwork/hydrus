@@ -2263,438 +2263,6 @@ class RenderedImageCache( object ):
         return self._data_cache.HasData( key )
         
     
-class ThumbnailCache( object ):
-    
-    def __init__( self, controller ):
-        
-        self._controller = controller
-        
-        cache_size = self._controller.options[ 'thumbnail_cache_size' ]
-        cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
-        
-        self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
-        
-        self._lock = threading.Lock()
-        
-        self._waterfall_queue_quick = set()
-        self._waterfall_queue_random = []
-        
-        self._waterfall_event = threading.Event()
-        
-        self._special_thumbs = {}
-        
-        self.Clear()
-        
-        self._controller.CallToThreadLongRunning( self.DAEMONWaterfall )
-        
-        self._controller.sub( self, 'Clear', 'thumbnail_resize' )
-        self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
-        
-    
-    def _GetResizedHydrusBitmap( self, display_media ):
-        
-        if not HG.thumbnail_experiment_mode:
-            
-            return self._GetResizedHydrusBitmapFromHardDrive( display_media )
-            
-        else:
-            
-            return self._GetResizedHydrusBitmapFromFullSize( display_media )
-            
-        
-    
-    def _GetResizedHydrusBitmapFromFullSize( self, display_media ):
-        
-        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
-        
-        hash = display_media.GetHash()
-        mime = display_media.GetMime()
-        
-        locations_manager = display_media.GetLocationsManager()
-        
-        try:
-            
-            path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
-            
-        except HydrusExceptions.FileMissingException as e:
-            
-            if locations_manager.IsLocal():
-                
-                HydrusData.ShowException( e )
-                
-            
-            return self._special_thumbs[ 'hydrus' ]
-            
-        
-        try:
-            
-            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
-            
-        except Exception as e:
-            
-            try:
-                
-                # file is malformed, let's force a regen
-                self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
-                
-                try:
-                    
-                    numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was broken. It was regenerated, but the new file would not render for the above reason. Please inform the hydrus developer what has happened.' )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                return self._special_thumbs[ 'hydrus' ]
-                
-            
-        
-        ( fullsize_x, fullsize_y ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
-        
-        ( resized_x, resized_y ) = HydrusImageHandling.GetThumbnailResolution( ( fullsize_x, fullsize_y ), thumbnail_dimensions )
-        
-        already_correct = fullsize_x == resized_x and fullsize_y == resized_y
-        
-        if not already_correct:
-            
-            numpy_image = ClientImageHandling.EfficientlyThumbnailNumpyImage( numpy_image, ( resized_x, resized_y ) )
-            
-        
-        hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
-        
-        return hydrus_bitmap
-        
-    
-    def _GetResizedHydrusBitmapFromHardDrive( self, display_media ):
-        
-        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
-        
-        if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
-            
-            full_size = True
-            
-        else:
-            
-            full_size = False
-            
-        
-        hash = display_media.GetHash()
-        mime = display_media.GetMime()
-        
-        locations_manager = display_media.GetLocationsManager()
-        
-        try:
-            
-            if full_size:
-                
-                path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
-                
-            else:
-                
-                path = self._controller.client_files_manager.GetResizedThumbnailPath( hash, mime )
-                
-            
-        except HydrusExceptions.FileMissingException as e:
-            
-            if locations_manager.IsLocal():
-                
-                HydrusData.ShowException( e )
-                
-            
-            return self._special_thumbs[ 'hydrus' ]
-            
-        
-        try:
-            
-            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
-            
-        except Exception as e:
-            
-            try:
-                
-                # file is malformed, let's force a regen
-                self._controller.client_files_manager.RegenerateFullSizeThumbnail( hash, mime )
-                
-                try:
-                    
-                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was broken. It was regenerated, but the new file would not render for the above reason. Please inform the hydrus developer what has happened.' )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                return self._special_thumbs[ 'hydrus' ]
-                
-            
-        
-        ( media_x, media_y ) = display_media.GetResolution()
-        ( actual_x, actual_y ) = hydrus_bitmap.GetSize()
-        ( desired_x, desired_y ) = self._controller.options[ 'thumbnail_dimensions' ]
-        
-        too_large = actual_x > desired_x or actual_y > desired_y
-        
-        small_original_image = actual_x == media_x and actual_y == media_y
-        
-        too_small = actual_x < desired_x and actual_y < desired_y
-        
-        if too_large or ( too_small and not small_original_image ):
-            
-            self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
-            
-            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
-            
-        
-        return hydrus_bitmap
-        
-    
-    def _RecalcWaterfallQueueRandom( self ):
-        
-        # here we sort by the hash since this is both breddy random and more likely to access faster on a well defragged hard drive!
-        
-        def sort_by_hash_key( item ):
-            
-            ( page_key, media ) = item
-            
-            return media.GetDisplayMedia().GetHash()
-            
-        
-        self._waterfall_queue_random = list( self._waterfall_queue_quick )
-        
-        self._waterfall_queue_random.sort( key = sort_by_hash_key )
-        
-    
-    def CancelWaterfall( self, page_key, medias ):
-        
-        with self._lock:
-            
-            self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
-            
-            self._RecalcWaterfallQueueRandom()
-            
-        
-    
-    def Clear( self ):
-        
-        with self._lock:
-            
-            self._data_cache.Clear()
-            
-            self._special_thumbs = {}
-            
-            names = [ 'hydrus', 'pdf', 'audio', 'video', 'zip' ]
-            
-            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
-            
-            try:
-                
-                for name in names:
-                    
-                    path = os.path.join( HC.STATIC_DIR, name + '.png' )
-                    
-                    thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
-                    
-                    thumbnail_bytes = HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath( path, thumbnail_dimensions, HC.IMAGE_PNG )
-                    
-                    with open( temp_path, 'wb' ) as f:
-                        
-                        f.write( thumbnail_bytes )
-                        
-                    
-                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path, HC.IMAGE_PNG )
-                    
-                    self._special_thumbs[ name ] = hydrus_bitmap
-                    
-                
-            finally:
-                
-                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-                
-            
-        
-    
-    def ClearThumbnails( self, hashes ):
-        
-        with self._lock:
-            
-            for hash in hashes:
-                
-                self._data_cache.DeleteData( hash )
-                
-            
-        
-    
-    def DoingWork( self ):
-        
-        with self._lock:
-            
-            return len( self._waterfall_queue_random ) > 0
-            
-        
-    
-    def GetThumbnail( self, media ):
-        
-        try:
-            
-            display_media = media.GetDisplayMedia()
-            
-        except:
-            
-            # sometimes media can get switched around during a collect event, and if this happens during waterfall, we have a problem here
-            # just return for now, we'll see how it goes
-            
-            return self._special_thumbs[ 'hydrus' ]
-            
-        
-        locations_manager = display_media.GetLocationsManager()
-        
-        if locations_manager.ShouldIdeallyHaveThumbnail():
-            
-            mime = display_media.GetMime()
-            
-            if mime in HC.MIMES_WITH_THUMBNAILS:
-                
-                hash = display_media.GetHash()
-                
-                result = self._data_cache.GetIfHasData( hash )
-                
-                if result is None:
-                    
-                    try:
-                        
-                        hydrus_bitmap = self._GetResizedHydrusBitmap( display_media )
-                        
-                    except:
-                        
-                        hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
-                        
-                    
-                    self._data_cache.AddData( hash, hydrus_bitmap )
-                    
-                else:
-                    
-                    hydrus_bitmap = result
-                    
-                
-                return hydrus_bitmap
-                
-            elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
-            elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
-            elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
-            elif mime in HC.ARCHIVES: return self._special_thumbs[ 'zip' ]
-            else: return self._special_thumbs[ 'hydrus' ]
-            
-        else:
-            
-            return self._special_thumbs[ 'hydrus' ]
-            
-        
-    
-    def HasThumbnailCached( self, media ):
-        
-        display_media = media.GetDisplayMedia()
-        
-        mime = display_media.GetMime()
-        
-        if mime in HC.MIMES_WITH_THUMBNAILS:
-            
-            hash = display_media.GetHash()
-            
-            return self._data_cache.HasData( hash )
-            
-        else:
-            
-            return True
-            
-        
-    
-    def Waterfall( self, page_key, medias ):
-        
-        with self._lock:
-            
-            self._waterfall_queue_quick.update( ( ( page_key, media ) for media in medias ) )
-            
-            self._RecalcWaterfallQueueRandom()
-            
-        
-        self._waterfall_event.set()
-        
-    
-    def DAEMONWaterfall( self ):
-        
-        last_paused = HydrusData.GetNowPrecise()
-        
-        while not HydrusThreading.IsThreadShuttingDown():
-            
-            with self._lock:
-                
-                do_wait = len( self._waterfall_queue_random ) == 0
-                
-            
-            if do_wait:
-                
-                self._waterfall_event.wait( 1 )
-                
-                self._waterfall_event.clear()
-                
-                last_paused = HydrusData.GetNowPrecise()
-                
-            
-            start_time = HydrusData.GetNowPrecise()
-            stop_time = start_time + 0.005 # a bit of a typical frame
-            
-            page_keys_to_rendered_medias = collections.defaultdict( list )
-            
-            while not HydrusData.TimeHasPassedPrecise( stop_time ):
-                
-                with self._lock:
-                    
-                    if len( self._waterfall_queue_random ) == 0:
-                        
-                        break
-                        
-                    
-                    result = self._waterfall_queue_random.pop()
-                    
-                    self._waterfall_queue_quick.discard( result )
-                    
-                
-                ( page_key, media ) = result
-                
-                try:
-                    
-                    self.GetThumbnail( media ) # to load it
-                    
-                    page_keys_to_rendered_medias[ page_key ].append( media )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                
-            
-            for ( page_key, rendered_medias ) in list(page_keys_to_rendered_medias.items()):
-                
-                self._controller.pub( 'waterfall_thumbnails', page_key, rendered_medias )
-                
-            
-            time.sleep( 0.00001 )
-            
-        
-    
 class ServicesManager( object ):
     
     def __init__( self, controller ):
@@ -3537,6 +3105,466 @@ class TagSiblingsManager( object ):
                 
                 self._controller.pub( 'notify_new_siblings_gui' )
                 
+            
+        
+    
+class ThumbnailCache( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        cache_size = self._controller.options[ 'thumbnail_cache_size' ]
+        cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
+        
+        self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
+        
+        self._lock = threading.Lock()
+        
+        self._thumbnail_error_occurred = False
+        
+        self._waterfall_queue_quick = set()
+        self._waterfall_queue_random = []
+        
+        self._waterfall_event = threading.Event()
+        
+        self._special_thumbs = {}
+        
+        self.Clear()
+        
+        self._controller.CallToThreadLongRunning( self.DAEMONWaterfall )
+        
+        self._controller.sub( self, 'Clear', 'thumbnail_resize' )
+        self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
+        
+    
+    def _GetResizedHydrusBitmap( self, display_media ):
+        
+        if not HG.thumbnail_experiment_mode:
+            
+            return self._GetResizedHydrusBitmapFromHardDrive( display_media )
+            
+        else:
+            
+            return self._GetResizedHydrusBitmapFromFullSize( display_media )
+            
+        
+    
+    def _GetResizedHydrusBitmapFromFullSize( self, display_media ):
+        
+        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+        
+        hash = display_media.GetHash()
+        mime = display_media.GetMime()
+        
+        locations_manager = display_media.GetLocationsManager()
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException as e:
+            
+            if locations_manager.IsLocal():
+                
+                summary = 'Unable to get full-size thumbnail for file {}.'.format( hash.hex() )
+                
+                self._HandleThumbnailException( e, summary )
+                
+            
+            return self._special_thumbs[ 'hydrus' ]
+            
+        
+        try:
+            
+            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+            
+        except Exception as e:
+            
+            try:
+                
+                # file is malformed, let's force a regen
+                self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
+                
+            except Exception as e:
+                
+                summary = 'The thumbnail for file ' + hash.hex() + ' was not loadable. An attempt to regenerate it failed.'
+                
+                self._HandleThumbnailException( e, summary )
+                
+                return self._special_thumbs[ 'hydrus' ]
+                
+            
+            try:
+                
+                numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+                
+            except Exception as e:
+                
+                summary = 'The thumbnail for file ' + hash.hex() + ' was not loadable. It was regenerated, but that file would not render either. Your image libraries or hard drive connection are unreliable. Please inform the hydrus developer what has happened.'
+                
+                self._HandleThumbnailException( e, summary )
+                
+                return self._special_thumbs[ 'hydrus' ]
+                
+            
+        
+        ( fullsize_x, fullsize_y ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
+        
+        ( resized_x, resized_y ) = HydrusImageHandling.GetThumbnailResolution( ( fullsize_x, fullsize_y ), thumbnail_dimensions )
+        
+        already_correct = fullsize_x == resized_x and fullsize_y == resized_y
+        
+        if not already_correct:
+            
+            numpy_image = ClientImageHandling.EfficientlyThumbnailNumpyImage( numpy_image, ( resized_x, resized_y ) )
+            
+        
+        hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+        
+        return hydrus_bitmap
+        
+    
+    def _GetResizedHydrusBitmapFromHardDrive( self, display_media ):
+        
+        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+        
+        if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
+            
+            full_size = True
+            
+        else:
+            
+            full_size = False
+            
+        
+        hash = display_media.GetHash()
+        mime = display_media.GetMime()
+        
+        locations_manager = display_media.GetLocationsManager()
+        
+        try:
+            
+            if full_size:
+                
+                path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
+                
+            else:
+                
+                path = self._controller.client_files_manager.GetResizedThumbnailPath( hash, mime )
+                
+            
+        except HydrusExceptions.FileMissingException as e:
+            
+            if locations_manager.IsLocal():
+                
+                summary = 'Unable to get full-size thumbnail for file {}.'.format( hash.hex() )
+                
+                self._HandleThumbnailException( e, summary )
+                
+            
+            return self._special_thumbs[ 'hydrus' ]
+            
+        
+        try:
+            
+            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
+            
+        except Exception as e:
+            
+            try:
+                
+                # file is malformed, let's force a regen
+                self._controller.client_files_manager.RegenerateFullSizeThumbnail( hash, mime )
+                
+            except Exception as e:
+                
+                summary = 'The thumbnail for file ' + hash.hex() + ' was not loadable. An attempt to regenerate it failed.'
+                
+                self._HandleThumbnailException( e, summary )
+                
+                return self._special_thumbs[ 'hydrus' ]
+                
+            
+            try:
+                
+                hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
+                
+            except Exception as e:
+                
+                summary = 'The thumbnail for file ' + hash.hex() + ' was not loadable. It was regenerated, but that file would not render either. Your image libraries or hard drive connection are unreliable. Please inform the hydrus developer what has happened.'
+                
+                self._HandleThumbnailException( e, summary )
+                
+                return self._special_thumbs[ 'hydrus' ]
+                
+            
+        
+        ( media_x, media_y ) = display_media.GetResolution()
+        ( actual_x, actual_y ) = hydrus_bitmap.GetSize()
+        ( desired_x, desired_y ) = self._controller.options[ 'thumbnail_dimensions' ]
+        
+        too_large = actual_x > desired_x or actual_y > desired_y
+        
+        small_original_image = actual_x == media_x and actual_y == media_y
+        
+        too_small = actual_x < desired_x and actual_y < desired_y
+        
+        if too_large or ( too_small and not small_original_image ):
+            
+            self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
+            
+            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
+            
+        
+        return hydrus_bitmap
+        
+    
+    def _HandleThumbnailException( self, e, summary ):
+        
+        if self._thumbnail_error_occurred:
+            
+            HydrusData.Print( summary )
+            
+        else:
+            
+            self._thumbnail_error_occurred = True
+            
+            message = 'A thumbnail error has occurred. The problem thumbnail will appear with the default \'hydrus\' symbol. You may need to take hard drive recovery actions, and if the error is not obviously fixable, you can contact hydrus dev for additional help. Specific information for this first error follows. Subsequent thumbnail errors in this session will be silently printed to the log.'
+            message += os.linesep * 2
+            message += str( e )
+            message += os.linesep * 2
+            message += summary
+            
+            HydrusData.ShowText( message )
+            
+        
+    
+    def _RecalcWaterfallQueueRandom( self ):
+        
+        # here we sort by the hash since this is both breddy random and more likely to access faster on a well defragged hard drive!
+        
+        def sort_by_hash_key( item ):
+            
+            ( page_key, media ) = item
+            
+            return media.GetDisplayMedia().GetHash()
+            
+        
+        self._waterfall_queue_random = list( self._waterfall_queue_quick )
+        
+        self._waterfall_queue_random.sort( key = sort_by_hash_key )
+        
+    
+    def CancelWaterfall( self, page_key, medias ):
+        
+        with self._lock:
+            
+            self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
+            
+            self._RecalcWaterfallQueueRandom()
+            
+        
+    
+    def Clear( self ):
+        
+        with self._lock:
+            
+            self._data_cache.Clear()
+            
+            self._special_thumbs = {}
+            
+            names = [ 'hydrus', 'pdf', 'psd', 'audio', 'video', 'zip' ]
+            
+            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+            
+            try:
+                
+                for name in names:
+                    
+                    path = os.path.join( HC.STATIC_DIR, name + '.png' )
+                    
+                    thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+                    
+                    thumbnail_bytes = HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath( path, thumbnail_dimensions, HC.IMAGE_PNG )
+                    
+                    with open( temp_path, 'wb' ) as f:
+                        
+                        f.write( thumbnail_bytes )
+                        
+                    
+                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path, HC.IMAGE_PNG )
+                    
+                    self._special_thumbs[ name ] = hydrus_bitmap
+                    
+                
+            finally:
+                
+                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                
+            
+        
+    
+    def ClearThumbnails( self, hashes ):
+        
+        with self._lock:
+            
+            for hash in hashes:
+                
+                self._data_cache.DeleteData( hash )
+                
+            
+        
+    
+    def DoingWork( self ):
+        
+        with self._lock:
+            
+            return len( self._waterfall_queue_random ) > 0
+            
+        
+    
+    def GetThumbnail( self, media ):
+        
+        try:
+            
+            display_media = media.GetDisplayMedia()
+            
+        except:
+            
+            # sometimes media can get switched around during a collect event, and if this happens during waterfall, we have a problem here
+            # just return for now, we'll see how it goes
+            
+            return self._special_thumbs[ 'hydrus' ]
+            
+        
+        locations_manager = display_media.GetLocationsManager()
+        
+        if locations_manager.ShouldIdeallyHaveThumbnail():
+            
+            mime = display_media.GetMime()
+            
+            if mime in HC.MIMES_WITH_THUMBNAILS:
+                
+                hash = display_media.GetHash()
+                
+                result = self._data_cache.GetIfHasData( hash )
+                
+                if result is None:
+                    
+                    try:
+                        
+                        hydrus_bitmap = self._GetResizedHydrusBitmap( display_media )
+                        
+                    except:
+                        
+                        hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
+                        
+                    
+                    self._data_cache.AddData( hash, hydrus_bitmap )
+                    
+                else:
+                    
+                    hydrus_bitmap = result
+                    
+                
+                return hydrus_bitmap
+                
+            elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
+            elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
+            elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
+            elif mime == HC.APPLICATION_PSD: return self._special_thumbs[ 'psd' ]
+            elif mime in HC.ARCHIVES: return self._special_thumbs[ 'zip' ]
+            else: return self._special_thumbs[ 'hydrus' ]
+            
+        else:
+            
+            return self._special_thumbs[ 'hydrus' ]
+            
+        
+    
+    def HasThumbnailCached( self, media ):
+        
+        display_media = media.GetDisplayMedia()
+        
+        mime = display_media.GetMime()
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            hash = display_media.GetHash()
+            
+            return self._data_cache.HasData( hash )
+            
+        else:
+            
+            return True
+            
+        
+    
+    def Waterfall( self, page_key, medias ):
+        
+        with self._lock:
+            
+            self._waterfall_queue_quick.update( ( ( page_key, media ) for media in medias ) )
+            
+            self._RecalcWaterfallQueueRandom()
+            
+        
+        self._waterfall_event.set()
+        
+    
+    def DAEMONWaterfall( self ):
+        
+        last_paused = HydrusData.GetNowPrecise()
+        
+        while not HydrusThreading.IsThreadShuttingDown():
+            
+            with self._lock:
+                
+                do_wait = len( self._waterfall_queue_random ) == 0
+                
+            
+            if do_wait:
+                
+                self._waterfall_event.wait( 1 )
+                
+                self._waterfall_event.clear()
+                
+                last_paused = HydrusData.GetNowPrecise()
+                
+            
+            start_time = HydrusData.GetNowPrecise()
+            stop_time = start_time + 0.005 # a bit of a typical frame
+            
+            page_keys_to_rendered_medias = collections.defaultdict( list )
+            
+            while not HydrusData.TimeHasPassedPrecise( stop_time ):
+                
+                with self._lock:
+                    
+                    if len( self._waterfall_queue_random ) == 0:
+                        
+                        break
+                        
+                    
+                    result = self._waterfall_queue_random.pop()
+                    
+                    self._waterfall_queue_quick.discard( result )
+                    
+                
+                ( page_key, media ) = result
+                
+                self.GetThumbnail( media )
+                
+                page_keys_to_rendered_medias[ page_key ].append( media )
+                
+            
+            for ( page_key, rendered_medias ) in page_keys_to_rendered_medias.items():
+                
+                self._controller.pub( 'waterfall_thumbnails', page_key, rendered_medias )
+                
+            
+            time.sleep( 0.00001 )
             
         
     

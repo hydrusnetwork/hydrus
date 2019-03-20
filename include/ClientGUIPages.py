@@ -1905,100 +1905,64 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def GetOrMakeMultipleWatcherPage( self, desired_page_name = None ):
+    def GetOrMakeMultipleWatcherPage( self, desired_page_name = None, select_page = True ):
         
-        current_media_page = self.GetCurrentMediaPage()
-        
-        if current_media_page is not None and current_media_page.IsMultipleWatcherPage():
-            
-            has_wrong_name = desired_page_name is not None and current_media_page.GetName() != desired_page_name
-            
-            if not has_wrong_name:
-                
-                return current_media_page
-                
-            
-        
-        # first do a search for the page name, if asked for
+        potential_watcher_pages = [ page for page in self._GetMediaPages( False ) if page.IsMultipleWatcherPage() ]
         
         if desired_page_name is not None:
             
-            page = self._GetPageFromName( desired_page_name )
-            
-            if page is not None and page.IsMultipleWatcherPage():
-                
-                return page
-                
+            potential_watcher_pages = [ page for page in potential_watcher_pages if page.GetName() == desired_page_name ]
             
         
-        # failing that, find/generate one with default name
-        
-        for page in self._GetPages():
+        if len( potential_watcher_pages ) > 0:
             
-            if isinstance( page, PagesNotebook ):
+            # ok, we can use an existing one. should we use the current?
+            
+            current_media_page = self.GetCurrentMediaPage()
+            
+            if current_media_page is not None and current_media_page in potential_watcher_pages:
                 
-                if page.HasMultipleWatcherPage():
-                    
-                    return page.GetOrMakeMultipleWatcherPage( desired_page_name = desired_page_name )
-                    
+                return current_media_page
                 
-            elif page.IsMultipleWatcherPage():
+            else:
                 
-                return page
+                return potential_watcher_pages[0]
                 
             
-        
-        # import page does not exist
-        
-        return self.NewPageImportMultipleWatcher( page_name = desired_page_name, on_deepest_notebook = True )
+        else:
+            
+            return self.NewPageImportMultipleWatcher( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page )
+            
         
     
-    def GetOrMakeURLImportPage( self, desired_page_name = None ):
+    def GetOrMakeURLImportPage( self, desired_page_name = None, select_page =  True ):
         
-        current_media_page = self.GetCurrentMediaPage()
-        
-        if current_media_page is not None and current_media_page.IsURLImportPage():
-            
-            has_wrong_name = desired_page_name is not None and current_media_page.GetName() != desired_page_name
-            
-            if not has_wrong_name:
-                
-                return current_media_page
-                
-            
-        
-        # first do a search for the page name, if asked for
+        potential_url_import_pages = [ page for page in self._GetMediaPages( False ) if page.IsURLImportPage() ]
         
         if desired_page_name is not None:
             
-            page = self._GetPageFromName( desired_page_name )
-            
-            if page is not None and page.IsURLImportPage():
-                
-                return page
-                
+            potential_url_import_pages = [ page for page in potential_url_import_pages if page.GetName() == desired_page_name ]
             
         
-        # failing that, find/generate one with default name
-        
-        for page in self._GetPages():
+        if len( potential_url_import_pages ) > 0:
             
-            if isinstance( page, PagesNotebook ):
+            # ok, we can use an existing one. should we use the current?
+            
+            current_media_page = self.GetCurrentMediaPage()
+            
+            if current_media_page is not None and current_media_page in potential_url_import_pages:
                 
-                if page.HasURLImportPage():
-                    
-                    return page.GetOrMakeURLImportPage( desired_page_name = desired_page_name )
-                    
+                return current_media_page
                 
-            elif page.IsURLImportPage():
+            else:
                 
-                return page
+                return potential_url_import_pages[0]
                 
             
-        
-        # import page does not exist
-        
-        return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True )
+        else:
+            
+            return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page )
+            
         
     
     def GetPageKey( self ):
@@ -2418,18 +2382,18 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportMultipleWatcher( self, page_name = None, url = None, on_deepest_notebook = False ):
+    def NewPageImportMultipleWatcher( self, page_name = None, url = None, on_deepest_notebook = False, select_page = True ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( page_name = page_name, url = url )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
-    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False ):
+    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportURLs( page_name = page_name )
         
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
     def NewPagePetitions( self, service_key, on_deepest_notebook = False ):

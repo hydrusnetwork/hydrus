@@ -599,6 +599,18 @@ class RasterContainerVideo( RasterContainer ):
         return self._target_resolution
         
     
+    def GetTimestampMS( self, frame_index ):
+        
+        if self._media.GetMime() == HC.IMAGE_GIF:
+            
+            return sum( self._durations[ : frame_index ] )
+            
+        else:
+            
+            return self._average_frame_duration * frame_index
+            
+        
+    
     def GetTotalDuration( self ):
         
         if self._media.GetMime() == HC.IMAGE_GIF:
@@ -616,6 +628,14 @@ class RasterContainerVideo( RasterContainer ):
         with self._lock:
             
             return self._HasFrame( index )
+            
+        
+    
+    def CanHaveVariableFramerate( self ):
+        
+        with self._lock:
+            
+            return self._media.GetMime() == HC.IMAGE_GIF
             
         
     

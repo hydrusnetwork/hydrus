@@ -113,7 +113,14 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
     
-    proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+    try:
+        
+        proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        
+    except FileNotFoundError as e:
+        
+        raise FileNotFoundError( 'FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
+        
     
     data_bytes = proc.stderr.read()
     

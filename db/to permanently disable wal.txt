@@ -1,3 +1,0 @@
-If you do not want to use WAL journalling, you can either use the switch '--no_wal' on either the client or server, or you can just put a file in this directory called 'no-wal'. SQLite will try to use TRUNCATE instead.
-
-This can happen automatically if WAL fails on db creation.

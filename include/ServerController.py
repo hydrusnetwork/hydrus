@@ -149,9 +149,9 @@ def ShutdownSiblingInstance( db_dir ):
     
 class Controller( HydrusController.HydrusController ):
     
-    def __init__( self, db_dir, no_daemons, no_wal ):
+    def __init__( self, db_dir ):
         
-        HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
+        HydrusController.HydrusController.__init__( self, db_dir )
         
         self._name = 'server'
         
@@ -167,7 +167,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ServerDB.DB( self, self.db_dir, 'server', no_wal = self._no_wal )
+        return ServerDB.DB( self, self.db_dir, 'server' )
         
     
     def StartService( self, service ):

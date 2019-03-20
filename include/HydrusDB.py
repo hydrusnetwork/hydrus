@@ -132,7 +132,7 @@ class HydrusDB( object ):
     
     TRANSACTION_COMMIT_TIME = 10
     
-    def __init__( self, controller, db_dir, db_name, no_wal = False ):
+    def __init__( self, controller, db_dir, db_name ):
         
         if HydrusPaths.GetFreeSpace( db_dir ) < 500 * 1048576:
             
@@ -142,7 +142,6 @@ class HydrusDB( object ):
         self._controller = controller
         self._db_dir = db_dir
         self._db_name = db_name
-        self._no_wal = no_wal
         
         self._transaction_started = 0
         self._in_transaction = False
@@ -473,7 +472,7 @@ class HydrusDB( object ):
             
             self._c.execute( 'PRAGMA ' + db_name + '.cache_size = -10000;' )
             
-            if self._no_wal:
+            if HG.no_wal:
                 
                 self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = TRUNCATE;' )
                 
@@ -494,38 +493,15 @@ class HydrusDB( object ):
                     
                     self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
                     
-                except sqlite3.OperationalError:
+                except sqlite3.OperationalError as e:
                     
-                    HydrusData.DebugPrint( traceback.format_exc() )
+                    message = 'The database failed to read some data. You may need to run the program in no-wal mode using the --no_wal command parameter. Full error information:'
+                    message += os.linesep * 2
+                    message += str( e )
                     
-                    def create_no_wal_file():
-                        
-                        HG.controller.CreateNoWALFile()
-                        
-                        self._no_wal = True
-                        
+                    HydrusData.DebugPrint( message )
                     
-                    if db_just_created:
-                        
-                        del self._c
-                        del self._db
-                        
-                        os.remove( db_path )
-                        
-                        create_no_wal_file()
-                        
-                        self._InitDBCursor()
-                        
-                    else:
-                        
-                        self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = TRUNCATE;' )
-                        
-                        self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
-                        
-                        self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
-                        
-                        create_no_wal_file()
-                        
+                    raise HydrusExceptions.DBAccessException( message )
                     
                 
             

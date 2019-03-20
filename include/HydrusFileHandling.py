@@ -31,6 +31,8 @@ header_and_mime = [
     ( 0, b'ZWS', HC.APPLICATION_FLASH ),
     ( 0, b'FLV', HC.VIDEO_FLV ),
     ( 0, b'%PDF', HC.APPLICATION_PDF ),
+    ( 0, b'8BPS\x00\x01', HC.APPLICATION_PSD ),
+    ( 0, b'8BPS\x00\x02', HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
     ( 0, b'PK\x03\x04', HC.APPLICATION_ZIP ),
     ( 0, b'PK\x05\x06', HC.APPLICATION_ZIP ),
     ( 0, b'PK\x07\x08', HC.APPLICATION_ZIP ),
@@ -237,6 +239,10 @@ def GetFileInfo( path, mime = None ):
     elif mime == HC.APPLICATION_PDF:
         
         num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
+        
+    elif mime == HC.APPLICATION_PSD:
+        
+        ( width, height ) = HydrusImageHandling.GetPSDResolution( path )
         
     elif mime in HC.AUDIO:
         

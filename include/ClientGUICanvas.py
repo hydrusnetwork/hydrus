@@ -268,6 +268,7 @@ class Animation( wx.Window ):
         
         self._current_frame_index = 0
         self._current_frame_drawn = False
+        self._current_timestamp_ms = None
         self._next_frame_due_at = HydrusData.GetNowPrecise()
         self._slow_frame_score = 1.0
         
@@ -525,8 +526,13 @@ class Animation( wx.Window ):
             
             buffer_indices = self._video_container.GetBufferIndices()
             
+            if self._current_timestamp_ms is None and self._video_container.IsInitialised():
+                
+                self._current_timestamp_ms = self._video_container.GetTimestampMS( self._current_frame_index )
+                
+            
         
-        return ( self._current_frame_index, self._paused, buffer_indices )
+        return ( self._current_frame_index, self._current_timestamp_ms, self._paused, buffer_indices )
         
     
     def GotoFrame( self, frame_index ):
@@ -536,6 +542,9 @@ class Animation( wx.Window ):
             if frame_index != self._current_frame_index:
                 
                 self._current_frame_index = frame_index
+                self._current_timestamp_ms = None
+                
+                self._next_frame_due_at = HydrusData.GetNowPrecise()
                 
                 self._video_container.GetReadyForFrame( self._current_frame_index )
                 
@@ -592,6 +601,7 @@ class Animation( wx.Window ):
         
         self._current_frame_index = int( ( self._num_frames - 1 ) * HC.options[ 'animation_start_position' ] )
         self._current_frame_drawn = False
+        self._current_timestamp_ms = None
         self._next_frame_due_at = HydrusData.GetNowPrecise()
         self._slow_frame_score = 1.0
         
@@ -639,7 +649,17 @@ class Animation( wx.Window ):
                         
                         if self._current_frame_index == 0:
                             
+                            self._current_timestamp_ms = 0
                             self._has_played_once_through = True
+                            
+                        else:
+                            
+                            if self._current_timestamp_ms is not None and self._video_container is not None and self._video_container.IsInitialised():
+                                
+                                duration_ms = self._video_container.GetDuration( self._current_frame_index - 1 )
+                                
+                                self._current_timestamp_ms += duration_ms
+                                
                             
                         
                         self._current_frame_drawn = False
@@ -681,6 +701,7 @@ class AnimationBar( wx.Window ):
         self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
         
         self._media_window = None
+        self._duration_ms = 1000
         self._num_frames = 1
         self._last_drawn_info = None
         
@@ -699,10 +720,11 @@ class AnimationBar( wx.Window ):
         if FLASHWIN_OK and isinstance( self._media_window, wx.lib.flashwin.FlashWindow ):
             
             current_frame = self._media_window.CurrentFrame()
+            current_timestamp_ms = None
             paused = False
             buffer_indices = None
             
-            return ( current_frame, paused, buffer_indices )
+            return ( current_frame, current_timestamp_ms, paused, buffer_indices )
             
         else:
             
@@ -726,7 +748,7 @@ class AnimationBar( wx.Window ):
         
         self._last_drawn_info = self._GetAnimationBarStatus()
         
-        ( current_frame_index, paused, buffer_indices )  = self._last_drawn_info
+        ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._last_drawn_info
         
         ( my_width, my_height ) = self._canvas_bmp.GetSize()
         
@@ -806,6 +828,11 @@ class AnimationBar( wx.Window ):
         dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
         
         s = HydrusData.ConvertValueRangeToPrettyString( current_frame_index + 1, self._num_frames )
+        
+        if current_timestamp_ms is not None:
+            
+            s += ' - {}'.format( HydrusData.ConvertValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
+            
         
         ( x, y ) = dc.GetTextExtent( s )
         
@@ -938,6 +965,7 @@ class AnimationBar( wx.Window ):
     def SetMediaAndWindow( self, media, media_window ):
         
         self._media_window = media_window
+        self._duration_ms = max( media.GetDuration(), 1 )
         self._num_frames = max( media.GetNumFrames(), 1 )
         self._last_drawn_info = None
         
@@ -1738,6 +1766,14 @@ class Canvas( wx.Window ):
             
         
     
+    def _OpenKnownURL( self ):
+        
+        if self._current_media is not None:
+            
+            ClientGUIMedia.DoOpenKnownURLFromShortcut( self, self._current_media )
+            
+        
+    
     def _PauseCurrentMedia( self ):
         
         if self._current_media is None:
@@ -2238,6 +2274,10 @@ class Canvas( wx.Window ):
             elif action == 'manage_file_notes':
                 
                 self._ManageNotes()
+                
+            elif action == 'open_known_url':
+                
+                self._OpenKnownURL()
                 
             elif action == 'archive_file':
                 

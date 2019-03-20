@@ -184,11 +184,11 @@ class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'service_info', 'system_predicates', 'missing_thumbnail_hashes' ]
     
-    def __init__( self, controller, db_dir, db_name, no_wal = False ):
+    def __init__( self, controller, db_dir, db_name ):
         
         self._initial_messages = []
         
-        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name, no_wal = no_wal )
+        HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
         self._controller.pub( 'splash_set_title_text', 'booting db\u2026' )
         
@@ -4699,9 +4699,9 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids = update_qhi( query_hash_ids, similar_hash_ids )
             
         
-        for ( operator, value, service_key ) in system_predicates.GetRatingsPredicates():
+        for ( operator, value, rating_service_key ) in system_predicates.GetRatingsPredicates():
             
-            service_id = self._GetServiceId( service_key )
+            service_id = self._GetServiceId( rating_service_key )
             
             if value == 'not rated':
                 
@@ -4716,28 +4716,46 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
+                service = HG.client_controller.services_manager.GetService( rating_service_key )
+                
+                if service.GetServiceType() == HC.LOCAL_RATING_LIKE:
+                    
+                    half_a_star_value = 0.5
+                    
+                else:
+                    
+                    num_stars = service.GetNumStars()
+                    
+                    if service.AllowZero():
+                        
+                        num_stars += 1
+                        
+                    
+                    half_a_star_value = 1.0 / ( ( num_stars - 1 ) * 2 )
+                    
+                
                 if isinstance( value, str ):
                     
                     value = float( value )
                     
                 
-                # floats are a pain!
+                # floats are a pain! as is storing rating as 0.0-1.0 and then allowing number of stars to change!
                 
                 if operator == '\u2248':
                     
-                    predicate = str( value * 0.8 ) + ' < rating AND rating < ' + str( value * 1.2 )
+                    predicate = str( ( value - half_a_star_value ) * 0.8 ) + ' < rating AND rating < ' + str( ( value + half_a_star_value ) * 1.2 )
                     
                 elif operator == '<':
                     
-                    predicate = 'rating < ' + str( value * 0.995 )
+                    predicate = 'rating <= ' + str( value - half_a_star_value )
                     
                 elif operator == '>':
                     
-                    predicate = 'rating > ' + str( value * 1.005 )
+                    predicate = 'rating > ' + str( value + half_a_star_value )
                     
                 elif operator == '=':
                     
-                    predicate = str( value * 0.995 ) + ' <= rating AND rating <= ' + str( value * 1.005 )
+                    predicate = str( value - half_a_star_value ) + ' < rating AND rating <= ' + str( value + half_a_star_value )
                     
                 
                 rating_hash_ids = self._STI( self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) )

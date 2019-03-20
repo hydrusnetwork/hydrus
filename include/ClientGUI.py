@@ -70,6 +70,166 @@ ID_TIMER_ANIMATION_UPDATE = wx.NewId()
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
 
+def THREADUploadPending( service_key ):
+    
+    service = HG.client_controller.services_manager.GetService( service_key )
+    
+    service_name = service.GetName()
+    service_type = service.GetServiceType()
+    
+    nums_pending = HG.client_controller.Read( 'nums_pending' )
+    
+    info = nums_pending[ service_key ]
+    
+    initial_num_pending = sum( info.values() )
+    
+    result = HG.client_controller.Read( 'pending', service_key )
+    
+    try:
+        
+        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'uploading pending to ' + service_name )
+        
+        HG.client_controller.pub( 'message', job_key )
+        
+        while result is not None:
+            
+            nums_pending = HG.client_controller.Read( 'nums_pending' )
+            
+            info = nums_pending[ service_key ]
+            
+            remaining_num_pending = sum( info.values() )
+            done_num_pending = initial_num_pending - remaining_num_pending
+            
+            job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( done_num_pending, initial_num_pending ) )
+            job_key.SetVariable( 'popup_gauge_1', ( done_num_pending, initial_num_pending ) )
+            
+            while job_key.IsPaused() or job_key.IsCancelled():
+                
+                time.sleep( 0.1 )
+                
+                if job_key.IsCancelled():
+                    
+                    job_key.DeleteVariable( 'popup_gauge_1' )
+                    job_key.SetVariable( 'popup_text_1', 'cancelled' )
+                    
+                    HydrusData.Print( job_key.ToString() )
+                    
+                    job_key.Delete( 5 )
+                    
+                    return
+                    
+                
+            
+            try:
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    if isinstance( result, ClientMedia.MediaResult ):
+                        
+                        media_result = result
+                        
+                        client_files_manager = HG.client_controller.client_files_manager
+                        
+                        hash = media_result.GetHash()
+                        mime = media_result.GetMime()
+                        
+                        path = client_files_manager.GetFilePath( hash, mime )
+                        
+                        with open( path, 'rb' ) as f:
+                            
+                            file_bytes = f.read()
+                            
+                        
+                        service.Request( HC.POST, 'file', { 'file' : file_bytes } )
+                        
+                        file_info_manager = media_result.GetFileInfoManager()
+                        
+                        timestamp = HydrusData.GetNow()
+                        
+                        content_update_row = ( file_info_manager, timestamp )
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        
+                    else:
+                        
+                        client_to_server_update = result
+                        
+                        service.Request( HC.POST, 'update', { 'client_to_server_update' : client_to_server_update } )
+                        
+                        content_updates = client_to_server_update.GetClientsideContentUpdates()
+                        
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                    
+                elif service_type == HC.IPFS:
+                    
+                    if isinstance( result, ClientMedia.MediaResult ):
+                        
+                        media_result = result
+                        
+                        hash = media_result.GetHash()
+                        mime = media_result.GetMime()
+                        
+                        service.PinFile( hash, mime )
+                        
+                    else:
+                        
+                        ( hash, multihash ) = result
+                        
+                        service.UnpinFile( hash, multihash )
+                        
+                    
+                
+            except HydrusExceptions.ServerBusyException:
+                
+                job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
+                
+                job_key.Cancel()
+                
+                return
+                
+            
+            HG.client_controller.pub( 'notify_new_pending' )
+            
+            time.sleep( 0.1 )
+            
+            HG.client_controller.WaitUntilViewFree()
+            
+            result = HG.client_controller.Read( 'pending', service_key )
+            
+        
+    except Exception as e:
+        
+        r = re.search( '[a-fA-F0-9]{64}', str( e ) )
+        
+        if r is not None:
+            
+            possible_hash = bytes.fromhex( r.group() )
+            
+            HydrusData.ShowText( 'Found a possible hash in that error message--trying to show it in a new page.' )
+            
+            HG.client_controller.pub( 'imported_files_to_page', [ possible_hash ], 'files that did not upload right' )
+            
+        
+        job_key.SetVariable( 'popup_text_1', service.GetName() + ' error' )
+        
+        job_key.Cancel()
+        
+        raise
+        
+    
+    job_key.DeleteVariable( 'popup_gauge_1' )
+    job_key.SetVariable( 'popup_text_1', 'upload done!' )
+    
+    HydrusData.Print( job_key.ToString() )
+    
+    job_key.Finish()
+    
+    job_key.Delete( 5 )
+    
+
 class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def __init__( self, controller ):
@@ -2299,7 +2459,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None ):
+    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None, show_destination_page = True ):
         
         if service_keys_to_tags is None:
             
@@ -2321,11 +2481,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
             
-            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name )
+            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, select_page = show_destination_page )
             
             if page is not None:
                 
-                self._notebook.ShowPage( page )
+                if show_destination_page:
+                    
+                    self._notebook.ShowPage( page )
+                    
                 
                 management_panel = page.GetManagementPanel()
                 
@@ -2336,11 +2499,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         elif url_type == HC.URL_TYPE_WATCHABLE:
             
-            page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name )
+            page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name, select_page = show_destination_page )
             
             if page is not None:
                 
-                self._notebook.ShowPage( page )
+                if show_destination_page:
+                    
+                    self._notebook.ShowPage( page )
+                    
                 
                 management_panel = page.GetManagementPanel()
                 
@@ -3904,7 +4070,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UploadPending( self, service_key ):
         
-        self._controller.CallToThread( self._THREADUploadPending, service_key )
+        service = self._controller.services_manager.GetService( service_key )
+        
+        try:
+            
+            service.CheckFunctional( including_bandwidth = False )
+            
+        except Exception as e:
+            
+            wx.MessageBox( 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )
+            
+            return
+            
+        
+        self._controller.CallToThread( THREADUploadPending, service_key )
         
     
     def _VacuumDatabase( self ):
@@ -4043,166 +4222,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             job_key.Cancel()
             
-        
-    
-    def _THREADUploadPending( self, service_key ):
-        
-        service = self._controller.services_manager.GetService( service_key )
-        
-        service_name = service.GetName()
-        service_type = service.GetServiceType()
-        
-        nums_pending = self._controller.Read( 'nums_pending' )
-        
-        info = nums_pending[ service_key ]
-        
-        initial_num_pending = sum( info.values() )
-        
-        result = self._controller.Read( 'pending', service_key )
-        
-        try:
-            
-            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
-            
-            job_key.SetVariable( 'popup_title', 'uploading pending to ' + service_name )
-            
-            self._controller.pub( 'message', job_key )
-            
-            while result is not None:
-                
-                nums_pending = self._controller.Read( 'nums_pending' )
-                
-                info = nums_pending[ service_key ]
-                
-                remaining_num_pending = sum( info.values() )
-                done_num_pending = initial_num_pending - remaining_num_pending
-                
-                job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( done_num_pending, initial_num_pending ) )
-                job_key.SetVariable( 'popup_gauge_1', ( done_num_pending, initial_num_pending ) )
-                
-                while job_key.IsPaused() or job_key.IsCancelled():
-                    
-                    time.sleep( 0.1 )
-                    
-                    if job_key.IsCancelled():
-                        
-                        job_key.DeleteVariable( 'popup_gauge_1' )
-                        job_key.SetVariable( 'popup_text_1', 'cancelled' )
-                        
-                        HydrusData.Print( job_key.ToString() )
-                        
-                        job_key.Delete( 5 )
-                        
-                        return
-                        
-                    
-                
-                try:
-                    
-                    if service_type in HC.REPOSITORIES:
-                        
-                        if isinstance( result, ClientMedia.MediaResult ):
-                            
-                            media_result = result
-                            
-                            client_files_manager = self._controller.client_files_manager
-                            
-                            hash = media_result.GetHash()
-                            mime = media_result.GetMime()
-                            
-                            path = client_files_manager.GetFilePath( hash, mime )
-                            
-                            with open( path, 'rb' ) as f:
-                                
-                                file_bytes = f.read()
-                                
-                            
-                            service.Request( HC.POST, 'file', { 'file' : file_bytes } )
-                            
-                            file_info_manager = media_result.GetFileInfoManager()
-                            
-                            timestamp = HydrusData.GetNow()
-                            
-                            content_update_row = ( file_info_manager, timestamp )
-                            
-                            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
-                            
-                        else:
-                            
-                            client_to_server_update = result
-                            
-                            service.Request( HC.POST, 'update', { 'client_to_server_update' : client_to_server_update } )
-                            
-                            content_updates = client_to_server_update.GetClientsideContentUpdates()
-                            
-                        
-                        self._controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                        
-                    elif service_type == HC.IPFS:
-                        
-                        if isinstance( result, ClientMedia.MediaResult ):
-                            
-                            media_result = result
-                            
-                            hash = media_result.GetHash()
-                            mime = media_result.GetMime()
-                            
-                            service.PinFile( hash, mime )
-                            
-                        else:
-                            
-                            ( hash, multihash ) = result
-                            
-                            service.UnpinFile( hash, multihash )
-                            
-                        
-                    
-                except HydrusExceptions.ServerBusyException:
-                    
-                    job_key.SetVariable( 'popup_text_1', service.GetName() + ' was busy. please try again in a few minutes' )
-                    
-                    job_key.Cancel()
-                    
-                    return
-                    
-                
-                self._controller.pub( 'notify_new_pending' )
-                
-                time.sleep( 0.1 )
-                
-                self._controller.WaitUntilViewFree()
-                
-                result = self._controller.Read( 'pending', service_key )
-                
-            
-        except Exception as e:
-            
-            r = re.search( '[a-fA-F0-9]{64}', str( e ) )
-            
-            if r is not None:
-                
-                possible_hash = bytes.fromhex( r.group() )
-                
-                HydrusData.ShowText( 'Found a possible hash in that error message--trying to show it in a new page.' )
-                
-                HG.client_controller.pub( 'imported_files_to_page', [ possible_hash ], 'files that did not upload right' )
-                
-            
-            job_key.SetVariable( 'popup_text_1', service.GetName() + ' error' )
-            
-            job_key.Cancel()
-            
-            raise
-            
-        
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', 'upload done!' )
-        
-        HydrusData.Print( job_key.ToString() )
-        
-        job_key.Finish()
-        
-        job_key.Delete( 5 )
         
     
     def AddModalMessage( self, job_key ):
@@ -4619,11 +4638,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ImportFiles( paths )
         
     
-    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name ):
+    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, show_destination_page ):
         
         try:
             
-            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name )
+            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page )
             
             return ( normalised_url, result_text )
             

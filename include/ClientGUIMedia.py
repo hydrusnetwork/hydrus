@@ -86,6 +86,59 @@ def CopyMediaURLMatchURLs( medias, url_match ):
     
     HG.client_controller.pub( 'clipboard', 'text', urls_string )
     
+def DoOpenKnownURLFromShortcut( win, media ):
+    
+    urls = media.GetLocationsManager().GetURLs()
+    
+    matched_labels_and_urls = []
+    unmatched_urls = []
+    
+    if len( urls ) > 0:
+        
+        for url in urls:
+            
+            url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url )
+            
+            if url_match is None:
+                
+                unmatched_urls.append( url )
+                
+            else:
+                
+                label = url_match.GetName() + ': ' + url
+                
+                matched_labels_and_urls.append( ( label, url ) )
+                
+            
+        
+        matched_labels_and_urls.sort()
+        unmatched_urls.sort()
+        
+    
+    if len( matched_labels_and_urls ) == 0:
+        
+        return
+        
+    elif len( matched_labels_and_urls ) == 1:
+        
+        url = matched_labels_and_urls[0][1]
+        
+    else:
+        
+        matched_labels_and_urls.extend( ( url, url ) for url in unmatched_urls )
+        
+        try:
+            
+            url = ClientGUIDialogsQuick.SelectFromList( win, 'Select which URL', matched_labels_and_urls, sort_tuples = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+    
+    ClientPaths.LaunchURLInWebBrowser( url )
+    
 def OpenURLs( urls ):
     
     urls = list( urls )
@@ -1519,6 +1572,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         
     
+    def _OpenKnownURL( self ):
+        
+        if self._focussed_media is not None:
+            
+            DoOpenKnownURLFromShortcut( self, self._focussed_media )
+            
+        
+    
     def _PetitionFiles( self, remote_service_key ):
         
         hashes = self._GetSelectedHashes()
@@ -2255,6 +2316,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             elif action == 'manage_file_notes':
                 
                 self._ManageNotes()
+                
+            elif action == 'open_known_url':
+                
+                self._OpenKnownURL()
                 
             elif action == 'archive_file':
                 

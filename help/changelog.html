@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 344</h3></li>
+				<ul>
+					<li>final v1.0 client api polish:</li>
+					<li>added optional 'show_destination_page' arg to '/add_urls/add_url', defaulting to False, to control whether an URL-add will select (i.e. jump to) the destination page in the ui. this changes the default behaviour for this command</li>
+					<li>simplified the routine that finds or creates a watcher or url import page and fixed a bug in the api that was not creating new pages when destination_page_name was specified</li>
+					<li>some misc cleanup</li>
+					<li>fixed fetching file_metadata by hashes</li>
+					<li>fixed the client api help regarding file_metadata response example tags</li>
+					<li>client api version is now 5</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>psd support added! because of this format's potential multi-layer complexity, it will not render natively, but width and height are parsed. it is treated as 'application/x-photoshop'. PSB is also recognised and treated as psd</li>
+					<li>added a 'open_known_url' shortcut to the 'media' shortcut set that lets you quickly open URLs for files. if there is one recognised known url, it will be launched, and if there are multiple, a list with all known urls will appear to select which one you want</li>
+					<li>animation scanbars now show an x/y current timestamp! it includes millisecond timings and even works for variable framerate gifs. whether to show a second/shadow caret for timestamp position on variable frame rate is a new discussion to have</li>
+					<li>fixed an issue where animations would sometimes not resume animation for several seconds after a big scanbar drag</li>
+					<li>when the thumbnail manager cannot produce a thumbnail due to a storage error (like a missing file), it now only puts up a single, more informative error popup on the first problem. subsequent errors are printed silently to the log. (these errors tend to come in en masse, so this cuts down on spam and error-related ui lag that was making loading a bad session difficult)</li>
+					<li>improved error reporting when an upload pending command would fail due to service non-functionality--it should now give a popup with error info imediately, rather than obscured through the login system</li>
+					<li>added temp_dir parameter to the client and server that will override which temporary directory the program will use</li>
+					<li>cleaned up how no_daemons and no_wal mode are handled internally</li>
+					<li>no_wal mode now has to be called from the command parameter, the no_wal file hack in the db directory no longer works</li>
+					<li>missing ffmpeg errors now prompt the user to check if it is installed</li>
+					<li>searching for numerical ratings should now work for files that were rated when the service had a different number of stars (ratings now searches in 'bands' rather than exact values)</li>
+					<li>reduced the min height of the new import files frame's list</li>
+					<li>doubled the decompression bomb test to permit files up to ~179 megapixel, we'll see how it goes</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 343</h3></li>
 				<ul>
 					<li>client api:</li>

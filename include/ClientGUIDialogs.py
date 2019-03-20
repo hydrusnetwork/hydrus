@@ -589,7 +589,7 @@ class FrameInputLocalFiles( wx.Frame ):
         
         columns = [ ( '#', 4 ), ( 'path', -1 ), ( 'guessed mime', 16 ), ( 'size', 10 ) ]
         
-        self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'input_local_files', 28, 36, columns, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
+        self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'input_local_files', 12, 36, columns, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
         
         listctrl_panel.SetListCtrl( self._paths_list )
         

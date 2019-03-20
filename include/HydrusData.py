@@ -419,6 +419,64 @@ def ConvertValueRangeToPrettyString( value, range ):
     
     return ToHumanInt( value ) + '/' + ToHumanInt( range )
     
+def ConvertValueRangeToScanbarTimestampsMS( value_ms, range_ms ):
+    
+    value_ms = int( round( value_ms ) )
+    
+    range_hours = range_ms // 3600000
+    value_hours = value_ms // 3600000
+    range_minutes = ( range_ms % 3600000 ) // 60000
+    value_minutes = ( value_ms % 3600000 ) // 60000
+    range_seconds = ( range_ms % 60000 ) // 1000
+    value_seconds = ( value_ms % 60000 ) // 1000
+    range_ms = range_ms % 1000
+    value_ms = value_ms % 1000
+    
+    if range_hours > 0:
+        
+        # 0:01:23.033/1:12:57.067
+        
+        time_phrase = '{}:{:0>2}:{:0>2}.{:0>3}'
+        
+        args = ( value_hours, value_minutes, value_seconds, value_ms, range_hours, range_minutes, range_seconds, range_ms )
+        
+    elif range_minutes > 0:
+        
+        # 01:23.033/12:57.067 or 0:23.033/1:57.067
+        
+        if range_minutes > 9:
+            
+            time_phrase = '{:0>2}:{:0>2}.{:0>3}'
+            
+        else:
+            
+            time_phrase = '{:0>1}:{:0>2}.{:0>3}'
+            
+        
+        args = ( value_minutes, value_seconds, value_ms, range_minutes, range_seconds, range_ms )
+        
+    else:
+        
+        # 23.033/57.067 or 3.033/7.067 or 0.033/0.067
+        
+        if range_seconds > 9:
+            
+            time_phrase = '{:0>2}.{:0>3}'
+            
+        else:
+            
+            time_phrase = '{:0>1}.{:0>3}'
+            
+        
+        args = ( value_seconds, value_ms, range_seconds, range_ms )
+        
+    
+    full_phrase = '{}/{}'.format( time_phrase, time_phrase )
+    
+    result = full_phrase.format( *args )
+    
+    return result
+    
 def DebugPrint( debug_info ):
     
     Print( debug_info )

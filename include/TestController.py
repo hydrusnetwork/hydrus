@@ -494,13 +494,13 @@ class Controller( object ):
         return write
         
     
-    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name ):
+    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, show_destination_page ):
         
         normalised_url = self.network_engine.domain_manager.NormaliseURL( url )
         
         human_result_text = '"{}" URL added successfully.'.format( normalised_url )
         
-        self.Write( 'import_url_test', url, service_keys_to_tags, destination_page_name )
+        self.Write( 'import_url_test', url, service_keys_to_tags, destination_page_name, show_destination_page )
         
         return ( normalised_url, human_result_text )
         

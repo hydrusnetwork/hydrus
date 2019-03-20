@@ -44,6 +44,7 @@ try:
     argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'run without WAL db journalling' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run the db entirely in memory' )
+    argparser.add_argument( '--temp_dir', help = 'override the program\'s temporary directory' )
     
     result = argparser.parse_args()
     
@@ -75,9 +76,27 @@ try:
         raise Exception( 'Could not ensure db path ' + db_dir + ' exists! Check the location is correct and that you have permission to write to it!' )
         
     
-    no_daemons = result.no_daemons
-    no_wal = result.no_wal
+    HG.no_daemons = result.no_daemons
+    HG.no_wal = result.no_wal
     HG.no_db_temp_files = result.no_db_temp_files
+    
+    if result.temp_dir is not None:
+        
+        if not os.path.exists( result.temp_dir ):
+            
+            raise Exception( 'The given temp directory, "{}", does not exist!'.format( result.temp_dir ) )
+            
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            os.environ[ 'TEMP' ] = result.temp_dir
+            os.environ[ 'TMP' ] = result.temp_dir
+            
+        else:
+            
+            os.environ[ 'TMPDIR' ] = result.temp_dir
+            
+        
     
     #
     
@@ -98,7 +117,7 @@ try:
                 
                 threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 
-                controller = ServerController.Controller( db_dir, no_daemons, no_wal )
+                controller = ServerController.Controller( db_dir )
                 
                 controller.Run()
                 

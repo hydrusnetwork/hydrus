@@ -55,7 +55,7 @@ if not HG.twisted_is_broke:
     
 class Controller( HydrusController.HydrusController ):
     
-    def __init__( self, db_dir, no_daemons, no_wal ):
+    def __init__( self, db_dir ):
         
         self._last_shutdown_was_bad = False
         
@@ -63,7 +63,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._splash = None
         
-        HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
+        HydrusController.HydrusController.__init__( self, db_dir )
         
         self._name = 'client'
         
@@ -96,7 +96,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ClientDB.DB( self, self.db_dir, 'client', no_wal = self._no_wal )
+        return ClientDB.DB( self, self.db_dir, 'client' )
         
     
     def _InitTempDir( self ):
@@ -796,7 +796,7 @@ class Controller( HydrusController.HydrusController ):
         self.RestartClientServerService( CC.LOCAL_BOORU_SERVICE_KEY )
         self.RestartClientServerService( CC.CLIENT_API_SERVICE_KEY )
         
-        if not self._no_daemons:
+        if not HG.no_daemons:
             
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 4 * 3600, init_wait = 60, pre_call_wait = 3 ) )

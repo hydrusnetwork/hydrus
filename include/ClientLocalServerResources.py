@@ -474,6 +474,10 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
             
             path = os.path.join( HC.STATIC_DIR, 'pdf.png' )
             
+        elif mime == HC.APPLICATION_PSD:
+            
+            path = os.path.join( HC.STATIC_DIR, 'psd.png' )
+            
         else:
             
             path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
@@ -1123,9 +1127,21 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
                 
             
         
+        show_destination_page = False
+        
+        if 'show_destination_page' in request.parsed_request_args:
+            
+            show_destination_page = request.parsed_request_args[ 'show_destination_page' ]
+            
+            if not isinstance( show_destination_page, bool ):
+                
+                raise HydrusExceptions.BadRequestException( '"show_destination_page" did not seem to be a boolean!' )
+                
+            
+        
         gui = HG.client_controller.gui
         
-        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags, destination_page_name )
+        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags, destination_page_name, show_destination_page )
         
         time.sleep( 0.05 ) # yield and give the ui time to catch up with new URL pubsubs in case this is being spammed
         
@@ -1247,7 +1263,9 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 request.client_api_permissions.CheckCanSeeAllFiles()
                 
-                hashes = request.parsed_request_args[ 'hashes' ]
+                hashes_hex = request.parsed_request_args[ 'hashes' ]
+                
+                hashes = [ bytes.fromhex( hash ) for hash in hashes_hex ]
                 
                 if only_return_identifiers:
                     
