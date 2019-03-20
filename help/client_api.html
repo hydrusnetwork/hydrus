@@ -423,10 +423,12 @@
 						<ul>
 							<li>url : (the url you want to add)</li>
 							<li>destination_page_name : (optional page name to receive the url)</li>
+							<li>show_destination_page : (optional, defaulting to false, controls whether the UI will change pages on add)</li>
 							<li>service_names_to_tags : (optional tags to give to any files imported from this url)</li>
 						</ul>
 					</li>
 					<p>If you specify a destination_page_name and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.</p>
+					<p>show_destination_page defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.</p>
 					<p>The service_names_to_tags uses the same system as for /add_tags/add_tags. You will need 'add tags' permission, or this will 403.</p>
 					<li>
 						<p>Example request body:</p>
@@ -605,6 +607,10 @@
 			"num_words" : null
 			"service_names_to_statuses_to_tags" : {
 				"local tags" : {
+					"0" : [ "favourites" ]
+					"2" : [ "process this later" ]
+				},
+				"my tag repository" : {
 					"0" : [ "blonde hair", "blue eyes", "looking at viewer" ]
 					"1" : [ "bodysuit" ]
 				}
@@ -633,7 +639,7 @@
 						</ul>
 					</li>
 					<p>Size is in bytes. Duration is in milliseconds, and may be an int or a float.</p>
-					<p>The tags structure is similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
+					<p>The service_names_to_statuses_to_tags structure is similar to the /add_tags/add_tags scheme, excepting that the status numbers are:</p>
 					<ul>
 						<li>0 - current</li>
 						<li>1 - pending</li>
