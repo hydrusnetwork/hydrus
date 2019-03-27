@@ -1586,7 +1586,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        thumbnail = self.Request( HC.GET, 'thumbnail', { 'hash' : thumbnail_hash } )
+                        thumbnail_bytes = self.Request( HC.GET, 'thumbnail', { 'hash' : thumbnail_hash } )
                         
                     except HydrusExceptions.CancelledException as e:
                         
@@ -1603,7 +1603,7 @@ class ServiceRepository( ServiceRestricted ):
                         return
                         
                     
-                    client_files_manager.AddFullSizeThumbnailFromBytes( thumbnail_hash, thumbnail )
+                    client_files_manager.AddThumbnailFromBytes( thumbnail_hash, thumbnail_bytes )
                     
                 
                 job_key.SetVariable( 'popup_text_1', 'finished' )

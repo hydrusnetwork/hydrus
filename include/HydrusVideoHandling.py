@@ -101,13 +101,15 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     if count_frames_manually:
         
+        # added -an here to remove audio component, which was sometimes causing convert fails on single-frame music webms
+        
         if HC.PLATFORM_WINDOWS:
             
-            cmd += [ "-f", "null", "NUL" ]
+            cmd += [ "-an", "-f", "null", "NUL" ]
             
         else:
             
-            cmd += [ "-f", "null", "/dev/null" ]
+            cmd += [ "-an", "-f", "null", "/dev/null" ]
             
         
     

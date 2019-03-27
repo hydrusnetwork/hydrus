@@ -194,7 +194,7 @@ class Controller( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
-        self.new_options = ClientOptions.ClientOptions( self.db_dir )
+        self.new_options = ClientOptions.ClientOptions()
         
         HC.options = ClientDefaults.GetClientDefaultOptions()
         
@@ -234,7 +234,7 @@ class Controller( object ):
         
         for prefix in HydrusData.IterateHexPrefixes():
             
-            for c in ( 'f', 't', 'r' ):
+            for c in ( 'f', 't' ):
                 
                 client_files_locations[ c + prefix ] = client_files_default
                 

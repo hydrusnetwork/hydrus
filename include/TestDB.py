@@ -836,7 +836,7 @@ class TestClientDB( unittest.TestCase ):
         
         for prefix in HydrusData.IterateHexPrefixes():
             
-            for c in ( 'f', 't', 'r' ):
+            for c in ( 'f', 't' ):
                 
                 dir = os.path.join( client_files_default, c + prefix )
                 

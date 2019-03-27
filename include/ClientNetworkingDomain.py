@@ -1383,7 +1383,15 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 ( url_to_fetch, parser ) = result
                 
-                HydrusData.ShowText( 'URL to fetch and parser request: ' + url + ' -> ' + url_to_fetch + ': ' + parser.GetName() )
+                url_match = self._GetURLMatch( url )
+                
+                url_name = url_match.GetName()
+                
+                url_to_fetch_match = self._GetURLMatch( url_to_fetch )
+                
+                url_to_fetch_name = url_to_fetch_match.GetName()
+                
+                HydrusData.ShowText( 'request for URL to fetch and parser: {} ({}) -> {} ({}): {}'.format( url, url_name, url_to_fetch, url_to_fetch_name, parser.GetName() ) )
                 
             
             return result

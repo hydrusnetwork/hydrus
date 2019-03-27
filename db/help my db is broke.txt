@@ -1,6 +1,6 @@
 If you are getting weird but serious-sounding errors like 'database image is malformed', your database may be corrupt!
 
-Nine times out of ten, corrupted databases happen because of hardware failure, usually the hard drive writing bad sectors. This is a serious problem.
+Ninety-nine times out of a hundred, corrupted databases happen because of hardware failure, usually the hard drive writing bad sectors due to a power cut or old age. This is a serious problem.
 
 
 first, shut everything down
@@ -16,7 +16,7 @@ Then check your hard drive's integrity.
 
 On Windows, go Start->Run (Win+R) and type 'cmd'. Type chkdsk into the new window and wait for it to scan your drive.
 
-If it finds many problems, then your drive has been compromised in some way, and you should view it as unreliable. If it is an old drive, you should think about buying a replacement. The exception to 'buy a new drive' is if the existing one is new, otherwise works well, and you can trace the error to a specific event, such as an unprotected power surge during a storm that violently reset your computer. The other exception is if you cannot afford it. :/
+If it finds many problems, then your drive has been compromised in some way and you should view it as unreliable. If it is an old drive, you should think about buying a replacement. The exception to 'buy a new drive' is if the existing one is new, otherwise works well, and you can trace the error to a specific event, such as an unprotected power surge during a storm that violently reset your computer. The other exception is if you cannot afford it. :/
 
 On Windows, tell chkdsk to fix the problems it found by running it again with the /F modifier, like 'chkdsk /F'.
 
@@ -67,14 +67,27 @@ client.mappings.db is usually the largest and busiest file in most people's data
 
 If the errors do not look too bad, then try cloning a fresh copy of the broken db file like so:
 
+.open client.db
 .clone client_new.db
 
-And wait a bit. It'll report its progress as it tries to copy your db's info to a new, cleaner db.
+And wait a bit. It'll report its progress as it tries to copy your db's info to a new, cleaner db. Remember to go '.exit' once it is done to close the shell neatly.
 
-Remember to go '.exit' to close the shell neatly.
+If the clone operation is successful, rename client.db to client_old.db and client_new.db to client.db. If the damage is in a different file, do a similar operation:
 
-If the clone operation is successful, rename client.db to client_old.db and client_new.db to client.db. (or similar names if you are dealing with client.master.db or whatever) Then, try running the client!
+.open client.caches.db
+.clone client.caches_new.db
+.exit
+
+.open client.master.db
+.clone client.master_new.db
+.exit
+
+.open client.mappings.db
+.clone client.mappings_new.db
+.exit
+
+Do not delete your original files for now. Just rename them to 'old' and move them somewhere safe. Make sure your new cloned files are all named right and then try running the client!
 
 If the clone is unsuccessful or it still does not run correctly, contact me (Hydrus Dev) and I'll help you with the next steps. In the worst case, we will manually extract what you can to a new db.
 
-If you recover ok but still get problems, please contact me. Check help/contact.html for ways to do this.
+If you recover ok but still get problems, please contact me. Check install_dir/help/contact.html for ways to do this.

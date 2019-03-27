@@ -30,7 +30,7 @@
 			<p>Backing such an arrangement up is obviously more complicated, and the internal client backup is not sophisticated enough to capture everything, so I recommend you figure out a broader solution with a third-party backup program like FreeFileSync.</p>
 			<h3>pulling your media apart</h3>
 			<p><b class="warning">As always, I recommend creating a backup before you try any of this, just in case it goes wrong.</b></p>
-			<p>If you would like to spread your files and thumbnails across multiple locations, please do not move their folders around yourself--the database has an internal 'knowledge' of where it thinks its file and thumbnail folders are, and if you move them while it is closed, it will throw 'missing path' errors as soon as it boots. The internal hydrus logic of relative and absolute paths is not always obvious, so it is easy to make mistakes, even if you think you know what you are doing. Instead, please do it through the gui:</p>
+			<p>If you would like to move your files and thumbnails to new locations, I generally recommend you not move their folders around yourself--the database has an internal knowledge of where it thinks its file and thumbnail folders are, and if you move them while it is closed, it will become confused and you will have to manually relocate what is missing on the next boot via a repair dialog. This is not impossible to figure out, but if the program's 'client files' folder confuses you at all, I'd recommend you stay away. Instead, you can simply do it through the gui:</p>
 			<p>Go <i>database->migrate database</i>, giving you this dialog:</p>
 			<p><img src="db_migration.png" /></p>
 			<p>This is an image from my old laptop's client. At that time, I had moved the main database and its files out of the install directory but otherwise kept everything together. Your situation may be simpler or more complicated.</p>
@@ -56,23 +56,23 @@
 			<h3>finally</h3>
 			<p>If your database now lives in one or more new locations, make sure to update your backup routine to follow them!</p>
 			<h3>moving to an SSD</h3>
-			<p>As an example, let's say you started using the hydrus client on your HDD, and now you have an SSD available and would like to move your resized thumbnails and main install to that SSD to speed up the client. Your database will be valid and functional at every stage of this, and it can all be undone. The basic steps are:</p>
-			<ul>
+			<p>As an example, let's say you started using the hydrus client on your HDD, and now you have an SSD available and would like to move your thumbnails and main install to that SSD to speed up the client. Your database will be valid and functional at every stage of this, and it can all be undone. The basic steps are:</p>
+			<ol>
 				<li>Move your 'fast' files to the fast location.</li>
 				<li>Move your 'slow' files out of the main install directory.</li>
 				<li>Move the install and db itself to the fast location and update shortcuts.</li>
-			</ul>
+			</ol>
 			<p>Specifically:</p>
 			<ul>
 				<li>Update your backup if you maintain one.</li>
-				<li>Create an empty folder on your HDD that is outside of your current install folder. Call it 'hydrus_files_slow' or similar.</li>
-				<li>Create two empty folders on your SSD with names like 'hydrus_db' and 'hydrus_files_fast'.</li>
+				<li>Create an empty folder on your HDD that is outside of your current install folder. Call it 'hydrus_files' or similar.</li>
+				<li>Create two empty folders on your SSD with names like 'hydrus_db' and 'hydrus_thumbnails'.</li>
 				<li>.</li>
-				<li>Set the 'resized thumbnail location' to 'hydrus_files_fast'. You should get that new location in the list, currently empty but prepared to take all your resized thumbs.</li>
-				<li>Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish.</li>
+				<li>Set the 'thumbnail location override' to 'hydrus_thumbnails'. You should get that new location in the list, currently empty but prepared to take all your thumbs.</li>
+				<li>Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish. The hydrus client may hang periodically as it works, but you can just leave it to work on its own--it will get there in the end. You can also watch it do its disk work under Task Manager.</li>
 				<li>.</li>
-				<li>Now hit 'add location' and set 'hydrus_files_slow'. 'hydrus_files_slow' should be added and willing to take some files and full-size thumbnails.</li>
-				<li>Select the old location (probably 'install_dir/db/client_files') and hit 'empty/remove location'. 'hydrus_files_slow' should now be willing to take all the files from the old location.</li>
+				<li>Now hit 'add location' and select your new 'hydrus_files'. 'hydrus_files' should be added and willing to take 50% of the files.</li>
+				<li>Select the old location (probably 'install_dir/db/client_files') and hit 'decrease weight' until it has weight 0 and you are prompted to remove it completely. 'hydrus_files' should now be willing to take all the files from the old location.</li>
 				<li>Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.</li>
 				<li>.</li>
 				<li>With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.</li>

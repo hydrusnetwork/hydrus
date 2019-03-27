@@ -286,9 +286,11 @@ class FileImportJob( object ):
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
+            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+            
             percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
-            self._thumbnail = HydrusFileHandling.GenerateThumbnail( self._temp_path, mime, percentage_in = percentage_in )
+            self._thumbnail = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, bounding_dimensions, mime, percentage_in = percentage_in )
             
         
         if mime in HC.MIMES_WE_CAN_PHASH:

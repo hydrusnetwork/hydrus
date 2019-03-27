@@ -2860,6 +2860,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE client_files_locations ( prefix TEXT, location TEXT );' )
         
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_client_files_locations ( location TEXT, weight INTEGER );' )
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_thumbnail_override_location ( location TEXT );' )
+        
         self._c.execute( 'CREATE TABLE current_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'current_files', [ 'timestamp' ] )
         
@@ -2974,8 +2977,9 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'f' + prefix, location ) )
             self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 't' + prefix, location ) )
-            self._c.execute( 'INSERT INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'r' + prefix, location ) )
             
+        
+        self._c.execute( 'INSERT INTO ideal_client_files_locations ( location, weight ) VALUES ( ?, ? );', ( location, 1 ) )
         
         init_service_info = []
         
@@ -2999,7 +3003,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
         
-        new_options = ClientOptions.ClientOptions( self._db_dir )
+        new_options = ClientOptions.ClientOptions()
         
         new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
         
@@ -4625,6 +4629,8 @@ class DB( HydrusDB.HydrusDB ):
         include_current_tags = search_context.IncludeCurrentTags()
         include_pending_tags = search_context.IncludePendingTags()
         
+        or_predicates = search_context.GetORPredicates()
+        
         #
         
         files_info_predicates = []
@@ -4687,6 +4693,40 @@ class DB( HydrusDB.HydrusDB ):
             
         
         query_hash_ids = None
+        
+        #
+        
+        # let's do OR preds here for now
+        # updating all this code to do OR and AND naturally will be a big job getting right, so let's get a functional inefficient solution and then optimise later as needed
+        # -tag stuff and various other exclude situations remain a pain to do quickly assuming OR
+        # the future extension of this will be creating an OR_search_context with all the OR_pred's subpreds and have that naturally query_hash_ids.update throughout this func based on search_context search_type
+        
+        for or_predicate in or_predicates:
+            
+            # blue eyes OR green eyes
+            
+            or_query_hash_ids = set()
+            
+            for or_subpredicate in or_predicate.GetValue():
+                
+                # blue eyes
+                
+                or_search_context = search_context.Duplicate()
+                
+                or_search_context.SetPredicates( [ or_subpredicate ] )
+                
+                or_query_hash_ids.update( self._GetHashIdsFromQuery( or_search_context, job_key ) )
+                
+                if job_key.IsCancelled():
+                    
+                    return set()
+                    
+                
+            
+            update_qhi( query_hash_ids, or_query_hash_ids )
+            
+        
+        #
         
         if system_predicates.HasSimilarTo():
             
@@ -4946,13 +4986,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                     
-                    query_hash_ids.intersection_update( self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                    update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                     
                 else:
                     
                     files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                     
-                    query_hash_ids.intersection_update( self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                    update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                     
                 
             
@@ -5031,14 +5071,14 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.intersection_update( self._STI( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ) )
+            update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ) )
             
         
         for service_key in file_services_to_include_pending:
             
             service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.intersection_update( self._STI( self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ) )
+            update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ) )
             
         
         for service_key in file_services_to_exclude_current:
@@ -5088,7 +5128,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
-                query_hash_ids.intersection_update( hash_ids )
+                update_qhi( query_hash_ids, hash_ids )
                 
             
         
@@ -5113,7 +5153,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
-                query_hash_ids.intersection_update( hash_ids )
+                update_qhi( query_hash_ids, hash_ids )
                 
             
         
@@ -5142,7 +5182,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if must_be_local:
                 
-                query_hash_ids.intersection_update( local_hash_ids )
+                update_qhi( query_hash_ids, local_hash_ids )
                 
             elif must_not_be_local:
                 
@@ -5152,7 +5192,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if must_be_inbox:
             
-            query_hash_ids.intersection_update( self._inbox_hash_ids )
+            update_qhi( query_hash_ids, self._inbox_hash_ids )
             
         elif must_be_archive:
             
@@ -5169,7 +5209,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if operator: # inclusive
                     
-                    query_hash_ids.intersection_update( url_hash_ids )
+                    update_qhi( query_hash_ids, url_hash_ids )
                     
                 else:
                     
@@ -5239,7 +5279,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             elif num_tags_nonzero:
                 
-                query_hash_ids.intersection_update( nonzero_tag_query_hash_ids )
+                update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
                 
             
         
@@ -5256,7 +5296,7 @@ class DB( HydrusDB.HydrusDB ):
                 good_tag_count_hash_ids.update( zero_hash_ids )
                 
             
-            query_hash_ids.intersection_update( good_tag_count_hash_ids )
+            update_qhi( query_hash_ids, good_tag_count_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -5272,7 +5312,7 @@ class DB( HydrusDB.HydrusDB ):
             
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags )
             
-            query_hash_ids.intersection_update( good_hash_ids )
+            update_qhi( query_hash_ids, good_hash_ids )
             
         
         if 'max_tag_as_number' in simple_preds:
@@ -5281,7 +5321,7 @@ class DB( HydrusDB.HydrusDB ):
             
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags )
             
-            query_hash_ids.intersection_update( good_hash_ids )
+            update_qhi( query_hash_ids, good_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -5814,6 +5854,33 @@ class DB( HydrusDB.HydrusDB ):
                 return self._GetHashIdStatus( hash_id, prefix = prefix )
                 
             
+        
+    
+    def _GetIdealClientFilesLocations( self ):
+        
+        locations_to_ideal_weights = {}
+        
+        for ( portable_location, weight ) in self._c.execute( 'SELECT location, weight FROM ideal_client_files_locations;' ):
+            
+            abs_location = HydrusPaths.ConvertPortablePathToAbsPath( portable_location )
+            
+            locations_to_ideal_weights[ abs_location ] = weight
+            
+        
+        result = self._c.execute( 'SELECT location FROM ideal_thumbnail_override_location;' ).fetchone()
+        
+        if result is None:
+            
+            abs_ideal_thumbnail_override_location = None
+            
+        else:
+            
+            ( portable_ideal_thumbnail_override_location, ) = result
+            
+            abs_ideal_thumbnail_override_location = HydrusPaths.ConvertPortablePathToAbsPath( portable_ideal_thumbnail_override_location )
+            
+        
+        return ( locations_to_ideal_weights, abs_ideal_thumbnail_override_location )
         
     
     def _GetMaintenanceDue( self, stop_time ):
@@ -6619,7 +6686,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash = self._GetHash( hash_id )
             
-            if client_files_manager.LocklessHasFullSizeThumbnail( hash ):
+            if client_files_manager.LocklessHasThumbnail( hash ):
                 
                 self._c.execute( 'INSERT OR IGNORE INTO remote_thumbnails ( service_id, hash_id ) VALUES ( ?, ? );', ( service_id, hash_id ) )
                 
@@ -9264,6 +9331,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'force_refresh_tags_managers': result = self._GetForceRefreshTagsManagers( *args, **kwargs )
         elif action == 'hash_ids_to_hashes': result = self._GetHashIdsToHashes( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
+        elif action == 'ideal_client_files_locations': result = self._GetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'in_inbox': result = self._InInbox( *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
@@ -9619,11 +9687,13 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS:
                         
+                        bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+                        
                         percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
                         
-                        thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime, percentage_in = percentage_in )
+                        thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( path, bounding_dimensions, mime, percentage_in = percentage_in )
                         
-                        client_files_manager.LocklessAddFullSizeThumbnailFromBytes( hash, thumbnail )
+                        client_files_manager.LocklessAddThumbnailFromBytes( hash, thumbnail_bytes )
                         
                     
                     result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
@@ -9760,6 +9830,32 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_job( 'thumbnail_resize' )
         self.pub_after_job( 'notify_new_options' )
+        
+    
+    def _SetIdealClientFilesLocations( self, locations_to_ideal_weights, ideal_thumbnail_override_location ):
+        
+        if len( locations_to_ideal_weights ) == 0:
+            
+            raise Exception( 'No locations passed in ideal locations list!' )
+            
+        
+        self._c.execute( 'DELETE FROM ideal_client_files_locations;' )
+        
+        for ( abs_location, weight ) in locations_to_ideal_weights.items():
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( abs_location )
+            
+            self._c.execute( 'INSERT INTO ideal_client_files_locations ( location, weight ) VALUES ( ?, ? );', ( portable_location, weight ) )
+            
+        
+        self._c.execute( 'DELETE FROM ideal_thumbnail_override_location;' )
+        
+        if ideal_thumbnail_override_location is not None:
+            
+            portable_ideal_thumbnail_override_location = HydrusPaths.ConvertAbsPathToPortablePath( ideal_thumbnail_override_location )
+            
+            self._c.execute( 'INSERT INTO ideal_thumbnail_override_location ( location ) VALUES ( ? );', ( portable_ideal_thumbnail_override_location, ) )
+            
         
     
     def _SetJSONDump( self, obj ):
@@ -11857,6 +11953,86 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 344:
+            
+            def wx_code():
+                
+                message = 'The client now only uses one thumbnail per file (previously it needed two). Your \'resized\' thumbnails will now be deleted. This is a significant step that could take some time to complete. It will also significantly impact your next backup run.'
+                message += os.linesep * 2
+                message += 'In order to keep your recycle bin sane, the thumbnails will be permanently deleted. Therefore, this operation cannot be undone. If you are not ready to do this yet (for instance if you do not have a recent backup), kill the hydrus process in Task Manager now.'
+                message += os.linesep * 2
+                message += 'BTW: If you previously put your resized thumbnails on an SSD but not your \'full-size\' ones, you should check the \'migrate database\' dialog once the client boots so you can move the remaining thumbnail directories to fast storage.'
+                
+                wx.MessageBox( message )
+                
+            
+            self._controller.CallBlockingToWX( None, wx_code )
+            
+            new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_client_files_locations ( location TEXT, weight INTEGER );' )
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS ideal_thumbnail_override_location ( location TEXT );' )
+            
+            for ( location, weight ) in new_options._dictionary[ 'client_files_locations_ideal_weights' ]:
+                
+                self._c.execute( 'INSERT INTO ideal_client_files_locations ( location, weight ) VALUES ( ?, ? );', ( location, weight ) )
+                
+            
+            thumbnail_override_location = new_options._dictionary[ 'client_files_locations_full_size_thumbnail_override' ]
+            
+            if thumbnail_override_location is not None:
+                
+                self._c.execute( 'INSERT INTO ideal_thumbnail_override_location ( location ) VALUES ( ? );', ( thumbnail_override_location, ) )
+                
+            
+            self._SetJSONDump( new_options )
+            
+            #
+            
+            error_occurred = False
+            
+            for ( i, prefix ) in enumerate( HydrusData.IterateHexPrefixes() ):
+                
+                self._controller.pub( 'splash_set_status_subtext', 'deleting resized thumbnails {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, 256 ) ) )
+                
+                resized_prefix = 'r' + prefix
+                
+                try:
+                    
+                    ( location, ) = self._c.execute( 'SELECT location FROM client_files_locations WHERE prefix = ?;', ( resized_prefix, ) ).fetchone()
+                    
+                except:
+                    
+                    continue
+                    
+                
+                full_path = os.path.join( HydrusPaths.ConvertPortablePathToAbsPath( location ), resized_prefix )
+                
+                if os.path.exists( full_path ):
+                    
+                    try:
+                        
+                        HydrusPaths.DeletePath( full_path )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.PrintException( e )
+                        
+                        if not error_occurred:
+                            
+                            error_occurred = True
+                            
+                            message = 'There was a problem deleting one or more of your old \'rxx\' resized thumbnail directories, perhaps because of some old read-only files. There is no big harm here, since the old directories are no longer needed, but you will want to delete them yourself. Additional error information has been written to the log. Please contact hydrus dev if you need help.'
+                            
+                            self.pub_initial_message( message )
+                            
+                        
+                    
+                
+                self._c.execute( 'DELETE FROM client_files_locations WHERE prefix = ?;', ( resized_prefix, ) )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -12425,6 +12601,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'export_mappings': self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_integrity': self._CheckFileIntegrity( *args, **kwargs )
         elif action == 'imageboard': self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+        elif action == 'ideal_client_files_locations': self._SetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
         elif action == 'last_shutdown_work_time': self._SetLastShutdownWorkTime( *args, **kwargs )

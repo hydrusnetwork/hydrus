@@ -1212,7 +1212,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus_small.png' )
         
-        thumb_path = HG.test_controller.client_files_manager._GenerateExpectedFullSizeThumbnailPath( hash )
+        thumb_path = HG.test_controller.client_files_manager._GenerateExpectedThumbnailPath( hash )
         
         shutil.copy2( path, thumb_path )
         

@@ -251,7 +251,9 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
         
         try:
             
-            thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime )
+            bounding_dimensions = HC.SERVER_THUMBNAIL_DIMENSIONS
+            
+            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( path, bounding_dimensions, mime )
             
         except Exception as e:
             
@@ -260,7 +262,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             raise HydrusExceptions.BadRequestException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
             
         
-        args[ 'thumbnail' ] = thumbnail
+        args[ 'thumbnail' ] = thumbnail_bytes
         
     
     return args

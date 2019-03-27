@@ -71,7 +71,7 @@ class Controller( HydrusController.HydrusController ):
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
         self.options = ClientDefaults.GetClientDefaultOptions()
-        self.new_options = ClientOptions.ClientOptions( self.db_dir )
+        self.new_options = ClientOptions.ClientOptions()
         
         HC.options = self.options
         

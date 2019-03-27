@@ -56,11 +56,11 @@ def GenerateHydrusBitmap( path, mime, compressed = True, desired_dimensions = No
         
         if do_thumbnail_resize:
             
-            numpy_image = ClientImageHandling.EfficientlyThumbnailNumpyImage( numpy_image, desired_dimensions )
+            numpy_image = ClientImageHandling.ThumbnailNumpyImage( numpy_image, desired_dimensions )
             
         else:
             
-            numpy_image = ClientImageHandling.EfficientlyResizeNumpyImage( numpy_image, desired_dimensions )
+            numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, desired_dimensions )
             
         
     
@@ -141,7 +141,7 @@ class ImageRenderer( object ):
             
         else:
             
-            wx_numpy_image = ClientImageHandling.ResizeNumpyImage( self._media.GetMime(), self._numpy_image, target_resolution )
+            wx_numpy_image = ClientImageHandling.ResizeNumpyImageForMediaViewer( self._media.GetMime(), self._numpy_image, target_resolution )
             
         
         ( wx_height, wx_width, wx_depth ) = wx_numpy_image.shape

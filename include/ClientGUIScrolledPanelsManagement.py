@@ -4058,8 +4058,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 200 )
-            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 200 )
+            self._thumbnail_width = wx.SpinCtrl( self, min = 20, max = 2048 )
+            self._thumbnail_height = wx.SpinCtrl( self, min = 20, max = 2048 )
             
             self._thumbnail_border = wx.SpinCtrl( self, min = 0, max = 20 )
             self._thumbnail_margin = wx.SpinCtrl( self, min = 0, max = 20 )

@@ -2228,7 +2228,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             gui_actions = wx.Menu()
             
-            ClientGUIMenus.AppendMenuCheckItem( self, gui_actions, 'thumbnail experiment mode', 'Try the new experiment.', HG.thumbnail_experiment_mode, self._SwitchBoolean, 'thumbnail_experiment_mode' )
             ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
@@ -4014,10 +4013,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'thumbnail_debug_mode':
             
             HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
-            
-        elif name == 'thumbnail_experiment_mode':
-            
-            HG.thumbnail_experiment_mode = not HG.thumbnail_experiment_mode
             
         elif name == 'ui_timer_profile_mode':
             

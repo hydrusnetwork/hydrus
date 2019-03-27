@@ -157,11 +157,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 thumbnail_dest_path = ServerFiles.GetExpectedThumbnailPath( hash )
                 
-                thumbnail = file_dict[ 'thumbnail' ]
+                thumbnail_bytes = file_dict[ 'thumbnail' ]
                 
                 with open( thumbnail_dest_path, 'wb' ) as f:
                     
-                    f.write( thumbnail )
+                    f.write( thumbnail_bytes )
                     
                 
             

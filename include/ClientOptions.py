@@ -19,20 +19,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Client Options'
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, db_dir = None ):
+    def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        if db_dir is None:
-            
-            db_dir = HC.DEFAULT_DB_DIR
-            
         
         self._dictionary = HydrusSerialisable.SerialisableDictionary()
         
         self._lock = threading.Lock()
         
-        self._InitialiseDefaults( db_dir )
+        self._InitialiseDefaults()
         
     
     def _GetSerialisableInfo( self ):
@@ -42,7 +37,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         return serialisable_info
         
     
-    def _InitialiseDefaults( self, db_dir ):
+    def _InitialiseDefaults( self ):
         
         self._dictionary[ 'booleans' ] = {}
         
@@ -349,14 +344,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        client_files_default = os.path.join( db_dir, 'client_files' )
-        
-        self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
-        self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None
-        self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = None
-        
-        #
-        
         self._dictionary[ 'default_file_import_options' ] = HydrusSerialisable.SerialisableDictionary()
         
         exclude_deleted = True
@@ -648,38 +635,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetClientFilesLocationsToIdealWeights( self ):
-        
-        with self._lock:
-            
-            paths_to_weights = {}
-            
-            for ( portable_path, weight ) in self._dictionary[ 'client_files_locations_ideal_weights' ]:
-                
-                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_path )
-                
-                paths_to_weights[ abs_path ] = weight
-                
-            
-            resized_thumbnail_override = self._dictionary[ 'client_files_locations_resized_thumbnail_override' ]
-            
-            if resized_thumbnail_override is not None:
-                
-                resized_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( resized_thumbnail_override )
-                
-            
-            
-            full_size_thumbnail_override = self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ]
-            
-            if full_size_thumbnail_override is not None:
-                
-                full_size_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( full_size_thumbnail_override )
-                
-            
-            return ( paths_to_weights, resized_thumbnail_override, full_size_thumbnail_override )
-            
-        
-    
     def GetColour( self, colour_type, colourset = None ):
         
         with self._lock:
@@ -937,39 +892,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def RemoveClientFilesLocation( self, location ):
-        
-        with self._lock:
-            
-            if len( self._dictionary[ 'client_files_locations_ideal_weights' ] ) < 2:
-                
-                raise Exception( 'Cannot remove any more files locations!' )
-                
-            
-            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
-            
-            self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
-            
-        
-    
     def SetBoolean( self, name, value ):
         
         with self._lock:
             
             self._dictionary[ 'booleans' ][ name ] = value
-            
-        
-    
-    def SetClientFilesLocation( self, location, weight ):
-        
-        with self._lock:
-            
-            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
-            weight = float( weight )
-            
-            self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
-            
-            self._dictionary[ 'client_files_locations_ideal_weights' ].append( ( portable_location, weight ) )
             
         
     
@@ -1046,14 +973,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetFullsizeThumbnailOverride( self, full_size_thumbnail_override ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = full_size_thumbnail_override
-            
-        
-    
     def SetInteger( self, name, value ):
         
         with self._lock:
@@ -1115,14 +1034,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'noneable_strings' ][ name ] = value
-            
-        
-    
-    def SetResizedThumbnailOverride( self, resized_thumbnail_override ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
             
         
     

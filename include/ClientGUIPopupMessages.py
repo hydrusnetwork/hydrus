@@ -1119,6 +1119,11 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
+            if ClientGUICommon.IsWXAncestor( self, tlw, through_tlws = True ):
+                
+                continue
+                
+            
             from . import ClientGUI
             
             if isinstance( tlw, ClientGUI.FrameGUI ):

@@ -204,7 +204,7 @@ def CalculateMediaContainerSize( media, zoom, action ):
         
         if media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
-            ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), HC.UNSCALED_THUMBNAIL_DIMENSIONS )
+            ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), HG.client_controller.options[ 'thumbnail_dimensions' ] )
             
             height = height + thumb_height
             
@@ -385,14 +385,19 @@ class Animation( wx.Window ):
     
     def EventPaint( self, event ):
         
-        if self._video_container is None:
+        if self._canvas_bmp is None:
+            
+            return
+            
+        
+        if self._video_container is None and self._media is not None:
             
             self._video_container = ClientRendering.RasterContainerVideo( self._media, self.GetClientSize(), init_position = self._current_frame_index )
             
         
         dc = wx.BufferedPaintDC( self, self._canvas_bmp )
         
-        if not self._a_frame_has_been_drawn:
+        if not self._a_frame_has_been_drawn or self._media is not None:
             
             self._DrawWhite( dc )
             
@@ -5511,7 +5516,7 @@ class EmbedButton( wx.Window ):
             hash = self._media.GetHash()
             mime = self._media.GetMime()
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
+            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( hash, mime )
             
             self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             
@@ -5542,15 +5547,15 @@ class OpenExternallyPanel( wx.Panel ):
             hash = self._media.GetHash()
             mime = self._media.GetMime()
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
+            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( hash, mime )
             
             bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             
-            thumbnail = ClientGUICommon.BufferedWindowIcon( self, bmp )
+            thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, bmp )
             
-            thumbnail.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
+            thumbnail_window.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
             
-            vbox.Add( thumbnail, CC.FLAGS_CENTER )
+            vbox.Add( thumbnail_window, CC.FLAGS_CENTER )
             
         
         m_text = HC.mime_string_lookup[ media.GetMime() ]
@@ -5654,6 +5659,11 @@ class StaticImage( wx.Window ):
         
     
     def EventPaint( self, event ):
+        
+        if self._canvas_bmp is None:
+            
+            return
+            
         
         dc = wx.BufferedPaintDC( self, self._canvas_bmp )
         

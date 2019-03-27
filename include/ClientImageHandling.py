@@ -3,6 +3,7 @@ from . import ClientConstants as CC
 import cv2
 from . import HydrusConstants as HC
 from . import HydrusData
+from . import HydrusExceptions
 from . import HydrusImageHandling
 from . import HydrusGlobals as HG
 from functools import reduce
@@ -34,35 +35,6 @@ cv_interpolation_enum_lookup[ CC.ZOOM_AREA ] = cv2.INTER_AREA
 cv_interpolation_enum_lookup[ CC.ZOOM_CUBIC ] = cv2.INTER_CUBIC
 cv_interpolation_enum_lookup[ CC.ZOOM_LANCZOS4 ] = cv2.INTER_LANCZOS4
 
-def EfficientlyResizeNumpyImage( numpy_image, target_resolution ):
-    
-    ( target_x, target_y ) = target_resolution
-    ( im_y, im_x, depth ) = numpy_image.shape
-    
-    if target_x >= im_x and target_y >= im_y:
-        
-        return numpy_image
-        
-    
-    # this seems to slow things down a lot, at least for cv!
-    #if im_x > 2 * target_x and im_y > 2 * target_y: result = cv2.resize( numpy_image, ( 2 * target_x, 2 * target_y ), interpolation = cv2.INTER_NEAREST )
-    
-    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
-    
-def EfficientlyThumbnailNumpyImage( numpy_image, target_resolution ):
-    
-    ( target_x, target_y ) = target_resolution
-    ( im_y, im_x, depth ) = numpy_image.shape
-    
-    if target_x >= im_x and target_y >= im_y:
-        
-        return numpy_image
-        
-    
-    ( target_x, target_y ) = HydrusImageHandling.GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) )
-    
-    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
-    
 def GenerateNumpyImage( path, mime ):
     
     if HG.media_load_report_mode:
@@ -169,7 +141,7 @@ def GenerateShapePerceptualHashes( path, mime ):
     if depth == 4:
         
         # doing this on 10000x10000 pngs eats ram like mad
-        numpy_image = EfficientlyThumbnailNumpyImage( numpy_image, ( 1024, 1024 ) )
+        numpy_image = ThumbnailNumpyImage( numpy_image, ( 1024, 1024 ) )
         
         ( y, x, depth ) = numpy_image.shape
         
@@ -272,23 +244,9 @@ def GenerateShapePerceptualHashes( path, mime ):
     
     return phashes
     
-def GenerateThumbnailFileBytesFromStaticImagePathCV( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
+def GenerateBytesFromCV( numpy_image, mime ):
     
-    if mime is None:
-        
-        mime = HydrusFileHandling.GetMime( path )
-        
-    
-    if mime == HC.IMAGE_GIF:
-        
-        return HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePathPIL( path, dimensions, mime )
-        
-    
-    numpy_image = GenerateNumpyImage( path, mime )
-    
-    thumbnail_numpy_image = EfficientlyThumbnailNumpyImage( numpy_image, dimensions )
-    
-    ( im_y, im_x, depth ) = thumbnail_numpy_image.shape
+    ( im_y, im_x, depth ) = numpy_image.shape
     
     if depth == 4:
         
@@ -299,7 +257,7 @@ def GenerateThumbnailFileBytesFromStaticImagePathCV( path, dimensions = HC.UNSCA
         convert = cv2.COLOR_RGB2BGR
         
     
-    thumbnail_numpy_image = cv2.cvtColor( thumbnail_numpy_image, convert )
+    numpy_image = cv2.cvtColor( numpy_image, convert )
     
     if mime == HC.IMAGE_JPEG:
         
@@ -314,22 +272,44 @@ def GenerateThumbnailFileBytesFromStaticImagePathCV( path, dimensions = HC.UNSCA
         params = CV_PNG_THUMBNAIL_ENCODE_PARAMS
         
     
-    ( result_success, result_byte_array ) = cv2.imencode( ext, thumbnail_numpy_image, params )
+    ( result_success, result_byte_array ) = cv2.imencode( ext, numpy_image, params )
     
     if result_success:
         
-        thumbnail = result_byte_array.tostring()
+        thumbnail_bytes = result_byte_array.tostring()
         
-        return thumbnail
+        return thumbnail_bytes
         
     else:
         
-        return HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePathPIL( path, dimensions, mime )
+        raise HydrusExceptions.CantRenderWithCVException( 'Thumb failed to encode!' )
+        
+    
+def GenerateThumbnailBytesFromStaticImagePathCV( path, bounding_dimensions, mime ):
+    
+    if mime == HC.IMAGE_GIF:
+        
+        return HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePathPIL( path, bounding_dimensions, mime )
+        
+    
+    numpy_image = GenerateNumpyImage( path, mime )
+    
+    thumbnail_numpy_image = ThumbnailNumpyImage( numpy_image, bounding_dimensions )
+    
+    try:
+        
+        thumbnail_bytes = GenerateBytesFromCV( thumbnail_numpy_image, mime )
+        
+        return thumbnail_bytes
+        
+    except HydrusExceptions.CantRenderWithCVException:
+        
+        return HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePathPIL( path, bounding_dimensions, mime )
         
     
 from . import HydrusFileHandling
 
-HydrusFileHandling.GenerateThumbnailFileBytesFromStaticImagePath = GenerateThumbnailFileBytesFromStaticImagePathCV
+HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePath = GenerateThumbnailBytesFromStaticImagePathCV
     
 def GetNumPyImageResolution( numpy_image ):
     
@@ -337,7 +317,14 @@ def GetNumPyImageResolution( numpy_image ):
     
     return ( image_x, image_y )
     
-def ResizeNumpyImage( mime, numpy_image, target_resolution ):
+def ResizeNumpyImage( numpy_image, target_resolution ):
+    
+    ( target_x, target_y ) = target_resolution
+    ( im_y, im_x, depth ) = numpy_image.shape
+    
+    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
+    
+def ResizeNumpyImageForMediaViewer( mime, numpy_image, target_resolution ):
     
     ( target_x, target_y ) = target_resolution
     new_options = HG.client_controller.new_options
@@ -363,4 +350,18 @@ def ResizeNumpyImage( mime, numpy_image, target_resolution ):
         
         return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = interpolation )
         
+    
+def ThumbnailNumpyImage( numpy_image, bounding_dimensions ):
+    
+    ( target_x, target_y ) = bounding_dimensions
+    ( im_y, im_x, depth ) = numpy_image.shape
+    
+    if target_x >= im_x and target_y >= im_y:
+        
+        return numpy_image
+        
+    
+    ( target_x, target_y ) = HydrusImageHandling.GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) )
+    
+    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
     
