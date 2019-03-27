@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<ul>
+				<li><h3>version 345</h3></li>
+					<li>or search:</li>
+					<li>set out a plan to achieve some simple conjunctive normal form (e.g. (blue eyes OR green eyes) AND (blonde hair OR red hair)) OR search support</li>
+					<li>started work on the object extension and search code to support this search in a very basic (and likely inefficient-for-some-scenarios) way--we'll work on this as we discover the most common inefficiencies</li>
+					<li>.</li>
+					<li>thumbnails:</li>
+					<li>the client no longer uses both 'master' and 'resized' thumbnails--it uses a single, smarter thumbnail</li>
+					<li>only the 'txx' thumbnail directories (formerly referred to as full-size) are now used, and the thumbnails inside will regenerate and scale themselves as needed on demand (and will be careful to not save changes to disk when when their source file is non-local)</li>
+					<li>the old 'rxx' 'resized' thumbnail directories are no longer referred to anywhere in the code or ui</li>
+					<li>the old 'rxx' thumbnails directories will be permanently (i.e. no recycle bin) deleted on update. this is a big job, and you will be prompted on update before it happens</li>
+					<li>if you have migrated your db to put 'resized' thumbs on an SSD but not the formerly 'full-size', you will want to recheck the 'migrate database' dialog once you have booted and set a new thumbnail override to move the txx directories over</li>
+					<li>due to the smarter thumbnail, 200x200 is no longer the hard limit for hydrus thumbnails! you can now set up to 2048x2048</li>
+					<li>all file storage location information is now stored directly in the client db (rather than the options object), which should make for more easily export/importable options in future and improve manual fixing as needed</li>
+					<li>added more thumbnail-resizing related popup spam to file report mode</li>
+					<li>fixed a windows-only issue that was making the migrate db dialog close after a file move event concluded</li>
+					<li>updated database migration help for new concepts and ui</li>
+					<li>cleaned up some misc storage code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed a problem in the client api with fetching file identifiers from file_ids</li>
+					<li>fleshed out 'help my db is broke.txt' with more specific clone recovery examples</li>
+					<li>fixed import support for a variety of single-frame music webms</li>
+					<li>fixed an edge-case preview viewer initialisation bug that was trying to draw the canvas before any media was set</li>
+					<li>network report mode now states url classes of urls about to be parsed</li>
+					<li>misc small fixes and cleanup</li>
+				</ul>
 				<li><h3>version 344</h3></li>
 				<ul>
 					<li>final v1.0 client api polish:</li>
