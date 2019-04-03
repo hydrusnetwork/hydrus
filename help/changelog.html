@@ -8,8 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 346</h3></li>
 				<ul>
+					<li>or search:</li>
+					<li>extended the search predicate object to handle more OR stuff</li>
+					<li>extended the tag list to handle list objects that have multiple colours</li>
+					<li>extended the new OR search predicate to report multiple text-snippet-and-colour pairs based on sub-predicates</li>
+					<li>extended tag search input to handle prototype OR predicate creation--hold shift when you enter the tag, and it'll start an OR chain. shift-enter continues the chain, enter alone completes it</li>
+					<li>fleshed out the predicate unit tests to cover more of this</li>
+					<li>wrote unit tests for OR search predicates. it seems good!</li>
+					<li>improved some search logic to apply system preds better in certain edge cases and spend less CPU on OR-search-only searches</li>
+					<li>.</li>
+					<li>thumbnails:</li>
+					<li>thumbnails will now queue for load in a more intelligent order based on estimated difficulty to regenerate, which will tend to put more thumbs on screen faster</li>
+					<li>the decision to regenerate a thumbnail from source is now tempered by how different the current thumbnail is from what is desired--the more similar the two sizes, the more (randomly) likely the client will decide to just use the current (resized) this time. this smooths out change-lag while limiting the number of really fuzzy thumbs you get. feedback on how this works IRL would be appreciated--it uses some voodoo distribution polling to figure it out, which I can definitely tweak</li>
+					<li>improved visual quality of thumbnail scale-up optimisations</li>
+					<li>fixed an issue where a multipage thumbnail grid would incorrectly recalculate the new virtual height after a thumbnail size change event, leading to a bit of invalid extra scrollspace (with noclip rendering errors) at the bottom</li>
+					<li>the thumbnail right-click menu's reparse files entry is now extended to a new 'regenerate' submenu with three options: reparse file and regen thumbs (the old action), force regen thumbs, and regen thumbs if wrong size!</li>
+					<li>the new 'regen if thumbs wrong size' action sends how many thumbs needed resize up to the popup window, as well</li>
+					<li>moved some old thumbnail regen code responsibility out of the db and into the files manager</li>
+					<li>cleaned out some old redundant file/thumbnail code</li>
+					<li>cleaned and refactored a bunch of general image handling and resizing code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed some bad serialisation code that was making file search objects set their 'include current tags' value to false/true on interleaving loads. on this update, all 'include current tags' values are blanket reset to true</li>
+					<li>fixed an issue that was drawing animation canvases pure white on various media update events</li>
+					<li>extended manage urls dialog to support multiple files when launched from a selection of thumbnails. there is a warning in this case, noting that only gallery-style urls are appropriate to be added to multiple files</li>
+					<li>manage urls dialog now supports multiple selections, including shift-select, and accepts delete key presses for easy mass deletion</li>
+					<li>when you ask the database migration dialog to move some files, it now pops up a confirmation dialog that also asks if you would like to limit the max time for the job as 10, 30, or 60 minutes</li>
+					<li>improved file permission setting code across the program to be more sensible for non-Windows</li>
+					<li>if you are a non-Windows user and were hit with directory permission problems last week on the thumbnail update--which resulted in the rxx directories not being deleted--the update this week will attempt to do the delete again, this time correcting the now missing execute permission bit. if it finds outstanding rxx directories to delete, it will give a popup beforehand summarising the situation and giving you a chance to bail out</li>
+					<li>fixed yet another problem that was stopping client api url requests from finding the correct page by name</li>
+					<li>when a client api url request includes fixed tags, these tags should now propagate in all scenarios where the single url produces multiple files</li>
+					<li>updated sqlite dll and console for windows</li>
+					<li>misc fixes and cleanup</li>
+				</ul>
 				<li><h3>version 345</h3></li>
+				<ul>
 					<li>or search:</li>
 					<li>set out a plan to achieve some simple conjunctive normal form (e.g. (blue eyes OR green eyes) AND (blonde hair OR red hair)) OR search support</li>
 					<li>started work on the object extension and search code to support this search in a very basic (and likely inefficient-for-some-scenarios) way--we'll work on this as we discover the most common inefficiencies</li>
