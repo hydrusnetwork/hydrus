@@ -426,7 +426,7 @@ class HydrusResource( Resource ):
             request.setHeader( 'Content-Disposition', str( content_disposition ) )
             
             request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
-            request.setHeader( 'Cache-Control', str( 86400 * 365 ) )
+            request.setHeader( 'Cache-Control', 'max-age={}'.format( 86400 * 365 ) )
             
             fileObject = open( path, 'rb' )
             

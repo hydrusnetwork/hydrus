@@ -5307,10 +5307,21 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._media = media
+        media = ClientMedia.FlattenMedia( media )
         
-        self._urls_listbox = wx.ListBox( self, style = wx.LB_SORT | wx.LB_SINGLE )
+        self._current_media = [ m.Duplicate() for m in media ]
+        
+        self._multiple_files_warning = ClientGUICommon.BetterStaticText( self, label = 'Warning: you are editing urls for multiple files!\nBe very careful about adding URLs here, as they will apply to everything.\nAdding the same URL to multiple files is only appropriate for gallery-type URLs!' )
+        self._multiple_files_warning.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        if len( self._current_media ) == 1:
+            
+            self._multiple_files_warning.Hide()
+            
+        
+        self._urls_listbox = wx.ListBox( self, style = wx.LB_SORT | wx.LB_EXTENDED )
         self._urls_listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventListDoubleClick )
+        self._urls_listbox.Bind( wx.EVT_KEY_DOWN, self.EventListKeyDown )
         
         ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
         
@@ -5327,16 +5338,11 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        locations_manager = self._media.GetLocationsManager()
+        self._pending_content_updates = []
         
-        self._original_urls = set( locations_manager.GetURLs() )
+        self._current_urls_count = collections.Counter()
         
-        for url in self._original_urls:
-            
-            self._urls_listbox.Append( url, url )
-            
-        
-        self._current_urls = set( self._original_urls )
+        self._UpdateList()
         
         #
         
@@ -5347,6 +5353,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.Add( self._multiple_files_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
@@ -5360,7 +5367,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Copy( self ):
         
-        urls = list( self._current_urls )
+        urls = list( self._current_urls_count.keys() )
         
         urls.sort()
         
@@ -5373,42 +5380,35 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
-        for u in ( url, normalised_url ):
+        addee_media = set()
+        
+        for m in self._current_media:
             
-            if u in self._current_urls:
+            locations_manager = m.GetLocationsManager()
+            
+            if normalised_url not in locations_manager.GetURLs():
                 
-                if only_add:
-                    
-                    return
-                    
-                
-                for index in range( self._urls_listbox.GetCount() ):
-                    
-                    existing_url = self._urls_listbox.GetClientData( index )
-                    
-                    if existing_url == u:
-                        
-                        self._RemoveURL( index )
-                        
-                        return
-                        
-                    
+                addee_media.add( m )
                 
             
         
-        u = normalised_url
+        if len( addee_media ) > 0:
+            
+            addee_hashes = { m.GetHash() for m in addee_media }
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( url, ), addee_hashes ) )
+            
+            for m in addee_media:
+                
+                m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                
+            
+            self._pending_content_updates.append( content_update )
+            
         
-        if u not in self._current_urls:
-            
-            self._urls_listbox.Append( u, u )
-            
-            self._current_urls.add( u )
-            
-            if u not in self._original_urls:
-                
-                self._urls_to_add.add( u )
-                
-            
+        #
+        
+        self._UpdateList()
         
     
     def _Paste( self ):
@@ -5431,20 +5431,37 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _RemoveURL( self, index ):
+    def _RemoveURL( self, url ):
         
-        url = self._urls_listbox.GetClientData( index )
+        removee_media = set()
         
-        self._urls_listbox.Delete( index )
-        
-        self._current_urls.discard( url )
-        
-        self._urls_to_add.discard( url )
-        
-        if url in self._original_urls:
+        for m in self._current_media:
             
-            self._urls_to_remove.add( url )
+            locations_manager = m.GetLocationsManager()
             
+            if url in locations_manager.GetURLs():
+                
+                removee_media.add( m )
+                
+            
+        
+        if len( removee_media ) > 0:
+            
+            removee_hashes = { m.GetHash() for m in removee_media }
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( ( url, ), removee_hashes ) )
+            
+            for m in removee_media:
+                
+                m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                
+            
+            self._pending_content_updates.append( content_update )
+            
+        
+        #
+        
+        self._UpdateList()
         
     
     def _SetSearchFocus( self ):
@@ -5452,17 +5469,70 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._url_input.SetFocus()
         
     
+    def _UpdateList( self ):
+        
+        self._urls_listbox.Clear()
+        
+        self._current_urls_count = collections.Counter()
+        
+        for m in self._current_media:
+            
+            locations_manager = m.GetLocationsManager()
+            
+            for url in locations_manager.GetURLs():
+                
+                self._current_urls_count[ url ] += 1
+                
+            
+        
+        for ( url, count ) in self._current_urls_count.items():
+            
+            if len( self._current_media ) == 1:
+                
+                label = url
+                
+            else:
+                
+                label = '{} ({})'.format( url, count )
+                
+            
+            self._urls_listbox.Append( label, url )
+            
+        
+    
     def EventListDoubleClick( self, event ):
         
-        selection = self._urls_listbox.GetSelection()
+        urls = [ self._urls_listbox.GetClientData( selection ) for selection in list( self._urls_listbox.GetSelections() ) ]
         
-        if selection != wx.NOT_FOUND:
+        for url in urls:
             
-            url = self._urls_listbox.GetClientData( selection )
+            self._RemoveURL( url )
             
-            self._RemoveURL( selection )
+        
+        if len( urls ) == 1:
+            
+            url = urls[0]
             
             self._url_input.SetValue( url )
+            
+        
+    
+    def EventListKeyDown( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in CC.DELETE_KEYS:
+            
+            urls = [ self._urls_listbox.GetClientData( selection ) for selection in list( self._urls_listbox.GetSelections() ) ]
+            
+            for url in urls:
+                
+                self._RemoveURL( url )
+                
+            
+        else:
+            
+            event.Skip()
             
         
     
@@ -5502,23 +5572,9 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        hash = self._media.GetHash()
-        
-        content_updates = []
-        
-        if len( self._urls_to_add ) > 0:
+        if len( self._pending_content_updates ) > 0:
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( self._urls_to_add, ( hash, ) ) ) )
-            
-        
-        if len( self._urls_to_remove ) > 0:
-            
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( self._urls_to_remove, ( hash, ) ) ) )
-            
-        
-        if len( content_updates ) > 0:
-            
-            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
+            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : self._pending_content_updates }
             
             HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             

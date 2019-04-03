@@ -313,33 +313,46 @@ HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePath = GenerateThumbnail
     
 def GetNumPyImageResolution( numpy_image ):
     
-    ( image_y, image_x, depth ) = numpy_image.shape
+    ( image_height, image_width, depth ) = numpy_image.shape
     
-    return ( image_x, image_y )
+    return ( image_width, image_height )
     
 def ResizeNumpyImage( numpy_image, target_resolution ):
     
-    ( target_x, target_y ) = target_resolution
-    ( im_y, im_x, depth ) = numpy_image.shape
+    ( target_width, target_height ) = target_resolution
+    ( image_width, image_height, depth ) = numpy_image.shape
     
-    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
+    if target_width == image_width and target_height == target_width:
+        
+        return numpy_image
+        
+    elif target_width > image_height or target_height > image_width:
+        
+        interpolation = cv2.INTER_LANCZOS4
+        
+    else:
+        
+        interpolation = cv2.INTER_AREA
+        
+    
+    return cv2.resize( numpy_image, ( target_width, target_height ), interpolation = interpolation )
     
 def ResizeNumpyImageForMediaViewer( mime, numpy_image, target_resolution ):
     
-    ( target_x, target_y ) = target_resolution
+    ( target_width, target_height ) = target_resolution
     new_options = HG.client_controller.new_options
     
     ( scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomQuality( mime )
     
-    ( im_y, im_x, depth ) = numpy_image.shape
+    ( image_width, image_height, depth ) = numpy_image.shape
     
-    if ( target_x, target_y ) == ( im_x, im_y ):
+    if ( target_width, target_height ) == ( image_height, image_width ):
         
         return numpy_image
         
     else:
         
-        if target_x > im_x or target_y > im_y:
+        if target_width > image_height or target_height > image_width:
             
             interpolation = cv_interpolation_enum_lookup[ scale_up_quality ]
             
@@ -348,20 +361,20 @@ def ResizeNumpyImageForMediaViewer( mime, numpy_image, target_resolution ):
             interpolation = cv_interpolation_enum_lookup[ scale_down_quality ]
             
         
-        return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = interpolation )
+        return cv2.resize( numpy_image, ( target_width, target_height ), interpolation = interpolation )
         
     
 def ThumbnailNumpyImage( numpy_image, bounding_dimensions ):
     
-    ( target_x, target_y ) = bounding_dimensions
-    ( im_y, im_x, depth ) = numpy_image.shape
+    ( bounding_width, bounding_height ) = bounding_dimensions
+    ( image_width, image_height, depth ) = numpy_image.shape
     
-    if target_x >= im_x and target_y >= im_y:
+    if bounding_width >= image_height and bounding_height >= image_width:
         
         return numpy_image
         
     
-    ( target_x, target_y ) = HydrusImageHandling.GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) )
+    target_resolution = HydrusImageHandling.GetThumbnailResolution( ( image_height, image_width ), ( bounding_width, bounding_height ) )
     
-    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
+    return ResizeNumpyImage( numpy_image, target_resolution )
     

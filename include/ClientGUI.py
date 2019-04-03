@@ -4247,7 +4247,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self.IsIconized() or dialog_open:
             
-            self._controller.CallLaterWXSafe( self, 10, self.AddModalMessage, job_key )
+            self._controller.CallLaterWXSafe( self, 2, self.AddModalMessage, job_key )
             
         else:
             

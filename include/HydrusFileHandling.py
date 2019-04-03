@@ -61,7 +61,9 @@ def SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f ):
     
     pil_image = HydrusImageHandling.Dequantize( pil_image )
     
-    HydrusImageHandling.ThumbnailPILImage( pil_image, bounding_dimensions )
+    thumbnail_dimensions = HydrusImageHandling.GetThumbnailResolution( pil_image.size, bounding_dimensions )
+    
+    HydrusImageHandling.ResizePILImage( pil_image, thumbnail_dimensions )
     
     if original_file_was_png or pil_image.mode == 'RGBA':
         

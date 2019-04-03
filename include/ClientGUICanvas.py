@@ -261,7 +261,7 @@ class Animation( wx.Window ):
         self._drag_happened = False
         self._left_down_event = None
         
-        self._a_frame_has_been_drawn = False
+        self._something_valid_has_been_drawn = False
         self._has_played_once_through = False
         
         self._num_frames = 1
@@ -361,16 +361,18 @@ class Animation( wx.Window ):
             self._next_frame_due_at = next_frame_ideally_due
             
         
-        self._a_frame_has_been_drawn = True
+        self._something_valid_has_been_drawn = True
         
     
-    def _DrawWhite( self, dc ):
+    def _DrawABlankFrame( self, dc ):
         
         new_options = HG.client_controller.new_options
         
         dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
         dc.Clear()
+        
+        self._something_valid_has_been_drawn = True
         
     
     def CurrentFrame( self ):
@@ -397,9 +399,9 @@ class Animation( wx.Window ):
         
         dc = wx.BufferedPaintDC( self, self._canvas_bmp )
         
-        if not self._a_frame_has_been_drawn or self._media is not None:
+        if not self._something_valid_has_been_drawn:
             
-            self._DrawWhite( dc )
+            self._DrawABlankFrame( dc )
             
         
     
@@ -479,7 +481,7 @@ class Animation( wx.Window ):
                 self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
                 
                 self._current_frame_drawn = False
-                self._a_frame_has_been_drawn = False
+                self._something_valid_has_been_drawn = False
                 
                 self.Refresh()
                 
@@ -592,7 +594,7 @@ class Animation( wx.Window ):
         self._drag_happened = False
         self._left_down_event = None
         
-        self._a_frame_has_been_drawn = False
+        self._something_valid_has_been_drawn = False
         self._has_played_once_through = False
         
         if self._media is not None:
@@ -639,6 +641,11 @@ class Animation( wx.Window ):
         
     
     def TIMERAnimationUpdate( self ):
+        
+        if self._media is None:
+            
+            return
+            
         
         try:
             
@@ -1676,7 +1683,7 @@ class Canvas( wx.Window ):
         
         with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._current_media )
+            panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, ( self._current_media, ) )
             
             dlg.SetPanel( panel )
             

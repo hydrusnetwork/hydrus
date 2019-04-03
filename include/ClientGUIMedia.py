@@ -1467,23 +1467,23 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _ManageURLs( self ):
         
-        if self._focussed_media is None:
+        if len( self._selected_media ) > 0:
             
-            return
+            num_files = self._GetNumSelected()
             
-        
-        title = 'manage known urls'
-        
-        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+            title = 'manage urls for {} files'.format( num_files )
             
-            panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._focussed_media.GetDisplayMedia() )
+            with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._selected_media )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
             
-            dlg.SetPanel( panel )
+            self.SetFocus()
             
-            dlg.ShowModal()
-            
-        
-        self.SetFocus()
         
     
     def _ModifyUploaders( self, file_service_key ):
@@ -1684,19 +1684,33 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         self._RemoveMediaDirectly( singletons, collections )
         
     
-    def _ReparseFile( self ):
+    def _RegenerateFileData( self, job_type ):
         
         flat_media = self._GetSelectedFlatMedia()
         
         hashes = { media.GetHash() for media in flat_media }
         
-        if len( hashes ) > 0:
+        num_files = len( hashes )
+        
+        if num_files > 0:
             
-            text = 'This will reparse the ' + HydrusData.ToHumanInt( len( hashes ) ) + ' selected files\' metadata and regenerate their thumbnails.'
+            if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE:
+                
+                text = 'This will reparse the {} selected files\' metadata and regenerate their thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
+                text += os.linesep * 2
+                text += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
+                
+            elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
+                
+                text = 'This will force-regenerate the {} selected files\' thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
+                
+            elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
+                
+                text = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
+                
+            
             text += os.linesep * 2
-            text += 'If the files were imported before some recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
-            text += os.linesep * 2
-            text += 'It may take some time to reparse the files.'
+            text += 'It may take some time to finish this job.'
             
             with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                 
@@ -1706,7 +1720,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                     time.sleep( 1 )
                     
-                    HG.client_controller.Write( 'reparse_files', hashes )
+                    HG.client_controller.Write( 'regenerate_file_data', job_type, hashes )
                     
                 
             
@@ -3190,7 +3204,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
-            if abs( delta_x ) > 5 or abs( delta_y ) > 5:
+            if abs( delta_x ) > 10 or abs( delta_y ) > 10:
                 
                 media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
                 
@@ -3520,6 +3534,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 rescind_unpin_phrase = 'rescind unpin from'
                 
                 manage_tags_phrase = 'selected files\' tags'
+                manage_urls_phrase = 'selected files\' urls'
                 manage_ratings_phrase = 'selected files\' ratings'
                 
                 archive_phrase = 'archive selected'
@@ -3549,6 +3564,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 rescind_unpin_phrase = 'rescind unpin from'
                 
                 manage_tags_phrase = 'file\'s tags'
+                manage_urls_phrase = 'file\'s urls'
                 manage_ratings_phrase = 'file\'s ratings'
                 
                 archive_phrase = 'archive'
@@ -3865,7 +3881,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_ratings_phrase, 'Manage ratings for the selected files.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'file\'s known urls', 'Manage urls for the focused file.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_urls_phrase, 'Manage urls for the selected files.', self._ManageURLs )
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'file\'s notes', 'Manage notes for the focused file.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
@@ -4230,7 +4246,13 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'reparse files and regenerate thumbnails', 'Refresh this file\'s metadata and regenerate its thumbnails.', self._ReparseFile )
+                regen_menu = wx.Menu()
+                
+                ClientGUIMenus.AppendMenuItem( self, regen_menu, 'thumbnails, but only if wrong size', 'Regenerate the selected files\' thumbnails, but only if they are the wrong size.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
+                ClientGUIMenus.AppendMenuItem( self, regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                ClientGUIMenus.AppendMenuItem( self, regen_menu, 'file metadata and thumbnails', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+                
+                ClientGUIMenus.AppendMenu( menu, regen_menu, 'regenerate' )
                 
             
         
@@ -4361,13 +4383,13 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._ReinitialisePageCacheIfNeeded()
-        
-        self._RecalculateVirtualSize()
-        
         thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
         
         self.SetScrollRate( 0, int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
+        
+        self._ReinitialisePageCacheIfNeeded()
+        
+        self._RecalculateVirtualSize()
         
         self._DirtyAllPages()
         

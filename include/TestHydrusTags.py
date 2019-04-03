@@ -382,153 +382,239 @@ class TestTagsManager( unittest.TestCase ):
     
 class TestTagObjects( unittest.TestCase ):
     
-    def test_predicates( self ):
+    def test_predicate_strings_and_namespaces( self ):
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
         
         self.assertEqual( p.ToString(), 'tag' )
+        self.assertEqual( p.GetNamespace(), '' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 2 )
         
         self.assertEqual( p.ToString( with_count = False ), 'tag' )
         self.assertEqual( p.ToString( with_count = True ), 'tag (1) (+2)' )
+        self.assertEqual( p.GetNamespace(), '' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False )
         
         self.assertEqual( p.ToString(), '-tag' )
+        self.assertEqual( p.GetNamespace(), '' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', False, 1, 2 )
         
         self.assertEqual( p.ToString( with_count = False ), '-tag' )
         self.assertEqual( p.ToString( with_count = True ), '-tag (1) (+2)' )
+        self.assertEqual( p.GetNamespace(), '' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:time imported: since 1 year 2 months ago' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:time imported: around 1 year 2 months ago' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:time imported: before 1 year 2 months ago' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
         
         self.assertEqual( p.ToString(), 'system:archive (1,000)' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 200 ) )
         
         self.assertEqual( p.ToString(), 'system:duration < 200 milliseconds' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 2000 )
         
         self.assertEqual( p.ToString(), 'system:everything (2,000)' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:is currently in my files' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:is not pending to my files' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HASH, ( bytes.fromhex( 'abcd' ), 'sha256' ) )
         
         self.assertEqual( p.ToString(), 'system:sha256 hash is abcd' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
         
         self.assertEqual( p.ToString(), 'system:height < 2,000' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1000 )
         
         self.assertEqual( p.ToString(), 'system:inbox (1,000)' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 2000 )
         
         self.assertEqual( p.ToString(), 'system:limit is 2,000' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LOCAL, min_current_count = 100 )
         
         self.assertEqual( p.ToString(), 'system:local (100)' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, set( HC.IMAGES ).intersection( HC.SEARCHABLE_MIMES ) )
         
         self.assertEqual( p.ToString(), 'system:mime is image' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, ) )
         
         self.assertEqual( p.ToString(), 'system:mime is video/webm' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
         
         self.assertEqual( p.ToString(), 'system:mime is video/webm, image/gif' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = 100 )
         
         self.assertEqual( p.ToString(), 'system:not local (100)' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '<', 2 ) )
         
         self.assertEqual( p.ToString(), 'system:number of tags < 2' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
         
         self.assertEqual( p.ToString(), 'system:number of words < 5,000' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self.assertEqual( p.ToString(), 'system:rating for my files > 0.2' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 16, 9 ) )
         
         self.assertEqual( p.ToString(), 'system:ratio = 16:9' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( bytes.fromhex( 'abcd' ), 5 ) )
         
         self.assertEqual( p.ToString(), 'system:similar to abcd using max hamming of 5' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
         
         self.assertEqual( p.ToString(), 'system:size > 5MB' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.IMAGES )
         
         self.assertEqual( p.ToString(), 'system:untagged' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
         
         self.assertEqual( p.ToString(), 'system:width = 1,920' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
         
         self.assertEqual( p.ToString(), 'series:*anything*' )
+        self.assertEqual( p.GetNamespace(), 'series' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series', False )
         
         self.assertEqual( p.ToString(), '-series' )
+        self.assertEqual( p.GetNamespace(), '' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
         
         self.assertEqual( p.ToString(), 'a*i:o* (wildcard search)' )
+        self.assertEqual( p.GetNamespace(), 'a*i' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', False )
         
         self.assertEqual( p.ToString(), '-a*i:o*' )
+        self.assertEqual( p.GetNamespace(), 'a*i' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
         #
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
         
         self.assertEqual( p.ToString(), '    series:game of thrones' )
+        self.assertEqual( p.GetNamespace(), 'series' )
+        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
+        
+        #
+        
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
+        
+        self.assertEqual( p.ToString(), 'system:height < 2,000 OR blue eyes OR character:samus aran' )
+        self.assertEqual( p.GetNamespace(), '' )
+        
+        or_texts_and_namespaces = []
+        
+        or_texts_and_namespaces.append( ( 'system:height < 2,000', 'system' ) )
+        or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
+        or_texts_and_namespaces.append( ( 'blue eyes', '' ) )
+        or_texts_and_namespaces.append( ( ' OR ', 'system' ) )
+        or_texts_and_namespaces.append( ( 'character:samus aran', 'character' ) )
+        
+        
+        self.assertEqual( p.GetTextsAndNamespaces(), or_texts_and_namespaces )
         
     
 class TestTagParents( unittest.TestCase ):

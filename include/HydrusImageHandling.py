@@ -306,32 +306,35 @@ def GetResolutionAndNumFrames( path, mime ):
     
     return ( ( x, y ), num_frames )
     
-def GetThumbnailResolution( image_resolution, target_resolution ):
+def GetThumbnailResolution( image_resolution, bounding_resolution ):
     
-    ( im_x, im_y ) = image_resolution
-    ( target_x, target_y ) = target_resolution
+    ( im_width, im_height ) = image_resolution
+    ( bounding_width, bounding_height ) = bounding_resolution
     
-    if target_x >= im_x and target_y >= im_y:
+    if bounding_width >= im_width and bounding_height >= im_height:
         
-        return ( im_x, im_y )
-        
-    
-    x_ratio = im_x / target_x
-    y_ratio = im_y / target_y
-    
-    if x_ratio > y_ratio:
-        
-        target_y = im_y / x_ratio
-        
-    elif y_ratio > x_ratio:
-        
-        target_x = im_x / y_ratio
+        return ( im_width, im_height )
         
     
-    target_x = max( int( target_x ), 1 )
-    target_y = max( int( target_y ), 1 )
+    width_ratio = im_width / bounding_width
+    height_ratio = im_height / bounding_height
     
-    return ( target_x, target_y )
+    thumbnail_width = bounding_width
+    thumbnail_height = bounding_height
+    
+    if width_ratio > height_ratio:
+        
+        thumbnail_height = im_height / width_ratio
+        
+    elif height_ratio > width_ratio:
+        
+        thumbnail_width = im_width / height_ratio
+        
+    
+    thumbnail_width = max( int( thumbnail_width ), 1 )
+    thumbnail_height = max( int( thumbnail_height ), 1 )
+    
+    return ( thumbnail_width, thumbnail_height )
     
 def IsDecompressionBomb( path ):
     
@@ -363,14 +366,4 @@ def ResizePILImage( pil_image, target_resolution ):
     ( im_x, im_y ) = pil_image.size
     
     return pil_image.resize( ( target_x, target_y ), PILImage.ANTIALIAS )
-    
-def ThumbnailPILImage( pil_image, bounding_dimensions ):
-    
-    ( target_x, target_y ) = bounding_dimensions
-    ( im_x, im_y ) = pil_image.size
-    
-    if im_x > target_x or im_y > target_y:
-        
-        pil_image.thumbnail( ( target_x, target_y ), PILImage.ANTIALIAS )
-        
     

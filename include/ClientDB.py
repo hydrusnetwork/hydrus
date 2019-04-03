@@ -2,6 +2,7 @@ from . import ClientAPI
 from . import ClientCaches
 from . import ClientData
 from . import ClientDefaults
+from . import ClientFiles
 from . import ClientGUIShortcuts
 from . import ClientImageHandling
 from . import ClientMedia
@@ -40,6 +41,7 @@ import psutil
 import random
 import re
 import sqlite3
+import stat
 import time
 import traceback
 import wx
@@ -4633,8 +4635,6 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        files_info_predicates = []
-        
         simple_preds = system_predicates.GetSimpleInfo()
         
         # This now overrides any other predicates, including file domain
@@ -4723,7 +4723,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            update_qhi( query_hash_ids, or_query_hash_ids )
+            query_hash_ids = update_qhi( query_hash_ids, or_query_hash_ids )
             
         
         #
@@ -4846,7 +4846,49 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        # now the simple preds and typical ways to populate query_hash_ids
+        # first tags
+        
+        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
+            
+            def sort_longest_first_key( s ):
+                
+                return -len( s )
+                
+            
+            tags_to_include = list( tags_to_include )
+            
+            tags_to_include.sort( key = sort_longest_first_key )
+            
+            for tag in tags_to_include:
+                
+                tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids )
+                
+                query_hash_ids = update_qhi( query_hash_ids, tag_query_hash_ids )
+                
+                if query_hash_ids == set():
+                    
+                    return query_hash_ids
+                    
+                
+            
+            if len( namespaces_to_include ) > 0:
+                
+                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) for namespace in namespaces_to_include ) )
+                
+                query_hash_ids = update_qhi( query_hash_ids, namespace_query_hash_ids )
+                
+            
+            if len( wildcards_to_include ) > 0:
+                
+                wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
+                
+                query_hash_ids = update_qhi( query_hash_ids, wildcard_query_hash_ids )
+                
+            
+        
+        # now the simple preds and desperate last shot to populate query_hash_ids
+        
+        files_info_predicates = []
         
         if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
         if 'size' in simple_preds: files_info_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
@@ -4943,60 +4985,9 @@ class DB( HydrusDB.HydrusDB ):
             else: files_info_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
             
         
-        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
-            
-            def sort_longest_first_key( s ):
-                
-                return -len( s )
-                
-            
-            tags_to_include = list( tags_to_include )
-            
-            tags_to_include.sort( key = sort_longest_first_key )
-            
-            for tag in tags_to_include:
-                
-                tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids )
-                
-                query_hash_ids = update_qhi( query_hash_ids, tag_query_hash_ids )
-                
-                if query_hash_ids == set():
-                    
-                    return query_hash_ids
-                    
-                
-            
-            if len( namespaces_to_include ) > 0:
-                
-                namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags, include_siblings = True ) for namespace in namespaces_to_include ) )
-                
-                query_hash_ids = update_qhi( query_hash_ids, namespace_query_hash_ids )
-                
-            
-            if len( wildcards_to_include ) > 0:
-                
-                wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
-                
-                query_hash_ids = update_qhi( query_hash_ids, wildcard_query_hash_ids )
-                
-            
-            if len( files_info_predicates ) > 0:
-                
-                files_info_predicates.append( 'hash_id IN %s' )
-                
-                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
-                    
-                else:
-                    
-                    files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
-                    
-                    update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
-                    
-                
-            
-        else:
+        done_files_info_predicates = False
+        
+        if query_hash_ids is None:
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
@@ -5006,19 +4997,28 @@ class DB( HydrusDB.HydrusDB ):
                 
                 files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
-                if query_hash_ids is None:
-                    
-                    query_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) )
-                    
-                else:
-                    
-                    files_info_predicates.append( 'hash_id IN %s' )
-                    
-                    statement = 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';'
-                    
-                    query_hash_ids = self._STS( self._SelectFromList( statement, query_hash_ids ) )
-                    
+                query_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) )
                 
+                done_files_info_predicates = True
+                
+            
+        
+        if not done_files_info_predicates and len( files_info_predicates ) > 0:
+            
+            files_info_predicates.append( 'hash_id IN %s' )
+            
+            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                
+                update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                
+            else:
+                
+                files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
+                
+                update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                
+            
+            done_files_info_predicates = True
             
         
         if job_key.IsCancelled():
@@ -7820,7 +7820,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hashes = self._GetHashes( hash_ids )
             
-            self._ReparseFiles( hashes, pub_job_key = False )
+            self._RegenerateFileData( ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE, hashes, pub_job_key = False )
             
             self._c.executemany( 'DELETE FROM reparse_files_queue WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
             
@@ -9423,6 +9423,142 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RegenerateFileData( self, job_type, hashes, pub_job_key = True ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'regenerating file data' )
+            
+            if pub_job_key:
+                
+                self._controller.pub( 'modal_message', job_key )
+                
+            
+            client_files_manager = self._controller.client_files_manager
+            
+            num_thumb_refits = 0
+            
+            num_to_do = len( hashes )
+            
+            needed_to_dupe_some_files = False
+            
+            for ( i, hash ) in enumerate( hashes ):
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                if should_quit:
+                    
+                    break
+                    
+                
+                job_key.SetVariable( 'popup_text_1', 'processing ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
+                
+                hash_id = self._GetHashId( hash )
+                
+                try:
+                    
+                    ( current_mime, width, height ) = self._c.execute( 'SELECT mime, width, height FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                    
+                    path = client_files_manager.LocklessGetFilePath( hash, current_mime )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    continue
+                    
+                
+                mime = current_mime
+                
+                try:
+                    
+                    do_thumbnail = False
+                    
+                    if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE:
+                        
+                        ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
+                        
+                        self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
+                        
+                        if mime != current_mime:
+                            
+                            needed_to_dupe_the_file = client_files_manager.LocklessChangeFileExt( hash, current_mime, mime )
+                            
+                            if needed_to_dupe_the_file:
+                                
+                                needed_to_dupe_some_files = True
+                                
+                            
+                            path = client_files_manager.LocklessGetFilePath( hash, mime )
+                            
+                        
+                        result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                        
+                        if result is None:
+                            
+                            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( path )
+                            
+                            self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+                            
+                        
+                        self._controller.pub( 'new_file_info', { hash } )
+                        
+                        do_thumbnail = True
+                        
+                    
+                    if mime in HC.MIMES_WITH_THUMBNAILS:
+                        
+                        if do_thumbnail or job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
+                            
+                            client_files_manager.LocklessRegenerateThumbnail( hash, mime )
+                            
+                        elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
+                            
+                            was_regenerated = client_files_manager.LocklessRegenerateThumbnailIfWrongSize( hash, mime, ( width, height ) )
+                            
+                            if was_regenerated:
+                                
+                                num_thumb_refits += 1
+                                
+                            
+                            job_key.SetVariable( 'popup_text_2', 'thumbs needing regen: {}'.format( HydrusData.ToHumanInt( num_thumb_refits ) ) )
+                            
+                        
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'There was a problem reparsing or re-thumbnailing file ' + path + '! A full traceback of this error should be written to the log!'
+                    message += os.linesep * 2
+                    message += str( e )
+                    
+                    HydrusData.ShowText( message )
+                    
+                
+            
+            if needed_to_dupe_some_files:
+                
+                message = 'Some files that were reparsed needed to be moved, but the move was not possible and they were copied instead.'
+                message += os.linesep * 2
+                message += 'At some point, you should run _network->clear orphan files_ to clear out the duplicates.'
+                
+                HydrusData.ShowText( message )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
     def _RelocateClientFiles( self, prefix, source, dest ):
         
         full_source = os.path.join( source, prefix )
@@ -9620,121 +9756,6 @@ class DB( HydrusDB.HydrusDB ):
             wx.CallAfter( wx.MessageBox, message )
             
             self._RegenerateACCache()
-            
-        
-    
-    def _ReparseFiles( self, hashes, pub_job_key = True ):
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        try:
-            
-            job_key.SetVariable( 'popup_title', 'rechecking video metadata' )
-            
-            if pub_job_key:
-                
-                self._controller.pub( 'modal_message', job_key )
-                
-            
-            client_files_manager = self._controller.client_files_manager
-            
-            num_to_do = len( hashes )
-            
-            needed_to_dupe_some_files = False
-            
-            for ( i, hash ) in enumerate( hashes ):
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    break
-                    
-                
-                job_key.SetVariable( 'popup_text_1', 'processing ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
-                
-                hash_id = self._GetHashId( hash )
-                
-                try:
-                    
-                    old_mime = self._GetMime( hash_id )
-                    
-                    path = client_files_manager.LocklessGetFilePath( hash, old_mime )
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    continue
-                    
-                
-                try:
-                    
-                    ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
-                    
-                    self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
-                    
-                    if mime != old_mime:
-                        
-                        needed_to_dupe_the_file = client_files_manager.LocklessChangeFileExt( hash, old_mime, mime )
-                        
-                        if needed_to_dupe_the_file:
-                            
-                            needed_to_dupe_some_files = True
-                            
-                        
-                        path = client_files_manager.LocklessGetFilePath( hash, mime )
-                        
-                    
-                    if mime in HC.MIMES_WITH_THUMBNAILS:
-                        
-                        bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-                        
-                        percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
-                        
-                        thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( path, bounding_dimensions, mime, percentage_in = percentage_in )
-                        
-                        client_files_manager.LocklessAddThumbnailFromBytes( hash, thumbnail_bytes )
-                        
-                    
-                    result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                    
-                    if result is None:
-                        
-                        ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( path )
-                        
-                        self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
-                        
-                    
-                    self._controller.pub( 'new_file_info', { hash } )
-                    
-                except Exception as e:
-                    
-                    HydrusData.PrintException( e )
-                    
-                    message = 'There was a problem reparsing or re-thumbnailing file ' + path + '! A full traceback of this error should be written to the log!'
-                    message += os.linesep * 2
-                    message += str( e )
-                    
-                    HydrusData.ShowText( message )
-                    
-                
-            
-            if needed_to_dupe_some_files:
-                
-                message = 'Some files that were reparsed needed to be moved, but the move was not possible and they were copied instead.'
-                message += os.linesep * 2
-                message += 'At some point, you should run _network->clear orphan files_ to clear out the duplicates.'
-                
-                HydrusData.ShowText( message )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            
-            job_key.Finish()
             
         
     
@@ -11955,7 +11976,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 344:
             
-            def wx_code():
+            def wx_thumb_delete_warning():
                 
                 message = 'The client now only uses one thumbnail per file (previously it needed two). Your \'resized\' thumbnails will now be deleted. This is a significant step that could take some time to complete. It will also significantly impact your next backup run.'
                 message += os.linesep * 2
@@ -11966,7 +11987,7 @@ class DB( HydrusDB.HydrusDB ):
                 wx.MessageBox( message )
                 
             
-            self._controller.CallBlockingToWX( None, wx_code )
+            self._controller.CallBlockingToWX( None, wx_thumb_delete_warning )
             
             new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
             
@@ -12030,6 +12051,92 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 self._c.execute( 'DELETE FROM client_files_locations WHERE prefix = ?;', ( resized_prefix, ) )
+                
+            
+        
+        if version == 345:
+            
+            # I screwed up the permissions setting on 344 update so that certain non-windows users got de-execution-permissioned rxx folders, which then made them non-traversable and -deletable
+            # so, let's give it another spin, albeit with less information since we have to guess potential location from remaining locations
+            
+            if not HC.PLATFORM_WINDOWS:
+                
+                locations_where_r_folders_were_found = set()
+                
+                locations = self._STL( self._c.execute( 'SELECT DISTINCT location FROM client_files_locations;' ) )
+                
+                possible_resized_paths = []
+                
+                error_occurred = False
+                
+                for prefix in HydrusData.IterateHexPrefixes():
+                    
+                    resized_prefix = 'r' + prefix
+                    
+                    for location in locations:
+                        
+                        full_path = os.path.join( HydrusPaths.ConvertPortablePathToAbsPath( location ), resized_prefix )
+                        
+                        if os.path.exists( full_path ):
+                            
+                            possible_resized_paths.append( full_path )
+                            
+                            locations_where_r_folders_were_found.add( location )
+                            
+                        
+                    
+                
+                num_possible_resized_paths = len( possible_resized_paths )
+                
+                if num_possible_resized_paths > 0:
+                    
+                    def wx_thumb_delete_warning_reattempt():
+                        
+                        message = 'It appears that the update code from last week\'s release, 345, did not successfully delete all your old (and now unneeded) resized thumbnail directories.'
+                        message += os.linesep * 2
+                        message += 'I have found {} spare \'rxx\' directories (this number should be less than or equal to 256) in these current locations:'.format( num_possible_resized_paths )
+                        message += os.linesep * 2
+                        message += os.linesep.join( [ HydrusPaths.ConvertPortablePathToAbsPath( location ) for location in locations_where_r_folders_were_found ] )
+                        message += os.linesep * 2
+                        message += 'I will now attempt to delete these directories again, this time with fixed permissions. If you are not ready to do this, kill the hydrus process now.'
+                        
+                        wx.MessageBox( message )
+                        
+                    
+                    self._controller.CallBlockingToWX( None, wx_thumb_delete_warning_reattempt )
+                    
+                    for ( i, full_path ) in enumerate( possible_resized_paths ):
+                        
+                        self._controller.pub( 'splash_set_status_subtext', 'deleting resized thumbnails 2: electric boogaloo {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_possible_resized_paths ) ) )
+                        
+                        try:
+                            
+                            stat_result = os.stat( full_path )
+                            
+                            current_bits = stat_result.st_mode
+                            
+                            if not stat.S_IXUSR & current_bits:
+                                
+                                os.chmod( full_path, current_bits | stat.S_IXUSR )
+                                
+                            
+                            HydrusPaths.DeletePath( full_path )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.PrintException( e )
+                            
+                            if not error_occurred:
+                                
+                                error_occurred = True
+                                
+                                message = 'The second attempt to delete old resized directories also failed. Error information has been written to the log. Please consult hydrus dev if you cannot figure this out on your own.'
+                                
+                                self.pub_initial_message( message )
+                                
+                            
+                        
+                    
                 
             
         
@@ -12616,7 +12723,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_similar_files': self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
-        elif action == 'reparse_files': self._ReparseFiles( *args, **kwargs )
+        elif action == 'regenerate_file_data': self._RegenerateFileData( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
         elif action == 'schedule_full_phash_regen': self._CacheSimilarFilesSchedulePHashRegeneration()

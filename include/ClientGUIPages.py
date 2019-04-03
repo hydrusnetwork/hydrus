@@ -1911,7 +1911,7 @@ class PagesNotebook( wx.Notebook ):
         
         if desired_page_name is not None:
             
-            potential_watcher_pages = [ page for page in potential_watcher_pages if page.GetName() == desired_page_name ]
+            potential_watcher_pages = [ page for page in potential_watcher_pages if page.GetDisplayName() == desired_page_name ]
             
         
         if len( potential_watcher_pages ) > 0:
@@ -1941,7 +1941,7 @@ class PagesNotebook( wx.Notebook ):
         
         if desired_page_name is not None:
             
-            potential_url_import_pages = [ page for page in potential_url_import_pages if page.GetName() == desired_page_name ]
+            potential_url_import_pages = [ page for page in potential_url_import_pages if page.GetDisplayName() == desired_page_name ]
             
         
         if len( potential_url_import_pages ) > 0:

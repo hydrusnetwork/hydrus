@@ -513,7 +513,7 @@ def MakeSureDirectoryExists( path ):
         os.makedirs( path )
         
     
-def MakeFileWritable( path ):
+def MakeFileWritable( path, recursive = True ):
     
     if not os.path.exists( path ):
         
@@ -522,24 +522,48 @@ def MakeFileWritable( path ):
     
     try:
         
-        os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+        stat_result = os.stat( path )
         
-        if os.path.isdir( path ):
+        current_bits = stat_result.st_mode
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
+            desired_bit = stat.S_IWRITE
+            
+        else:
+            
+            desired_bit = stat.S_IWUSR
+            
+        
+        if not desired_bit & current_bits:
+            
+            os.chmod( path, current_bits | desired_bit )
+            
+        
+        if os.path.isdir( path ) and recursive:
             
             for ( root, dirnames, filenames ) in os.walk( path ):
+                
+                for dirname in dirnames:
+                    
+                    sub_path = os.path.join( root, dirname )
+                    
+                    MakeFileWritable( sub_path, recursive = False )
+                    
                 
                 for filename in filenames:
                     
                     sub_path = os.path.join( root, filename )
                     
-                    os.chmod( sub_path, stat.S_IWRITE | stat.S_IREAD )
+                    MakeFileWritable( sub_path )
                     
                 
             
         
     except Exception as e:
         
-        pass
+        HydrusData.Print( 'Wanted to add write permission to "{}", but had an error: {}'.format( path, str( e ) ) )
         
     
 def MergeFile( source, dest ):

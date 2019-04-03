@@ -992,9 +992,11 @@ class ListBox( wx.ScrolledWindow ):
         return self._ordered_terms[ index ]
         
     
-    def _GetTextColour( self, term ):
+    def _GetTextsAndColours( self, term ):
         
-        return ( 0, 111, 250 )
+        text = self._terms_to_texts[ term ]
+        
+        return [ ( text, ( 0, 111, 250 ) ) ]
         
     
     def _GetSafeHitIndex( self, hit_index, direction = None ):
@@ -1185,28 +1187,49 @@ class ListBox( wx.ScrolledWindow ):
             
             term = self._GetTerm( current_index )
             
-            text = self._terms_to_texts[ term ]
+            texts_and_colours = self._GetTextsAndColours( term )
             
-            ( r, g, b ) = self._GetTextColour( term )
+            there_is_more_than_one_text = len( texts_and_colours ) > 1
             
-            text_colour = wx.Colour( r, g, b )
+            x_start = self.TEXT_X_PADDING
             
-            if term in self._selected_terms:
+            for ( text, ( r, g, b ) ) in texts_and_colours:
                 
-                dc.SetBrush( wx.Brush( text_colour ) )
+                text_colour = wx.Colour( r, g, b )
                 
-                dc.SetPen( wx.TRANSPARENT_PEN )
+                if term in self._selected_terms:
+                    
+                    dc.SetBrush( wx.Brush( text_colour ) )
+                    
+                    dc.SetPen( wx.TRANSPARENT_PEN )
+                    
+                    if x_start == self.TEXT_X_PADDING:
+                        
+                        background_colour_x = 0
+                        
+                    else:
+                        
+                        background_colour_x = x_start
+                        
+                    
+                    dc.DrawRectangle( background_colour_x, i * self._text_y, my_width, self._text_y )
+                    
+                    text_colour = self._background_colour
+                    
                 
-                dc.DrawRectangle( 0, i * self._text_y, my_width, self._text_y )
+                dc.SetTextForeground( text_colour )
                 
-                text_colour = self._background_colour
+                ( x, y ) = ( x_start, i * self._text_y )
                 
-            
-            dc.SetTextForeground( text_colour )
-            
-            ( x, y ) = ( self.TEXT_X_PADDING, i * self._text_y )
-            
-            dc.DrawText( text, x, y )
+                dc.DrawText( text, x, y )
+                
+                if there_is_more_than_one_text:
+                    
+                    ( text_width, text_height ) = dc.GetTextExtent( text )
+                    
+                    x_start += text_width
+                    
+                
             
         
         self._dirty = False
@@ -1495,22 +1518,40 @@ class ListBoxTags( ListBox ):
         raise NotImplementedError()
         
     
-    def _GetTextColour( self, term ):
+    def _GetTextsAndColours( self, term ):
         
         namespace_colours = self._GetNamespaceColours()
         
-        namespace = self._GetNamespaceFromTerm( term )
-        
-        if namespace in namespace_colours:
+        if isinstance( term, ClientSearch.Predicate ) and term.GetType() == HC.PREDICATE_TYPE_OR_CONTAINER:
             
-            ( r, g, b ) = namespace_colours[ namespace ]
+            texts_and_namespaces = term.GetTextsAndNamespaces()
             
         else:
             
-            ( r, g, b ) = namespace_colours[ None ]
+            text = self._terms_to_texts[ term ]
+            
+            namespace = self._GetNamespaceFromTerm( term )
+            
+            texts_and_namespaces = [ ( text, namespace ) ]
             
         
-        return ( r, g, b )
+        texts_and_colours = []
+        
+        for ( text, namespace ) in texts_and_namespaces:
+            
+            if namespace in namespace_colours:
+                
+                ( r, g, b ) = namespace_colours[ namespace ]
+                
+            else:
+                
+                ( r, g, b ) = namespace_colours[ None ]
+                
+            
+            texts_and_colours.append( ( text, ( r, g, b ) ) )
+            
+        
+        return texts_and_colours
         
     
     def _NewSearchPage( self ):
@@ -2260,6 +2301,27 @@ class ListBoxTagsACWrite( ListBoxTagsAC ):
         predicate = term
         
         return predicate.ToString( sibling_service_key = self._service_key )
+        
+    
+class ListBoxTagsPredicatesORPreview( ListBoxTagsPredicates ):
+    
+    has_counts = False
+    
+    def __init__( self, parent ):
+        
+        ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 1 )
+        
+    
+    def SetPredicate( self, predicate ):
+        
+        self._Clear()
+        
+        if predicate is not None:
+            
+            self._AppendTerm( predicate )
+            
+        
+        self._DataHasChanged()
         
     
 class ListBoxTagsCensorship( ListBoxTags ):

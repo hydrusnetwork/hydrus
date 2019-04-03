@@ -863,7 +863,37 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Rebalance( self ):
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        message = 'Moving files can be a slow and slightly laggy process, with the UI intermittently hanging, which sometimes makes manually stopping a large ongoing job difficult. Would you like to set a max runtime on this job?'
+        
+        yes_tuples = []
+        
+        yes_tuples.append( ( 'run for 10 minutes', 600 ) )
+        yes_tuples.append( ( 'run for 30 minutes', 1800 ) )
+        yes_tuples.append( ( 'run for 1 hour', 3600 ) )
+        yes_tuples.append( ( 'run indefinitely', None ) )
+        
+        with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                value = dlg.GetValue()
+                
+                if value is None:
+                    
+                    stop_time = None
+                    
+                else:
+                    
+                    stop_time = HydrusData.GetNow() + value
+                    
+                
+                job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+                
+            else:
+                
+                return
+                
+            
         
         job_key.SetVariable( 'popup_title', 'rebalancing files' )
         

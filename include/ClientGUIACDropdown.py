@@ -15,6 +15,7 @@ from . import HydrusGlobals as HG
 from . import HydrusTags
 import itertools
 import wx
+import wx.lib.scrolledpanel
 
 ID_TIMER_DROPDOWN_HIDE = wx.NewId()
 ID_TIMER_AC_LAG = wx.NewId()
@@ -470,16 +471,16 @@ class AutoCompleteDropdown( wx.Panel ):
         self._ScheduleListRefresh( 0.0 )
         
     
-    def _BroadcastChoices( self, predicates ):
+    def _BroadcastChoices( self, predicates, shift_down ):
         
         raise NotImplementedError()
         
     
-    def _BroadcastCurrentText( self ):
+    def _BroadcastCurrentText( self, shift_down ):
         
         text = self._text_ctrl.GetValue()
         
-        self._BroadcastChoices( { text } )
+        self._BroadcastChoices( { text }, shift_down )
         
     
     def _CancelScheduledListRefresh( self ):
@@ -698,7 +699,7 @@ class AutoCompleteDropdown( wx.Panel ):
         raise NotImplementedError()
         
     
-    def _TakeResponsibilityForEnter( self ):
+    def _TakeResponsibilityForEnter( self, shift_down ):
         
         raise NotImplementedError()
         
@@ -733,7 +734,9 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def BroadcastChoices( self, predicates ):
         
-        self._BroadcastChoices( predicates )
+        shift_down = wx.GetKeyState( wx.WXK_SHIFT )
+        
+        self._BroadcastChoices( predicates, shift_down )
         
     
     def DoDropdownHideShow( self ):
@@ -773,7 +776,9 @@ class AutoCompleteDropdown( wx.Panel ):
                 
             elif key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
                 
-                self._TakeResponsibilityForEnter()
+                shift_down = modifier == wx.ACCEL_SHIFT
+                
+                self._TakeResponsibilityForEnter( shift_down )
                 
             elif input_is_empty: # maybe we should be sending a 'move' event to a different place
                 
@@ -1193,6 +1198,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._media_callable = media_callable
         self._page_key = page_key
         
+        self._under_construction_or_predicate = None
+        
+        self._or_predicate_preview_list_window = ClientGUIListBoxes.ListBoxTagsPredicatesORPreview( self )
+        
+        self._or_predicate_preview_list_window.Hide()
+        
         self._file_search_context = file_search_context
         
         self._include_current_tags = ClientGUICommon.OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags', start_on = file_search_context.IncludeCurrentTags() )
@@ -1204,6 +1215,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._synchronised.SetToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
+        
+        top_vbox = self.GetSizer()
+        
+        top_vbox.Insert( 0, self._or_predicate_preview_list_window, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         button_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1230,14 +1245,47 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         HG.client_controller.sub( self, 'IncludePending', 'notify_include_pending' )
         
     
-    def _BroadcastChoices( self, predicates ):
+    def _BroadcastChoices( self, predicates, shift_down ):
         
-        HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+        if shift_down:
+            
+            if self._under_construction_or_predicate is None:
+                
+                self._under_construction_or_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, predicates )
+                
+            else:
+                
+                or_preds = list( self._under_construction_or_predicate.GetValue() )
+                
+                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
+                
+                self._under_construction_or_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, or_preds )
+                
+            
+            self._UpdateORPreview()
+            
+        else:
+            
+            if self._under_construction_or_predicate is not None:
+                
+                or_preds = list( self._under_construction_or_predicate.GetValue() )
+                
+                or_preds.extend( [ predicate for predicate in predicates if predicate not in or_preds ] )
+                
+                predicates = { ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, or_preds ) }
+                
+                self._under_construction_or_predicate = None
+                
+                self._UpdateORPreview()
+                
+            
+            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            
         
         self._ClearInput()
         
     
-    def _BroadcastCurrentText( self ):
+    def _BroadcastCurrentText( self, shift_down ):
         
         ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
@@ -1250,7 +1298,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             return
             
         
-        self._BroadcastChoices( { entry_predicate } )
+        self._BroadcastChoices( { entry_predicate }, shift_down )
         
     
     def _ChangeFileService( self, file_service_key ):
@@ -1337,6 +1385,49 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate )
         
     
+    def _UpdateORPreview( self ):
+        
+        self._or_predicate_preview_list_window.SetPredicate( self._under_construction_or_predicate )
+        
+        needs_layout = False
+        
+        if self._under_construction_or_predicate is None:
+            
+            if self._or_predicate_preview_list_window.IsShown():
+                
+                self._or_predicate_preview_list_window.Hide()
+                
+                needs_layout = True
+                
+            
+        else:
+            
+            if not self._or_predicate_preview_list_window.IsShown():
+                
+                self._or_predicate_preview_list_window.Show()
+                
+                needs_layout = True
+                
+            
+        
+        if needs_layout:
+            
+            parent = self.GetParent()
+            
+            while parent is not None and not isinstance( parent, wx.lib.scrolledpanel.ScrolledPanel ):
+                
+                parent = parent.GetParent()
+                
+            
+            parent.FitInside()
+            
+            if self._float_mode:
+                
+                self._DropdownHideShow()
+                
+            
+        
+    
     def _StartResultsFetchJob( self, job_key ):
         
         parsed_search_text = self._ParseSearchText()
@@ -1357,9 +1448,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return p1
         
     
-    def _TakeResponsibilityForEnter( self ):
+    def _TakeResponsibilityForEnter( self, shift_down ):
         
-        self._BroadcastCurrentText()
+        self._BroadcastCurrentText( shift_down )
         
     
     def GetFileSearchContext( self ):
@@ -1449,7 +1540,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._dropdown_window.SetSizer( vbox )
         
     
-    def _BroadcastChoices( self, predicates ):
+    def _BroadcastChoices( self, predicates, shift_down ):
         
         tags = { predicate.GetValue() for predicate in predicates }
         
@@ -1496,7 +1587,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         return ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate )
         
     
-    def _BroadcastCurrentText( self ):
+    def _BroadcastCurrentText( self, shift_down ):
         
         ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
@@ -1509,7 +1600,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             return
             
         
-        self._BroadcastChoices( { entry_predicate } )
+        self._BroadcastChoices( { entry_predicate }, shift_down )
         
     
     def _ChangeTagService( self, tag_service_key ):
@@ -1558,7 +1649,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._search_text_for_current_cache, self._cached_results )
         
     
-    def _TakeResponsibilityForEnter( self ):
+    def _TakeResponsibilityForEnter( self, shift_down ):
         
         if self._text_ctrl.GetValue() == '' and self._dropdown_notebook.GetCurrentPage() == self._search_results_list:
             
@@ -1569,7 +1660,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         else:
             
-            self._BroadcastCurrentText()
+            self._BroadcastCurrentText( shift_down )
             
         
     

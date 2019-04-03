@@ -318,7 +318,7 @@ class ClientFilesManager( object ):
             raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
             
         
-        self._SaveThumbnail( hash, thumbnail_bytes )
+        self._AddThumbnailFromBytes( hash, thumbnail_bytes )
         
     
     def _GetRecoverTuple( self ):
@@ -601,23 +601,31 @@ class ClientFilesManager( object ):
             
         
     
-    def _SaveThumbnail( self, hash, thumbnail_bytes ):
+    def _AddThumbnailFromBytes( self, hash, thumbnail_bytes ):
         
-        thumbnail_path = self._GenerateExpectedThumbnailPath( hash )
+        dest_path = self._GenerateExpectedThumbnailPath( hash )
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Adding thumbnail: ' + str( ( len( thumbnail_bytes ), dest_path ) ) )
+            
         
         try:
             
-            HydrusPaths.MakeFileWritable( thumbnail_path )
+            HydrusPaths.MakeFileWritable( dest_path )
             
-            with open( thumbnail_path, 'wb' ) as f:
+            with open( dest_path, 'wb' ) as f:
                 
                 f.write( thumbnail_bytes )
                 
             
         except Exception as e:
             
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file "{}" failed to write to path "{}". This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.'.format( hash.hex(), thumbnail_path ) )
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file "{}" failed to write to path "{}". This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.'.format( hash.hex(), dest_path ) )
             
+        
+        self._controller.pub( 'clear_thumbnails', { hash } )
+        self._controller.pub( 'new_thumbnails', { hash } )
         
     
     def _WaitOnWakeup( self ):
@@ -688,28 +696,8 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            self.LocklessAddThumbnailFromBytes( hash, thumbnail_bytes )
+            self._AddThumbnailFromBytes( hash, thumbnail_bytes )
             
-        
-    
-    def LocklessAddThumbnailFromBytes( self, hash, thumbnail_bytes ):
-        
-        dest_path = self._GenerateExpectedThumbnailPath( hash )
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'Adding thumbnail: ' + str( ( len( thumbnail_bytes ), dest_path ) ) )
-            
-        
-        HydrusPaths.MakeFileWritable( dest_path )
-        
-        with open( dest_path, 'wb' ) as f:
-            
-            f.write( thumbnail_bytes )
-            
-        
-        self._controller.pub( 'clear_thumbnails', { hash } )
-        self._controller.pub( 'new_thumbnails', { hash } )
         
     
     def CheckFileIntegrity( self, *args, **kwargs ):
@@ -999,7 +987,7 @@ class ClientFilesManager( object ):
                 
                 if thumbnail is not None:
                     
-                    self.LocklessAddThumbnailFromBytes( hash, thumbnail )
+                    self._AddThumbnailFromBytes( hash, thumbnail )
                     
                 
                 ( import_status, note ) = self._controller.WriteSynchronous( 'import_file', file_import_job )
@@ -1096,22 +1084,26 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
-            path = self._GenerateExpectedThumbnailPath( hash )
+            return self.LocklessGetThumbnailPath( hash, mime = mime )
             
-            if not os.path.exists( path ):
+    
+    def LocklessGetThumbnailPath( self, hash, mime = None ):
+        
+        path = self._GenerateExpectedThumbnailPath( hash )
+        
+        if not os.path.exists( path ):
+            
+            self._GenerateThumbnail( hash, mime )
+            
+            if not self._bad_error_occurred:
                 
-                self._GenerateThumbnail( hash, mime )
+                self._bad_error_occurred = True
                 
-                if not self._bad_error_occurred:
-                    
-                    self._bad_error_occurred = True
-                    
-                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.hex() + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
-                    
+                HydrusData.ShowText( 'A thumbnail for a file, ' + hash.hex() + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
                 
             
-            return path
-            
+        
+        return path
         
     
     def LocklessHasThumbnail( self, hash ):
@@ -1217,8 +1209,49 @@ class ClientFilesManager( object ):
                 HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
                 
             
-            self._GenerateThumbnail( hash, mime )
+            self.LocklessRegenerateThumbnail( hash, mime )
             
+        
+    
+    def LocklessRegenerateThumbnail( self, hash, mime ):
+        
+        self._GenerateThumbnail( hash, mime )
+        
+    
+    def LocklessRegenerateThumbnailIfWrongSize( self, hash, mime, media_size ):
+        
+        do_it = False
+        
+        try:
+            
+            path = self._GenerateExpectedThumbnailPath( hash )
+            
+            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+            
+            ( current_width, current_height ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
+            
+            ( media_width, media_height ) = media_size
+            
+            bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+            
+            ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions )
+            
+            if current_width != expected_width or current_height != expected_height:
+                
+                do_it = True
+                
+            
+        except:
+            
+            do_it = True
+            
+        
+        if do_it:
+            
+            self.LocklessRegenerateThumbnail( hash, mime )
+            
+        
+        return do_it
         
     
     def RegenerateThumbnails( self, only_do_missing = False ):
@@ -1274,11 +1307,20 @@ class ClientFilesManager( object ):
                         continue
                         
                     
+                    # this is bad, and will be blessedly gone when we move to new db-level regen maintenance cycle
+                    # if db thinks it is a mkv but this now says webm, the genthumb call fails since it can't find origin path, ha ha
                     mime = HydrusFileHandling.GetMime( path )
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS:
                         
-                        self._GenerateThumbnail( hash, mime )
+                        try:
+                            
+                            self._GenerateThumbnail( hash, mime )
+                            
+                        except HydrusExceptions.FileMissingException:
+                            
+                            continue
+                            
                         
                     
                 except:
@@ -1302,14 +1344,6 @@ class ClientFilesManager( object ):
             HydrusData.Print( job_key.ToString() )
             
             job_key.Finish()
-            
-        
-    
-    def SaveThumbnail( self, hash, thumbnail_bytes ):
-        
-        with self._lock:
-            
-            self._SaveThumbnail( hash, thumbnail_bytes )
             
         
     
@@ -2967,6 +3001,10 @@ class ThumbnailCache( object ):
         
         self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
         
+        self._magic_mime_thumbnail_ease_score_lookup = {}
+        
+        self._InitialiseMagicMimeScores()
+        
         self._lock = threading.Lock()
         
         self._thumbnail_error_occurred = False
@@ -3055,117 +3093,153 @@ class ThumbnailCache( object ):
         
         if not correct_size:
             
-            it_is_definitely_too_big = current_width >= expected_width and current_height >= expected_height
+            just_resize_it_this_time = False
             
-            if it_is_definitely_too_big:
+            if current_width > 0 and current_height > 0:
+                
+                x_scale = abs( current_width - expected_width ) / current_width
+                y_scale = abs( current_height - expected_height ) / current_height
+                
+                biggest_scale = max( x_scale, y_scale )
+                
+                # 10% change in dimension is an ok tipping point for 50/50 chance of resize
+                magic_fuzzy_number = 0.10
+                
+                '''
+                # very well-researched probability distribution, I certainly did not pull this out of the shadow realm because it sort of made some nice-looking curves
+                just_resize_it_this_time = random.betavariate( biggest_scale, magic_fuzzy_number ) < 0.5
+                '''
+                
+                # according to my expert analysis, this does the same as above, but simpler:
+                # mean = alpha / ( alpha + beta )
+                beta_dist_mean = biggest_scale / ( biggest_scale + magic_fuzzy_number )
+                
+                just_resize_it_this_time = random.random() > beta_dist_mean
+                
+            
+            if just_resize_it_this_time:
                 
                 if HG.file_report_mode:
                     
-                    HydrusData.ShowText( 'Thumbnail {} too big.'.format( hash.hex() ) )
+                    HydrusData.ShowText( 'Thumbnail incorrect, but just resizing this time. Scale alpha: {}'.format( biggest_scale ) )
                     
                 
-                # the thumb we have is larger than desired. we can use it to generate what we actually want without losing significant data
-                
-                # this is _resize_, not _thumbnail_, because we already know the dimensions we want
-                # and in some edge cases, doing getthumbresolution on existing thumb dimensions results in float/int conversion imprecision and you get 90px/91px regen cycles that never get fixed
                 numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, ( expected_width, expected_height ) )
-                
-                if locations_manager.IsLocal():
-                    
-                    # we have the master file, so it is safe to save our resized thumb back to disk since we can regen from source if needed
-                    
-                    if HG.file_report_mode:
-                        
-                        HydrusData.ShowText( 'Thumbnail {} too big, saving back to disk.'.format( hash.hex() ) )
-                        
-                    
-                    try:
-                        
-                        try:
-                            
-                            thumbnail_bytes = ClientImageHandling.GenerateBytesFromCV( numpy_image, mime )
-                            
-                        except HydrusExceptions.CantRenderWithCVException:
-                            
-                            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePathPIL( path, bounding_dimensions, mime )
-                            
-                        
-                    except:
-                        
-                        summary = 'The thumbnail for file {} was too large, but an attempt to shrink it failed.'.format( hash.hex() )
-                        
-                        self._HandleThumbnailException( e, summary )
-                        
-                        return self._special_thumbs[ 'hydrus' ]
-                        
-                    
-                    try:
-                        
-                        self._controller.client_files_manager.SaveThumbnail( hash, thumbnail_bytes )
-                        
-                    except:
-                        
-                        summary = 'The thumbnail for file {} was too large, but an attempt to save back the shrunk file failed.'.format( hash.hex() )
-                        
-                        self._HandleThumbnailException( e, summary )
-                        
-                        return self._special_thumbs[ 'hydrus' ]
-                        
-                    
                 
             else:
                 
-                # the thumb we have is either too small or completely messed up due to a previous ratio misparse
+                it_is_definitely_too_big = current_width >= expected_width and current_height >= expected_height
                 
-                media_is_same_size_as_thumb = current_width == media_width and current_height == media_height
-                
-                if media_is_same_size_as_thumb:
-                    
-                    # the thumb is smaller than desired, but this is a 32x32 pixilart image or whatever, so no need to scale
+                if it_is_definitely_too_big:
                     
                     if HG.file_report_mode:
                         
-                        HydrusData.ShowText( 'Thumbnail {} too small due to small source file.'.format( hash.hex() ) )
+                        HydrusData.ShowText( 'Thumbnail {} too big.'.format( hash.hex() ) )
                         
                     
-                    pass
+                    # the thumb we have is larger than desired. we can use it to generate what we actually want without losing significant data
                     
-                else:
-                
+                    # this is _resize_, not _thumbnail_, because we already know the dimensions we want
+                    # and in some edge cases, doing getthumbresolution on existing thumb dimensions results in float/int conversion imprecision and you get 90px/91px regen cycles that never get fixed
+                    numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, ( expected_width, expected_height ) )
+                    
                     if locations_manager.IsLocal():
                         
-                        # we have the master file, so we should regen the thumb from source
+                        # we have the master file, so it is safe to save our resized thumb back to disk since we can regen from source if needed
                         
                         if HG.file_report_mode:
                             
-                            HydrusData.ShowText( 'Thumbnail {} too small, regenerating from source.'.format( hash.hex() ) )
+                            HydrusData.ShowText( 'Thumbnail {} too big, saving back to disk.'.format( hash.hex() ) )
                             
                         
                         try:
                             
-                            self._controller.client_files_manager.RegenerateThumbnail( hash, mime )
-                            
-                            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+                            try:
+                                
+                                thumbnail_bytes = ClientImageHandling.GenerateBytesFromCV( numpy_image, mime )
+                                
+                            except HydrusExceptions.CantRenderWithCVException:
+                                
+                                thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePathPIL( path, bounding_dimensions, mime )
+                                
                             
                         except:
                             
-                            summary = 'The thumbnail for file {} was too small, but the attempt to regenerate it or load the new file back failed.'.format( hash.hex() )
+                            summary = 'The thumbnail for file {} was too large, but an attempt to shrink it failed.'.format( hash.hex() )
                             
                             self._HandleThumbnailException( e, summary )
                             
                             return self._special_thumbs[ 'hydrus' ]
                             
                         
-                    else:
+                        try:
+                            
+                            self._controller.client_files_manager.AddThumbnailFromBytes( hash, thumbnail_bytes )
+                            
+                        except:
+                            
+                            summary = 'The thumbnail for file {} was too large, but an attempt to save back the shrunk file failed.'.format( hash.hex() )
+                            
+                            self._HandleThumbnailException( e, summary )
+                            
+                            return self._special_thumbs[ 'hydrus' ]
+                            
                         
-                        # we do not have the master file, so we have to scale up from what we have
+                    
+                else:
+                    
+                    # the thumb we have is either too small or completely messed up due to a previous ratio misparse
+                    
+                    media_is_same_size_as_current_thumb = current_width == media_width and current_height == media_height
+                    
+                    if media_is_same_size_as_current_thumb:
+                        
+                        # the thumb is smaller than expected, but this is a 32x32 pixilart image or whatever, so no need to scale
                         
                         if HG.file_report_mode:
                             
-                            HydrusData.ShowText( 'Thumbnail {} too small, scaling up due to no local source.'.format( hash.hex() ) )
+                            HydrusData.ShowText( 'Thumbnail {} too small due to small source file.'.format( hash.hex() ) )
                             
                         
-                        numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, ( expected_width, expected_height ) )
+                        pass
+                        
+                    else:
+                    
+                        if locations_manager.IsLocal():
+                            
+                            # we have the master file, so we should regen the thumb from source
+                            
+                            if HG.file_report_mode:
+                                
+                                HydrusData.ShowText( 'Thumbnail {} too small, regenerating from source.'.format( hash.hex() ) )
+                                
+                            
+                            try:
+                                
+                                self._controller.client_files_manager.RegenerateThumbnail( hash, mime )
+                                
+                                numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+                                
+                            except:
+                                
+                                summary = 'The thumbnail for file {} was too small, but the attempt to regenerate it or load the new file back failed.'.format( hash.hex() )
+                                
+                                self._HandleThumbnailException( e, summary )
+                                
+                                return self._special_thumbs[ 'hydrus' ]
+                                
+                            
+                        else:
+                            
+                            # we do not have the master file, so we have to scale up from what we have
+                            
+                            if HG.file_report_mode:
+                                
+                                HydrusData.ShowText( 'Thumbnail {} too small, scaling up due to no local source.'.format( hash.hex() ) )
+                                
+                            
+                            numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, ( expected_width, expected_height ) )
+                            
                         
                     
                 
@@ -3196,6 +3270,49 @@ class ThumbnailCache( object ):
             
         
     
+    def _InitialiseMagicMimeScores( self ):
+        
+        # let's render our thumbs in order of ease of regeneration, so we rush what we can to screen as fast as possible and leave big vids until the end
+        
+        for mime in HC.ALLOWED_MIMES:
+            
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 5
+            
+        
+        # default filetype thumbs are easiest
+        
+        self._magic_mime_thumbnail_ease_score_lookup[ None ] = 0
+        self._magic_mime_thumbnail_ease_score_lookup[ HC.APPLICATION_UNKNOWN ] = 0
+        
+        for mime in HC.APPLICATIONS:
+            
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 0
+            
+        
+        for mime in HC.AUDIO:
+            
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 0
+            
+        
+        # images a little trickier
+        
+        for mime in HC.IMAGES:
+            
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 1
+            
+        
+        # override because these are a bit more
+        self._magic_mime_thumbnail_ease_score_lookup[ HC.IMAGE_APNG ] = 2
+        self._magic_mime_thumbnail_ease_score_lookup[ HC.IMAGE_GIF ] = 2
+        
+        # ffmpeg hellzone
+        
+        for mime in HC.VIDEO:
+            
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 3
+            
+        
+    
     def _RecalcWaterfallQueueRandom( self ):
         
         # here we sort by the hash since this is both breddy random and more likely to access faster on a well defragged hard drive!
@@ -3204,12 +3321,18 @@ class ThumbnailCache( object ):
             
             ( page_key, media ) = item
             
-            return media.GetDisplayMedia().GetHash()
+            display_media = media.GetDisplayMedia()
+            
+            magic_score = self._magic_mime_thumbnail_ease_score_lookup[ display_media.GetMime() ]
+            hash = display_media.GetHash()
+            
+            return ( magic_score, hash )
             
         
         self._waterfall_queue_random = list( self._waterfall_queue_quick )
         
-        self._waterfall_queue_random.sort( key = sort_by_hash_key )
+        # we pop off the end, so reverse
+        self._waterfall_queue_random.sort( key = sort_by_hash_key, reverse = True )
         
     
     def CancelWaterfall( self, page_key, medias ):

@@ -1120,6 +1120,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         file_seeds = ClientImporting.ConvertAllParseResultsToFileSeeds( all_parse_results, self.file_seed_data, file_import_options )
                         
+                        for file_seed in file_seeds:
+                            
+                            file_seed._fixed_service_keys_to_tags = self._fixed_service_keys_to_tags.Duplicate()
+                            
+                        
                         try:
                             
                             my_index = file_seed_cache.GetFileSeedIndex( self )

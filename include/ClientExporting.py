@@ -386,8 +386,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             num_copied += 1
                             
-                            try: os.chmod( dest_path, stat.S_IWRITE | stat.S_IREAD )
-                            except: pass
+                            HydrusPaths.MakeFileWritable( dest_path )
                             
                         
                     

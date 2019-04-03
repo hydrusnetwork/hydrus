@@ -48,21 +48,9 @@ def FrameIndexOutOfRange( index, range_start, range_end ):
     
     return False
     
-def GenerateHydrusBitmap( path, mime, compressed = True, desired_dimensions = None, do_thumbnail_resize = False ):
+def GenerateHydrusBitmap( path, mime, compressed = True ):
     
     numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
-    
-    if desired_dimensions is not None:
-        
-        if do_thumbnail_resize:
-            
-            numpy_image = ClientImageHandling.ThumbnailNumpyImage( numpy_image, desired_dimensions )
-            
-        else:
-            
-            numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, desired_dimensions )
-            
-        
     
     return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
     

@@ -251,6 +251,18 @@ class TestClientDB( unittest.TestCase ):
                 
             
         
+        def run_or_predicate_tests( tests ):
+            
+            for ( predicates, result ) in tests:
+                
+                search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                
+                file_query_ids = self._read( 'file_query_ids', search_context )
+                
+                self.assertEqual( len( file_query_ids ), result )
+                
+            
+        
         tests = []
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
@@ -474,6 +486,64 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( False, 'series', 0 ) )
         
         run_namespace_predicate_tests( tests )
+        
+        #
+        
+        tests = []
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car' ) )
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'bus' ) )
+        
+        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        tests.append( ( [ or_pred ], 1 ) )
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car' ) )
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ) ) )
+        
+        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        tests.append( ( [ or_pred ], 1 ) )
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'truck' ) )
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'bus' ) )
+        
+        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        tests.append( ( [ or_pred ], 0 ) )
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'truck', inclusive = False ) )
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'bus' ) )
+        
+        or_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        tests.append( ( [ or_pred ], 1 ) )
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car' ) )
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'truck' ) )
+        
+        or_pred_1 = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        preds = []
+        
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'maker:toyota' ) )
+        preds.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'maker:ford' ) )
+        
+        or_pred_2 = ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, preds )
+        
+        tests.append( ( [ or_pred_1, or_pred_2 ], 1 ) )
+        
+        run_or_predicate_tests( tests )
         
         #
         

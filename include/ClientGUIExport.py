@@ -696,8 +696,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         HydrusPaths.MirrorFile( source_path, path )
                         
-                        try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
-                        except: pass
+                        HydrusPaths.MakeFileWritable( path )
                         
                     
                 except:

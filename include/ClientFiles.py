@@ -4,6 +4,10 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 import os
 
+REGENERATE_FILE_DATA_JOB_COMPLETE = 0
+REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1
+REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL = 2
+
 def GetAllPaths( raw_paths, do_human_sort = True ):
     
     file_paths = []
