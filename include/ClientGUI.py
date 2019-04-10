@@ -297,7 +297,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
-        self._controller.sub( self, 'RenamePage', 'rename_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
@@ -1545,7 +1544,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
                         
-                        name = page.GetDisplayName()
+                        name = page.GetName()
                         
                         args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
                         
@@ -2250,6 +2249,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'clear_all_thumbnails' )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
             
@@ -4069,7 +4069,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            service.CheckFunctional( including_bandwidth = False )
+            if isinstance( service, ClientServices.ServiceRestricted ):
+                
+                service.CheckFunctional( including_bandwidth = False )
+                
+            else:
+                
+                service.CheckFunctional()
+                
             
         except Exception as e:
             
@@ -5010,11 +5017,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._ui_update_repeating_job = self._controller.CallRepeatingWXSafe( self, 0.0, 0.1, self.REPEATINGUIUpdate )
             
-        
-    
-    def RenamePage( self, page_key, name ):
-        
-        self._notebook.RenamePage( page_key, name )
         
     
     def REPEATINGBandwidth( self ):

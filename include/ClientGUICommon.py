@@ -101,6 +101,8 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
             
         
+        reason = None
+        
         if service_type == HC.LOCAL_TAG:
             
             tags = [ tag ]
@@ -166,7 +168,9 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                         
                         content_update_action = HC.CONTENT_UPDATE_PETITION
                         
-                        rows = [ ( dlg.GetValue(), tag, hashes ) ]
+                        reason = dlg.GetValue()
+                        
+                        rows = [ ( tag, hashes ) ]
                         
                     else:
                         
@@ -180,7 +184,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
             
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_update_action, row ) for row in rows ]
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_update_action, row, reason = reason ) for row in rows ]
         
     elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
         
@@ -2016,18 +2020,6 @@ class ListBook( wx.Panel ):
     def KeyExists( self, key ):
         
         return key in self._keys_to_active_pages or key in self._keys_to_proto_pages
-        
-    
-    def RenamePage( self, key, new_name ):
-        
-        index = self._GetIndex( key )
-        
-        if index != wx.NOT_FOUND:
-            
-            self._list_box.SetString( index, new_name )
-            
-        
-        self._RecalcListBoxWidth()
         
     
     def Select( self, key ):

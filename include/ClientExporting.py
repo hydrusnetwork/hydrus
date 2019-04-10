@@ -345,13 +345,20 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     media_results.extend( more_media_results )
                     
                 
+                media_results.sort( key = lambda mr: mr.GetHashId() )
+                
                 #
                 
                 terms = ParseExportPhrase( self._phrase )
                 
-                previous_filenames = set( os.listdir( self._path ) )
+                previous_paths = set()
                 
-                sync_filenames = set()
+                for ( root, dirnames, filenames ) in os.walk( self._path ):
+                    
+                    previous_paths.update( ( os.path.join( root, filename ) for filename in filenames ) )
+                    
+                
+                sync_paths = set()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -372,13 +379,18 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     filename = GenerateExportFilename( self._path, media_result, terms )
                     
-                    dest_path = os.path.join( self._path, filename )
+                    dest_path = os.path.normpath( os.path.join( self._path, filename ) )
+                    
+                    if not dest_path.startswith( self._path ):
+                        
+                        raise Exception( 'It seems a destination path for export folder "{}" was above the main export directory! The file was "{}" and its destination path was "{}".'.format( self._path, hash.hex(), dest_path ) )
+                        
                     
                     dest_path_dir = os.path.dirname( dest_path )
                     
                     HydrusPaths.MakeSureDirectoryExists( dest_path_dir )
                     
-                    if filename not in sync_filenames:
+                    if dest_path not in sync_paths:
                         
                         copied = HydrusPaths.MirrorFile( source_path, dest_path )
                         
@@ -390,7 +402,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                         
                     
-                    sync_filenames.add( filename )
+                    sync_paths.add( dest_path )
                     
                 
                 if num_copied > 0:
@@ -400,18 +412,45 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
                     
-                    deletee_filenames = previous_filenames.difference( sync_filenames )
+                    deletee_paths = previous_paths.difference( sync_paths )
                     
-                    for deletee_filename in deletee_filenames:
-                        
-                        deletee_path = os.path.join( self._path, deletee_filename )
+                    for deletee_path in deletee_paths:
                         
                         ClientPaths.DeletePath( deletee_path )
                         
                     
-                    if len( deletee_filenames ) > 0:
+                    deletee_dirs = set()
+                    
+                    for ( root, dirnames, filenames ) in os.walk( self._path, topdown = False ):
                         
-                        HydrusData.Print( 'Export folder ' + self._name + ' deleted ' + HydrusData.ToHumanInt( len( deletee_filenames ) ) + ' files.' )
+                        if root == self._path:
+                            
+                            continue
+                            
+                        
+                        no_files = len( filenames ) == 0
+                        
+                        useful_dirnames = [ dirname for dirname in dirnames if os.path.join( root, dirname ) not in deletee_dirs ]
+                        
+                        no_useful_dirs = len( useful_dirnames ) == 0
+                        
+                        if no_useful_dirs and no_files:
+                            
+                            deletee_dirs.add( root )
+                            
+                        
+                    
+                    for deletee_dir in deletee_dirs:
+                        
+                        if os.path.exists( deletee_dir ):
+                            
+                            HydrusPaths.DeletePath( deletee_dir )
+                            
+                        
+                    
+                    if len( deletee_paths ) > 0:
+                        
+                        HydrusData.Print( 'Export folder {} deleted {} files and {} folders.'.format( self._name, HydrusData.ToHumanInt( len( deletee_paths ) ), HydrusData.ToHumanInt( len( deletee_dirs ) ) ) )
                         
                     
                 
@@ -421,7 +460,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
                     
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                    reason = 'Deleted after export to Export Folder "{}".'.format( self._path )
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
                     
                     for content_update in content_updates:
                         

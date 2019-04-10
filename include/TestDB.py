@@ -594,7 +594,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
         service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         
@@ -651,130 +651,135 @@ class TestClientDB( unittest.TestCase ):
     
     def test_gui_sessions( self ):
         
-        test_frame = wx.Frame( None )
+        def wx_code():
+            
+            test_frame = TestController.TestFrame()
+            
+            try:
+                
+                session = ClientGUIPages.GUISession( 'test_session' )
+                
+                #
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher()
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
+                
+                management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerPetitions( HG.test_controller.example_tag_repo_service_key )
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [] )
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, predicates = [] )
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, False )
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
+                
+                management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+                
+                page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+                
+                session.AddPageTuple( page )
+                
+                #
+                
+                self._write( 'serialisable', session )
+                
+                result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, 'test_session' )
+                
+                page_names = []
+                
+                for ( page_type, page_data ) in result.GetPageTuples():
+                    
+                    if page_type == 'page':
+                        
+                        ( management_controller, initial_hashes ) = page_data
+                        
+                        page_names.append( management_controller.GetPageName() )
+                        
+                    
+                
+                self.assertEqual( page_names, [ 'gallery', 'watcher', 'import', 'simple downloader', 'example tag repo petitions', 'search', 'search', 'files', 'wew lad', 'files' ] )
+                
+            finally:
+                
+                test_frame.DestroyLater()
+                
+            
         
-        try:
-            
-            session = ClientGUIPages.GUISession( 'test_session' )
-            
-            #
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher()
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
-            
-            management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerPetitions( HG.test_controller.example_tag_repo_service_key )
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [] )
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, predicates = [] )
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, False )
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPageTuple( page )
-            
-            #
-            
-            self._write( 'serialisable', session )
-            
-            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, 'test_session' )
-            
-            page_names = []
-            
-            for ( page_type, page_data ) in result.GetPageTuples():
-                
-                if page_type == 'page':
-                    
-                    ( management_controller, initial_hashes ) = page_data
-                    
-                    page_names.append( management_controller.GetPageName() )
-                    
-                
-            
-            self.assertEqual( page_names, [ 'gallery', 'watcher', 'import', 'simple downloader', 'example tag repo petitions', 'search', 'search', 'files', 'wew lad', 'files' ] )
-            
-        finally:
-            
-            test_frame.DestroyLater()
-            
+        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
         
     
     def test_import( self ):
@@ -955,7 +960,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
         service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         

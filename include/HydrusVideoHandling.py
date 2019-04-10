@@ -126,8 +126,6 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     data_bytes = proc.stderr.read()
     
-    proc.wait()
-    
     proc.communicate()
     
     del proc

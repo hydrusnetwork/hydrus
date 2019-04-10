@@ -1014,11 +1014,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetTextsAndNamespaces( self ):
+    def GetTextsAndNamespaces( self, or_under_construction = False ):
         
         if self._predicate_type == HC.PREDICATE_TYPE_OR_CONTAINER:
             
             texts_and_namespaces = []
+            
+            if or_under_construction:
+                
+                texts_and_namespaces.append( ( 'OR: ', 'system' ) )
+                
             
             for or_predicate in self._value:
                 
@@ -1047,7 +1052,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._inclusive
         
     
-    def ToString( self, with_count = True, sibling_service_key = None, render_for_user = False ):
+    def ToString( self, with_count = True, sibling_service_key = None, render_for_user = False, or_under_construction = False ):
         
         count_text = ''
         
@@ -1562,7 +1567,14 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             or_predicates = self._value
             
-            base = ' OR '.join( ( or_predicate.ToString() for or_predicate in or_predicates ) )
+            base = ''
+            
+            if or_under_construction:
+                
+                base += 'OR: '
+                
+            
+            base += ' OR '.join( ( or_predicate.ToString( render_for_user = render_for_user ) for or_predicate in or_predicates ) )
             
         
         return base

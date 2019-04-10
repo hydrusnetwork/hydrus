@@ -413,8 +413,6 @@ def LaunchDirectory( path ):
             
             process = subprocess.Popen( cmd, preexec_fn = os.setsid, **sbp_kwargs )
             
-            process.wait()
-            
             process.communicate()
             
         
@@ -468,8 +466,6 @@ def LaunchFile( path, launch_path = None ):
                 sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
                 
                 process = subprocess.Popen( cmd, preexec_fn = preexec_fn, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
-                
-                process.wait()
                 
                 ( stdout, stderr ) = process.communicate()
                 
@@ -798,8 +794,6 @@ def OpenFileLocation( path ):
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
         
         process = subprocess.Popen( cmd, **sbp_kwargs )
-        
-        process.wait()
         
         process.communicate()
         

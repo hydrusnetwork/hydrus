@@ -303,6 +303,8 @@ class RasterContainerVideo( RasterContainer ):
         
         client_files_manager = HG.client_controller.client_files_manager
         
+        time.sleep( 0.00001 )
+        
         if self._media.GetMime() == HC.IMAGE_GIF:
             
             self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
@@ -313,6 +315,9 @@ class RasterContainerVideo( RasterContainer ):
             
             self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
             
+        
+        # give ui a chance to draw a blank frame rather than hard-charge right into CPUland
+        time.sleep( 0.00001 )
         
         self.GetReadyForFrame( self._init_position )
         

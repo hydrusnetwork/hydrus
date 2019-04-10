@@ -351,6 +351,11 @@ class HydrusController( object ):
         return True
         
     
+    def CurrentlyPubSubbing( self ):
+        
+        return self._pubsub.WorkToDo() or self._pubsub.DoingWork()
+        
+    
     def DBCurrentlyDoingJob( self ):
         
         if self.db is None:
@@ -744,7 +749,7 @@ class HydrusController( object ):
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 
-            elif not self._pubsub.WorkToDo() and not self._pubsub.DoingWork():
+            elif not self.CurrentlyPubSubbing():
                 
                 return
                 

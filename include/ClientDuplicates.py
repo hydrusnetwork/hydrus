@@ -139,7 +139,12 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         return ( self._tag_service_actions, self._rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action )
         
     
-    def ProcessPairIntoContentUpdates( self, first_media, second_media ):
+    def ProcessPairIntoContentUpdates( self, first_media, second_media, file_deletion_reason = None ):
+        
+        if file_deletion_reason is None:
+            
+            file_deletion_reason = 'unknown reason'
+            
         
         service_keys_to_content_updates = collections.defaultdict( list )
         
@@ -342,6 +347,12 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
                 deletee_media.append( first_media )
                 
+                file_deletion_reason += ': both files deleted'
+                
+            else:
+                
+                file_deletion_reason += ': \'worse\' file deleted'
+                
             
             deletee_media.append( second_media )
             
@@ -365,7 +376,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             if deletee_service_key is not None:
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes() )
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
                 
                 service_keys_to_content_updates[ deletee_service_key ].append( content_update )
                 

@@ -1477,6 +1477,7 @@ class ListBox( wx.ScrolledWindow ):
     
 class ListBoxTags( ListBox ):
     
+    ors_are_under_construction = False
     has_counts = False
     
     can_spawn_new_windows = True
@@ -1524,7 +1525,7 @@ class ListBoxTags( ListBox ):
         
         if isinstance( term, ClientSearch.Predicate ) and term.GetType() == HC.PREDICATE_TYPE_OR_CONTAINER:
             
-            texts_and_namespaces = term.GetTextsAndNamespaces()
+            texts_and_namespaces = term.GetTextsAndNamespaces( or_under_construction = self.ors_are_under_construction )
             
         else:
             
@@ -2199,13 +2200,15 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
     
     def _Activate( self ):
         
+        shift_down = wx.GetKeyState( wx.WXK_SHIFT )
+        
         predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
         
         predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
         
         if len( predicates ) > 0:
             
-            self._callable( predicates )
+            self._callable( predicates, shift_down )
             
         
     
@@ -2255,23 +2258,27 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
                 
                 if len( predicates ) > 1:
                     
-                    if HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' ):
+                    skip_ors = True
+                    
+                    skip_countless = HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' )
+                    
+                    for ( index, predicate ) in enumerate( predicates ):
                         
-                        for ( index, predicate ) in enumerate( predicates ):
+                        # now only apply this to simple tags, not wildcards and system tags
+                        
+                        if skip_ors and predicate.GetType() == HC.PREDICATE_TYPE_OR_CONTAINER:
                             
-                            # now only apply this to simple tags, not wildcards and system tags
+                            continue
                             
-                            if predicate.GetType() in ( HC.PREDICATE_TYPE_PARENT, HC.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
-                                
-                                continue
-                                
-                            else:
-                                
-                                hit_index = index
-                                
-                                break
-                                
+                        
+                        if skip_countless and predicate.GetType() in ( HC.PREDICATE_TYPE_PARENT, HC.PREDICATE_TYPE_TAG ) and predicate.GetCount() == 0:
                             
+                            continue
+                            
+                        
+                        hit_index = index
+                        
+                        break
                         
                     
                 
@@ -2287,11 +2294,13 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
     
 class ListBoxTagsACRead( ListBoxTagsAC ):
     
+    ors_are_under_construction = True
+    
     def _GetTextFromTerm( self, term ):
         
         predicate = term
         
-        return predicate.ToString( render_for_user = True )
+        return predicate.ToString( render_for_user = True, or_under_construction = self.ors_are_under_construction )
         
     
 class ListBoxTagsACWrite( ListBoxTagsAC ):

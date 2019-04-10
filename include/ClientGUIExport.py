@@ -514,6 +514,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertDataToListCtrlTuples( self, data ):
         
+        directory = self._directory_picker.GetPath()
+        
         ( ordering_index, media ) = data
         
         number = ordering_index
@@ -530,7 +532,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         pretty_number = HydrusData.ToHumanInt( ordering_index + 1 )
         pretty_mime = HC.mime_string_lookup[ mime ]
+        
         pretty_path = path
+        
+        if not path.startswith( directory ):
+            
+            pretty_path = 'INVALID, above destination directory: ' + path
+            
         
         display_tuple = ( pretty_number, pretty_mime, pretty_path )
         sort_tuple = ( number, pretty_mime, path )
@@ -636,7 +644,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def do_it( neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards ):
+        def do_it( directory, neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards ):
+            
+            pauser = HydrusData.BigJobPauser()
             
             for ( index, ( ordering_index, media ) ) in enumerate( to_do ):
                 
@@ -648,6 +658,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     mime = media.GetMime()
                     
                     path = self._GetPath( media )
+                    
+                    path = os.path.normpath( path )
+                    
+                    if not path.startswith( directory ):
+                        
+                        raise Exception( 'It seems a destination path was above the main export directory! The file was "{}" and its destination path was "{}".'.format( hash.hex(), path ) )
+                        
                     
                     path_dir = os.path.dirname( path )
                     
@@ -706,6 +723,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     break
                     
                 
+                pauser.Pause()
+                
             
             if delete_afterwards:
                 
@@ -715,7 +734,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 chunks_of_hashes = HydrusData.SplitListIntoChunks( deletee_hashes, 64 )
                 
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                reason = 'Deleted after manual export to "{}".'.format( directory )
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
                 
                 for content_update in content_updates:
                     
@@ -732,7 +753,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             wx.CallAfter( wx_done, quit_afterwards )
             
         
-        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
+        HG.client_controller.CallToThread( do_it, directory, self._neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
         
     
     def _GetPath( self, media ):
@@ -760,6 +781,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         path = os.path.join( directory, filename )
+        
+        path = os.path.normpath( path )
         
         self._existing_filenames.add( filename )
         self._media_to_paths[ media ] = path

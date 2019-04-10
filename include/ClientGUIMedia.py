@@ -870,11 +870,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                     chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
                     
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+                    reason = 'Deleted from Media Page.'
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
                     
                 else:
                     
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) ) ]
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'admin' ) ]
                     
                 
                 HG.client_controller.CallToThread( process_in_thread, file_service_key, content_updates )
@@ -1605,7 +1607,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, dlg.GetValue() ) )
+                        reason = dlg.GetValue()
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason )
                         
                         service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
                         
@@ -1617,7 +1621,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
             elif service_type == HC.IPFS:
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'ipfs' ) )
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'ipfs' )
                 
                 service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
                 
@@ -1863,6 +1867,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _SetDuplicates( self, duplicate_type, media_pairs = None, duplicate_action_options = None, silent = False ):
         
+        yes_no_text = 'unknown duplicate action'
+        
         if duplicate_type is None or duplicate_type == HC.DUPLICATE_UNKNOWN:
             
             if duplicate_type is None:
@@ -1888,6 +1894,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
             yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with custom duplicate action/merge options)'
             
+        
+        file_deletion_reason = 'Deleted from duplicate action on Media Page ({}).'.format( yes_no_text )
         
         if media_pairs is None:
             
@@ -1955,7 +1963,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                 else:
                     
-                    service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+                    service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason )
                     
                 
                 pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
@@ -2573,7 +2581,7 @@ class MediaPanelThumbnails( MediaPanel ):
         HG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
         HG.client_controller.sub( self, 'NewFileInfo', 'new_file_info' )
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
-        HG.client_controller.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
+        HG.client_controller.sub( self, 'ThumbnailsResized', 'redraw_all_thumbnails' )
         HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         HG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
@@ -3389,6 +3397,7 @@ class MediaPanelThumbnails( MediaPanel ):
             dc.DrawBitmap( background_bmp, client_x - background_bmp_width, client_y - background_bmp_height )
             
         '''
+        
         for page_index in page_indices_to_draw:
             
             if page_index not in self._clean_canvas_pages:
@@ -4387,11 +4396,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.SetScrollRate( 0, int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
+        self._thumbnails_being_faded_in = {}
+        self._hashes_faded = set()
+        
         self._ReinitialisePageCacheIfNeeded()
         
         self._RecalculateVirtualSize()
         
         self._DirtyAllPages()
+        
+        self.Refresh()
         
     
     def TIMERAnimationUpdate( self ):

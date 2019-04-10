@@ -512,7 +512,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
     def __init__( self, page_name = 'page' ):
         
@@ -707,6 +707,20 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
             return ( 7, new_serialisable_info )
+            
+        
+        if version == 7:
+            
+            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if page_name.startswith( '[USER]' ) and len( page_name ) > 6:
+                
+                page_name = page_name[6:]
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 8, new_serialisable_info )
             
         
     

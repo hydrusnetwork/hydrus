@@ -845,7 +845,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                             tags_and_reasons = tags
                             
                         
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes, reason ) ) for ( tag, reason ) in tags_and_reasons ]
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ), reason = reason ) for ( tag, reason ) in tags_and_reasons ]
                         
                     else:
                         

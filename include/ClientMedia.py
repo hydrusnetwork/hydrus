@@ -2753,14 +2753,7 @@ class TagsManager( TagsManagerSimple ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        if action == HC.CONTENT_UPDATE_PETITION:
-            
-            ( tag, hashes, reason ) = row
-            
-        else:
-            
-            ( tag, hashes ) = row
-            
+        ( tag, hashes ) = row
         
         if action == HC.CONTENT_UPDATE_ADD:
             
@@ -2794,7 +2787,10 @@ class TagsManager( TagsManagerSimple ):
                 statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].add( tag )
                 
             
-        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+            
+            statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
+            
         
         self._combined_is_calculated = False
         

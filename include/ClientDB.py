@@ -2663,6 +2663,8 @@ class DB( HydrusDB.HydrusDB ):
             job_key.DeleteVariable( 'popup_gauge_1' )
             job_key.SetVariable( 'popup_text_1', prefix_string + 'deleting the incorrect records' )
             
+            self._SetLocalFileDeletionReason( deletee_hash_ids, 'Deleted during File Integrity check.' )
+            
             self._DeleteFiles( self._local_file_service_id, deletee_hash_ids )
             self._DeleteFiles( self._trash_service_id, deletee_hash_ids )
             self._DeleteFiles( self._combined_local_file_service_id, deletee_hash_ids )
@@ -2869,6 +2871,8 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'current_files', [ 'timestamp' ] )
         
         self._c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+        
+        self._c.execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
         
         self._c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
         
@@ -4597,11 +4601,16 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromQuery( self, search_context, job_key = None ):
+    def _GetHashIdsFromQuery( self, search_context, job_key = None, query_hash_ids = None ):
         
         if job_key is None:
             
             job_key = ClientThreading.JobKey( cancellable = True )
+            
+        
+        if query_hash_ids is not None:
+            
+            query_hash_ids = set( query_hash_ids )
             
         
         self._controller.ResetIdleTimer()
@@ -4631,11 +4640,115 @@ class DB( HydrusDB.HydrusDB ):
         include_current_tags = search_context.IncludeCurrentTags()
         include_pending_tags = search_context.IncludePendingTags()
         
+        simple_preds = system_predicates.GetSimpleInfo()
+        
         or_predicates = search_context.GetORPredicates()
         
-        #
+        need_file_domain_cross_reference = file_service_key != CC.COMBINED_FILE_SERVICE_KEY
+        there_are_tags_to_search = len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0
         
-        simple_preds = system_predicates.GetSimpleInfo()
+        # ok, let's set up the big list of simple search preds
+        
+        files_info_predicates = []
+        
+        if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
+        if 'size' in simple_preds: files_info_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
+        if 'max_size' in simple_preds: files_info_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
+        
+        if 'mimes' in simple_preds:
+            
+            mimes = simple_preds[ 'mimes' ]
+            
+            if len( mimes ) == 1:
+                
+                ( mime, ) = mimes
+                
+                files_info_predicates.append( 'mime = ' + str( mime ) )
+                
+            else:
+                
+                files_info_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
+                
+            
+        
+        if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
+            
+            if 'min_timestamp' in simple_preds: files_info_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_timestamp' ] ) )
+            if 'max_timestamp' in simple_preds: files_info_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_timestamp' ] ) )
+            
+        
+        if 'min_width' in simple_preds: files_info_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
+        if 'width' in simple_preds: files_info_predicates.append( 'width = ' + str( simple_preds[ 'width' ] ) )
+        if 'max_width' in simple_preds: files_info_predicates.append( 'width < ' + str( simple_preds[ 'max_width' ] ) )
+        
+        if 'min_height' in simple_preds: files_info_predicates.append( 'height > ' + str( simple_preds[ 'min_height' ] ) )
+        if 'height' in simple_preds: files_info_predicates.append( 'height = ' + str( simple_preds[ 'height' ] ) )
+        if 'max_height' in simple_preds: files_info_predicates.append( 'height < ' + str( simple_preds[ 'max_height' ] ) )
+        
+        if 'min_num_pixels' in simple_preds: files_info_predicates.append( 'width * height > ' + str( simple_preds[ 'min_num_pixels' ] ) )
+        if 'num_pixels' in simple_preds: files_info_predicates.append( 'width * height = ' + str( simple_preds[ 'num_pixels' ] ) )
+        if 'max_num_pixels' in simple_preds: files_info_predicates.append( 'width * height < ' + str( simple_preds[ 'max_num_pixels' ] ) )
+        
+        if 'min_ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'min_ratio' ]
+            
+            files_info_predicates.append( '( width * 1.0 ) / height > ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
+            
+        if 'ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
+            
+            files_info_predicates.append( '( width * 1.0 ) / height = ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
+            
+        if 'max_ratio' in simple_preds:
+            
+            ( ratio_width, ratio_height ) = simple_preds[ 'max_ratio' ]
+            
+            files_info_predicates.append( '( width * 1.0 ) / height < ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
+            
+        
+        if 'min_num_words' in simple_preds: files_info_predicates.append( 'num_words > ' + str( simple_preds[ 'min_num_words' ] ) )
+        if 'num_words' in simple_preds:
+            
+            num_words = simple_preds[ 'num_words' ]
+            
+            if num_words == 0: files_info_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
+            else: files_info_predicates.append( 'num_words = ' + str( num_words ) )
+            
+        if 'max_num_words' in simple_preds:
+            
+            max_num_words = simple_preds[ 'max_num_words' ]
+            
+            if max_num_words == 0: files_info_predicates.append( 'num_words < ' + str( max_num_words ) )
+            else: files_info_predicates.append( '( num_words < ' + str( max_num_words ) + ' OR num_words IS NULL )' )
+            
+        
+        if 'min_duration' in simple_preds: files_info_predicates.append( 'duration > ' + str( simple_preds[ 'min_duration' ] ) )
+        if 'duration' in simple_preds:
+            
+            duration = simple_preds[ 'duration' ]
+            
+            if duration == 0:
+                
+                files_info_predicates.append( '( duration IS NULL OR duration = 0 )' )
+                
+            else:
+                
+                files_info_predicates.append( 'duration = ' + str( duration ) )
+                
+            
+        if 'max_duration' in simple_preds:
+            
+            max_duration = simple_preds[ 'max_duration' ]
+            
+            if max_duration == 0: files_info_predicates.append( 'duration < ' + str( max_duration ) )
+            else: files_info_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
+            
+        
+        there_are_simple_files_info_preds_to_search_for = len( files_info_predicates ) > 0
+        
+        #
         
         # This now overrides any other predicates, including file domain
         
@@ -4692,38 +4805,64 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        query_hash_ids = None
+        #
+        
+        def do_or_preds( or_predicates, query_hash_ids ):
+            
+            # updating all this regular search code to do OR and AND naturally will be a big job getting right, so let's get a functional inefficient solution and then optimise later as needed
+            # -tag stuff and various other exclude situations remain a pain to do quickly assuming OR
+            # the future extension of this will be creating an OR_search_context with all the OR_pred's subpreds and have that naturally query_hash_ids.update throughout this func based on search_context search_type
+            # this func is called at one of several potential points, kicking in if query_hash_ids are needed but preferring tags or system preds to step in
+            
+            or_predicates = list( or_predicates )
+            
+            # better typically to sort by fewest num of preds first, establishing query_hash_ids for longer chains
+            def or_sort_key( p ):
+                
+                return len( p.GetValue() )
+                
+            
+            or_predicates.sort( key = or_sort_key )
+            
+            for or_predicate in or_predicates:
+                
+                # blue eyes OR green eyes
+                
+                or_query_hash_ids = set()
+                
+                for or_subpredicate in or_predicate.GetValue():
+                    
+                    # blue eyes
+                    
+                    or_search_context = search_context.Duplicate()
+                    
+                    or_search_context.SetPredicates( [ or_subpredicate ] )
+                    
+                    # I pass current query_hash_ids here to make these inefficient sub-searches (like -tag) potentially much faster
+                    or_query_hash_ids.update( self._GetHashIdsFromQuery( or_search_context, job_key, query_hash_ids = query_hash_ids ) )
+                    
+                    if job_key.IsCancelled():
+                        
+                        return set()
+                        
+                    
+                
+                query_hash_ids = update_qhi( query_hash_ids, or_query_hash_ids )
+                
+            
+            return query_hash_ids
+            
         
         #
         
-        # let's do OR preds here for now
-        # updating all this code to do OR and AND naturally will be a big job getting right, so let's get a functional inefficient solution and then optimise later as needed
-        # -tag stuff and various other exclude situations remain a pain to do quickly assuming OR
-        # the future extension of this will be creating an OR_search_context with all the OR_pred's subpreds and have that naturally query_hash_ids.update throughout this func based on search_context search_type
+        done_or_predicates = False
         
-        for or_predicate in or_predicates:
+        # OR round one--if nothing else will be fast, let's prep query_hash_ids now
+        if not ( there_are_tags_to_search or there_are_simple_files_info_preds_to_search_for ):
             
-            # blue eyes OR green eyes
+            query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
             
-            or_query_hash_ids = set()
-            
-            for or_subpredicate in or_predicate.GetValue():
-                
-                # blue eyes
-                
-                or_search_context = search_context.Duplicate()
-                
-                or_search_context.SetPredicates( [ or_subpredicate ] )
-                
-                or_query_hash_ids.update( self._GetHashIdsFromQuery( or_search_context, job_key ) )
-                
-                if job_key.IsCancelled():
-                    
-                    return set()
-                    
-                
-            
-            query_hash_ids = update_qhi( query_hash_ids, or_query_hash_ids )
+            done_or_predicates = True
             
         
         #
@@ -4848,7 +4987,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # first tags
         
-        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
+        if there_are_tags_to_search:
             
             def sort_longest_first_key( s ):
                 
@@ -4886,104 +5025,17 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        #
+        
+        # OR round two--if file preds will not be fast, let's step in to reduce the file domain search space
+        if not ( there_are_simple_files_info_preds_to_search_for or done_or_predicates ):
+            
+            query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
+            
+            done_or_predicates = True
+            
+        
         # now the simple preds and desperate last shot to populate query_hash_ids
-        
-        files_info_predicates = []
-        
-        if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
-        if 'size' in simple_preds: files_info_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
-        if 'max_size' in simple_preds: files_info_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
-        
-        if 'mimes' in simple_preds:
-            
-            mimes = simple_preds[ 'mimes' ]
-            
-            if len( mimes ) == 1:
-                
-                ( mime, ) = mimes
-                
-                files_info_predicates.append( 'mime = ' + str( mime ) )
-                
-            else:
-                
-                files_info_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
-                
-            
-        
-        if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
-            
-            if 'min_timestamp' in simple_preds: files_info_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_timestamp' ] ) )
-            if 'max_timestamp' in simple_preds: files_info_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_timestamp' ] ) )
-            
-        
-        if 'min_width' in simple_preds: files_info_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
-        if 'width' in simple_preds: files_info_predicates.append( 'width = ' + str( simple_preds[ 'width' ] ) )
-        if 'max_width' in simple_preds: files_info_predicates.append( 'width < ' + str( simple_preds[ 'max_width' ] ) )
-        
-        if 'min_height' in simple_preds: files_info_predicates.append( 'height > ' + str( simple_preds[ 'min_height' ] ) )
-        if 'height' in simple_preds: files_info_predicates.append( 'height = ' + str( simple_preds[ 'height' ] ) )
-        if 'max_height' in simple_preds: files_info_predicates.append( 'height < ' + str( simple_preds[ 'max_height' ] ) )
-        
-        if 'min_num_pixels' in simple_preds: files_info_predicates.append( 'width * height > ' + str( simple_preds[ 'min_num_pixels' ] ) )
-        if 'num_pixels' in simple_preds: files_info_predicates.append( 'width * height = ' + str( simple_preds[ 'num_pixels' ] ) )
-        if 'max_num_pixels' in simple_preds: files_info_predicates.append( 'width * height < ' + str( simple_preds[ 'max_num_pixels' ] ) )
-        
-        if 'min_ratio' in simple_preds:
-            
-            ( ratio_width, ratio_height ) = simple_preds[ 'min_ratio' ]
-            
-            files_info_predicates.append( '( width * 1.0 ) / height > ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
-            
-        if 'ratio' in simple_preds:
-            
-            ( ratio_width, ratio_height ) = simple_preds[ 'ratio' ]
-            
-            files_info_predicates.append( '( width * 1.0 ) / height = ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
-            
-        if 'max_ratio' in simple_preds:
-            
-            ( ratio_width, ratio_height ) = simple_preds[ 'max_ratio' ]
-            
-            files_info_predicates.append( '( width * 1.0 ) / height < ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
-            
-        
-        if 'min_num_words' in simple_preds: files_info_predicates.append( 'num_words > ' + str( simple_preds[ 'min_num_words' ] ) )
-        if 'num_words' in simple_preds:
-            
-            num_words = simple_preds[ 'num_words' ]
-            
-            if num_words == 0: files_info_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
-            else: files_info_predicates.append( 'num_words = ' + str( num_words ) )
-            
-        if 'max_num_words' in simple_preds:
-            
-            max_num_words = simple_preds[ 'max_num_words' ]
-            
-            if max_num_words == 0: files_info_predicates.append( 'num_words < ' + str( max_num_words ) )
-            else: files_info_predicates.append( '( num_words < ' + str( max_num_words ) + ' OR num_words IS NULL )' )
-            
-        
-        if 'min_duration' in simple_preds: files_info_predicates.append( 'duration > ' + str( simple_preds[ 'min_duration' ] ) )
-        if 'duration' in simple_preds:
-            
-            duration = simple_preds[ 'duration' ]
-            
-            if duration == 0:
-                
-                files_info_predicates.append( '( duration IS NULL OR duration = 0 )' )
-                
-            else:
-                
-                files_info_predicates.append( 'duration = ' + str( duration ) )
-                
-            
-        if 'max_duration' in simple_preds:
-            
-            max_duration = simple_preds[ 'max_duration' ]
-            
-            if max_duration == 0: files_info_predicates.append( 'duration < ' + str( max_duration ) )
-            else: files_info_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
-            
         
         done_files_info_predicates = False
         
@@ -4991,7 +5043,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
-                query_hash_ids = self._GetHashIdsThatHaveTags( tag_service_key, include_current_tags, include_pending_tags, hash_ids = query_hash_ids )
+                query_hash_ids = self._GetHashIdsThatHaveTags( tag_service_key, include_current_tags, include_pending_tags )
                 
             else:
                 
@@ -5003,7 +5055,9 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if not done_files_info_predicates and len( files_info_predicates ) > 0:
+        # at this point, query_hash_ids has something in it
+        
+        if not done_files_info_predicates and ( need_file_domain_cross_reference or there_are_simple_files_info_preds_to_search_for ):
             
             files_info_predicates.append( 'hash_id IN %s' )
             
@@ -5026,7 +5080,15 @@ class DB( HydrusDB.HydrusDB ):
             return set()
             
         
-        # at this point, query_hash_ids has something in it
+        #
+        
+        # OR round three--final chance to kick in, and the preferred one. query_hash_ids is now set, so this shouldn't be super slow for most scenarios
+        if not done_or_predicates:
+            
+            query_hash_ids = do_or_preds( or_predicates, query_hash_ids )
+            
+            done_or_predicates = True
+            
         
         # hide update files
         
@@ -5756,13 +5818,31 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdStatus( self, hash_id, prefix = '' ):
         
+        if prefix != '':
+            
+            prefix += ': '
+            
+        
+        result = self._c.execute( 'SELECT reason_id FROM local_file_deletion_reasons WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            file_deletion_reason = 'Unknown deletion reason.'
+            
+        else:
+            
+            ( reason_id, ) = result
+            
+            file_deletion_reason = self._GetText( reason_id )
+            
+        
         hash = self._GetHash( hash_id )
         
         result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
-            return ( CC.STATUS_DELETED, hash, prefix )
+            return ( CC.STATUS_DELETED, hash, prefix + file_deletion_reason )
             
         
         result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._trash_service_id, hash_id ) ).fetchone()
@@ -5771,9 +5851,9 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
-            note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) + ' (before this check).'
+            note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusData.ConvertTimestampToPrettyTime( timestamp ), HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
-            return ( CC.STATUS_DELETED, hash, prefix + ': ' + note )
+            return ( CC.STATUS_DELETED, hash, prefix + note )
             
         
         result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()
@@ -5796,13 +5876,13 @@ class DB( HydrusDB.HydrusDB ):
                     
                     note = 'The client believed this file was already in the db, but it was truly missing! Import will go ahead, in an attempt to fix the situation.'
                     
-                    return ( CC.STATUS_UNKNOWN, hash, prefix + ': ' + note )
+                    return ( CC.STATUS_UNKNOWN, hash, prefix + note )
                     
                 
             
-            note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) + ' (before this check).'
+            note = 'Imported at {}, which was {} before this check.'.format( HydrusData.ConvertTimestampToPrettyTime( timestamp ), HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
-            return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + ': ' + note )
+            return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + note )
             
         
         return ( CC.STATUS_UNKNOWN, hash, '' )
@@ -7467,7 +7547,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self._GetHashId( hash )
         
-        ( status, status_hash, note ) = self._GetHashIdStatus( hash_id, prefix = 'recognised during import' )
+        ( status, status_hash, note ) = self._GetHashIdStatus( hash_id, prefix = 'file recognised' )
         
         if status != CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
             
@@ -8036,11 +8116,15 @@ class DB( HydrusDB.HydrusDB ):
                                     
                                     self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ?;', ( service_id, ) )
                                     
+                                    self._c.execute( 'DELETE FROM local_file_deletion_reasons;' )
+                                    
                                 else:
                                     
                                     hash_ids = self._GetHashIds( hashes )
                                     
                                     self._c.executemany( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( ( service_id, hash_id ) for hash_id in hash_ids ) )
+                                    
+                                    self._c.executemany( 'DELETE FROM local_file_deletion_reasons WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
                                     
                                 
                             
@@ -8082,7 +8166,9 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action == HC.CONTENT_UPDATE_PETITION:
                             
-                            ( hashes, reason ) = row
+                            hashes = row
+                            
+                            reason = content_update.GetReason()
                             
                             hash_ids = self._GetHashIds( hashes )
                             
@@ -8129,6 +8215,13 @@ class DB( HydrusDB.HydrusDB ):
                                 self._InboxFiles( hash_ids )
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
+                                
+                                if service_id == self._local_file_service_id:
+                                    
+                                    reason = content_update.GetReason()
+                                    
+                                    self._SetLocalFileDeletionReason( hash_ids, reason )
+                                    
                                 
                                 self._DeleteFiles( service_id, hash_ids )
                                 
@@ -8370,14 +8463,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                         else:
                             
-                            if action == HC.CONTENT_UPDATE_PETITION:
-                                
-                                ( tag, hashes, reason ) = row
-                                
-                            else:
-                                
-                                ( tag, hashes ) = row
-                                
+                            ( tag, hashes ) = row
                             
                             try:
                                 
@@ -8407,6 +8493,8 @@ class DB( HydrusDB.HydrusDB ):
                                 ultimate_pending_rescinded_mappings_ids.append( ( tag_id, hash_ids ) )
                                 
                             elif action == HC.CONTENT_UPDATE_PETITION:
+                                
+                                reason = content_update.GetReason()
                                 
                                 reason_id = self._GetTextId( reason )
                                 
@@ -8457,7 +8545,7 @@ class DB( HydrusDB.HydrusDB ):
                                 new_status = HC.CONTENT_STATUS_PETITIONED
                                 
                             
-                            ( ( child_tag, parent_tag ), reason ) = row
+                            ( child_tag, parent_tag ) = row
                             
                             try:
                                 
@@ -8469,6 +8557,8 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 continue
                                 
+                            
+                            reason = content_update.GetReason()
                             
                             reason_id = self._GetTextId( reason )
                             
@@ -8548,7 +8638,7 @@ class DB( HydrusDB.HydrusDB ):
                                 new_status = HC.CONTENT_STATUS_PETITIONED
                                 
                             
-                            ( ( bad_tag, good_tag ), reason ) = row
+                            ( bad_tag, good_tag ) = row
                             
                             try:
                                 
@@ -8560,6 +8650,8 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 continue
                                 
+                            
+                            reason = content_update.GetReason()
                             
                             reason_id = self._GetTextId( reason )
                             
@@ -9849,7 +9941,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
         
-        self.pub_after_job( 'thumbnail_resize' )
+        self.pub_after_job( 'clear_all_thumbnails' )
         self.pub_after_job( 'notify_new_options' )
         
     
@@ -10006,6 +10098,13 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'INSERT INTO last_shutdown_work_time ( last_shutdown_work_time ) VALUES ( ? );', ( timestamp, ) )
         
     
+    def _SetLocalFileDeletionReason( self, hash_ids, reason ):
+        
+        reason_id = self._GetTextId( reason )
+        
+        self._c.executemany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
+        
+    
     def _SetPassword( self, password ):
         
         if password is not None:
@@ -10144,11 +10243,13 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( desired_tags ) > 0:
                 
+                reason = None
+                
                 if tag_service_key != CC.LOCAL_TAG_SERVICE_KEY and not adding:
                     
                     action = HC.CONTENT_UPDATE_PETITION
                     
-                    rows = [ ( tag, ( hash, ), 'admin: tag archive desync' ) for tag in desired_tags ]
+                    reason = 'admin: tag archive desync'
                     
                 else:
                     
@@ -10163,12 +10264,15 @@ class DB( HydrusDB.HydrusDB ):
                             action = HC.CONTENT_UPDATE_PEND
                             
                         
-                    else: action = HC.CONTENT_UPDATE_DELETE
-                    
-                    rows = [ ( tag, ( hash, )  ) for tag in desired_tags ]
+                    else:
+                        
+                        action = HC.CONTENT_UPDATE_DELETE
+                        
                     
                 
-                content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, row ) for row in rows ] )
+                rows = [ ( tag, ( hash, ) ) for tag in desired_tags ]
+                
+                content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, row, reason = reason ) for row in rows ] )
                 
             
         
@@ -12138,6 +12242,11 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
+            
+        
+        if version == 346:
+            
+            self._c.execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

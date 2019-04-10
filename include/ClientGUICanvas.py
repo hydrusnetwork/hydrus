@@ -727,6 +727,17 @@ class AnimationBar( wx.Window ):
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
+    def _DrawBlank( self, dc ):
+        
+        new_options = HG.client_controller.new_options
+        
+        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        
+        dc.Clear()
+        
+        self._dirty = False
+        
+    
     def _GetAnimationBarStatus( self ):
         
         if FLASHWIN_OK and isinstance( self._media_window, wx.lib.flashwin.FlashWindow ):
@@ -936,7 +947,14 @@ class AnimationBar( wx.Window ):
             
             if self._dirty:
                 
-                self._Redraw( dc )
+                if self._media_window is None:
+                    
+                    self._DrawBlank( dc )
+                    
+                else:
+                    
+                    self._Redraw( dc )
+                    
                 
             
         
@@ -989,12 +1007,18 @@ class AnimationBar( wx.Window ):
         
         self._dirty = True
         
+        self.Refresh()
+        
     
     def SetNoneMedia( self ):
         
         self._media_window = None
         
         HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+        
+        self._dirty = True
+        
+        self.Refresh()
         
     
     def TIMERAnimationUpdate( self ):
@@ -1364,7 +1388,9 @@ class Canvas( wx.Window ):
             
             hashes = { self._current_media.GetHash() }
             
-            HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+            reason = 'Deleted from Preview or Media Viewer.'
+            
+            HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] } )
             
         
     
@@ -3164,7 +3190,18 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+            if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_BETTER_OR_WORSE ):
+                
+                file_deletion_reason = 'better/worse'
+                
+            else:
+                
+                file_deletion_reason = HC.duplicate_type_string_lookup[ duplicate_type ]
+                
+            
+            file_deletion_reason = 'Deleted in Duplicate Filter ({}).'.format( file_deletion_reason )
+            
+            service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason )
             
             pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
             
@@ -3232,12 +3269,16 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     hashes = { self._current_media.GetHash() }
                     
+                    reason = 'Deleted manually in Duplicate Filter.'
+                    
                 elif value == 'both':
                     
                     hashes = { self._current_media.GetHash(), self._media_list.GetNext( self._current_media ).GetHash() }
                     
+                    reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
+                    
                 
-                HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] } )
                 
             
         
@@ -4211,9 +4252,11 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                         
                         service_keys_and_content_updates = []
                         
+                        reason = 'Deleted in Archive/Delete filter.'
+                        
                         for chunk_of_hashes in HydrusData.SplitListIntoChunks( self._deleted_hashes, 64 ):
                             
-                            service_keys_and_content_updates.append( ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) ) )
+                            service_keys_and_content_updates.append( ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) ) )
                             
                         
                         service_keys_and_content_updates.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ) )

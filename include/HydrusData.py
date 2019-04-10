@@ -1406,11 +1406,12 @@ class Call( object ):
     
 class ContentUpdate( object ):
     
-    def __init__( self, data_type, action, row ):
+    def __init__( self, data_type, action, row, reason = None ):
         
         self._data_type = data_type
         self._action = action
         self._row = row
+        self._reason = reason
         
     
     def __eq__( self, other ):
@@ -1454,13 +1455,9 @@ class ContentUpdate( object ):
                 
                 hashes = { file_info_manager.hash }
                 
-            elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
+            else:
                 
                 hashes = self._row
-                
-            elif self._action == HC.CONTENT_UPDATE_PETITION:
-                
-                ( hashes, reason ) = self._row
                 
             
         elif self._data_type == HC.CONTENT_TYPE_DIRECTORIES:
@@ -1476,10 +1473,6 @@ class ContentUpdate( object ):
             if self._action == HC.CONTENT_UPDATE_ADVANCED:
                 
                 hashes = set()
-                
-            elif self._action == HC.CONTENT_UPDATE_PETITION:
-                
-                ( tag, hashes, reason ) = self._row
                 
             else:
                 
@@ -1519,6 +1512,18 @@ class ContentUpdate( object ):
             
         
         return hashes
+        
+    
+    def GetReason( self ):
+        
+        if self._reason is None:
+            
+            return 'No reason given.'
+            
+        else:
+            
+            return self._reason
+            
         
     
     def GetWeight( self ):

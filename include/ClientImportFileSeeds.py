@@ -261,7 +261,7 @@ class FileImportJob( object ):
         
         self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
         
-        ( self._pre_import_status, hash, note ) = HG.client_controller.Read( 'hash_status', 'sha256', self._hash, prefix = 'recognised during import' )
+        ( self._pre_import_status, hash, note ) = HG.client_controller.Read( 'hash_status', 'sha256', self._hash, prefix = 'file recognised' )
         
         return ( self._pre_import_status, self._hash, note )
         
@@ -626,7 +626,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             for ( hash_type, found_hash ) in list(self._hashes.items()):
                 
-                ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash )
+                ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash, prefix = 'hash recognised' )
                 
                 if status != CC.STATUS_UNKNOWN:
                     
