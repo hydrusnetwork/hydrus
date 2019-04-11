@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 347</h3></li>
+				<ul>
+					<li>or search:</li>
+					<li>under construction OR predicates now present at the top of the regular tag results list, prepended with 'OR: ', and skipping default selection</li>
+					<li>this new OR line is enter-able, which will present it as-is, rather than adding new preds</li>
+					<li>hitting escape on a 'search' tag input box that is empty but has an under construction or predicate will cancel the or pred</li>
+					<li>hitting escape on a 'search' tag input box otherwise should more reliably kill its focus when the dropdown is a float window</li>
+					<li>improved OR search efficiency significantly with dynamic OR search triggering based on other search predicates. OR searches including negated '-tag' components should be massively faster when paired with non-OR tag or file search predicates</li>
+					<li>I believe I fixed a search issue that would sometimes return insufficient results when OR preds are mixed with certain other combinations of tags</li>
+					<li>improved reliability of some thumbnail refresh calls</li>
+					<li>cleaned up a bunch of OR handling ui code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>after previous weeks' experiments, wrote new double-layer thumbnail loading system--now too-small thumbs will quckly scale up fuzzily straight to screen, and then in the coming seconds, the nice regenerated full-size thumb will be made and drawn in place as ready. it presents much faster and looks better, but there is some cleanup to do here that I will tackle next week</li>
+					<li>all local file trashing events now record a context-appropriate deletion statement such as "Deleted from Media Viewer." this value is recovered in 'deleted' import status 'notes'. You will mostly see 'Unknown deletion reason.', for files deleted before this new system, but it will populate with appropriate info over time</li>
+					<li>fixed a search optimisation that was not cross-referencing with file domain, meaning for instance that bare system:rating calls were returning since-deleted files</li>
+					<li>upnp management window now uses new listctrl</li>
+					<li>cleaned up some old custom page-naming code</li>
+					<li>added a 'data' debug call to clear out all cached thumbnails and force an instant ui thumb reload</li>
+					<li>fixed the trash bmp misalignment, ha ha</li>
+					<li>removed e-hentai login script from the defaults, since this testing script is not appropriate for new users</li>
+					<li>dejanked some media viewer video transitions by cleaning up animation bar rendering and smoothing out video buffer initialisation</li>
+					<li>cleaned out some surplus subprocess wait calls that were hanging some systems on various 'open externally' calls</li>
+					<li>fixed multiple syncing problems with 'synchronise' export folders that produce files with subdirectories. subdirectory structures should now be synced correctly and empty folders deleted</li>
+					<li>export folders that collapse multiple file results to the same duplicated name should, after the next run, do less overwriting to this same name</li>
+					<li>if an export folder or the regular export dialog makes a file destination path that is above the chosen directory (e.g. if the path starts with ../ or ..\), the export job will error out with an explanation</li>
+					<li>big manual file exports _should_ be politer to the ui and cause fewer hangs</li>
+					<li>doing page tab drag and drops may have less post-drop ui jank on linux, continued feedback would be appreciated</li>
+					<li>moved 'reason' handling for all content updates to its own area, which neatens many content update data handling issues</li>
+					<li>fixed petitioning a tag via a shortcut, which had bad reason handling</li>
+					<li>fixed an issue with committing pending ipfs items that was overchecking service permissions</li>
+					<li>fixed some remaining bad wx code in the unit tests</li>
+					<li>misc file status reporting cleanup</li>
+				</ul>
 				<li><h3>version 346</h3></li>
 				<ul>
 					<li>or search:</li>
