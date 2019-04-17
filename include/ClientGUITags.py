@@ -1568,7 +1568,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if self._new_options.GetBoolean( 'add_parents_on_manage_tags' ):
                             
-                            tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+                            tag_parents_manager = HG.client_controller.tag_parents_manager
                             
                             parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
                             
@@ -1759,7 +1759,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ):
                 
-                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+                siblings_manager = HG.client_controller.tag_siblings_manager
                 
                 tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
                 

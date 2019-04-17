@@ -203,7 +203,7 @@ def CreateManagementPanel( parent, page, controller, management_controller ):
         
         self._captcha_challenge = None
         self._captcha_runs_out = 0
-        self._bitmap = wx.Bitmap( 20, 20, 24 )
+        self._bitmap = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
         
         self._timer = wx.Timer( self, ID_TIMER_CAPTCHA )
         self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_CAPTCHA )
@@ -299,7 +299,7 @@ def CreateManagementPanel( parent, page, controller, management_controller ):
             
             dc.DrawBitmap( wx_bmp, 0, 0 )
             
-            wx_bmp.Destroy()
+            HG.client_controller.bitmap_manager.ReleaseBitmap( wx_bmp )
             
             self._refresh_button.SetLabelText( 'get new captcha' )
             self._refresh_button.Enable()
@@ -338,7 +338,7 @@ def CreateManagementPanel( parent, page, controller, management_controller ):
         
         self._captcha_challenge = None
         self._captcha_runs_out = 0
-        self._bitmap = wx.Bitmap( 20, 20, 24 )
+        self._bitmap = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
         
         self._DrawMain()
         self._DrawEntry()
@@ -351,7 +351,7 @@ def CreateManagementPanel( parent, page, controller, management_controller ):
         
         self._captcha_challenge = ''
         self._captcha_runs_out = 0
-        self._bitmap = wx.Bitmap( 20, 20, 24 )
+        self._bitmap = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
         
         self._DrawMain()
         self._DrawEntry()

@@ -1380,7 +1380,7 @@ class DialogInputTags( Dialog ):
 
     def EnterTags( self, tags ):
         
-        tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+        tag_parents_manager = HG.client_controller.tag_parents_manager
         
         parents = set()
         

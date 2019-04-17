@@ -1049,7 +1049,7 @@ class NetworkJob( object ):
                 
                 trace = traceback.format_exc()
                 
-                if not isinstance( e, HydrusExceptions.ConnectionException ):
+                if not isinstance( e, ( HydrusExceptions.ConnectionException, HydrusExceptions.SizeException ) ):
                     
                     HydrusData.Print( trace )
                     

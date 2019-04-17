@@ -279,9 +279,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        add_remove_hbox.Add( self._add_button, CC.FLAGS_LONE_BUTTON )
-        add_remove_hbox.Add( self._edit_button, CC.FLAGS_LONE_BUTTON )
-        add_remove_hbox.Add( self._delete_button, CC.FLAGS_LONE_BUTTON )
+        add_remove_hbox.Add( self._add_button, CC.FLAGS_VCENTER )
+        add_remove_hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
+        add_remove_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -800,8 +800,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.Add( self._register, CC.FLAGS_LONE_BUTTON )
-                hbox.Add( self._test_credentials_button, CC.FLAGS_LONE_BUTTON )
+                hbox.Add( self._register, CC.FLAGS_VCENTER )
+                hbox.Add( self._test_credentials_button, CC.FLAGS_VCENTER )
                 
                 wrapped_access_key = ClientGUICommon.WrapInText( self._access_key, self, 'access key: ' )
                 
@@ -1047,7 +1047,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'client api' )
                 
-                self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
+                self._client_server_options_panel = ClientGUICommon.StaticBox( self, 'options' )
                 
                 if service_type == HC.LOCAL_BOORU:
                     
@@ -1063,13 +1063,19 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 port_name = '{} local port'.format( name )
                 none_phrase = 'do not run {} service'.format( name )
                 
-                self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, port_name, none_phrase = none_phrase, min = 1, max = 65535 )
+                self._port = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, port_name, none_phrase = none_phrase, min = 1, max = 65535 )
                 
-                self._allow_non_local_connections = wx.CheckBox( self._booru_options_panel, label = 'allow non-local connections' )
+                self._allow_non_local_connections = wx.CheckBox( self._client_server_options_panel, label = 'allow non-local connections' )
                 
-                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+                self._support_cors = wx.CheckBox( self._client_server_options_panel, label = 'support CORS headers' )
+                self._support_cors.SetToolTip( 'Have this server support Cross-Origin Resource Sharing, which allows web browsers to access it off other domains. Turn this on if you want to access this service through a web-based wrapper (e.g. a booru wrapper) hosted on another domain.' )
                 
-                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._booru_options_panel, dictionary[ 'bandwidth_rules' ] )
+                self._log_requests = wx.CheckBox( self._client_server_options_panel, label = 'log requests' )
+                self._log_requests.SetToolTip( 'Hydrus server services will write a brief anonymous line to the log for every request made, but for the client services this tends to be a bit spammy. You probably want this off unless you are testing something.' )
+                
+                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+                
+                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._client_server_options_panel, dictionary[ 'bandwidth_rules' ] )
                 
                 #
                 
@@ -1080,15 +1086,19 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._upnp.SetValue( dictionary[ 'upnp_port' ] )
                 
                 self._allow_non_local_connections.SetValue( dictionary[ 'allow_non_local_connections' ] )
+                self._support_cors.SetValue( dictionary[ 'support_cors' ] )
+                self._log_requests.SetValue( dictionary[ 'log_requests' ] )
                 
                 #
                 
-                self._booru_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.Add( self._allow_non_local_connections, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._client_server_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._allow_non_local_connections, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._support_cors, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._log_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                self.Add( self._booru_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self.Add( self._client_server_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._allow_non_local_connections.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
                 
@@ -1119,6 +1129,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 dictionary_part[ 'port' ] = self._port.GetValue()
                 dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
                 dictionary_part[ 'allow_non_local_connections' ] = self._allow_non_local_connections.GetValue()
+                dictionary_part[ 'support_cors' ] = self._support_cors.GetValue()
+                dictionary_part[ 'log_requests' ] = self._log_requests.GetValue()
                 dictionary_part[ 'bandwidth_rules' ] = self._bandwidth_rules.GetValue()
                 
                 return dictionary_part

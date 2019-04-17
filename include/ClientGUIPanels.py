@@ -723,9 +723,9 @@ class ReviewServicePanel( wx.Panel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.Add( self._refresh_account_button, CC.FLAGS_LONE_BUTTON )
-            hbox.Add( self._copy_account_key_button, CC.FLAGS_LONE_BUTTON )
-            hbox.Add( self._permissions_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._refresh_account_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._copy_account_key_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._permissions_button, CC.FLAGS_VCENTER )
             
             self.Add( self._title_and_expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -918,10 +918,10 @@ class ReviewServicePanel( wx.Panel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.Add( self._sync_now_button, CC.FLAGS_LONE_BUTTON )
-            hbox.Add( self._pause_play_button, CC.FLAGS_LONE_BUTTON )
-            hbox.Add( self._export_updates_button, CC.FLAGS_LONE_BUTTON )
-            hbox.Add( self._reset_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._sync_now_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._pause_play_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._export_updates_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._reset_button, CC.FLAGS_VCENTER )
             
             self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )

@@ -1863,6 +1863,19 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                 
                 base_url = parsing_context[ 'url' ]
                 
+                def clean_url( u ):
+                    
+                    # clears up when a source field starts with gubbins for some reason. e.g.:
+                    # (jap characters).avi | ranken [pixiv] http:/www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
+                    # ->
+                    # http:/www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
+                    
+                    while re.search( '\shttp', u ) is not None:
+                        
+                        u = re.sub( '^.*\shttp', 'http', u )
+                        
+                    
+                
                 parsed_texts = [ urllib.parse.urljoin( base_url, parsed_text ) for parsed_text in parsed_texts ]
                 
             

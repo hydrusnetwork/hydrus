@@ -361,6 +361,132 @@ class JobKey( object ):
         return ( i_paused, should_quit )
         
     
+class FileRWLock( object ):
+    
+    class RLock( object ):
+        
+        def __init__( self, parent ):
+            
+            self.parent = parent
+            
+        
+        def __enter__( self ):
+            
+            while not HydrusThreading.IsThreadShuttingDown():
+                
+                with self.parent.lock:
+                    
+                    # if there are no writers, we can start reading
+                    
+                    if self.parent.num_waiting_writers == 0:
+                        
+                        self.parent.num_readers += 1
+                        
+                        return
+                        
+                    
+                
+                # otherwise wait a bit
+                
+                self.parent.read_available_event.wait( 1 )
+                
+                self.parent.read_available_event.clear()
+                
+            
+        
+        def __exit__( self, exc_type, exc_val, exc_tb ):
+            
+            with self.parent.lock:
+                
+                self.parent.num_readers -= 1
+                
+                do_notify = self.parent.num_readers == 0
+                
+            
+            if do_notify:
+                
+                self.parent.write_available_event.set()
+                
+            
+        
+    
+    class WLock( object ):
+        
+        def __init__( self, parent ):
+            
+            self.parent = parent
+            
+        
+        def __enter__( self ):
+            
+            # let all the readers know that we are bumping up to the front of the queue
+            
+            with self.parent.lock:
+                
+                self.parent.num_waiting_writers += 1
+                
+            
+            while not HydrusThreading.IsThreadShuttingDown():
+                
+                with self.parent.lock:
+                    
+                    # if nothing reading or writing atm, sieze the opportunity
+                    
+                    if self.parent.num_readers == 0 and not self.parent.there_is_an_active_writer:
+                        
+                        self.parent.there_is_an_active_writer = True
+                        
+                        return
+                        
+                    
+                
+                # otherwise wait a bit
+                
+                self.parent.write_available_event.wait( 1 )
+                
+                self.parent.write_available_event.clear()
+                
+            
+        
+        def __exit__( self, exc_type, exc_val, exc_tb ):
+            
+            with self.parent.lock:
+                
+                self.parent.there_is_an_active_writer = False
+                
+                self.parent.num_waiting_writers -= 1
+                
+                do_read_notify = self.parent.num_waiting_writers == 0 # reading is now available
+                do_write_notify = self.parent.num_waiting_writers > 0 # another writer is waiting
+                
+            
+            if do_read_notify:
+                
+                self.parent.read_available_event.set()
+                
+            
+            if do_write_notify:
+                
+                self.parent.write_available_event.set()
+                
+            
+        
+    
+    def __init__( self ):
+        
+        self.read = self.RLock( self )
+        self.write = self.WLock( self )
+        
+        self.lock = threading.Lock()
+        
+        self.read_available_event = threading.Event()
+        self.write_available_event = threading.Event()
+        
+        self.num_readers = 0
+        self.num_waiting_writers = 0
+        self.there_is_an_active_writer = False
+        
+    
 class WXAwareJob( HydrusThreading.SchedulableJob ):
     
     def __init__( self, controller, scheduler, window, initial_delay, work_callable ):

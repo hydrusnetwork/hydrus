@@ -106,13 +106,23 @@ class Controller( HydrusController.HydrusController ):
     
     def _DestroySplash( self ):
         
+        def wx_code( splash ):
+            
+            if splash:
+                
+                splash.Hide()
+                
+                splash.DestroyLater()
+                
+            
+        
         if self._splash is not None:
             
-            wx.CallAfter( self._splash.Hide )
-            
-            wx.CallAfter( self._splash.Destroy )
+            splash = self._splash
             
             self._splash = None
+            
+            wx.CallAfter( wx_code, splash )
             
         
     
@@ -716,15 +726,15 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', 'tag censorship' )
         
-        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
+        self.tag_censorship_manager = ClientCaches.TagCensorshipManager( self )
         
         self.pub( 'splash_set_status_subtext', 'tag siblings' )
         
-        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
+        self.tag_siblings_manager = ClientCaches.TagSiblingsManager( self )
         
         self.pub( 'splash_set_status_subtext', 'tag parents' )
         
-        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
+        self.tag_parents_manager = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         
         def wx_code():

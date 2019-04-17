@@ -296,14 +296,16 @@ class Animation( wx.Window ):
         
         if self._frame_bmp is not None and self._frame_bmp.GetSize() != current_frame.GetSize():
             
-            wx.CallAfter( self._frame_bmp.Destroy )
+            HG.client_controller.bitmap_manager.ReleaseBitmap( self._frame_bmp )
             
             self._frame_bmp = None
             
         
         if self._frame_bmp is None:
             
-            self._frame_bmp = wx.Bitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
+            self._frame_bmp = HG.client_controller.bitmap_manager.GetBitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
+            
+            #self._frame_bmp = wx.Bitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
             
         
         current_frame.CopyToWxBitmap( self._frame_bmp )
@@ -475,10 +477,10 @@ class Animation( wx.Window ):
                 
                 if self._canvas_bmp is not None:
                     
-                    wx.CallAfter( self._canvas_bmp.Destroy )
+                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
                     
                 
-                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
+                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
                 
                 self._current_frame_drawn = False
                 self._something_valid_has_been_drawn = False
@@ -980,10 +982,10 @@ class AnimationBar( wx.Window ):
                 
                 if self._canvas_bmp is not None:
                     
-                    wx.CallAfter( self._canvas_bmp.Destroy )
+                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
                     
                 
-                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
+                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
                 
                 self._dirty = True
                 
@@ -1198,7 +1200,7 @@ class Canvas( wx.Window ):
         
         self._UpdateBackgroundColour()
         
-        self._canvas_bmp = wx.Bitmap( 20, 20, 24 )
+        self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
         
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
@@ -2187,9 +2189,9 @@ class Canvas( wx.Window ):
             
             ( my_width, my_height ) = self.GetClientSize()
             
-            wx.CallAfter( self._canvas_bmp.Destroy )
+            HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
             
-            self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
+            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
             
             if self._current_media is not None:
                 
@@ -5538,10 +5540,10 @@ class EmbedButton( wx.Window ):
                 
                 if self._canvas_bmp is not None:
                     
-                    wx.CallAfter( self._canvas_bmp.Destroy )
+                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
                     
                 
-                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
+                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
                 
                 self._SetDirty()
                 
@@ -5681,7 +5683,7 @@ class StaticImage( wx.Window ):
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
-            wx.CallAfter( wx_bitmap.Destroy )
+            HG.client_controller.bitmap_manager.ReleaseBitmap( wx_bitmap )
             
             self._is_rendered = True
             
@@ -5756,10 +5758,10 @@ class StaticImage( wx.Window ):
                 
                 if self._canvas_bmp is not None:
                     
-                    wx.CallAfter( self._canvas_bmp.Destroy )
+                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
                     
                 
-                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
+                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
                 
                 self._first_background_drawn = False
                 

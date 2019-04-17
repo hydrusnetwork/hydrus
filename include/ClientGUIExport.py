@@ -676,9 +676,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         tags = set()
                         
-                        siblings_manager = HG.controller.GetManager( 'tag_siblings' )
+                        siblings_manager = HG.controller.tag_siblings_manager
                         
-                        tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+                        tag_censorship_manager = HG.client_controller.tag_censorship_manager
                         
                         for service_key in neighbouring_txt_tag_service_keys:
                             

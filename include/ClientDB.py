@@ -3900,9 +3900,9 @@ class DB( HydrusDB.HydrusDB ):
         
         all_predicates = []
         
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.tag_censorship_manager
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
         
         for search_tag_service_id in search_tag_service_ids:
             
@@ -4246,7 +4246,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetForceRefreshTagsManagers( self, hash_ids, hash_ids_to_current_file_service_ids = None ):
         
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.tag_censorship_manager
         
         #
         
@@ -5464,7 +5464,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = None ):
         
-        siblings_manager = self._controller.GetManager( 'tag_siblings' )
+        siblings_manager = self._controller.tag_siblings_manager
         
         tags = siblings_manager.GetAllSiblings( tag_service_key, tag )
         
@@ -6629,7 +6629,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetRelatedTags( self, service_key, skip_hash, search_tags, max_results, max_time_to_take ):
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
         
         stop_time_for_finding_files = HydrusData.GetNowPrecise() + ( max_time_to_take / 2 )
         stop_time_for_finding_tags = HydrusData.GetNowPrecise() + ( max_time_to_take / 2 )
@@ -6725,7 +6725,7 @@ class DB( HydrusDB.HydrusDB ):
         
         tags_to_do = { tag for tag in tags_to_counts if tag not in search_tags }
         
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.tag_censorship_manager
         
         filtered_tags = tag_censorship_manager.FilterTags( service_key, tags_to_do )
         
@@ -7193,7 +7193,7 @@ class DB( HydrusDB.HydrusDB ):
             return statuses_to_pairs
             
         
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.tag_censorship_manager
         
         if service_key is None:
             
@@ -7259,7 +7259,7 @@ class DB( HydrusDB.HydrusDB ):
             return statuses_to_pairs
             
         
-        tag_censorship_manager = self._controller.GetManager( 'tag_censorship' )
+        tag_censorship_manager = self._controller.tag_censorship_manager
         
         if service_key is None:
             
@@ -7643,7 +7643,6 @@ class DB( HydrusDB.HydrusDB ):
         
         client_files_manager = self._controller.client_files_manager
         
-        # lockless because this db call is made by the locked client files manager
         client_files_manager.LocklessAddFileFromBytes( update_hash, mime, update_network_bytes )
         
         self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
@@ -12246,7 +12245,37 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 346:
             
-            self._c.execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
+            
+        
+        if version == 347:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( [ 'yiff.party file attachment long' ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

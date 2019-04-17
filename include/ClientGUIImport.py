@@ -199,9 +199,9 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         tags = HydrusTags.CleanTags( tags )
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
-        tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
+        parents_manager = HG.client_controller.tag_parents_manager
+        tag_censorship_manager = HG.client_controller.tag_censorship_manager
         
         tags = siblings_manager.CollapseTags( self._service_key, tags )
         tags = parents_manager.ExpandTags( self._service_key, tags )
@@ -691,7 +691,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         def EnterTags( self, tags ):
             
-            tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+            tag_parents_manager = HG.client_controller.tag_parents_manager
             
             parents = set()
             
@@ -713,7 +713,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         def EnterTagsSingle( self, tags ):
             
-            tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+            tag_parents_manager = HG.client_controller.tag_parents_manager
             
             parents = set()
             

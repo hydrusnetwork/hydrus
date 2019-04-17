@@ -2617,14 +2617,14 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( wx.Bitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height ) )
+        self._dirty_canvas_pages.append( HG.client_controller.bitmap_manager.GetBitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height ) )
         
     
     def _DeleteAllDirtyPages( self ):
         
         for bmp in self._dirty_canvas_pages:
             
-            bmp.Destroy()
+            HG.client_controller.bitmap_manager.ReleaseBitmap( bmp )
             
         
         self._dirty_canvas_pages = []
@@ -3146,8 +3146,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             del self._thumbnails_being_faded_in[ hash ]
             
-            bmp.Destroy()
-            alpha_bmp.Destroy()
+            HG.client_controller.bitmap_manager.ReleaseBitmap( bmp )
+            HG.client_controller.bitmap_manager.ReleaseBitmap( alpha_bmp )
             
         
     
@@ -4528,8 +4528,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 del self._thumbnails_being_faded_in[ hash ]
                 
-                original_bmp.Destroy()
-                alpha_bmp.Destroy()
+                HG.client_controller.bitmap_manager.ReleaseBitmap( original_bmp )
+                HG.client_controller.bitmap_manager.ReleaseBitmap( alpha_bmp )
                 
             
             if HydrusData.TimeHasPassedPrecise( loop_should_break_time ):
@@ -4611,7 +4611,7 @@ class Thumbnail( Selectable ):
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
         
-        bmp = wx.Bitmap( width, height, 24 )
+        bmp = HG.client_controller.bitmap_manager.GetBitmap( width, height, 24 )
         
         dc = wx.MemoryDC( bmp )
         
@@ -4682,7 +4682,7 @@ class Thumbnail( Selectable ):
         
         dc.DrawBitmap( wx_bmp, x_offset, y_offset )
         
-        wx_bmp.Destroy()
+        HG.client_controller.bitmap_manager.ReleaseBitmap( wx_bmp )
         
         new_options = HG.client_controller.new_options
         
@@ -4692,7 +4692,7 @@ class Thumbnail( Selectable ):
         
         if len( tags ) > 0:
             
-            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.tag_siblings_manager
             
             tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
             

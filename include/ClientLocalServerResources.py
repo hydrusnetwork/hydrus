@@ -744,7 +744,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
             
             more_hashes = request.parsed_request_args[ 'hashes' ]
             
-            hashes.update( hashes )
+            hashes.update( more_hashes )
             
         
         if len( hashes ) == 0:
@@ -753,6 +753,13 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
             
         
         #
+        
+        add_siblings_and_parents = True
+        
+        if 'add_siblings_and_parents' in request.parsed_request_args:
+            
+            add_siblings_and_parents = request.parsed_request_args[ 'add_siblings_and_parents' ]
+            
         
         service_keys_to_content_updates = collections.defaultdict( list )
         
@@ -785,6 +792,17 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 else:
                     
                     content_action = HC.CONTENT_UPDATE_PEND
+                    
+                
+                if add_siblings_and_parents:
+                    
+                    siblings_manager = HG.client_controller.tag_siblings_manager
+                    
+                    tags = siblings_manager.CollapseTags( service_key, tags )
+                    
+                    parents_manager = HG.client_controller.tag_parents_manager
+                    
+                    tags = parents_manager.ExpandTags( service_key, tags )
                     
                 
                 content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in tags ]
@@ -832,6 +850,17 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                             
                             continue
                             
+                        
+                    
+                    if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and add_siblings_and_parents:
+                        
+                        siblings_manager = HG.client_controller.tag_siblings_manager
+                        
+                        tags = siblings_manager.CollapseTags( service_key, tags )
+                        
+                        parents_manager = HG.client_controller.tag_parents_manager
+                        
+                        tags = parents_manager.ExpandTags( service_key, tags )
                         
                     
                     if content_action == HC.CONTENT_UPDATE_PETITION:

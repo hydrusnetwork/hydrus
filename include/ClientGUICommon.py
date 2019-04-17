@@ -111,7 +111,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
                 content_update_action = HC.CONTENT_UPDATE_ADD
                 
-                tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+                tag_parents_manager = HG.client_controller.tag_parents_manager
                 
                 parents = tag_parents_manager.GetParents( service_key, tag )
                 
@@ -142,7 +142,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
                 content_update_action = HC.CONTENT_UPDATE_PEND
                 
-                tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+                tag_parents_manager = HG.client_controller.tag_parents_manager
                 
                 parents = tag_parents_manager.GetParents( service_key, tag )
                 
@@ -980,11 +980,11 @@ class BufferedWindow( wx.Window ):
             
             ( x, y ) = kwargs[ 'size' ]
             
-            self._canvas_bmp = wx.Bitmap( x, y, 24 )
+            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( x, y, 24 )
             
         else:
             
-            self._canvas_bmp = wx.Bitmap( 20, 20, 24 )
+            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
             
         
         self._dirty = True
@@ -1019,7 +1019,7 @@ class BufferedWindow( wx.Window ):
         
         if my_width != current_bmp_width or my_height != current_bmp_height:
             
-            self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
+            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
             
             self._dirty = True
             
@@ -2515,7 +2515,7 @@ class RatingLike( wx.Window ):
         
         self._service_key = service_key
         
-        self._canvas_bmp = wx.Bitmap( 16, 16, 24 )
+        self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( 16, 16, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
@@ -2744,7 +2744,7 @@ class RatingNumerical( wx.Window ):
         
         my_width = ClientRatings.GetNumericalWidth( self._service_key )
         
-        self._canvas_bmp = wx.Bitmap( my_width, 16, 24 )
+        self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, 16, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )

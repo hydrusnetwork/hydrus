@@ -107,7 +107,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
     
     re_predicate = compile_re( search_text )
     
-    sibling_manager = HG.client_controller.GetManager( 'tag_siblings' )
+    sibling_manager = HG.client_controller.tag_siblings_manager
     
     result = []
     
@@ -1513,7 +1513,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             if sibling_service_key is not None:
                 
-                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+                siblings_manager = HG.client_controller.tag_siblings_manager
                 
                 sibling = siblings_manager.GetSibling( sibling_service_key, tag )
                 

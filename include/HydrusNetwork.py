@@ -2098,6 +2098,11 @@ class ServerService( object ):
             
         
     
+    def LogsRequests( self ):
+        
+        return True
+        
+    
     def ReportDataUsed( self, num_bytes ):
         
         with self._lock:
@@ -2144,6 +2149,11 @@ class ServerService( object ):
             
             self._SetDirty()
             
+        
+    
+    def SupportsCORS( self ):
+        
+        return False
         
     
     def ToSerialisableTuple( self ):

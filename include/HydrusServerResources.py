@@ -389,7 +389,11 @@ class HydrusResource( Resource ):
         
         if request.channel is None:
             
-            raise HydrusExceptions.ServerException( 'Channel was closed! Probably a connectionLost that was not caught!' )
+            # Connection was lost, it seems.
+            
+            request.finish()
+            
+            return
             
         
         response_context = request.hydrus_response_context
@@ -458,7 +462,10 @@ class HydrusResource( Resource ):
             
             content_length = 0
             
-            request.setHeader( 'Content-Length', str( content_length ) )
+            if status_code != 204: # 204 is No Content
+                
+                request.setHeader( 'Content-Length', str( content_length ) )
+                
             
         
         self._reportDataUsed( request, content_length )
@@ -480,6 +487,22 @@ class HydrusResource( Resource ):
             
         
         d = deferToThread( self._threadDoGETJob, request )
+        
+        d.addCallback( wrap_thread_result )
+        
+        return d
+        
+    
+    def _callbackDoOPTIONSJob( self, request ):
+        
+        def wrap_thread_result( response_context ):
+            
+            request.hydrus_response_context = response_context
+            
+            return request
+            
+        
+        d = deferToThread( self._threadDoOPTIONSJob, request )
         
         d.addCallback( wrap_thread_result )
         
@@ -547,7 +570,7 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 400, mime = default_mime, body = default_encoding( failure.value ) )
             
-        elif failure.type == HydrusExceptions.MissingCredentialsException:
+        elif failure.type in ( HydrusExceptions.MissingCredentialsException, HydrusExceptions.DoesNotSupportCORSException ):
             
             response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
             
@@ -629,6 +652,50 @@ class HydrusResource( Resource ):
         raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
         
     
+    def _threadDoOPTIONSJob( self, request ):
+        
+        allowed_methods = []
+        
+        if self._threadDoGETJob.__func__ != HydrusResource._threadDoGETJob:
+            
+            allowed_methods.append( 'GET' )
+            
+        
+        if self._threadDoPOSTJob.__func__ != HydrusResource._threadDoPOSTJob:
+            
+            allowed_methods.append( 'POST' )
+            
+        
+        allowed_methods_string = ', '.join( allowed_methods )
+        
+        if request.requestHeaders.hasHeader( 'Origin' ):
+            
+            # this is a CORS request
+            
+            if self._service.SupportsCORS():
+                
+                request.setHeader( 'Access-Control-Allow-Origin', '*' )
+                request.setHeader( 'Access-Control-Allow-Methods', allowed_methods_string )
+                
+            else:
+                
+                # 401
+                raise HydrusExceptions.DoesNotSupportCORSException( 'This service does not support CORS.' )
+                
+            
+        else:
+            
+            # regular OPTIONS request
+            
+            request.setHeader( 'Allow', allowed_methods_string )
+            
+        
+        # 204 No Content
+        response_context = ResponseContext( 204 )
+        
+        return response_context
+        
+    
     def _threadDoPOSTJob( self, request ):
         
         raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
@@ -657,6 +724,29 @@ class HydrusResource( Resource ):
         d.addCallback( self._callbackParseGETArgs )
         
         d.addCallback( self._callbackDoGETJob )
+        
+        d.addErrback( self._errbackHandleProcessingError, request )
+        
+        d.addCallback( self._callbackRenderResponseContext )
+        
+        d.addErrback( self._errbackHandleEmergencyError, request )
+        
+        reactor.callLater( 0, d.callback, request )
+        
+        request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        
+        return NOT_DONE_YET
+        
+    
+    def render_OPTIONS( self, request ):
+        
+        request.setHeader( 'Server', self._server_version_string )
+        
+        d = defer.Deferred()
+        
+        d.addCallback( self._callbackCheckRestrictions )
+        
+        d.addCallback( self._callbackDoOPTIONSJob )
         
         d.addErrback( self._errbackHandleProcessingError, request )
         

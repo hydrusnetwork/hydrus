@@ -45,6 +45,7 @@ class NotFoundException( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
 class BadRequestException( NetworkException ): pass
 class MissingCredentialsException( NetworkException ): pass
+class DoesNotSupportCORSException( NetworkException ): pass
 class InsufficientCredentialsException( NetworkException ): pass
 class RedirectionException( NetworkException ): pass
 class ServerException( NetworkException ): pass

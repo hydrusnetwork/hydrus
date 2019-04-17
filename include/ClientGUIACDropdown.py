@@ -76,7 +76,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
         
         ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
         
         if False and half_complete_subtag == '':
             
@@ -326,7 +326,7 @@ def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service
         
         if expand_parents:
             
-            parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+            parents_manager = HG.client_controller.tag_parents_manager
             
             matches = parents_manager.ExpandPredicates( tag_service_key, matches )
             
@@ -1256,8 +1256,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         sync_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         sync_button_hbox.Add( self._synchronised, CC.FLAGS_EXPAND_BOTH_WAYS )
-        sync_button_hbox.Add( self._or_cancel, CC.FLAGS_LONE_BUTTON )
-        sync_button_hbox.Add( self._or_rewind, CC.FLAGS_LONE_BUTTON )
+        sync_button_hbox.Add( self._or_cancel, CC.FLAGS_VCENTER )
+        sync_button_hbox.Add( self._or_rewind, CC.FLAGS_VCENTER )
         
         button_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1442,7 +1442,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             cache_text = search_text[:-1] # take off the trailing '*' for the cache text
             
-            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.tag_siblings_manager
             
             sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
             
@@ -1682,7 +1682,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag )
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
         
         sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
         
@@ -1783,7 +1783,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
         
-        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+        parents_manager = HG.client_controller.tag_parents_manager
         
         predicates = parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates )
         

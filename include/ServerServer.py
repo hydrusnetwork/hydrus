@@ -1,23 +1,7 @@
 from . import HydrusServer
 from . import ServerServerResources
 
-class HydrusRequestRestricted( HydrusServer.HydrusRequest ):
-    
-    def __init__( self, *args, **kwargs ):
-        
-        HydrusServer.HydrusRequest.__init__( self, *args, **kwargs )
-        
-        self.hydrus_account = None
-        
-    
 class HydrusServiceRestricted( HydrusServer.HydrusService ):
-    
-    def __init__( self, service ):
-        
-        HydrusServer.HydrusService.__init__( self, service )
-        
-        self.requestFactory = HydrusRequestRestricted
-        
     
     def _InitRoot( self ):
         

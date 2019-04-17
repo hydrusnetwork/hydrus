@@ -16,14 +16,16 @@ class HydrusRequest( Request ):
         Request.__init__( self, *args, **kwargs )
         
         self.start_time = time.clock()
-        self.is_hydrus_client = True
         self.parsed_request_args = None
         self.hydrus_response_context = None
+        self.hydrus_account = None
         
+    
+class HydrusRequestLogging( HydrusRequest ):
     
     def finish( self ):
         
-        Request.finish( self )
+        HydrusRequest.finish( self )
         
         host = self.getHost()
         
@@ -55,7 +57,14 @@ class HydrusService( Site ):
         
         Site.__init__( self, root )
         
-        self.requestFactory = HydrusRequest
+        if service.LogsRequests():
+            
+            self.requestFactory = HydrusRequestLogging
+            
+        else:
+            
+            self.requestFactory = HydrusRequest
+            
         
     
     def _InitRoot( self ):

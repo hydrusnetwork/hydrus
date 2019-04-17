@@ -138,11 +138,11 @@ class ImageRenderer( object ):
         
         if wx_depth == 3:
             
-            return wx.Bitmap.FromBuffer( wx_width, wx_height, wx_data )
+            return HG.client_controller.bitmap_manager.GetBitmapFromBuffer( wx_width, wx_height, 24, wx_data )
             
         else:
             
-            return wx.Bitmap.FromBufferRGBA( wx_width, wx_height, wx_data )
+            return HG.client_controller.bitmap_manager.GetBitmapFromBuffer( wx_width, wx_height, 32, wx_data )
             
         
     
@@ -714,14 +714,7 @@ class HydrusBitmap( object ):
         
         ( width, height ) = self._size
         
-        if self._depth == 3:
-            
-            return wx.Bitmap.FromBuffer( width, height, self._GetData() )
-            
-        elif self._depth == 4:
-            
-            return wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
-            
+        return HG.client_controller.bitmap_manager.GetBitmapFromBuffer( width, height, self._depth * 8, self._GetData() )
         
     
     def GetWxImage( self ):
@@ -734,11 +727,11 @@ class HydrusBitmap( object ):
             
         elif self._depth == 4:
             
-            bitmap = wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
+            bitmap = HG.client_controller.bitmap_manager.GetBitmapFromBuffer( width, height, 32, self._GetData() )
             
             image = bitmap.ConvertToImage()
             
-            bitmap.Destroy()
+            HG.client_controller.bitmap_manager.ReleaseBitmap( bitmap )
             
             return image
             

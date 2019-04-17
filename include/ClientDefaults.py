@@ -25,7 +25,7 @@ def GetClientDefaultOptions():
     options[ 'num_autocomplete_chars' ] = 2
     options[ 'default_gui_session' ] = 'last session'
     options[ 'fetch_ac_results_automatically' ] = True
-    options[ 'ac_timings' ] = ( 3, 500, 250 )
+    options[ 'ac_timings' ] = ( 4, 300, 100 )
     options[ 'idle_period' ] = 60 * 30
     options[ 'idle_mouse_period' ] = 60 * 10
     options[ 'idle_cpu_max' ] = 50

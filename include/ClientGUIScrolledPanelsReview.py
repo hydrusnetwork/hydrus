@@ -319,8 +319,6 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    THUMBNAIL_RATIO = 0.012
-    
     def __init__( self, parent, controller ):
         
         self._controller = controller
@@ -558,8 +556,10 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertLocationToListCtrlTuples( self, location ):
         
+        thumbnail_ratio_estimate = self._GetThumbnailRatioEstimate()
+        
         f_space = self._all_local_files_total_size
-        t_space = self._all_local_files_total_size * self.THUMBNAIL_RATIO
+        t_space = self._all_local_files_total_size * thumbnail_ratio_estimate
         
         # current
         
@@ -768,6 +768,20 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         all_locations = list( all_locations )
         
         return all_locations
+        
+    
+    def _GetThumbnailRatioEstimate( self ):
+        
+        ( t_width, t_height ) = HG.client_controller.options[ 'thumbnail_dimensions' ]
+        
+        normal_num_pixels = 200 * 200
+        normal_ratio = 0.016
+        
+        current_num_pixels = t_width * t_height
+        
+        estimate_ratio = ( current_num_pixels / normal_num_pixels ) * normal_ratio
+        
+        return estimate_ratio
         
     
     def _IncreaseWeight( self ):
@@ -1004,10 +1018,12 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_db_path_st.SetLabelText( 'database (about ' + HydrusData.ToHumanBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
         self._current_install_path_st.SetLabelText( 'install: ' + HC.BASE_DIR )
         
-        approx_total_client_files = self._all_local_files_total_size
-        approx_total_thumbnails = self._all_local_files_total_size * self.THUMBNAIL_RATIO
+        thumbnail_ratio_estimate = self._GetThumbnailRatioEstimate()
         
-        label = 'media is about ' + HydrusData.ToHumanBytes( approx_total_client_files ) + ', thumbnails are about ' + HydrusData.ToHumanBytes( approx_total_thumbnails ) + ':'
+        approx_total_client_files = self._all_local_files_total_size
+        approx_total_thumbnails = self._all_local_files_total_size * thumbnail_ratio_estimate
+        
+        label = 'media is ' + HydrusData.ToHumanBytes( approx_total_client_files ) + ', thumbnails are estimated at ' + HydrusData.ToHumanBytes( approx_total_thumbnails ) + ':'
         
         self._current_media_paths_st.SetLabelText( label )
         

@@ -244,7 +244,7 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
     
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, collapse_siblings = False ):
     
-    siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+    siblings_manager = HG.client_controller.tag_siblings_manager
     
     tags_managers = []
     

@@ -832,7 +832,7 @@ class ListBox( wx.ScrolledWindow ):
         self._last_view_start = None
         self._dirty = True
         
-        self._client_bmp = wx.Bitmap( 20, 20, 24 )
+        self._client_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
         
         dc = wx.MemoryDC( self._client_bmp )
         
@@ -1418,7 +1418,7 @@ class ListBox( wx.ScrolledWindow ):
         
         if ( my_x, my_y ) != self._client_bmp.GetSize():
             
-            self._client_bmp = wx.Bitmap( my_x, my_y, 24 )
+            self._client_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_x, my_y, 24 )
             
             self._dirty = True
             
@@ -2601,7 +2601,7 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def _GetTextFromTerm( self, term ):
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
         
         tag = term
         
@@ -2836,7 +2836,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if not self._collapse_siblings:
             
-            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.tag_siblings_manager
             
             sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
             

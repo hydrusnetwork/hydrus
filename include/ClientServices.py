@@ -62,6 +62,9 @@ def GenerateDefaultServiceDictionary( service_type ):
         dictionary[ 'bandwidth_tracker' ] = HydrusNetworking.BandwidthTracker()
         dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
         
+        dictionary[ 'support_cors' ] = False
+        dictionary[ 'log_requests' ] = False
+        
         if service_type == HC.LOCAL_BOORU:
             
             allow_non_local_connections = True
@@ -332,6 +335,8 @@ class ServiceLocalServerService( Service ):
         dictionary[ 'port' ] = self._port
         dictionary[ 'upnp_port' ] = self._upnp_port
         dictionary[ 'allow_non_local_connections' ] = self._allow_non_local_connections
+        dictionary[ 'support_cors' ] = self._support_cors
+        dictionary[ 'log_requests' ] = self._log_requests
         dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         
@@ -345,6 +350,8 @@ class ServiceLocalServerService( Service ):
         self._port = dictionary[ 'port' ]
         self._upnp_port = dictionary[ 'upnp_port' ]
         self._allow_non_local_connections = dictionary[ 'allow_non_local_connections' ]
+        self._support_cors = dictionary[ 'support_cors' ]
+        self._log_requests = dictionary[ 'log_requests' ]
         self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         
@@ -383,6 +390,14 @@ class ServiceLocalServerService( Service ):
             
         
     
+    def LogsRequests( self ):
+        
+        with self._lock:
+            
+            return self._log_requests
+            
+        
+    
     def ReportDataUsed( self, num_bytes ):
         
         with self._lock:
@@ -396,6 +411,14 @@ class ServiceLocalServerService( Service ):
         with self._lock:
             
             self._bandwidth_tracker.ReportRequestUsed()
+            
+        
+    
+    def SupportsCORS( self ):
+        
+        with self._lock:
+            
+            return self._support_cors
             
         
     

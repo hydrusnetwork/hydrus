@@ -349,13 +349,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         library_versions.append( ( 'FFMPEG', HydrusVideoHandling.GetFFMPEGVersion() ) )
         library_versions.append( ( 'OpenCV', cv2.__version__ ) )
         library_versions.append( ( 'openssl', ssl.OPENSSL_VERSION ) )
-        library_versions.append( ( 'PIL', PIL.VERSION ) )
-        
-        if hasattr( PIL, 'PILLOW_VERSION' ):
-            
-            library_versions.append( ( 'Pillow', PIL.PILLOW_VERSION ) )
-            
-        
+        library_versions.append( ( 'Pillow', PIL.__version__ ) )
         library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
         library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
         library_versions.append( ( 'lz4 present: ', str( ClientRendering.LZ4_OK ) ) )
@@ -3670,9 +3664,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 t += 0.5
                 
-                HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_DOWN )
-                
-                t += 0.05
+                for j in range( i + 1 ):
+                    
+                    HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_DOWN )
+                    
+                    t += 0.05
+                    
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
                 

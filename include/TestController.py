@@ -36,6 +36,7 @@ from . import TestClientImportOptions
 from . import TestClientImportSubscriptions
 from . import TestClientListBoxes
 from . import TestClientNetworking
+from . import TestClientThreading
 from . import TestDialogs
 from . import TestDB
 from . import TestFunctions
@@ -268,11 +269,13 @@ class Controller( object ):
         
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
-        self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
-        self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
-        self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
+        self.tag_censorship_manager = ClientCaches.TagCensorshipManager( self )
+        self.tag_siblings_manager = ClientCaches.TagSiblingsManager( self )
+        self.tag_parents_manager = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
+        
+        self.bitmap_manager = ClientCaches.BitmapManager( self )
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         self.client_api_manager = ClientAPI.APIManager()
@@ -608,6 +611,7 @@ class Controller( object ):
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientData ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportOptions ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientThreading ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
@@ -651,7 +655,7 @@ class Controller( object ):
                 
             finally:
                 
-                wx.CallAfter( self.win.Destroy )
+                wx.CallAfter( self.win.DestroyLater )
                 
             
         

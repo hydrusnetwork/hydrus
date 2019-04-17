@@ -203,17 +203,153 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
 class BitmapManager( object ):
     
+    MAX_MEMORY_ALLOWANCE = 512 * 1024 * 1024
+    
     def __init__( self, controller ):
         
         self._controller = controller
         
+        self._unusued_bitmaps = collections.defaultdict( list )
+        self._destroyee_bitmaps = []
+        self._total_unused_memory_size = 0
+        
         self._media_background_bmp_path = None
         self._media_background_bmp = None
         
-    
-    def _DestroyBmp( self, bmp ):
+        self._awaiting_destruction = False
         
-        wx.CallAfter( self._media_background_bmp.Destroy )
+        HG.client_controller.sub( self, 'MaintainMemory', 'memory_maintenance_pulse' )
+        
+    
+    def _AdjustTotalMemory( self, direction, key ):
+        
+        ( width, height, depth ) = key
+        
+        amount = width * height * depth / 8
+        
+        self._total_unused_memory_size += direction * amount
+        
+    
+    def _ClearDestroyees( self ):
+        
+        def action_destroyee( item ):
+            
+            ( destroy_timestamp, bitmap ) = item
+            
+            if HydrusData.TimeHasPassedPrecise( destroy_timestamp ) and bitmap:
+                
+                bitmap.Destroy()
+                
+                return False
+                
+            else:
+                
+                return True
+                
+            
+        
+        try:
+            
+            self._destroyee_bitmaps = list( filter( action_destroyee, self._destroyee_bitmaps ) )
+            
+        finally:
+            
+            self._awaiting_destruction = False
+            
+        
+        if len( self._destroyee_bitmaps ) > 0:
+            
+            self._ScheduleDestruction()
+            
+        
+    
+    def _ScheduleDestruction( self ):
+        
+        if not self._awaiting_destruction:
+            
+            self._controller.CallLaterWXSafe( self._controller, 1.0, self._ClearDestroyees )
+            
+            self._awaiting_destruction = True
+            
+        
+    
+    def ReleaseBitmap( self, bitmap ):
+        
+        ( width, height ) = bitmap.GetSize()
+        depth = bitmap.GetDepth()
+        
+        key = ( width, height, depth )
+        
+        if key in self._unusued_bitmaps and len( self._unusued_bitmaps[ key ] ) > 10:
+            
+            self._destroyee_bitmaps.append( ( HydrusData.GetNowPrecise() + 0.5, bitmap ) )
+            
+            self._ScheduleDestruction()
+            
+        else:
+            
+            self._unusued_bitmaps[ key ].append( bitmap )
+            
+            self._AdjustTotalMemory( 1, key )
+            
+            if self._total_unused_memory_size > self.MAX_MEMORY_ALLOWANCE:
+                
+                self._controller.CallLaterWXSafe( self._controller, 1.0, self.MaintainMemory )
+                
+            
+        
+    
+    def GetBitmap( self, width, height, depth = 24 ):
+        
+        if width < 0:
+            
+            width = 20
+            
+        
+        if height < 0:
+            
+            height = 20
+            
+        
+        key = ( width, height, depth )
+        
+        if key in self._unusued_bitmaps:
+            
+            bitmaps = self._unusued_bitmaps[ key ]
+            
+            if len( bitmaps ) > 0:
+                
+                bitmap = bitmaps.pop()
+                
+                self._AdjustTotalMemory( -1, key )
+                
+                return bitmap
+                
+            else:
+                
+                del self._unusued_bitmaps[ key ]
+                
+            
+        
+        bitmap = wx.Bitmap( width, height, depth )
+        
+        return bitmap
+        
+    
+    def GetBitmapFromBuffer( self, width, height, depth, data ):
+        
+        bitmap = self.GetBitmap( width, height, depth = depth )
+        
+        if depth == 24:
+            
+            bitmap.CopyFromBuffer( data, format = wx.BitmapBufferFormat_RGB )
+            
+        elif depth == 32:
+            
+            bitmap.CopyFromBuffer( data, format = wx.BitmapBufferFormat_RGBA )
+            
+        
+        return bitmap
         
     
     def GetMediaBackgroundBitmap( self ):
@@ -226,7 +362,7 @@ class BitmapManager( object ):
             
             if self._media_background_bmp is not None:
                 
-                self._DestroyBmp( self._media_background_bmp )
+                self.ReleaseBitmap( self._media_background_bmp )
                 
             
             try:
@@ -250,13 +386,29 @@ class BitmapManager( object ):
         return self._media_background_bmp
         
     
+    def MaintainMemory( self ):
+        
+        destroy_time = HydrusData.GetNowPrecise() + 0.5
+        
+        for bitmaps in self._unusued_bitmaps.values():
+            
+            self._destroyee_bitmaps.extend( ( ( destroy_time, bitmap ) for bitmap in bitmaps ) )
+            
+        
+        self._unusued_bitmaps = collections.defaultdict( list )
+        
+        self._total_unused_memory_size = 0
+        
+        self._ScheduleDestruction()
+        
+    
 class ClientFilesManager( object ):
     
     def __init__( self, controller ):
         
         self._controller = controller
         
-        self._lock = threading.Lock()
+        self._rwlock = ClientThreading.FileRWLock()
         
         self._prefixes_to_locations = {}
         
@@ -264,6 +416,50 @@ class ClientFilesManager( object ):
         self._missing_locations = set()
         
         self._Reinit()
+        
+    
+    def _AddFile( self, hash, mime, source_path ):
+        
+        dest_path = self._GenerateExpectedFilePath( hash, mime )
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Adding file from path: ' + str( ( source_path, dest_path ) ) )
+            
+        
+        successful = HydrusPaths.MirrorFile( source_path, dest_path )
+        
+        if not successful:
+            
+            raise Exception( 'There was a problem copying the file from ' + source_path + ' to ' + dest_path + '!' )
+            
+        
+    
+    def _AddThumbnailFromBytes( self, hash, thumbnail_bytes ):
+        
+        dest_path = self._GenerateExpectedThumbnailPath( hash )
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'Adding thumbnail: ' + str( ( len( thumbnail_bytes ), dest_path ) ) )
+            
+        
+        try:
+            
+            HydrusPaths.MakeFileWritable( dest_path )
+            
+            with open( dest_path, 'wb' ) as f:
+                
+                f.write( thumbnail_bytes )
+                
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file "{}" failed to write to path "{}". This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.'.format( hash.hex(), dest_path ) )
+            
+        
+        self._controller.pub( 'clear_thumbnails', { hash } )
+        self._controller.pub( 'new_thumbnails', { hash } )
         
     
     def _GenerateExpectedFilePath( self, hash, mime ):
@@ -296,29 +492,36 @@ class ClientFilesManager( object ):
         return path
         
     
-    def _GenerateThumbnail( self, hash, mime ):
+    def _GenerateAndSaveThumbnail( self, hash, mime ):
         
         file_path = self._GenerateExpectedFilePath( hash, mime )
         
         if not os.path.exists( file_path ):
             
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
             
         
+        thumbnail_bytes = self._GenerateThumbnailBytes( file_path, hash, mime )
+        
+        self._AddThumbnailFromBytes( hash, thumbnail_bytes )
+        
+    
+    def _GenerateThumbnailBytes( self, file_path, hash, mime ):
+        
+        bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+        
+        percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+        
         try:
-            
-            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-            
-            percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
             thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, bounding_dimensions, mime, percentage_in = percentage_in )
             
         except Exception as e:
             
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
+            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
             
         
-        self._AddThumbnailFromBytes( hash, thumbnail_bytes )
+        return thumbnail_bytes
         
     
     def _GetRecoverTuple( self ):
@@ -601,33 +804,6 @@ class ClientFilesManager( object ):
             
         
     
-    def _AddThumbnailFromBytes( self, hash, thumbnail_bytes ):
-        
-        dest_path = self._GenerateExpectedThumbnailPath( hash )
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'Adding thumbnail: ' + str( ( len( thumbnail_bytes ), dest_path ) ) )
-            
-        
-        try:
-            
-            HydrusPaths.MakeFileWritable( dest_path )
-            
-            with open( dest_path, 'wb' ) as f:
-                
-                f.write( thumbnail_bytes )
-                
-            
-        except Exception as e:
-            
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file "{}" failed to write to path "{}". This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.'.format( hash.hex(), dest_path ) )
-            
-        
-        self._controller.pub( 'clear_thumbnails', { hash } )
-        self._controller.pub( 'new_thumbnails', { hash } )
-        
-    
     def _WaitOnWakeup( self ):
         
         if HG.client_controller.new_options.GetBoolean( 'file_system_waits_on_wakeup' ):
@@ -643,7 +819,7 @@ class ClientFilesManager( object ):
     
     def AllLocationsAreDefault( self ):
         
-        with self._lock:
+        with self._rwlock.read:
             
             db_dir = self._controller.GetDBDir()
             
@@ -672,29 +848,9 @@ class ClientFilesManager( object ):
             
         
     
-    def LocklessAddFile( self, hash, mime, source_path ):
-        
-        dest_path = self._GenerateExpectedFilePath( hash, mime )
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'Adding file from path: ' + str( ( source_path, dest_path ) ) )
-            
-        
-        if not os.path.exists( dest_path ):
-            
-            successful = HydrusPaths.MirrorFile( source_path, dest_path )
-            
-            if not successful:
-                
-                raise Exception( 'There was a problem copying the file from ' + source_path + ' to ' + dest_path + '!' )
-                
-            
-        
-    
     def AddThumbnailFromBytes( self, hash, thumbnail_bytes ):
         
-        with self._lock:
+        with self._rwlock.write:
             
             self._AddThumbnailFromBytes( hash, thumbnail_bytes )
             
@@ -702,7 +858,7 @@ class ClientFilesManager( object ):
     
     def CheckFileIntegrity( self, *args, **kwargs ):
         
-        with self._lock:
+        with self._rwlock.write:
             
             self._controller.WriteSynchronous( 'file_integrity', *args, **kwargs )
             
@@ -710,7 +866,7 @@ class ClientFilesManager( object ):
     
     def ClearOrphans( self, move_location = None ):
         
-        with self._lock:
+        with self._rwlock.write:
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
@@ -901,7 +1057,7 @@ class ClientFilesManager( object ):
         
         for hashes_chunk in HydrusData.SplitIteratorIntoChunks( hashes, 10 ):
             
-            with self._lock:
+            with self._rwlock.write:
                 
                 for hash in hashes_chunk:
                     
@@ -935,7 +1091,7 @@ class ClientFilesManager( object ):
         
         for hashes_chunk in HydrusData.SplitIteratorIntoChunks( hashes, 20 ):
             
-            with self._lock:
+            with self._rwlock.write:
                 
                 for hash in hashes_chunk:
                     
@@ -951,7 +1107,7 @@ class ClientFilesManager( object ):
     
     def GetFilePath( self, hash, mime = None, check_file_exists = True ):
         
-        with self._lock:
+        with self._rwlock.read:
             
             return self.LocklessGetFilePath( hash, mime = mime, check_file_exists = check_file_exists )
             
@@ -981,17 +1137,17 @@ class ClientFilesManager( object ):
             
             mime = file_import_job.GetMime()
             
-            with self._lock:
+            with self._rwlock.write:
                 
-                self.LocklessAddFile( hash, mime, temp_path )
+                self._AddFile( hash, mime, temp_path )
                 
                 if thumbnail is not None:
                     
                     self._AddThumbnailFromBytes( hash, thumbnail )
                     
                 
-                ( import_status, note ) = self._controller.WriteSynchronous( 'import_file', file_import_job )
-                
+            
+            ( import_status, note ) = self._controller.WriteSynchronous( 'import_file', file_import_job )
             
         else:
             
@@ -1082,10 +1238,11 @@ class ClientFilesManager( object ):
             HydrusData.ShowText( 'Thumbnail path request: ' + str( ( hash, mime ) ) )
             
         
-        with self._lock:
+        with self._rwlock.read:
             
             return self.LocklessGetThumbnailPath( hash, mime = mime )
             
+        
     
     def LocklessGetThumbnailPath( self, hash, mime = None ):
         
@@ -1093,7 +1250,7 @@ class ClientFilesManager( object ):
         
         if not os.path.exists( path ):
             
-            self._GenerateThumbnail( hash, mime )
+            self._GenerateAndSaveThumbnail( hash, mime )
             
             if not self._bad_error_occurred:
                 
@@ -1129,7 +1286,7 @@ class ClientFilesManager( object ):
                 return
                 
             
-            with self._lock:
+            with self._rwlock.write:
                 
                 rebalance_tuple = self._GetRebalanceTuple()
                 
@@ -1194,7 +1351,7 @@ class ClientFilesManager( object ):
     
     def RebalanceWorkToDo( self ):
         
-        with self._lock:
+        with self._rwlock.read:
             
             return self._GetRebalanceTuple() is not None
             
@@ -1202,9 +1359,21 @@ class ClientFilesManager( object ):
     
     def RegenerateThumbnail( self, hash, mime ):
         
-        with self._lock:
+        with self._rwlock.read:
             
-            self.LocklessRegenerateThumbnail( hash, mime )
+            file_path = self._GenerateExpectedFilePath( hash, mime )
+            
+            if not os.path.exists( file_path ):
+                
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
+                
+            
+            thumbnail_bytes = self._GenerateThumbnailBytes( file_path, hash, mime )
+            
+        
+        with self._rwlock.write:
+            
+            self._AddThumbnailFromBytes( hash, thumbnail_bytes )
             
         
     
@@ -1215,7 +1384,7 @@ class ClientFilesManager( object ):
             HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
             
         
-        self._GenerateThumbnail( hash, mime )
+        self._GenerateAndSaveThumbnail( hash, mime )
         
     
     def LocklessRegenerateThumbnailIfWrongSize( self, hash, mime, media_size ):
@@ -1256,7 +1425,7 @@ class ClientFilesManager( object ):
     
     def RegenerateThumbnails( self, only_do_missing = False ):
         
-        with self._lock:
+        with self._rwlock.write:
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
@@ -1315,7 +1484,7 @@ class ClientFilesManager( object ):
                         
                         try:
                             
-                            self._GenerateThumbnail( hash, mime )
+                            self._GenerateAndSaveThumbnail( hash, mime )
                             
                         except HydrusExceptions.FileMissingException:
                             
@@ -2512,7 +2681,7 @@ class TagParentsManager( object ):
         
         # first collapse siblings
         
-        sibling_manager = self._controller.GetManager( 'tag_siblings' )
+        sibling_manager = self._controller.tag_siblings_manager
         
         collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -3562,9 +3731,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                # lockless for now just to keep things fast on vid-heavy pages, but really I need better locking
-                
-                self._controller.client_files_manager.LocklessRegenerateThumbnail( hash, mime )
+                self._controller.client_files_manager.RegenerateThumbnail( hash, mime )
                 
             except HydrusExceptions.FileMissingException:
                 

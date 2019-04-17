@@ -28,6 +28,17 @@
 			<p>If you add more tags or system predicates to a search, you will limit the results to those files that match every single one:</p>
 			<p><a href="sororitas_hanako.png"><img src="sororitas_hanako.png" width="960" height="540" /></a></p>
 			<p>You can also exclude a tag by prefixing it with a hyphen (e.g. '-heresy').</p>
+			<h3>OR searching</h3>
+			<p>Searches find files that match every search 'predicate' in the list (it is an <b>AND</b> search), which makes it difficult to search for files that include one <b>OR</b> another tag. More recently, simple OR search support was added. All you have to do is hold down Shift when you enter/double-click a tag in the autocomplete entry area. Instead of sending the tag up to the active search list up top, it will instead start an under-construction 'OR chain' in the tag results below:</p>
+			<p><img src="or_under_construction.png" /></p>
+			<p>You can keep searching for and entering new tags. Holding down Shift on new tags will extend the OR chain, and entering them as normal will 'cap' the chain and send it to the complete and active search predicates above.</p>
+			<p><img src="or_done.png" /></p>
+			<p>Any file that has one or more of those OR sub-tags will match.</p>
+			<p>If you enter an OR tag incorrectly, you can either cancel or 'rewind' the under-construction search predicate with these new buttons that will appear:</p>
+			<p><img src="or_buttons.png" /></p>
+			<p>You can also cancel an under-construction OR by hitting Esc on an empty input. You can add any sort of search term to an OR search predicate, including system predicates. Some unusual sub-predicates (typically a '-tag', or a very broad system predicate) can run very slowly, but they will run much faster if you include non-OR search predicates in the search:</p>
+			<p><img src="or_mixed.png" /></p>
+			<p>This search will return all files that have the tag 'fanfic' and one or more of 'medium:text', a positive value for the like/dislike rating 'read later', or PDF mime.</p>
 			<h3>tag repositories</h3>
 			<p>It can take a long time to tag even small numbers of files well, so I created <i>tag repositories</i> so people can share the work.</p>
 			<p>Tag repos store many file->tag relationships. Anyone who has an access key to the repository can sync with it and hence download all these relationships. If any of their own files match up, they will get those tags. Access keys will also usually have permission to upload new tags and ask for existing ones to be deleted.</p>

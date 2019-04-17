@@ -1711,7 +1711,7 @@ class MediaSingleton( Media ):
             return ''
             
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.tag_siblings_manager
         
         tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
         
@@ -2640,7 +2640,7 @@ class TagsManager( TagsManagerSimple ):
             
             # Combined tags are pre-collapsed by siblings
             
-            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.tag_siblings_manager
             
             combined_statuses_to_tags = collections.defaultdict( set )
             

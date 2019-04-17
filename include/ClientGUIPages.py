@@ -415,13 +415,6 @@ class Page( wx.SplitterWindow ):
         
         self._media_panel.DestroyLater()
         
-        # old messed-up way of doing it
-        '''
-        self._media_panel.Hide()
-        
-        # If this is a CallAfter, OS X segfaults on refresh jej
-        self._controller.CallLaterWXSafe( self._media_panel, 0.5, self._media_panel.Destroy )
-        '''
         self._media_panel = new_panel
         
         self._controller.pub( 'refresh_page_name', self._page_key )
