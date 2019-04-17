@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 348</h3></li>
+				<ul>
+					<li>wrote some OR search help to 'getting started with tags' help page</li>
+					<li>wrote a new multi-reader, single-writer lock object for the client file manager, along with some unit tests for it.</li>
+					<li>updated the file and thumbnail access and regen and maintenance code to use the new lock. various access is now faster when available and overall safer. there is still work to do here</li>
+					<li>adjusted file import to be less aggressive about locking, which should reduce some file/thumbnail access lag during heavy imports</li>
+					<li>the thumbnail space estimate in the migrate database dialog is now more adaptive to the new more flexible thumbnail size system and specificies better that it is an estimate</li>
+					<li>the client api's /add_tags/add_tags call now collapses siblings and expands parents on an add/pend call. this can be turned off by setting the new optional parameter 'add_siblings_and_parents' to false. the help is updated regarding this and the client api version is incremented to 6</li>
+					<li>fixed the client api's /add_tags/add_tags call for the 'hashes' parameter, which was failing to parse, and added an accidentally missing unit test to check this in future</li>
+					<li>the client local services (the booru and client api) now have two new options under their 'manage services' panel: 'support CORS', which turns on cross-orogin support (which is experimental for now, so defaults to False), and 'logs requests', which controls whether your log will be spammed with request reports (this also defaults to False), which should clear up some 100MB+ log hassle for people using the Hydrus Companion browser add-on</li>
+					<li>hydrus services now respond correctly (albeit sparsely) to OPTIONS requests, and if CORS is enabled, to CORS OPTIONS requests. there are unit tests for this that seem to work ok, but I think we'll need to verify it irl</li>
+					<li>finished a first version bitmap manager to handle all wx bitmap creation and destruction, including recycling mid-steps</li>
+					<li>updated all simple wx bitmap creation and destruction calls across the client to use the new bitmap manager, improving stability and saving some CPU</li>
+					<li>fixed some incorrect button alignment flags that were causing problems for clients set to assert check these values</li>
+					<li>added a new yiff.party file url class to the defaults that matches a new file attachment format</li>
+					<li>updated the 'url' content parser so if a parsed url is in the form 'summary_text url', as some booru source fields sometimes specify, the preceding summary text is removed, cleaning up the resultant url</li>
+					<li>silenced an old server connection lost error that was needlessly loud</li>
+					<li>silenced the client network engine from additionally log-printing SizeException errors when a downloading file (usually gif) exceeds file import options rules</li>
+					<li>improved misc window destruction code</li>
+					<li>updated supported mime list in 'getting started with files' help and website index</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 347</h3></li>
 				<ul>
 					<li>or search:</li>
