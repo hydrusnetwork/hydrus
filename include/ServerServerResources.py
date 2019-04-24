@@ -161,7 +161,7 @@ class HydrusResourceSessionKey( HydrusResourceHydrusNetwork ):
         
         max_age = expires - now
         
-        cookies = [ ( 'session_key', session_key.hex(), { 'max_age' : max_age, 'path' : '/' } ) ]
+        cookies = [ ( 'session_key', session_key.hex(), { 'max_age' : str( max_age ), 'path' : '/' } ) ]
         
         response_context = HydrusServerResources.ResponseContext( 200, cookies = cookies )
         

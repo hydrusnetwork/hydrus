@@ -367,14 +367,14 @@ def ResizeNumpyImageForMediaViewer( mime, numpy_image, target_resolution ):
 def ThumbnailNumpyImage( numpy_image, bounding_dimensions ):
     
     ( bounding_width, bounding_height ) = bounding_dimensions
-    ( image_width, image_height, depth ) = numpy_image.shape
+    ( image_height, image_width, depth ) = numpy_image.shape
     
     if bounding_width >= image_height and bounding_height >= image_width:
         
         return numpy_image
         
     
-    target_resolution = HydrusImageHandling.GetThumbnailResolution( ( image_height, image_width ), ( bounding_width, bounding_height ) )
+    target_resolution = HydrusImageHandling.GetThumbnailResolution( ( image_width, image_height ), ( bounding_width, bounding_height ) )
     
     return ResizeNumpyImage( numpy_image, target_resolution )
     

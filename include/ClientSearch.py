@@ -310,9 +310,21 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     def GetTagsToInclude( self ): return self._tags_to_include
     def GetWildcardsToExclude( self ): return self._wildcards_to_exclude
     def GetWildcardsToInclude( self ): return self._wildcards_to_include
+    
+    def HasNoPredicates( self ):
+        
+        return len( self._predicates ) == 0
+        
+    
     def IncludeCurrentTags( self ): return self._include_current_tags
     def IncludePendingTags( self ): return self._include_pending_tags
     def IsComplete( self ): return self._search_complete
+    
+    def IsJustSystemEverything( self ):
+        
+        return len( self._predicates ) == 1 and self._system_predicates.HasSystemEverything()
+        
+    
     def SetComplete( self ): self._search_complete = True
     
     def SetFileServiceKey( self, file_service_key ):
@@ -347,6 +359,8 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class FileSystemPredicates( object ):
     
     def __init__( self, system_predicates ):
+        
+        self._has_system_everything = False
         
         self._inbox = False
         self._archive = False
@@ -383,6 +397,7 @@ class FileSystemPredicates( object ):
             predicate_type = predicate.GetType()
             value = predicate.GetValue()
             
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_EVERYTHING: self._has_system_everything = True
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_INBOX: self._inbox = True
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_ARCHIVE: self._archive = True
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
@@ -710,6 +725,11 @@ class FileSystemPredicates( object ):
     def GetSimilarTo( self ): return self._similar_to
     
     def HasSimilarTo( self ): return self._similar_to is not None
+    
+    def HasSystemEverything( self ):
+        
+        return self._has_system_everything
+        
     
     def MustBeArchive( self ): return self._archive
     

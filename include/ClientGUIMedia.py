@@ -2106,7 +2106,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _ShowDuplicatesInNewPage( self, hash, duplicate_type ):
         
-        hashes = HG.client_controller.Read( 'duplicate_hashes', self._file_service_key, hash, duplicate_type )
+        hashes = HG.client_controller.Read( 'file_duplicate_hashes', self._file_service_key, hash, duplicate_type )
         
         if hashes is not None and len( hashes ) > 0:
             
@@ -4219,17 +4219,17 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 else:
                     
-                    duplicate_types_to_counts = HG.client_controller.Read( 'duplicate_types_to_counts', self._file_service_key, focussed_hash )
+                    file_duplicate_types_to_counts = HG.client_controller.Read( 'file_duplicate_types_to_counts', self._file_service_key, focussed_hash )
                     
-                    if len( duplicate_types_to_counts ) > 0:
+                    if len( file_duplicate_types_to_counts ) > 0:
                         
                         duplicates_view_menu = wx.Menu()
                         
                         for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ):
                             
-                            if duplicate_type in duplicate_types_to_counts:
+                            if duplicate_type in file_duplicate_types_to_counts:
                                 
-                                count = duplicate_types_to_counts[ duplicate_type ]
+                                count = file_duplicate_types_to_counts[ duplicate_type ]
                                 
                                 label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
                                 

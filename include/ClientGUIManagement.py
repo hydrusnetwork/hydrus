@@ -27,6 +27,7 @@ from . import ClientImportWatchers
 from . import ClientMedia
 from . import ClientParsing
 from . import ClientPaths
+from . import ClientSearch
 from . import ClientTags
 from . import ClientThreading
 from . import HydrusData
@@ -78,7 +79,10 @@ def CreateManagementControllerDuplicateFilter():
     
     management_controller = CreateManagementController( 'duplicates', MANAGEMENT_TYPE_DUPLICATE_FILTER )
     
-    management_controller.SetKey( 'duplicate_filter_file_domain', CC.LOCAL_FILE_SERVICE_KEY )
+    file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+    
+    management_controller.SetVariable( 'file_search_context', file_search_context )
+    management_controller.SetVariable( 'both_files_match', False )
     
     return management_controller
     
@@ -512,7 +516,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 8
+    SERIALISABLE_VERSION = 9
     
     def __init__( self, page_name = 'page' ):
         
@@ -546,11 +550,6 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     def _InitialiseDefaults( self ):
         
         self._serialisables[ 'media_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-        
-        if self._management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
-            
-            self._keys[ 'duplicate_filter_file_domain' ] = CC.LOCAL_FILE_SERVICE_KEY
-            
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -723,6 +722,29 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             return ( 8, new_serialisable_info )
             
         
+        if version == 8:
+            
+            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
+                
+                if 'duplicate_filter_file_domain' in serialisable_keys:
+                    
+                    del serialisable_keys[ 'duplicate_filter_file_domain' ]
+                    
+                
+                file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
+                
+                serialisable_serialisables[ 'file_search_context' ] = file_search_context.GetSerialisableTuple()
+                
+                serialisable_simples[ 'both_files_match' ] = False
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 9, new_serialisable_info )
+            
+        
     
     def GetKey( self, name ):
         
@@ -884,7 +906,10 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def PageShown( self ):
         
-        pass
+        if self._controller.new_options.GetBoolean( 'set_search_focus_on_page_change' ):
+            
+            self.SetSearchFocus()
+            
         
     
     def SetSearchFocus( self ):
@@ -914,9 +939,9 @@ def WaitOnDupeFilterJob( job_key ):
         time.sleep( 0.25 )
         
     
-    time.sleep( 1.0 )
+    time.sleep( 0.5 )
     
-    HG.client_controller.pub( 'refresh_dupe_numbers' )
+    HG.client_controller.pub( 'refresh_dupe_page_numbers' )
     
 class ManagementPanelDuplicateFilter( ManagementPanel ):
     
@@ -928,9 +953,23 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._job_key = None
         self._in_break = False
         
+        self._currently_refreshing_maintenance_numbers = False
+        self._currently_refreshing_dupe_count_numbers = False
+        
+        #
+        
+        self._main_notebook = ClientGUICommon.BetterNotebook( self )
+        
+        self._main_left_panel = wx.Panel( self._main_notebook )
+        self._main_right_panel = wx.Panel( self._main_notebook )
+        
+        #
+        
+        self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel )
+        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.GlobalBMPs.refresh, self._RefreshMaintenanceStatus )
+        
         menu_items = []
         
-        menu_items.append( ( 'normal', 'refresh', 'This panel does not update itself when files are added or deleted elsewhere in the client. Hitting this will refresh the numbers from the database.', self._RefreshAndUpdateStatus ) )
         menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
         menu_items.append( ( 'separator', 0, 0, 0 ) )
         
@@ -938,20 +977,19 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items.append( ( 'check', 'search for duplicate pairs at the current distance during normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
         
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.GlobalBMPs.cog, menu_items )
         
         menu_items = []
         
         page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'duplicates.html' ) )
         
-        menu_items.append( ( 'normal', 'show some simpler help here', 'Throw up a message box with some simple help.', self._ShowSimpleHelp ) )
         menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         
-        self._help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        self._help_button = ClientGUICommon.MenuBitmapButton( self._main_left_panel, CC.GlobalBMPs.help, menu_items )
         
-        self._preparing_panel = ClientGUICommon.StaticBox( self, '1 - preparation' )
+        #
         
-        # refresh button that just calls update
+        self._preparing_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'maintenance' )
         
         self._num_phashes_to_regen = ClientGUICommon.BetterStaticText( self._preparing_panel )
         self._num_branches_to_regen = ClientGUICommon.BetterStaticText( self._preparing_panel )
@@ -961,7 +999,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        self._searching_panel = ClientGUICommon.StaticBox( self, '2 - discovery' )
+        self._searching_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'finding potential duplicates' )
         
         menu_items = []
         
@@ -981,16 +1019,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        self._filtering_panel = ClientGUICommon.StaticBox( self, '3 - processing' )
-        
-        self._file_domain_button = ClientGUICommon.BetterButton( self._filtering_panel, 'file domain', self._FileDomainButtonHit )
-        self._num_unknown_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._num_better_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._num_better_duplicates.SetToolTip( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
-        self._num_same_quality_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._num_alternate_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        
-        
         menu_items = []
         
         menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
@@ -998,11 +1026,30 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
         menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
         
-        self._edit_merge_options = ClientGUICommon.MenuButton( self._filtering_panel, 'edit default duplicate action options', menu_items )
+        self._edit_merge_options = ClientGUICommon.MenuButton( self._main_right_panel, 'edit default duplicate action options', menu_items )
+        
+        #
+        
+        self._filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'duplicate filter' )
+        
+        file_search_context = management_controller.GetVariable( 'file_search_context' )
+        
+        predicates = file_search_context.GetPredicates()
+        
+        self._active_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._filtering_panel, self._page_key, predicates )
+        
+        self._ac_read = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context, allow_all_known_files = False )
+        
+        self._both_files_match = wx.CheckBox( self._filtering_panel )
+        
+        self._num_unknown_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
+        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.GlobalBMPs.refresh, self._RefreshDuplicateCounts )
         
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
-        random_filtering_panel = ClientGUICommon.StaticBox( self._filtering_panel, 'quick and dirty filtering' )
+        #
+        
+        random_filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'quick and dirty processing' )
         
         self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential pairs', self._ShowSomeDupes )
         self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
@@ -1011,13 +1058,20 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
+        self._main_notebook.AddPage( self._main_left_panel, 'preparation', select = False )
+        self._main_notebook.AddPage( self._main_right_panel, 'filtering', select = True )
+        
+        #
+        
         new_options = self._controller.new_options
         
         self._search_distance_spinctrl.SetValue( new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' ) )
         
-        duplicate_filter_file_domain = management_controller.GetKey( 'duplicate_filter_file_domain' )
+        self._both_files_match.SetValue( management_controller.GetVariable( 'both_files_match' ) )
         
-        wx.CallAfter( self._SetFileDomain, duplicate_filter_file_domain ) # this spawns a refreshandupdatestatus
+        self._both_files_match.Bind( wx.EVT_CHECKBOX, self.EventBothFilesHitChanged )
+        
+        self._UpdateBothFilesMatchButton()
         
         #
         
@@ -1057,37 +1111,66 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_not_duplicates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._filtering_panel.Add( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._num_same_quality_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
+        hbox.Add( self._refresh_maintenance_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._refresh_maintenance_button, CC.FLAGS_VCENTER )
         hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
         hbox.Add( self._help_button, CC.FLAGS_VCENTER )
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._preparing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._main_left_panel.SetSizer( vbox )
+        
+        #
+        
+        text_and_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        text_and_button_hbox.Add( self._num_unknown_duplicates, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        text_and_button_hbox.Add( self._refresh_dupe_counts_button, CC.FLAGS_VCENTER )
+        
+        rows = []
+        
+        rows.append( ( 'both files of pair match in search: ', self._both_files_match ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._filtering_panel, rows )
+        
+        self._filtering_panel.Add( self._active_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._ac_read, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._filtering_panel.Add( text_and_button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_not_duplicates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._main_right_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._main_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
-        HG.client_controller.sub( self, 'RefreshAndUpdateStatus', 'refresh_dupe_numbers' )
+        self._controller.sub( self, 'RefreshAllNumbers', 'refresh_dupe_page_numbers' )
+        self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
+        self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
+        
+        HG.client_controller.pub( 'refresh_dupe_page_numbers' )
         
     
     def _EditMergeOptions( self, duplicate_type ):
@@ -1111,35 +1194,26 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _FileDomainButtonHit( self ):
+    def _GetFileSearchContextAndBothFilesMatch( self ):
         
-        services_manager = HG.client_controller.services_manager
+        file_search_context = self._ac_read.GetFileSearchContext()
         
-        services = []
+        predicates = self._active_predicates_box.GetPredicates()
         
-        services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
-        services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
-        services.append( services_manager.GetService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        file_search_context.SetPredicates( predicates )
         
-        menu = wx.Menu()
+        both_files_match = self._both_files_match.GetValue()
         
-        for service in services:
-            
-            call = HydrusData.Call( self._SetFileDomain, service.GetServiceKey() )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Set the filtering file domain.', call )
-            
-        
-        HG.client_controller.PopupMenu( self._file_domain_button, menu )
+        return ( file_search_context, both_files_match )
         
     
     def _LaunchFilter( self ):
         
-        duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
+        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
         
         canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
         
-        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, duplicate_filter_file_domain )
+        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context, both_files_match )
         
         canvas_frame.SetCanvas( canvas_window )
         
@@ -1157,13 +1231,70 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
         
     
-    def _RefreshAndUpdateStatus( self ):
+    def _RefreshDuplicateCounts( self ):
         
-        duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
+        def wx_code( unknown_duplicates_count ):
+            
+            self._currently_refreshing_dupe_count_numbers = False
+            
+            self._refresh_dupe_counts_button.Enable()
+            
+            self._UpdateUnknownDuplicatesCount( unknown_duplicates_count )
+            
         
-        self._similar_files_maintenance_status = self._controller.Read( 'similar_files_maintenance_status', duplicate_filter_file_domain )
+        def thread_do_it( file_search_context, both_files_match ):
+            
+            unknown_duplicates_count = HG.client_controller.Read( 'unknown_duplicates_count', file_search_context, both_files_match )
+            
+            wx.CallAfter( wx_code, unknown_duplicates_count )
+            
         
-        self._UpdateImportStatus()
+        if not self._currently_refreshing_dupe_count_numbers:
+            
+            self._currently_refreshing_dupe_count_numbers = True
+            
+            self._refresh_dupe_counts_button.Disable()
+            
+            self._num_unknown_duplicates.SetLabelText( 'updating\u2026' )
+            
+            ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+            
+            HG.client_controller.CallToThread( thread_do_it, file_search_context, both_files_match )
+            
+        
+    
+    def _RefreshMaintenanceStatus( self ):
+        
+        def wx_code( similar_files_maintenance_status ):
+            
+            self._currently_refreshing_maintenance_numbers = False
+            
+            self._refresh_maintenance_status.SetLabelText( '' )
+            
+            self._refresh_maintenance_button.Enable()
+            
+            self._similar_files_maintenance_status = similar_files_maintenance_status
+            
+            self._UpdateMaintenanceStatus()
+            
+        
+        def thread_do_it():
+            
+            similar_files_maintenance_status = HG.client_controller.Read( 'similar_files_maintenance_status' )
+            
+            wx.CallAfter( wx_code, similar_files_maintenance_status )
+            
+        
+        if not self._currently_refreshing_maintenance_numbers:
+            
+            self._currently_refreshing_maintenance_numbers = True
+            
+            self._refresh_maintenance_status.SetLabelText( 'updating\u2026' )
+            
+            self._refresh_maintenance_button.Disable()
+            
+            HG.client_controller.CallToThread( thread_do_it )
+            
         
     
     def _RegeneratePhashes( self ):
@@ -1191,8 +1322,23 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 
                 self._controller.Write( 'delete_unknown_duplicate_pairs' )
                 
-                self._RefreshAndUpdateStatus()
+                self._RefreshMaintenanceStatus()
                 
+            
+        
+    
+    def _SearchDomainUpdated( self ):
+        
+        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        
+        self._management_controller.SetVariable( 'file_search_context', file_search_context )
+        self._management_controller.SetVariable( 'both_files_match', both_files_match )
+        
+        self._UpdateBothFilesMatchButton()
+        
+        if self._ac_read.IsSynchronised():
+            
+            self._RefreshDuplicateCounts()
             
         
     
@@ -1219,74 +1365,24 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         if change_made:
             
-            self._RefreshAndUpdateStatus()
+            self._RefreshDuplicateCounts()
             
             self._ShowSomeDupes()
             
-        
-    
-    def _SetFileDomain( self, service_key ):
-        
-        self._management_controller.SetKey( 'duplicate_filter_file_domain', service_key )
-        
-        services_manager = HG.client_controller.services_manager
-        
-        service = services_manager.GetService( service_key )
-        
-        self._file_domain_button.SetLabelText( service.GetName() )
-        
-        self._RefreshAndUpdateStatus()
         
     
     def _SetSearchDistance( self, value ):
         
         self._search_distance_spinctrl.SetValue( value )
         
-        self._UpdateImportStatus()
-        
-    
-    def _ShowSimpleHelp( self ):
-        
-        message = 'This page helps you discover and manage files that are very similar to each other. Sometimes these files will be exactly the same--but perhaps have a different resolution or image quality--or they may be recolours or have other small alterations. Here you can quickly define these relationships and hence merge your tags and ratings and, if you wish, delete the \'bad\' files.'
-        message += os.linesep * 2
-        message += 'There are three steps to this page:'
-        message += os.linesep * 2
-        message += '1 - Preparing the database for the CPU-heavy job of searching for duplicates.'
-        message += os.linesep
-        message += '2 - Performing the search and saving the results.'
-        message += os.linesep
-        message += '3 - Walking through the pairs or groups of potential duplicates and telling the client how they are related.'
-        message += os.linesep * 2
-        message += 'For the first two steps, you likely just want to click the play buttons and wait for them to complete. They are CPU intensive and lock the client as they work. You can also set them to run in idle time from the cog icon. For the search \'distance\', start at the fast and limited \'exact match\' (0 \'hamming distance\') and slowly expand it as you gain experience with the system.'
-        message += os.linesep * 2
-        message += 'Once you have found some potential pairs, you can either show some random groups as thumbnails (and process them manually however you prefer), or you can launch the specialised duplicate filter, which lets you quickly assign duplicate status to pairs of files and will automatically merge files and tags between dupes however you prefer.'
-        message += os.linesep * 2
-        message += 'After launching the duplicate filter, check the keyboard and cog icons on its top hover window. They will let you assign default content merge options (including whether you wish to trash \'bad\' files) and also change the shortcuts for setting the different duplicate statuses. It works like the archive/delete filter, with left-click setting \'this is better\' and right-click setting \'alternates\' by default.'
-        message += os.linesep * 2
-        message += 'A list of the different duplicate statuses and their meanings will follow this message.'
-        
-        wx.MessageBox( message )
-        
-        message = 'The currently supported duplicate statuses are:'
-        message += os.linesep * 2
-        message += 'potential - This is the default state newly discovered pairs are assigned. They will be loaded in the filter for you to look at.'
-        message += os.linesep * 2
-        message += 'better/worse - This tells the client that the pair of files are duplicates--but the one you are looking at has better image quality or resolution or lacks an annoying watermark or so on.'
-        message += os.linesep * 2
-        message += 'same quality - This tells the client that the pair of files are duplicates, and that you cannot discern an obvious quality difference.'
-        message += os.linesep * 2
-        message += 'alternates - This tells the client that the pair of files are not duplicates but that they are related--perhaps they are a recolour or are an artist\'s different versions of a particular scene. A future version of the client will allow you to further process these alternate groups into family structures and so on.'
-        message += os.linesep * 2
-        message += 'not duplicates - This tells the client that the discovered pair is a false positive--they are not the same and are not otherwise related. This usually happens when the same part of two files have a similar shape by accident, such as if a hair fringe and a mountain range happen to line up.'
-        
-        wx.MessageBox( message )
+        self._UpdateMaintenanceStatus()
         
     
     def _ShowSomeDupes( self ):
         
-        duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
+        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
         
-        hashes = self._controller.Read( 'duplicate_hashes', duplicate_filter_file_domain, None, HC.DUPLICATE_UNKNOWN )
+        hashes = self._controller.Read( 'random_unknown_duplicate_hashes', file_search_context, both_files_match )
         
         media_results = self._controller.Read( 'media_results', hashes )
         
@@ -1295,16 +1391,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._page.SwapMediaPanel( panel )
         
     
-    def _UpdateImportStatus( self ):
+    def _UpdateMaintenanceStatus( self ):
         
-        ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count ) = self._similar_files_maintenance_status
+        work_can_be_done = False
+        
+        ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count ) = self._similar_files_maintenance_status
         
         self._cog_button.Enable()
-        '''
-        ClientGUICommon.SetBitmapButtonBitmap( self._phashes_button, CC.GlobalBMPs.play )
-        ClientGUICommon.SetBitmapButtonBitmap( self._branches_button, CC.GlobalBMPs.play )
-        ClientGUICommon.SetBitmapButtonBitmap( self._search_button, CC.GlobalBMPs.play )
-        '''
+        
         total_num_files = max( num_phashes_to_regen, sum( searched_distances_to_count.values() ) )
         
         if num_phashes_to_regen == 0:
@@ -1321,6 +1415,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._phashes_button.Enable()
             
+            work_can_be_done = True
+            
         
         if num_branches_to_regen == 0:
             
@@ -1333,6 +1429,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._num_branches_to_regen.SetLabelText( HydrusData.ToHumanInt( num_branches_to_regen ) + ' search branches to rebalance.' )
             
             self._branches_button.Enable()
+            
+            work_can_be_done = True
             
         
         self._search_distance_button.Enable()
@@ -1376,15 +1474,40 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._search_button.Enable()
             
+            work_can_be_done = True
+            
         
-        num_unknown = duplicate_types_to_count[ HC.DUPLICATE_UNKNOWN ]
+        if work_can_be_done:
+            
+            page_name = 'preparation (needs work)'
+            
+        else:
+            
+            page_name = 'preparation'
+            
         
-        self._num_unknown_duplicates.SetLabelText( HydrusData.ToHumanInt( num_unknown ) + ' potential pairs.' )
-        self._num_better_duplicates.SetLabelText( HydrusData.ToHumanInt( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs.' )
-        self._num_same_quality_duplicates.SetLabelText( HydrusData.ToHumanInt( duplicate_types_to_count[ HC.DUPLICATE_SAME_QUALITY ] ) + ' same quality pairs.' )
-        self._num_alternate_duplicates.SetLabelText( HydrusData.ToHumanInt( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs.' )
+        self._main_notebook.SetPageText( 0, page_name )
         
-        if num_unknown > 0:
+    
+    def _UpdateBothFilesMatchButton( self ):
+        
+        ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
+        
+        if file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates():
+            
+            self._both_files_match.Disable()
+            
+        else:
+            
+            self._both_files_match.Enable()
+            
+        
+    
+    def _UpdateUnknownDuplicatesCount( self, unknown_duplicates_count ):
+        
+        self._num_unknown_duplicates.SetLabelText( HydrusData.ToHumanInt( unknown_duplicates_count ) + ' potential pairs.' )
+        
+        if unknown_duplicates_count > 0:
             
             self._show_some_dupes.Enable()
             self._launch_filter.Enable()
@@ -1396,14 +1519,37 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def EventSearchDistanceChanged( self, event ):
+    def EventBothFilesHitChanged( self, event ):
         
-        self._UpdateImportStatus()
+        self._SearchDomainUpdated()
         
     
-    def RefreshAndUpdateStatus( self ):
+    def EventSearchDistanceChanged( self, event ):
         
-        self._RefreshAndUpdateStatus()
+        self._UpdateMaintenanceStatus()
+        
+    
+    def RefreshAllNumbers( self ):
+        
+        self._RefreshMaintenanceStatus()
+        
+        self._RefreshDuplicateCounts()
+        
+    
+    def RefreshQuery( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._SearchDomainUpdated()
+            
+        
+    
+    def SearchImmediately( self, page_key, value ):
+        
+        if page_key == self._page_key:
+            
+            self._SearchDomainUpdated()
+            
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_DUPLICATE_FILTER ] = ManagementPanelDuplicateFilter

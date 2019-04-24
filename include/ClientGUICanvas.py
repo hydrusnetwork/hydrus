@@ -22,6 +22,7 @@ from . import ClientMedia
 from . import ClientPaths
 from . import ClientRatings
 from . import ClientRendering
+from . import ClientSearch
 from . import ClientTags
 from . import ClientThreading
 import gc
@@ -3109,11 +3110,12 @@ class CanvasWithHovers( CanvasWithDetails ):
     
 class CanvasFilterDuplicates( CanvasWithHovers ):
     
-    def __init__( self, parent, file_service_key ):
+    def __init__( self, parent, file_search_context, both_files_match ):
         
         CanvasWithHovers.__init__( self, parent )
         
-        self._file_service_key = file_service_key
+        self._file_search_context = file_search_context
+        self._both_files_match = both_files_match
         
         self._maintain_pan_and_zoom = True
         
@@ -3124,7 +3126,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._processed_pairs = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
         
-        self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, [] )
+        file_service_key = self._file_search_context.GetFileServiceKey()
+        
+        self._media_list = ClientMedia.ListeningMediaList( file_service_key, [] )
         
         self._reserved_shortcut_names.append( 'media_viewer_browser' )
         self._reserved_shortcut_names.append( 'duplicate_filter' )
@@ -3173,7 +3177,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        HG.client_controller.pub( 'refresh_dupe_numbers' )
+        HG.client_controller.pub( 'refresh_dupe_page_numbers' )
         
         CanvasWithHovers._Close( self )
         
@@ -3281,6 +3285,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 
                 HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] } )
+                
+                self._SkipPair()
                 
             
         
@@ -3542,17 +3548,20 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
+        file_service_key = self._file_search_context.GetFileServiceKey()
+        
         if len( self._unprocessed_pairs ) == 0:
             
             self._hashes_due_to_be_deleted_in_this_batch = set()
             self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above
             
             self.SetMedia( None )
-            self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, [] )
+            
+            self._media_list = ClientMedia.ListeningMediaList( file_service_key, [] )
             
             self._currently_fetching_pairs = True
             
-            HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_service_key )
+            HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match )
             
             self._SetDirty()
             
@@ -3627,7 +3636,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 media_results_with_better_first = ( second_media_result, first_media_result )
                 
             
-            self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, media_results_with_better_first )
+            self._media_list = ClientMedia.ListeningMediaList( file_service_key, media_results_with_better_first )
             
             self.SetMedia( self._media_list.GetFirst() )
             
@@ -3906,7 +3915,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def THREADFetchPairs( self, file_service_key ):
+    def THREADFetchPairs( self, file_search_context, both_files_match ):
         
         def wx_close():
             
@@ -3934,7 +3943,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._ShowNewPair()
             
         
-        result = HG.client_controller.Read( 'unique_duplicate_pairs', file_service_key, HC.DUPLICATE_UNKNOWN )
+        result = HG.client_controller.Read( 'duplicate_pairs_for_filtering', file_search_context, both_files_match )
         
         if len( result ) == 0:
             
@@ -5565,10 +5574,9 @@ class EmbedButton( wx.Window ):
         
         if needs_thumb:
             
-            hash = self._media.GetHash()
             mime = self._media.GetMime()
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( hash, mime )
+            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
             self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             
@@ -5596,10 +5604,9 @@ class OpenExternallyPanel( wx.Panel ):
         
         if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
-            hash = self._media.GetHash()
             mime = self._media.GetMime()
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( hash, mime )
+            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
             bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             

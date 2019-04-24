@@ -74,7 +74,7 @@ def SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f ):
         pil_image.save( f, 'JPEG', quality = 92 )
         
     
-def GenerateThumbnailBytes( path, bounding_dimensions, mime, percentage_in = 35 ):
+def GenerateThumbnailBytes( path, bounding_dimensions, mime, width, height, duration, num_frames, percentage_in = 35 ):
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
         
@@ -112,8 +112,6 @@ def GenerateThumbnailBytes( path, bounding_dimensions, mime, percentage_in = 35 
                 
             
         else:
-            
-            ( size, mime, width, height, duration, num_frames, num_words ) = GetFileInfo( path )
             
             cropped_dimensions = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
             
@@ -254,9 +252,9 @@ def GetFileInfo( path, mime = None ):
         
         ffmpeg_lines = HydrusVideoHandling.GetFFMPEGInfoLines( path )
         
-        duration_in_s = HydrusVideoHandling.ParseFFMPEGDuration( ffmpeg_lines )
+        ( file_duration_in_s, stream_duration_in_s ) = HydrusVideoHandling.ParseFFMPEGDuration( ffmpeg_lines )
         
-        duration = int( duration_in_s * 1000 )
+        duration = int( file_duration_in_s * 1000 )
         
     
     if width is not None and width < 0:

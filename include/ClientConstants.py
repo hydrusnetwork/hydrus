@@ -162,7 +162,6 @@ FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT
 FLAGS_VCENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 FLAGS_SIZER_VCENTER = wx.SizerFlags( 0 ).Align( wx.ALIGN_CENTRE_VERTICAL )
 FLAGS_VCENTER_EXPAND_DEPTH_ONLY = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-FLAGS_VCENTER_EXPAND_BOTH_WAYS = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Expand().Align( wx.ALIGN_CENTER_VERTICAL )
 
 DAY = 0
 WEEK = 1
@@ -571,6 +570,7 @@ class GlobalBMPs( object ):
         GlobalBMPs.dump_fail = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_fail.png' ) )
         
         GlobalBMPs.cog = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'cog.png' ) )
+        GlobalBMPs.family = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'family.png' ) )
         GlobalBMPs.keyboard = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'keyboard.png' ) )
         GlobalBMPs.help = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'help.png' ) )
         

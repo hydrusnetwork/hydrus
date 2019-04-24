@@ -1221,7 +1221,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
             
-            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags, self.RemoveTags )
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.EnterTags, self.RemoveTags )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
@@ -1240,6 +1240,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
             
+            self._do_siblings_and_parents = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.family, self._DoSiblingsAndParents )
+            self._do_siblings_and_parents.SetToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )
+            
             self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.copy, self._Copy )
             self._copy_button.SetToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
             
@@ -1252,15 +1255,19 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'add_parents_on_manage_tags' )
             
-            menu_items.append( ( 'check', 'auto-add entered tags\' parents', 'If checked, adding any tag that has parents will also add those parents.', check_manager ) )
+            menu_items.append( ( 'check', 'auto-add entered tags\' parents on add/pend action', 'If checked, adding any tag that has parents will also add those parents.', check_manager ) )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'replace_siblings_on_manage_tags' )
             
-            menu_items.append( ( 'check', 'auto-replace entered siblings', 'If checked, adding any tag that has a sibling will instead add that sibling.', check_manager ) )
+            menu_items.append( ( 'check', 'auto-replace entered siblings on add/pend action', 'If checked, adding any tag that has a sibling will instead add that sibling.', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'allow_remove_on_manage_tags_input' )
+            
+            menu_items.append( ( 'check', 'allow remove/petition result on tag input for already existing tag', 'If checked, inputting a tag that already exists will try to remove it.', check_manager ) )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'yes_no_on_remove_on_manage_tags' )
             
-            menu_items.append( ( 'check', 'confirm remove/petition tags', 'If checked, clicking the remove/petition tags button (or hitting the deleted key on the list) will first confirm the action with a yes/no dialog.', check_manager ) )
+            menu_items.append( ( 'check', 'confirm remove/petition tags on explicit delete actions', 'If checked, clicking the remove/petition tags button (or hitting the deleted key on the list) will first confirm the action with a yes/no dialog.', check_manager ) )
             
             check_manager = ClientGUICommon.CheckboxManagerCalls( self._FlipShowDeleted, lambda: self._show_deleted )
             
@@ -1286,7 +1293,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = True
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
             self._tags_box.ChangeTagService( self._tag_service_key )
             
@@ -1297,6 +1304,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             button_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             button_hbox.Add( self._remove_tags, CC.FLAGS_VCENTER )
+            button_hbox.Add( self._do_siblings_and_parents, CC.FLAGS_VCENTER )
             button_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
             button_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
             button_hbox.Add( self._cog_button, CC.FLAGS_SIZER_CENTER )
@@ -1325,7 +1333,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
+        def _EnterTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             
             tags = HydrusTags.CleanTags( tags )
             
@@ -1560,9 +1568,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if len( hashes ) > 0:
                     
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ), reason = reason ) ]
+                    content_updates = []
                     
                     if choice_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ):
+                        
+                        if self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ):
+                            
+                            siblings_manager = HG.client_controller.tag_siblings_manager
+                            
+                            tag = siblings_manager.CollapseTag( self._tag_service_key, tag )
+                            
                         
                         recent_tags.add( tag )
                         
@@ -1575,6 +1590,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( parent, hashes ) ) for parent in parents ) )
                             
                         
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ), reason = reason ) )
                     
                     if len( content_updates ) > 0:
                         
@@ -1666,6 +1683,161 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
+        def _DoSiblingsAndParents( self ):
+            
+            try:
+                
+                tag_siblings_manager = HG.client_controller.tag_siblings_manager
+                
+                tag_parents_manager = HG.client_controller.tag_parents_manager
+                
+                removee_tags_to_hashes = collections.defaultdict( list )
+                addee_tags_to_hashes = collections.defaultdict( list )
+                
+                for m in self._media:
+                    
+                    hash = m.GetHash()
+                    
+                    tags_manager = m.GetTagsManager()
+                    
+                    tags = tags_manager.GetCurrent( self._tag_service_key ).union( tags_manager.GetPending( self._tag_service_key ) )
+                    
+                    sibling_correct_tags = tag_siblings_manager.CollapseTags( self._tag_service_key, tags )
+                    
+                    sibling_and_parent_correct_tags = tag_parents_manager.ExpandTags( self._tag_service_key, sibling_correct_tags )
+                    
+                    removee_tags = tags.difference( sibling_and_parent_correct_tags )
+                    addee_tags = sibling_and_parent_correct_tags.difference( tags )
+                    
+                    for tag in removee_tags:
+                        
+                        removee_tags_to_hashes[ tag ].append( hash )
+                        
+                    
+                    for tag in addee_tags:
+                        
+                        addee_tags_to_hashes[ tag ].append( hash )
+                        
+                    
+                
+                if len( removee_tags_to_hashes ) == 0 and len( addee_tags_to_hashes ) == 0:
+                    
+                    wx.MessageBox( 'No replacements seem to be needed.' )
+                    
+                    return
+                    
+                
+                summary_message = 'The following changes will be made:'
+                
+                if len( removee_tags_to_hashes ) > 0:
+                    
+                    removee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in removee_tags_to_hashes.items() }
+                    
+                    removee_tags = list( removee_tags_to_counts.keys() )
+                    
+                    ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, removee_tags, removee_tags_to_counts )
+                    
+                    removee_tag_statements = [ '{} ({})'.format( tag, removee_tags_to_counts[ tag ] ) for tag in removee_tags ]
+                    
+                    if len( removee_tag_statements ) > 10:
+                        
+                        removee_tag_statements = removee_tag_statements[:10]
+                        
+                        removee_tag_statements.append( 'and more' )
+                        
+                    
+                    summary_message += os.linesep * 2
+                    summary_message += 'REMOVE: ' + ', '.join( removee_tag_statements )
+                    
+                
+                if len( addee_tags_to_hashes ) > 0:
+                    
+                    addee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in addee_tags_to_hashes.items() }
+                    
+                    addee_tags = list( addee_tags_to_counts.keys() )
+                    
+                    ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, addee_tags, addee_tags_to_counts )
+                    
+                    addee_tag_statements = [ '{} ({})'.format( tag, addee_tags_to_counts[ tag ] ) for tag in addee_tags ]
+                    
+                    if len( addee_tag_statements ) > 10:
+                        
+                        addee_tag_statements = addee_tag_statements[:10]
+                        
+                        addee_tag_statements.append( 'and more' )
+                        
+                    
+                    summary_message += os.linesep * 2
+                    summary_message += 'ADD: ' + ', '.join( addee_tag_statements )
+                    
+                
+                with ClientGUIDialogs.DialogYesNo( self, summary_message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+                    
+                    if dlg.ShowModal() != wx.ID_YES:
+                        
+                        return
+                        
+                    
+                
+                if self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                    
+                    addee_action = HC.CONTENT_UPDATE_ADD
+                    removee_action = HC.CONTENT_UPDATE_DELETE
+                    reason = None
+                    
+                else:
+                    
+                    addee_action = HC.CONTENT_UPDATE_PEND
+                    removee_action = HC.CONTENT_UPDATE_PETITION
+                    reason = 'automatic sibling/parent replace from manage tags'
+                    
+                
+                content_updates = []
+                
+                for ( tag, hashes ) in removee_tags_to_hashes.items():
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, removee_action, ( tag, hashes ), reason = reason ) )
+                    
+                
+                for ( tag, hashes ) in addee_tags_to_hashes.items():
+                    
+                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, addee_action, ( tag, hashes ), reason = reason ) )
+                    
+                
+                if not self._immediate_commit:
+                    
+                    hashes_to_tag_managers = { m.GetHash() : m.GetTagsManager() for m in self._media }
+                    
+                    for content_update in content_updates:
+                        
+                        hashes = content_update.GetHashes()
+                        
+                        for hash in hashes:
+                            
+                            if hash in hashes_to_tag_managers:
+                                
+                                hashes_to_tag_managers[ hash ].ProcessContentUpdate( self._tag_service_key, content_update )
+                                
+                            
+                        
+                    
+                    self._groups_of_content_updates.append( content_updates )
+                    
+                else:
+                    
+                    service_keys_to_content_updates = { self._tag_service_key : content_updates }
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                
+                self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+                
+            finally:
+                
+                self._add_tag_box.SetFocus()
+                
+            
+        
         def _FlipShowDeleted( self ):
             
             self._show_deleted = not self._show_deleted
@@ -1711,7 +1883,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 tags = HydrusTags.CleanTags( tags )
                 
-                self.EnterTags( tags, only_add = True )
+                self.AddTags( tags, only_add = True )
                 
             except Exception as e:
                 
@@ -1749,24 +1921,22 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def AddTags( self, tags, only_add = False ):
             
+            if not self._new_options.GetBoolean( 'allow_remove_on_manage_tags_input' ):
+                
+                only_add = True
+                
+            
             if len( tags ) > 0:
                 
-                self._AddTags( tags, only_add = only_add )
+                self.EnterTags( tags, only_add = only_add )
                 
             
         
         def EnterTags( self, tags, only_add = False ):
             
-            if self._new_options.GetBoolean( 'replace_siblings_on_manage_tags' ):
-                
-                siblings_manager = HG.client_controller.tag_siblings_manager
-                
-                tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
-                
-            
             if len( tags ) > 0:
                 
-                self._AddTags( tags, only_add = only_add )
+                self._EnterTags( tags, only_add = only_add )
                 
             
         
@@ -1834,7 +2004,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
-                self._AddTags( tags, only_remove = True )
+                self._EnterTags( tags, only_remove = True )
                 
             
         
@@ -1973,7 +2143,10 @@ class ManageTagCensorshipPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._tag_input.SetValue( '' )
                 
-            else: event.Skip()
+            else:
+                
+                event.Skip()
+                
             
         
         def GetInfo( self ):

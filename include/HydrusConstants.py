@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 348
+SOFTWARE_VERSION = 349
 CLIENT_API_VERSION = 6
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -207,7 +207,7 @@ DUPLICATE_BETTER_OR_WORSE = 8
 
 duplicate_type_string_lookup = {}
 
-duplicate_type_string_lookup[ DUPLICATE_UNKNOWN ] = 'unknown relationship'
+duplicate_type_string_lookup[ DUPLICATE_UNKNOWN ] = 'potential duplicates'
 duplicate_type_string_lookup[ DUPLICATE_NOT_DUPLICATE ] = 'not duplicates'
 duplicate_type_string_lookup[ DUPLICATE_SAME_QUALITY ] = 'same quality'
 duplicate_type_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'

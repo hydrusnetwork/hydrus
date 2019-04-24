@@ -462,7 +462,7 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
             
             client_files_manager = HG.client_controller.client_files_manager
             
-            path = client_files_manager.GetThumbnailPath( hash )
+            path = client_files_manager.GetThumbnailPath( media_result )
             
             response_context_mime = HC.APPLICATION_UNKNOWN
             
@@ -1421,10 +1421,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
         
         try:
             
-            hash = media_result.GetHash()
-            mime = media_result.GetMime()
-            
-            path = HG.client_controller.client_files_manager.GetThumbnailPath( hash, mime )
+            path = HG.client_controller.client_files_manager.GetThumbnailPath( media_result )
             
         except HydrusExceptions.FileMissingException:
             

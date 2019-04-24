@@ -290,7 +290,7 @@ class FileImportJob( object ):
             
             percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
-            self._thumbnail = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, bounding_dimensions, mime, percentage_in = percentage_in )
+            self._thumbnail = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, bounding_dimensions, mime, width, height, duration, num_frames, percentage_in = percentage_in )
             
         
         if mime in HC.MIMES_WE_CAN_PHASH:

@@ -3142,11 +3142,11 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
     
     render_for_user = False
     
-    def __init__( self, parent, add_func, delete_func ):
+    def __init__( self, parent, enter_func, delete_func ):
         
         ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = False )
         
-        self._add_func = add_func
+        self._enter_func = enter_func
         self._delete_func = delete_func
         
     
@@ -3154,7 +3154,7 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
         
         if len( self._selected_terms ) > 0:
             
-            self._add_func( set( self._selected_terms ) )
+            self._enter_func( set( self._selected_terms ) )
             
         
     

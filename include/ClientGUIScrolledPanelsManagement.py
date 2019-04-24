@@ -2711,6 +2711,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
             self._reverse_page_shift_drag_behaviour.SetToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
+            self._set_search_focus_on_page_change = wx.CheckBox( self )
+            
             #
             
             gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
@@ -2756,6 +2758,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
             
+            self._set_search_focus_on_page_change.SetValue( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
+            
             #
             
             rows = []
@@ -2765,6 +2769,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
             rows.append( ( 'Number of session backups to keep: ', self._number_of_gui_session_backups ) )
             rows.append( ( 'By default, put new page tabs on (requires restart): ', self._default_new_page_goes ) )
+            rows.append( ( 'When switching to a page, focus its input field (if any): ', self._set_search_focus_on_page_change ) )
             rows.append( ( 'Line notebook tabs down the left: ', self._notebook_tabs_on_left ) )
             rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
@@ -2804,6 +2809,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
+            self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.GetValue() )
+            
         
     
     class _MediaPanel( wx.Panel ):
@@ -2815,7 +2822,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = HG.client_controller.new_options
             
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
-            self._video_thumbnail_percentage_in = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._disable_cv_for_gifs = wx.CheckBox( self )
             self._disable_cv_for_gifs.SetToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
@@ -2849,7 +2855,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
-            self._video_thumbnail_percentage_in.SetValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
@@ -2882,7 +2887,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
-            rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             rows.append( ( 'Show media/preview viewing stats or media right-click menus?: ', self._file_viewing_stats_menu_display ) )
@@ -2981,7 +2985,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'animation_start_position' ] = self._animation_start_position.GetValue() / 100.0
             
-            self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.GetValue() )
             self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetChoice() )
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
@@ -4076,6 +4079,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_border = wx.SpinCtrl( self, min = 0, max = 20 )
             self._thumbnail_margin = wx.SpinCtrl( self, min = 0, max = 20 )
             
+            self._video_thumbnail_percentage_in = wx.SpinCtrl( self, min = 0, max = 100 )
+            
             self._thumbnail_scroll_rate = wx.TextCtrl( self )
             
             self._thumbnail_fill = wx.CheckBox( self )
@@ -4094,6 +4099,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thumbnail_border.SetValue( self._new_options.GetInteger( 'thumbnail_border' ) )
             self._thumbnail_margin.SetValue( self._new_options.GetInteger( 'thumbnail_margin' ) )
+            
+            self._video_thumbnail_percentage_in.SetValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
             
             self._thumbnail_scroll_rate.SetValue( self._new_options.GetString( 'thumbnail_scroll_rate' ) )
             
@@ -4118,6 +4125,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail height: ', self._thumbnail_height ) )
             rows.append( ( 'Thumbnail border: ', self._thumbnail_border ) )
             rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
+            rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
@@ -4140,6 +4148,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'thumbnail_border', self._thumbnail_border.GetValue() )
             self._new_options.SetInteger( 'thumbnail_margin', self._thumbnail_margin.GetValue() )
+            
+            self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.GetValue() )
             
             try:
                 

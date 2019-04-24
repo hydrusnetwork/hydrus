@@ -196,7 +196,10 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
         
         potential_loop_paths = new_potential_loop_paths
         
-        if child in potential_loop_paths: return True
+        if child in potential_loop_paths:
+            
+            return True
+            
         
     
     return False
@@ -492,7 +495,10 @@ class ClientFilesManager( object ):
         return path
         
     
-    def _GenerateAndSaveThumbnail( self, hash, mime ):
+    def _GenerateAndSaveThumbnail( self, media ):
+        
+        hash = media.GetHash()
+        mime = media.GetMime()
         
         file_path = self._GenerateExpectedFilePath( hash, mime )
         
@@ -501,12 +507,18 @@ class ClientFilesManager( object ):
             raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
             
         
-        thumbnail_bytes = self._GenerateThumbnailBytes( file_path, hash, mime )
+        thumbnail_bytes = self._GenerateThumbnailBytes( file_path, media )
         
         self._AddThumbnailFromBytes( hash, thumbnail_bytes )
         
     
-    def _GenerateThumbnailBytes( self, file_path, hash, mime ):
+    def _GenerateThumbnailBytes( self, file_path, media ):
+        
+        hash = media.GetHash()
+        mime = media.GetMime()
+        ( width, height ) = media.GetResolution()
+        duration = media.GetDuration()
+        num_frames = media.GetNumFrames()
         
         bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
         
@@ -514,7 +526,7 @@ class ClientFilesManager( object ):
         
         try:
             
-            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, bounding_dimensions, mime, percentage_in = percentage_in )
+            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, bounding_dimensions, mime, width, height, duration, num_frames, percentage_in = percentage_in )
             
         except Exception as e:
             
@@ -1231,7 +1243,10 @@ class ClientFilesManager( object ):
         return path
         
     
-    def GetThumbnailPath( self, hash, mime = None ):
+    def GetThumbnailPath( self, media ):
+        
+        hash = media.GetHash()
+        mime = media.GetMime()
         
         if HG.file_report_mode:
             
@@ -1240,27 +1255,22 @@ class ClientFilesManager( object ):
         
         with self._rwlock.read:
             
-            return self.LocklessGetThumbnailPath( hash, mime = mime )
+            path = self._GenerateExpectedThumbnailPath( hash )
             
-        
-    
-    def LocklessGetThumbnailPath( self, hash, mime = None ):
-        
-        path = self._GenerateExpectedThumbnailPath( hash )
-        
-        if not os.path.exists( path ):
-            
-            self._GenerateAndSaveThumbnail( hash, mime )
-            
-            if not self._bad_error_occurred:
+            if not os.path.exists( path ):
                 
-                self._bad_error_occurred = True
+                self._GenerateAndSaveThumbnail( media )
                 
-                HydrusData.ShowText( 'A thumbnail for a file, ' + hash.hex() + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
+                if not self._bad_error_occurred:
+                    
+                    self._bad_error_occurred = True
+                    
+                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.hex() + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
+                    
                 
             
-        
-        return path
+            return path
+            
         
     
     def LocklessHasThumbnail( self, hash ):
@@ -1357,7 +1367,10 @@ class ClientFilesManager( object ):
             
         
     
-    def RegenerateThumbnail( self, hash, mime ):
+    def RegenerateThumbnail( self, media ):
+        
+        hash = media.GetHash()
+        mime = media.GetMime()
         
         with self._rwlock.read:
             
@@ -1368,7 +1381,7 @@ class ClientFilesManager( object ):
                 raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
                 
             
-            thumbnail_bytes = self._GenerateThumbnailBytes( file_path, hash, mime )
+            thumbnail_bytes = self._GenerateThumbnailBytes( file_path, media )
             
         
         with self._rwlock.write:
@@ -1377,29 +1390,34 @@ class ClientFilesManager( object ):
             
         
     
-    def LocklessRegenerateThumbnail( self, hash, mime ):
+    def LocklessRegenerateThumbnail( self, media ):
         
         if HG.file_report_mode:
+            
+            hash = media.GetHash()
+            mime = media.GetMime()
             
             HydrusData.ShowText( 'Thumbnail regen request: ' + str( ( hash, mime ) ) )
             
         
-        self._GenerateAndSaveThumbnail( hash, mime )
+        self._GenerateAndSaveThumbnail( media )
         
     
-    def LocklessRegenerateThumbnailIfWrongSize( self, hash, mime, media_size ):
+    def LocklessRegenerateThumbnailIfWrongSize( self, media ):
         
         do_it = False
         
         try:
+            
+            hash = media.GetHash()
+            mime = media.GetMime()
+            ( media_width, media_height ) = media.GetResolution()
             
             path = self._GenerateExpectedThumbnailPath( hash )
             
             numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
             
             ( current_width, current_height ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
-            
-            ( media_width, media_height ) = media_size
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             
@@ -1417,103 +1435,10 @@ class ClientFilesManager( object ):
         
         if do_it:
             
-            self.LocklessRegenerateThumbnail( hash, mime )
+            self.LocklessRegenerateThumbnail( media )
             
         
         return do_it
-        
-    
-    def RegenerateThumbnails( self, only_do_missing = False ):
-        
-        with self._rwlock.write:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            job_key.SetVariable( 'popup_title', 'regenerating thumbnails' )
-            job_key.SetVariable( 'popup_text_1', 'creating directories' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            num_broken = 0
-            
-            for ( i, path ) in enumerate( self._IterateAllFilePaths() ):
-                
-                try:
-                    
-                    while job_key.IsPaused() or job_key.IsCancelled():
-                        
-                        time.sleep( 0.1 )
-                        
-                        if job_key.IsCancelled():
-                            
-                            job_key.SetVariable( 'popup_text_1', 'cancelled' )
-                            
-                            HydrusData.Print( job_key.ToString() )
-                            
-                            return
-                            
-                        
-                    
-                    job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( i ) + ' done' )
-                    
-                    ( base, filename ) = os.path.split( path )
-                    
-                    if '.' in filename:
-                        
-                        ( hash_encoded, ext ) = filename.split( '.', 1 )
-                        
-                    else:
-                        
-                        continue # it is an update file, so let's save us some ffmpeg lag and logspam
-                        
-                    
-                    hash = bytes.fromhex( hash_encoded )
-                    
-                    thumbnail_path = self._GenerateExpectedThumbnailPath( hash )
-                    
-                    if only_do_missing and os.path.exists( thumbnail_path ):
-                        
-                        continue
-                        
-                    
-                    # this is bad, and will be blessedly gone when we move to new db-level regen maintenance cycle
-                    # if db thinks it is a mkv but this now says webm, the genthumb call fails since it can't find origin path, ha ha
-                    mime = HydrusFileHandling.GetMime( path )
-                    
-                    if mime in HC.MIMES_WITH_THUMBNAILS:
-                        
-                        try:
-                            
-                            self._GenerateAndSaveThumbnail( hash, mime )
-                            
-                        except HydrusExceptions.FileMissingException:
-                            
-                            continue
-                            
-                        
-                    
-                except:
-                    
-                    HydrusData.Print( path )
-                    HydrusData.Print( traceback.format_exc() )
-                    
-                    num_broken += 1
-                    
-                
-            
-            if num_broken > 0:
-                
-                job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ToHumanInt( num_broken ) + ' files caused errors, which have been written to the log.' )
-                
-            else:
-                
-                job_key.SetVariable( 'popup_text_1', 'done!' )
-                
-            
-            HydrusData.Print( job_key.ToString() )
-            
-            job_key.Finish()
-            
         
     
 class DataCache( object ):
@@ -1950,6 +1875,22 @@ class MediaResultCache( object ):
                 
                 self._hash_ids_to_media_results[ hash_id ] = media_result
                 self._hashes_to_media_results[ hash ] = media_result
+                
+            
+        
+    
+    def DropMediaResult( self, hash_id, hash ):
+        
+        with self._lock:
+            
+            if hash_id in self._hash_ids_to_media_results:
+                
+                del self._hash_ids_to_media_results[ hash_id ]
+                
+            
+            if hash in self._hashes_to_media_results:
+                
+                del self._hashes_to_media_results[ hash ]
                 
             
         
@@ -3209,7 +3150,7 @@ class ThumbnailCache( object ):
         
         try:
             
-            path = self._controller.client_files_manager.GetThumbnailPath( hash, mime )
+            path = self._controller.client_files_manager.GetThumbnailPath( display_media )
             
         except HydrusExceptions.FileMissingException as e:
             
@@ -3232,7 +3173,7 @@ class ThumbnailCache( object ):
             try:
                 
                 # file is malformed, let's force a regen
-                self._controller.client_files_manager.RegenerateThumbnail( hash, mime )
+                self._controller.client_files_manager.RegenerateThumbnail( display_media )
                 
             except Exception as e:
                 
@@ -3261,7 +3202,11 @@ class ThumbnailCache( object ):
         
         ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions )
         
-        correct_size = current_width == expected_width and current_height == expected_height
+        exactly_as_expected = current_width == expected_width and current_height == expected_height
+        
+        rotation_exception = current_width == expected_height and current_height == expected_width
+        
+        correct_size = exactly_as_expected or rotation_exception
         
         if not correct_size:
             
@@ -3353,7 +3298,7 @@ class ThumbnailCache( object ):
                             HydrusData.ShowText( 'Thumbnail {} too small, scheduling regeneration from source.'.format( hash.hex() ) )
                             
                         
-                        delayed_item = ( hash, mime )
+                        delayed_item = display_media.GetMediaResult()
                         
                         with self._lock:
                             
@@ -3470,7 +3415,10 @@ class ThumbnailCache( object ):
         
         def sort_regen( item ):
             
-            ( hash, mime ) = item
+            media_result = item
+            
+            hash = media_result.GetHash()
+            mime = media_result.GetMime()
             
             magic_score = self._magic_mime_thumbnail_ease_score_lookup[ mime ]
             
@@ -3505,31 +3453,19 @@ class ThumbnailCache( object ):
             
             names = [ 'hydrus', 'pdf', 'psd', 'audio', 'video', 'zip' ]
             
-            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+            bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             
-            try:
+            for name in names:
                 
-                bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+                path = os.path.join( HC.STATIC_DIR, name + '.png' )
                 
-                for name in names:
-                    
-                    path = os.path.join( HC.STATIC_DIR, name + '.png' )
-                    
-                    thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePath( path, bounding_dimensions, HC.IMAGE_PNG )
-                    
-                    with open( temp_path, 'wb' ) as f:
-                        
-                        f.write( thumbnail_bytes )
-                        
-                    
-                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path, HC.IMAGE_PNG )
-                    
-                    self._special_thumbs[ name ] = hydrus_bitmap
-                    
+                numpy_image = ClientImageHandling.GenerateNumpyImage( path, HC.IMAGE_PNG )
                 
-            finally:
+                numpy_image = ClientImageHandling.ThumbnailNumpyImage( numpy_image, bounding_dimensions )
                 
-                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+                
+                self._special_thumbs[ name ] = hydrus_bitmap
                 
             
             self._controller.pub( 'redraw_all_thumbnails' )
@@ -3717,27 +3653,29 @@ class ThumbnailCache( object ):
                     continue
                     
                 
-                result = self._delayed_regeneration_queue.pop()
+                media_result = self._delayed_regeneration_queue.pop()
                 
-                self._delayed_regeneration_queue_quick.discard( result )
+                self._delayed_regeneration_queue_quick.discard( media_result )
                 
-            
-            ( hash, mime ) = result
             
             if HG.file_report_mode:
+                
+                hash = media_result.GetHash()
                 
                 HydrusData.ShowText( 'Thumbnail {} now regenerating from source.'.format( hash.hex() ) )
                 
             
             try:
                 
-                self._controller.client_files_manager.RegenerateThumbnail( hash, mime )
+                self._controller.client_files_manager.RegenerateThumbnail( media_result )
                 
             except HydrusExceptions.FileMissingException:
                 
                 pass
                 
             except Exception as e:
+                
+                hash = media_result.GetHash()
                 
                 summary = 'The thumbnail for file {} was incorrect, but a later attempt to regenerate it or load the new file back failed.'.format( hash.hex() )
                 

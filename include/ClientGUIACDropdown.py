@@ -1074,6 +1074,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         AutoCompleteDropdown.__init__( self, parent )
         
+        self._allow_all_known_files = True
+        
         file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
         
         tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
@@ -1158,7 +1160,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
-        if advanced_mode:
+        if advanced_mode and self._allow_all_known_files:
             
             services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
             
@@ -1216,12 +1218,14 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_search_context, media_callable = None, synchronised = True, include_unusual_predicate_types = True ):
+    def __init__( self, parent, page_key, file_search_context, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True ):
         
         file_service_key = file_search_context.GetFileServiceKey()
         tag_service_key = file_search_context.GetTagServiceKey()
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
+        
+        self._allow_all_known_files = allow_all_known_files
         
         self._media_callable = media_callable
         self._page_key = page_key
@@ -1593,6 +1597,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
     
+    def IsSynchronised( self ):
+        
+        return self._synchronised.IsOn()
+        
+    
     def SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results, next_search_is_probably_fast ):
         
         if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
@@ -1614,7 +1623,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def SetSynchronisedWait( self, page_key ):
         
-        if page_key == self._page_key: self._synchronised.EventButton( None )
+        if page_key == self._page_key:
+            
+            self._synchronised.EventButton( None )
+            
         
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):

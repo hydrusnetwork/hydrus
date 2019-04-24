@@ -50,32 +50,40 @@ def CreateTopImage( width, title, payload_description, text ):
     
     title_font.SetPointSize( int( basic_font_size * 2.0 ) )
     
-    dc.SetFont( text_font )
-    ( gumpf, text_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+    texts_to_draw = []
     
-    dc.SetFont( payload_description_font )
-    ( gumpf, payload_description_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+    current_y = 6
     
-    dc.SetFont( title_font )
-    ( gumpf, title_line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+    for ( t, f ) in ( ( title, title_font ), ( payload_description, payload_description_font ), ( text, text_font ) ):
+        
+        dc.SetFont( f )
+        
+        wrapped_texts = WrapText( dc, t, width - 20 )
+        ( gumpf, line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+        
+        wrapped_texts_with_ys = []
+        
+        if len( wrapped_texts ) > 0:
+            
+            current_y += 10
+            
+            for wrapped_text in wrapped_texts:
+                
+                wrapped_texts_with_ys.append( ( wrapped_text, current_y ) )
+                
+                current_y += line_height + 4
+                
+            
+        
+        texts_to_draw.append( ( wrapped_texts_with_ys, f ) )
+        
+    
+    current_y += 6
+    
+    top_height = current_y
     
     del dc
     del text_extent_bmp
-    
-    text_lines = WrapText( text, width, text_size, 1 )
-    
-    if len( text_lines ) == 0:
-        
-        text_total_height = 0
-        
-    else:
-        
-        text_total_height = ( text_line_height + 4 ) * len( text_lines )
-        
-        text_total_height += 6 # to bring the last 4 padding up to 10 padding
-        
-    
-    top_height = 10 + title_line_height + 10 + payload_description_line_height + 10 + text_total_height
     
     #
     
@@ -93,33 +101,16 @@ def CreateTopImage( width, title, payload_description, text ):
     
     #
     
-    current_y = 10
-    
-    dc.SetFont( title_font )
-    
-    ( t_width, t_height ) = dc.GetTextExtent( title )
-    
-    dc.DrawText( title, ( width - t_width ) // 2, current_y )
-    
-    current_y += t_height + 10
-    
-    dc.SetFont( payload_description_font )
-    
-    ( t_width, t_height ) = dc.GetTextExtent( payload_description )
-    
-    dc.DrawText( payload_description, ( width - t_width ) // 2, current_y )
-    
-    current_y += t_height + 10
-    
-    dc.SetFont( text_font )
-    
-    for text_line in text_lines:
+    for ( wrapped_texts_with_ys, f ) in texts_to_draw:
         
-        ( t_width, t_height ) = dc.GetTextExtent( text_line )
+        dc.SetFont( f )
         
-        dc.DrawText( text_line, ( width - t_width ) // 2, current_y )
-        
-        current_y += t_height + 4
+        for ( wrapped_text, y ) in wrapped_texts_with_ys:
+            
+            ( t_width, t_height ) = dc.GetTextExtent( wrapped_text )
+            
+            dc.DrawText( wrapped_text, ( width - t_width ) // 2, y )
+            
         
     
     del dc
@@ -316,13 +307,13 @@ def LoadFromPng( path ):
     
     return payload_bytes
     
-def TextExceedsWidth( text, width, size, thickness ):
+def TextExceedsWidth( dc, text, width ):
     
-    ( ( tw, th ), baseline ) = cv2.getTextSize( text, png_font, size, thickness )
+    ( t_width, t_height ) = dc.GetTextExtent( text )
     
-    return tw > width
+    return t_width > width
     
-def WrapText( text, width, size, thickness ):
+def WrapText( dc, text, width ):
     
     words = text.split( ' ' )
     
@@ -341,7 +332,7 @@ def WrapText( text, width, size, thickness ):
         
         potential_next_line.append( word )
         
-        if TextExceedsWidth( ' '.join( potential_next_line ), width, size, thickness ):
+        if TextExceedsWidth( dc, ' '.join( potential_next_line ), width ):
             
             if len( potential_next_line ) == 1: # one very long word
                 

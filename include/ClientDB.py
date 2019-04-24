@@ -983,59 +983,11 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
         
     
-    def _CacheSimilarFilesGetDuplicateHashes( self, file_service_key, hash, duplicate_type ):
+    def _CacheSimilarFilesGetFileDuplicateHashes( self, file_service_key, hash, duplicate_type, allowed_hash_ids = None ):
         
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
         
-        if hash is None:
-            
-            potential_hash_ids = set()
-            
-            if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
-                
-                if duplicate_type == HC.DUPLICATE_BETTER:
-                    
-                    smaller_search_duplicate_type = HC.DUPLICATE_SMALLER_BETTER
-                    larger_search_duplicate_type = HC.DUPLICATE_LARGER_BETTER
-                    
-                elif duplicate_type == HC.DUPLICATE_WORSE:
-                    
-                    smaller_search_duplicate_type = HC.DUPLICATE_LARGER_BETTER
-                    larger_search_duplicate_type = HC.DUPLICATE_SMALLER_BETTER
-                    
-                
-                potential_hash_ids.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( smaller_search_duplicate_type, ) ) ) )
-                potential_hash_ids.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( larger_search_duplicate_type, ) ) ) )
-                
-            else:
-                
-                if duplicate_type == HC.DUPLICATE_BETTER_OR_WORSE:
-                    
-                    search_duplicate_types = ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER )
-                    
-                else:
-                    
-                    search_duplicate_types = ( duplicate_type, )
-                    
-                
-                for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type IN ' + HydrusData.SplayListForDB( search_duplicate_types ) + ';' ):
-                    
-                    potential_hash_ids.add( smaller_hash_id )
-                    potential_hash_ids.add( larger_hash_id )
-                    
-                
-            
-            if len( potential_hash_ids ) == 0:
-                
-                return set()
-                
-            
-            hash_id = random.choice( list( potential_hash_ids ) )
-            
-        else:
-            
-            hash_id = self._GetHashId( hash )
-            
+        hash_id = self._GetHashId( hash )
         
         dupe_hash_ids = set()
         
@@ -1075,12 +1027,17 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if allowed_hash_ids is not None:
+            
+            dupe_hash_ids.intersection_update( allowed_hash_ids )
+            
+        
         dupe_hashes = self._GetHashes( dupe_hash_ids )
         
         return dupe_hashes
         
     
-    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfo( self, file_service_key ):
+    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( self, file_service_key ):
         
         if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
             
@@ -1098,11 +1055,27 @@ class DB( HydrusDB.HydrusDB ):
         return ( table_join, predicate_string )
         
     
-    def _CacheSimilarFilesGetDupeStatusesToCounts( self, file_service_key, hash ):
+    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( self, results_table_name, both_files_match ):
+        
+        if both_files_match:
+            
+            table_join = 'duplicate_pairs, {} AS results_smaller, {} AS results_larger ON ( smaller_hash_id = results_smaller.hash_id AND larger_hash_id = results_larger.hash_id )'.format( results_table_name, results_table_name )
+            predicate_string = '1=1'
+            
+        else:
+            
+            table_join = 'duplicate_pairs, {} ON ( smaller_hash_id = {}.hash_id OR larger_hash_id = {}.hash_id )'.format( results_table_name, results_table_name, results_table_name )
+            predicate_string = '1=1'
+            
+        
+        return ( table_join, predicate_string )
+        
+    
+    def _CacheSimilarFilesGetFileDuplicateCounts( self, file_service_key, hash ):
         
         hash_id = self._GetHashId( hash )
         
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
         
         counter = collections.Counter()
         
@@ -1146,7 +1119,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # doesn't work for '= 0' or '< 1'
         
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
         
         hash_ids_to_counts = collections.Counter()
         
@@ -1229,20 +1202,14 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _CacheSimilarFilesGetMaintenanceStatus( self, file_service_key ):
+    def _CacheSimilarFilesGetMaintenanceStatus( self ):
         
         ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
         ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
         
         searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
         
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
-        
-        duplicate_types_to_count = collections.Counter( dict( self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' GROUP BY duplicate_type;' ) ) )
-        
-        duplicate_types_to_count[ HC.DUPLICATE_BETTER ] = duplicate_types_to_count[ HC.DUPLICATE_SMALLER_BETTER ] + duplicate_types_to_count[ HC.DUPLICATE_LARGER_BETTER ]
-        
-        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count )
+        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count )
         
     
     def _CacheSimilarFilesGetPHashId( self, phash ):
@@ -1265,29 +1232,113 @@ class DB( HydrusDB.HydrusDB ):
         return phash_id
         
     
-    def _CacheSimilarFilesGetUniqueDuplicatePairs( self, service_key, duplicate_type ):
+    def _CacheSimilarFilesGetRandomUnknownDuplicateHashes( self, search_context, both_files_match ):
+        
+        file_service_key = search_context.GetFileServiceKey()
+        
+        is_complicated_search = False
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
+            
+            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+                
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+                
+            else:
+                
+                is_complicated_search = True
+                
+                query_hash_ids = self._GetHashIdsFromQuery( search_context )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( temp_table_name, both_files_match )
+                
+            
+            potential_hash_ids = set()
+            
+            # distinct important here for the search results table join
+            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
+                
+                if is_complicated_search:
+                    
+                    # we only want ones that match our query above, not the other half of the pair
+                    
+                    if smaller_hash_id in query_hash_ids:
+                        
+                        potential_hash_ids.add( smaller_hash_id )
+                        
+                    
+                    if larger_hash_id in query_hash_ids:
+                        
+                        potential_hash_ids.add( larger_hash_id )
+                        
+                    
+                else:
+                    
+                    potential_hash_ids.add( smaller_hash_id )
+                    potential_hash_ids.add( larger_hash_id )
+                    
+                
+            
+        
+        hash_id = random.choice( list( potential_hash_ids ) )
+        
+        hash = self._GetHash( hash_id )
+        
+        if is_complicated_search and both_files_match:
+            
+            allowed_hash_ids = query_hash_ids
+            
+        else:
+            
+            allowed_hash_ids = None
+            
+        
+        return self._CacheSimilarFilesGetFileDuplicateHashes( file_service_key, hash, HC.DUPLICATE_UNKNOWN, allowed_hash_ids = allowed_hash_ids )
+        
+    
+    def _CacheSimilarFilesGetDuplicatePairsForFiltering( self, search_context, both_files_match ):
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
         # we also want to clear things out in groups, and maximising per-decision value
-        
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( service_key )
-        
         # first, let's sample our existing dupe relationships so we know 'useful' nodes that will tend to generate higher value decisions
         
-        existing_node_counter = collections.Counter()
+        node_value_estimate_counter = collections.Counter()
         
         # note this doesn't use the table_join so we can see results that may have caused one of the pair to be moved into trash domain or whatever
         result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_QUALITY ) ).fetchall()
         
         for ( smaller_hash_id, larger_hash_id ) in result:
             
-            existing_node_counter[ smaller_hash_id ] += 1
-            existing_node_counter[ larger_hash_id ] += 1
+            node_value_estimate_counter[ smaller_hash_id ] += 1
+            node_value_estimate_counter[ larger_hash_id ] += 1
             
         
-        # now we will fetch some unknown pairs, convert them into possible groups per each possible 'master hash_id', and value them
+        # now we will fetch some unknown pairs
         
-        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
+        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
+            
+            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+                
+                file_service_key = search_context.GetFileServiceKey()
+                
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+                
+            else:
+                
+                query_hash_ids = self._GetHashIdsFromQuery( search_context )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( temp_table_name, both_files_match )
+                
+            
+            # distinct important here for the search results table join
+            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
+            
+        
+        # convert them into possible groups per each possible 'master hash_id', and value them
         
         master_hash_ids_to_values = collections.Counter()
         master_hash_ids_to_groups = collections.defaultdict( list )
@@ -1299,7 +1350,7 @@ class DB( HydrusDB.HydrusDB ):
             master_hash_ids_to_groups[ smaller_hash_id ].append( pair )
             master_hash_ids_to_groups[ larger_hash_id ].append( pair )
             
-            pair_value = existing_node_counter[ smaller_hash_id ] + existing_node_counter[ larger_hash_id ]
+            pair_value = node_value_estimate_counter[ smaller_hash_id ] + node_value_estimate_counter[ larger_hash_id ]
             
             master_hash_ids_to_values[ smaller_hash_id ] += pair_value
             master_hash_ids_to_values[ larger_hash_id ] += pair_value
@@ -1354,6 +1405,32 @@ class DB( HydrusDB.HydrusDB ):
         pairs_of_hashes = [ ( self._hash_ids_to_hashes_cache[ smaller_hash_id ], self._hash_ids_to_hashes_cache[ larger_hash_id ] ) for ( smaller_hash_id, larger_hash_id ) in pairs_of_hash_ids ]
         
         return pairs_of_hashes
+        
+    
+    def _CacheSimilarFilesGetUnknownDuplicatesCount( self, search_context, both_files_match ):
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
+            
+            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+                
+                file_service_key = search_context.GetFileServiceKey()
+                
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+                
+            else:
+                
+                query_hash_ids = self._GetHashIdsFromQuery( search_context )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( temp_table_name, both_files_match )
+                
+            
+            # distinct important here for the search results table join
+            ( unknown_duplicates_count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? );', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
+            
+        
+        return unknown_duplicates_count
         
     
     def _CacheSimilarFilesMaintainDuplicatePairs( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
@@ -9410,9 +9487,9 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
-        elif action == 'duplicate_hashes': result = self._CacheSimilarFilesGetDuplicateHashes( *args, **kwargs )
-        elif action == 'duplicate_types_to_counts': result = self._CacheSimilarFilesGetDupeStatusesToCounts( *args, **kwargs )
-        elif action == 'unique_duplicate_pairs': result = self._CacheSimilarFilesGetUniqueDuplicatePairs( *args, **kwargs )
+        elif action == 'duplicate_pairs_for_filtering': result = self._CacheSimilarFilesGetDuplicatePairsForFiltering( *args, **kwargs )
+        elif action == 'file_duplicate_hashes': result = self._CacheSimilarFilesGetFileDuplicateHashes( *args, **kwargs )
+        elif action == 'file_duplicate_types_to_counts': result = self._CacheSimilarFilesGetFileDuplicateCounts( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
         elif action == 'file_notes': result = self._GetFileNotes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
@@ -9440,6 +9517,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
+        elif action == 'random_unknown_duplicate_hashes': result = self._CacheSimilarFilesGetRandomUnknownDuplicateHashes( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'repository_progress': result = self._GetRepositoryProgress( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
@@ -9457,6 +9535,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
+        elif action == 'unknown_duplicates_count': result = self._CacheSimilarFilesGetUnknownDuplicatesCount( *args, **kwargs )
         elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
@@ -9593,6 +9672,8 @@ class DB( HydrusDB.HydrusDB ):
                             self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
                             
                         
+                        self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+                        
                         self._controller.pub( 'new_file_info', { hash } )
                         
                         do_thumbnail = True
@@ -9600,13 +9681,15 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS:
                         
+                        ( media_result, ) = self._GetMediaResults( ( hash_id, ) )
+                        
                         if do_thumbnail or job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
                             
-                            client_files_manager.LocklessRegenerateThumbnail( hash, mime )
+                            client_files_manager.LocklessRegenerateThumbnail( media_result )
                             
                         elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
                             
-                            was_regenerated = client_files_manager.LocklessRegenerateThumbnailIfWrongSize( hash, mime, ( width, height ) )
+                            was_regenerated = client_files_manager.LocklessRegenerateThumbnailIfWrongSize( media_result )
                             
                             if was_regenerated:
                                 

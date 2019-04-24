@@ -1836,7 +1836,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search metadata', 'Delete and recreate the similar files search phashes.', self._RegenerateSimilarFilesPhashes )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'missing/all thumbnails', 'Delete missing/all thumbnails and regenerate them from their original files.', self._RegenerateThumbnails )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
@@ -3460,31 +3459,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _RegenerateThumbnails( self ):
-        
-        client_files_manager = self._controller.client_files_manager
-        
-        text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
-        text += os.linesep * 2
-        text += 'You can choose to only regenerate missing thumbnails, which is useful if you are rebuilding a fractured database, or you can force a complete refresh of all thumbnails, which is useful if some have been corrupted by a faulty hard drive.'
-        text += os.linesep * 2
-        text += 'Files and thumbnails will be inaccessible while this occurs, so it is best to leave the client alone until it is done.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'only do missing', no_label = 'force all' ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                self._controller.CallToThread( client_files_manager.RegenerateThumbnails, only_do_missing = True )
-                
-            elif result == wx.ID_NO:
-                
-                self._controller.CallToThread( client_files_manager.RegenerateThumbnails )
-                
-            
-        
-    
     def _RestoreSplitterPositions( self ):
         
         self._controller.pub( 'set_splitter_positions', HC.options[ 'hpos' ], HC.options[ 'vpos' ] )
@@ -3668,7 +3642,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_DOWN )
                     
-                    t += 0.05
+                    t += 0.1
                     
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
