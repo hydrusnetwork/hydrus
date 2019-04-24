@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 349</h3></li>
+				<ul>
+					<li>duplicate filter:</li>
+					<li>the duplicate filter page now has a full-on real-deal file search object to narrow down the duplicate filter, potential duplicate count, and 'show some random dupes' search domains! it also has a 'both files match' checkbox that determines if one of both files of the potential pairs should match the search!</li>
+					<li>the duplicate filter page has multiple layout changes as a result:</li>
+					<li>the main management area is now split into two pages--'preparation', for doing maintenance and discovery work, and 'filtering', for actioning the potential dupe pairs found</li>
+					<li>the 'filtering' page will select by default, but if 'preparation' needs work, its name will become 'preparation (needs work)'</li>
+					<li>the 'filtering' page now has file search ui and the 'both files' checkbox instead of the file domain button. this search data is saved on a per-page basis</li>
+					<li>the two pages' status texts are now updated on separate calls which have been rewritten to be asynchronous (with 'updating...' text while they work). both now have explicit refresh buttons to force them to update</li>
+					<li>the additional non-unknown pair counts listed on the filter area, which were irrelevant to filtering and sometimes confusing, are now gone. it only lists the 'unknown' pair number</li>
+					<li>the duplicate filter page's help button no longer has the awful 'simple help' entry. the full html help will get a pass in the coming weeks to reflect the new search changes</li>
+					<li>the duplicate file db code received significant refactoring and improvement to support searching the potential dupe space while cross-referencing the new file search context (and still falling back to the fast code when the search is just blank/system:everything)</li>
+					<li>misc duplicate file db code cleanup and refactoring</li>
+					<li>while in advanced mode, you can no longer select 'all known files' file domain for an export folder (and now the duplicate filter page) search context</li>
+					<li>making a file delete action in the duplicate filter (by hitting delete key or the button on the top hover window, which both trigger a dialog asking to delete one or both) now auto-skips the current pair</li>
+					<li>.</li>
+					<li>manage tags:</li>
+					<li>the manage tags has a new 'siblings and parents' button that will auto-replace incorrect siblings and auto-add missing parents! it works on multi-file selections as well! it gives you a summary yes/no dialog before it fires</li>
+					<li>the manage tags dialog has a little logic cleanup r.e. siblings and parents and their cog auto-apply options. the auto-application now only applies on add/pend actions</li>
+					<li>the manage tags dialog has a new cog button option to not trigger 'remove' actions from an autocomplete dropdown or suggested tag input action when the tag already exists</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>gave video metadata parsing another pass--it now detects 'hidden' incorrect framerates due to advanced 'skip frame' codec settings and is more accurate at determining frame count and duration, including some fixed offset calculations that was sometimes adding or discounting a few frames</li>
+					<li>manual video frame count, when needed, is now faster and produces better error text</li>
+					<li>fixed a critical bug in thumbnail regen that was sometimes potentially looping regen on files with unusual rotation exif information</li>
+					<li>significant improvements to how the client file manager handles thumbnail identifier information, saving a great deal of time for file import and thumbnail regeneration code of videos</li>
+					<li>fixed an issue where regenerated file metadata was not propagating up to the ui level in real time</li>
+					<li>cleaned up some thumbnail cache initialisation code</li>
+					<li>the 'generate video thumbs this % in' option is moved from the 'media' to 'thumbnails' options page</li>
+					<li>to simplify code, and in prep for the idle-maintenance-rewrite of this system, the database->regen->thumbnails call is now removed</li>
+					<li>all three fields of text on serialised pngs now wrap, and they pad a little better as well</li>
+					<li>added a new option to the 'gui pages' options page to force input text box focus on page changes</li>
+					<li>fixed a small type issue with the server's session cookie code and some new library versions</li>
+				</ul>
 				<li><h3>version 348</h3></li>
 				<ul>
 					<li>wrote some OR search help to 'getting started with tags' help page</li>
