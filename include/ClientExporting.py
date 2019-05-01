@@ -235,9 +235,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_NAME = 'Export Folder'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = None, period = 3600, phrase = None ):
+    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, delete_from_client_after_export = False, file_search_context = None, run_regularly = True, period = 3600, phrase = None, last_checked = 0, paused = False, run_now = False ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
@@ -260,21 +260,24 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._export_type = export_type
         self._delete_from_client_after_export = delete_from_client_after_export
         self._file_search_context = file_search_context
+        self._run_regularly = run_regularly
         self._period = period
         self._phrase = phrase
-        self._last_checked = 0
+        self._last_checked = last_checked
+        self._paused = paused and not run_now
+        self._run_now = run_now
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_file_search_context = self._file_search_context.GetSerialisableTuple()
         
-        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._period, self._phrase, self._last_checked )
+        return ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._period, self._phrase, self._last_checked ) = serialisable_info
+        ( self._path, self._export_type, self._delete_from_client_after_export, serialisable_file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now ) = serialisable_info
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
@@ -308,12 +311,29 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, period, phrase, last_checked ) = old_serialisable_info
+            
+            run_regularly = True
+            paused = False
+            run_now = False
+            
+            new_serialisable_info = ( path, export_type, delete_from_client_after_export, serialisable_file_search_context, run_regularly, period, phrase, last_checked, paused, run_now )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def DoWork( self ):
         
         try:
             
-            if not HydrusData.TimeHasPassed( self._last_checked + self._period ):
+            regular_run_due = self._run_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )
+            
+            good_to_go = ( regular_run_due or self._run_now ) and not self._paused
+            
+            if not good_to_go:
                 
                 return
                 
@@ -472,10 +492,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             self._last_checked = HydrusData.GetNow()
+            self._run_now = False
             
         except Exception as e:
             
-            HG.client_controller.options[ 'pause_export_folders_sync' ] = True
+            self._paused = True
             
             HydrusData.ShowText( 'The export folder "' + self._name + '" encountered an error! The error will follow! All export folders have now been paused. Please check the folder\'s settings and maybe report to hydrus dev if the error is complicated!' )
             
@@ -485,9 +506,15 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         HG.client_controller.WriteSynchronous( 'serialisable', self )
         
     
+    def RunNow( self ):
+        
+        self._paused = False
+        self._run_now = True
+        
+    
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._file_search_context, self._period, self._phrase )
+        return ( self._name, self._path, self._export_type, self._delete_from_client_after_export, self._file_search_context, self._run_regularly, self._period, self._phrase, self._last_checked, self._paused, self._run_now )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ] = ExportFolder

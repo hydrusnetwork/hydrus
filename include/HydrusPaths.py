@@ -279,6 +279,10 @@ def FilterFreePaths( paths ):
     
     return free_paths
     
+def GetCurrentTempDir():
+    
+    return tempfile.gettempdir()
+    
 def GetDefaultLaunchPath():
     
     if HC.PLATFORM_WINDOWS:

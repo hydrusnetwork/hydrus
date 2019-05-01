@@ -785,103 +785,38 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _Delete( self, file_service_key = None ):
         
-        if file_service_key is None:
+        if file_service_key is None or file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
             
-            has_local = True in ( CC.LOCAL_FILE_SERVICE_KEY in media.GetLocationsManager().GetCurrent() for media in self._selected_media )
+            default_reason = 'Deleted from Media Page.'
             
-            has_trash = True in ( CC.TRASH_SERVICE_KEY in media.GetLocationsManager().GetCurrent() for media in self._selected_media )
+        else:
             
-            if has_local:
+            default_reason = 'admin'
+            
+        
+        try:
+            
+            ( involves_physical_delete, jobs ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, self._selected_media, default_reason, suggested_file_service_key = file_service_key )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if involves_physical_delete:
+            
+            self._SetFocussedMedia( None )
+            
+        
+        def do_it( jobs ):
+            
+            for service_keys_to_content_updates in jobs:
                 
-                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            elif has_trash:
-                
-                file_service_key = CC.TRASH_SERVICE_KEY
-                
-            else:
-                
-                return
+                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                 
             
         
-        hashes = self._GetSelectedHashes( has_location = file_service_key )
-        
-        num_to_delete = len( hashes )
-        
-        if num_to_delete > 0:
-            
-            do_it = False
-            
-            if file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
-                
-                if not HC.options[ 'confirm_trash' ]:
-                    
-                    do_it = True
-                    
-                
-                if num_to_delete == 1: text = 'Send this file to the trash?'
-                else: text = 'Send these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files to the trash?'
-                
-            elif file_service_key == CC.TRASH_SERVICE_KEY:
-                
-                if num_to_delete == 1: text = 'Permanently delete this file?'
-                else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
-                
-            else:
-                
-                if num_to_delete == 1: text = 'Admin-delete this file?'
-                else: text = 'Admin-delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
-                
-            
-            if not do_it:
-                
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        do_it = True
-                        
-                    
-                
-            
-            if do_it:
-                
-                def process_in_thread( service_key, content_updates ):
-                    
-                    for content_update in content_updates:
-                        
-                        HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
-                        
-                    
-                
-                local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
-                
-                if file_service_key in local_file_services:
-                    
-                    # we want currently animating files (i.e. currently open files) to be unloaded before the delete call goes through
-                    
-                    if file_service_key == CC.TRASH_SERVICE_KEY:
-                        
-                        self._SetFocussedMedia( None )
-                        
-                    
-                    # split them into bits so we don't hang the gui with a huge delete transaction
-                    
-                    chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
-                    
-                    reason = 'Deleted from Media Page.'
-                    
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
-                    
-                else:
-                    
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'admin' ) ]
-                    
-                
-                HG.client_controller.CallToThread( process_in_thread, file_service_key, content_updates )
-                
-            
+        HG.client_controller.CallToThread( do_it, jobs )
         
     
     def _DeselectSelect( self, media_to_deselect, media_to_select ):
@@ -3918,7 +3853,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if selection_has_local_file_domain:
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self._Delete )
                 
             
             if selection_has_trash:

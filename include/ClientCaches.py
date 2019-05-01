@@ -465,6 +465,88 @@ class ClientFilesManager( object ):
         self._controller.pub( 'new_thumbnails', { hash } )
         
     
+    def _AttemptToHealMissingLocations( self ):
+        
+        # if a missing prefix folder seems to be in another location, lets update to that other location
+        
+        correct_rows = []
+        some_are_unhealable = False
+        
+        fixes_counter = collections.Counter()
+        
+        known_locations = set()
+        
+        known_locations.update( self._prefixes_to_locations.values() )
+        
+        ( locations_to_ideal_weights, thumbnail_override ) = self._controller.Read( 'ideal_client_files_locations' )
+        
+        known_locations.update( locations_to_ideal_weights.keys() )
+        
+        if thumbnail_override is not None:
+            
+            known_locations.add( thumbnail_override )
+            
+        
+        for ( missing_location, prefix ) in self._missing_locations:
+            
+            potential_correct_locations = []
+            
+            for known_location in known_locations:
+                
+                if known_location == missing_location:
+                    
+                    continue
+                    
+                
+                dir_path = os.path.join( known_location, prefix )
+                
+                if os.path.exists( dir_path ) and os.path.isdir( dir_path ):
+                    
+                    potential_correct_locations.append( known_location )
+                    
+                
+            
+            if len( potential_correct_locations ) == 1:
+                
+                correct_location = potential_correct_locations[0]
+                
+                correct_rows.append( ( missing_location, prefix, correct_location ) )
+                
+                fixes_counter[ ( missing_location, correct_location ) ] += 1
+                
+            else:
+                
+                some_are_unhealable = True
+                
+            
+        
+        if len( correct_rows ) > 0 and some_are_unhealable:
+            
+            message = 'Hydrus found multiple missing locations in your file storage. Some of these locations seemed to be fixable, others did not. The client will now inform you about both problems.'
+            
+            wx.SafeShowMessage( 'Multiple file location problems.', message )
+            
+        
+        if len( correct_rows ) > 0:
+            
+            summaries = [ '{} moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_location, correct_location ) for ( ( missing_location, correct_location ), count ) in fixes_counter.items() ]
+            
+            summaries.sort()
+            
+            summary_message = 'Some client file folders were missing, but they seem to be in other known locations! The folders are:'
+            summary_message += os.linesep * 2
+            summary_message += os.linesep.join( summaries )
+            summary_message += os.linesep * 2
+            summary_message += 'Assuming you did this on purpose, Hydrus is ready to update its internal knowledge to reflect these new mappings as soon as this dialog closes. If you know these proposed fixes are incorrect, terminate the program now.'
+            
+            HydrusData.Print( summary_message )
+            
+            wx.SafeShowMessage( 'About to auto-heal client file folders.', summary_message )
+            
+            HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+            
+        
+    
     def _GenerateExpectedFilePath( self, hash, mime ):
         
         self._WaitOnWakeup()
@@ -720,7 +802,7 @@ class ClientFilesManager( object ):
             
             try:
                 
-                for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+                for ( prefix, location ) in list( self._prefixes_to_locations.items() ):
                     
                     HydrusPaths.MakeSureDirectoryExists( location )
                     
@@ -731,7 +813,7 @@ class ClientFilesManager( object ):
                 
             except:
                 
-                text = 'Attempting to create the database\'s client_files folder structure failed!'
+                text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( location )
                 
                 wx.SafeShowMessage( 'unable to create file structure', text )
                 
@@ -740,23 +822,15 @@ class ClientFilesManager( object ):
             
         else:
             
-            self._missing_locations = set()
+            self._ReinitMissingLocations()
             
-            for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+            if len( self._missing_locations ) > 0:
                 
-                if os.path.exists( location ):
-                    
-                    subdir = os.path.join( location, prefix )
-                    
-                    if not os.path.exists( subdir ):
-                        
-                        self._missing_locations.add( ( location, prefix ) )
-                        
-                    
-                else:
-                    
-                    self._missing_locations.add( ( location, prefix ) )
-                    
+                self._AttemptToHealMissingLocations()
+                
+                self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+                
+                self._ReinitMissingLocations()
                 
             
             if len( self._missing_locations ) > 0:
@@ -773,16 +847,16 @@ class ClientFilesManager( object ):
                 
                 missing_string = ''
                 
-                for l in missing_locations:
+                for missing_location in missing_locations:
                     
-                    missing_prefixes = list( missing_dict[ l ] )
+                    missing_prefixes = list( missing_dict[ missing_location ] )
                     
                     missing_prefixes.sort()
                     
                     missing_prefixes_string = '    ' + os.linesep.join( ( ', '.join( block ) for block in HydrusData.SplitListIntoChunks( missing_prefixes, 32 ) ) )
                     
                     missing_string += os.linesep
-                    missing_string += l
+                    missing_string += missing_location
                     missing_string += os.linesep
                     missing_string += missing_prefixes_string
                     
@@ -812,6 +886,28 @@ class ClientFilesManager( object ):
                     wx.SafeShowMessage( 'missing locations', text )
                     HydrusData.DebugPrint( text )
                     
+                
+            
+        
+    
+    def _ReinitMissingLocations( self ):
+        
+        self._missing_locations = set()
+        
+        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+            
+            if os.path.exists( location ):
+                
+                subdir = os.path.join( location, prefix )
+                
+                if not os.path.exists( subdir ):
+                    
+                    self._missing_locations.add( ( location, prefix ) )
+                    
+                
+            else:
+                
+                self._missing_locations.add( ( location, prefix ) )
                 
             
         

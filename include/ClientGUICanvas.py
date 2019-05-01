@@ -1333,68 +1333,45 @@ class Canvas( wx.Window ):
             
         
     
-    def _Delete( self, service_key = None ):
+    def _Delete( self, media = None, default_reason = None, file_service_key = None ):
         
-        if self._current_media is None:
+        if media is None:
             
-            return
+            if self._current_media is None:
+                
+                return False
+                
             
-        
-        do_it = False
-        
-        if service_key is None:
-            
-            locations_manager = self._current_media.GetLocationsManager()
-            
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                service_key = CC.TRASH_SERVICE_KEY
-                
-            else:
-                
-                return
-                
+            media = [ self._current_media ]
             
         
-        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+        if default_reason is None:
             
-            if not HC.options[ 'confirm_trash' ]:
-                
-                do_it = True
-                
-            
-            text = 'Send this file to the trash?'
-            
-        elif service_key == CC.TRASH_SERVICE_KEY:
-            
-            text = 'Permanently delete this file?'
+            default_reason = 'Deleted from Preview or Media Viewer.'
             
         
-        if not do_it:
+        try:
             
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    do_it = True
-                    
-                
+            ( involves_physical_delete, jobs ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media, default_reason, suggested_file_service_key = file_service_key )
             
-            self.SetFocus() # annoying bug because of the modal dialog
+        except HydrusExceptions.CancelledException:
+            
+            return False
             
         
-        if do_it:
+        self.SetFocus() # annoying bug because of the modal dialog
+        
+        def do_it( jobs ):
             
-            hashes = { self._current_media.GetHash() }
+            for service_keys_to_content_updates in jobs:
+                
+                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
             
-            reason = 'Deleted from Preview or Media Viewer.'
-            
-            HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] } )
-            
+        
+        HG.client_controller.CallToThread( do_it, jobs )
+        
+        return True
         
     
     def _DoManualPan( self, delta_x_step, delta_y_step ):
@@ -2588,11 +2565,11 @@ class CanvasPanel( Canvas ):
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete this file.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete this file.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
                 
             
@@ -3226,39 +3203,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( HC.DUPLICATE_BETTER )
         
     
-    def _Delete( self, service_key = None ):
+    def _Delete( self, media = None, reason = None, file_service_key = None ):
         
         if self._current_media is None:
             
             return
             
         
-        if service_key is None:
-            
-            locations_manager = self._current_media.GetLocationsManager()
-            
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                service_key = CC.TRASH_SERVICE_KEY
-                
-            else:
-                
-                return
-                
-            
-        
-        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
-            
-            text = 'Send this just this file to the trash, or both?'
-            
-        elif service_key == CC.TRASH_SERVICE_KEY:
-            
-            text = 'Permanently delete just this file, or both?'
-            
+        text = 'Delete just this file, or both?'
         
         yes_tuples = []
         
@@ -3273,24 +3225,35 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if value == 'current':
                     
-                    hashes = { self._current_media.GetHash() }
+                    media = [ self._current_media ]
                     
-                    reason = 'Deleted manually in Duplicate Filter.'
+                    default_reason = 'Deleted manually in Duplicate Filter.'
                     
                 elif value == 'both':
                     
-                    hashes = { self._current_media.GetHash(), self._media_list.GetNext( self._current_media ).GetHash() }
+                    media = [ self._current_media, self._media_list.GetNext( self._current_media ) ]
                     
-                    reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
+                    default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
+                    
+                else:
+                    
+                    return False
                     
                 
-                HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] } )
+            else:
                 
-                self._SkipPair()
+                return False
                 
             
         
-        self.SetFocus() # annoying bug because of the modal dialog
+        deleted = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key )
+        
+        if deleted:
+            
+            self._SkipPair()
+            
+        
+        return True
         
     
     def _DoCustomAction( self ):
@@ -3621,6 +3584,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._current_pair = potential_pair
             
             ( first_media_result, second_media_result ) = HG.client_controller.Read( 'media_results', self._current_pair )
+            
+            if not ( first_media_result.GetLocationsManager().IsLocal() and second_media_result.GetLocationsManager().IsLocal() ):
+                
+                wx.MessageBox( 'At least one of the potential files in this pair was not in this client. Likely it was very recently deleted through a different process. Your decisions until now will be saved, and then the duplicate filter will close.' )
+                
+                self._CommitProcessed()
+                
+                self._Close()
+                
+                return
+                
             
             first_media = ClientMedia.MediaSingleton( first_media_result )
             second_media = ClientMedia.MediaSingleton( second_media_result )
@@ -4296,12 +4270,19 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def _Delete( self ):
+    def _Delete( self, media = None, reason = None, file_service_key = None ):
+        
+        if self._current_media is None:
+            
+            return False
+            
         
         self._deleted.add( self._current_media )
         
         if self._current_media == self._GetLast(): self._Close()
         else: self._ShowNext()
+        
+        return True
         
     
     def _GenerateHoverTopFrame( self ):
@@ -4924,11 +4905,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Send this file to the trash.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Send this file to the trash.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
                 
             

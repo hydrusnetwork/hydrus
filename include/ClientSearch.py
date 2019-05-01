@@ -358,7 +358,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class FileSystemPredicates( object ):
     
-    def __init__( self, system_predicates ):
+    def __init__( self, system_predicates, apply_implicit_limit = True ):
         
         self._has_system_everything = False
         
@@ -384,13 +384,6 @@ class FileSystemPredicates( object ):
         self._file_viewing_stats_predicates = []
         
         new_options = HG.client_controller.new_options
-        
-        forced_search_limit = new_options.GetNoneableInteger( 'forced_search_limit' )
-        
-        if forced_search_limit is not None:
-            
-            self._limit = forced_search_limit
-            
         
         for predicate in system_predicates:
             
@@ -718,7 +711,17 @@ class FileSystemPredicates( object ):
         return self._common_info
         
     
-    def GetLimit( self ): return self._limit
+    def GetLimit( self, apply_implicit_limit = True ):
+        
+        if self._limit is None and apply_implicit_limit:
+            
+            forced_search_limit = HG.client_controller.new_options.GetNoneableInteger( 'forced_search_limit' )
+            
+            return forced_search_limit
+            
+        
+        return self._limit
+        
     
     def GetRatingsPredicates( self ): return self._ratings_predicates
     

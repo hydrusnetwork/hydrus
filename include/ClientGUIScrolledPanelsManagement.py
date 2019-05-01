@@ -1392,6 +1392,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
         self._listbook.AddPage( 'gui pages', 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
+        self._listbook.AddPage( 'external programs', 'external programs', self._ExternalProgramsPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
@@ -1915,244 +1916,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ImportingPanel( wx.Panel ):
-        
-        def __init__( self, parent, new_options ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._new_options = new_options
-            
-            #
-            
-            default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
-            
-            from . import ClientGUIImport
-            
-            show_downloader_options = True
-            
-            quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( 'quiet' )
-            
-            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options, show_downloader_options )
-            
-            loud_file_import_options = self._new_options.GetDefaultFileImportOptions( 'loud' )
-            
-            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options, show_downloader_options )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'For \'quiet\' import contexts like import folders and subscriptions:', self._quiet_fios ) )
-            rows.append( ( 'For import contexts that work on pages:', self._loud_fios ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( default_fios, rows )
-            
-            default_fios.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.Add( default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def UpdateOptions( self ):
-            
-            self._new_options.SetDefaultFileImportOptions( 'quiet', self._quiet_fios.GetValue() )
-            self._new_options.SetDefaultFileImportOptions( 'loud', self._loud_fios.GetValue() )
-            
-        
-    
-    class _MaintenanceAndProcessingPanel( wx.Panel ):
-        
-        def __init__( self, parent ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._new_options = HG.client_controller.new_options
-            
-            self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
-            self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
-            
-            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
-            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
-            
-            #
-            
-            self._idle_normal = wx.CheckBox( self._idle_panel )
-            self._idle_normal.Bind( wx.EVT_CHECKBOX, self.EventIdleNormal )
-            
-            self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
-            self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
-            self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 5, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
-            
-            #
-            
-            self._idle_shutdown = ClientGUICommon.BetterChoice( self._shutdown_panel )
-            
-            for idle_id in ( CC.IDLE_NOT_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
-                
-                self._idle_shutdown.Append( CC.idle_string_lookup[ idle_id ], idle_id )
-                
-            
-            self._idle_shutdown.Bind( wx.EVT_CHOICE, self.EventIdleShutdown )
-            
-            self._idle_shutdown_max_minutes = wx.SpinCtrl( self._shutdown_panel, min = 1, max = 1440 )
-            self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 3600, days = True, hours = True )
-            
-            #
-            
-            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 28, max = 365, none_phrase = 'do not automatically vacuum' )
-            
-            tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 90 days+.'
-            
-            self._maintenance_vacuum_period_days.SetToolTip( tts )
-            
-            #
-            
-            self._idle_normal.SetValue( HC.options[ 'idle_normal' ] )
-            self._idle_period.SetValue( HC.options[ 'idle_period' ] )
-            self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] )
-            self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
-            
-            self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
-            self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
-            self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
-            
-            self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Run maintenance jobs when the client is idle and the system is not otherwise busy: ', self._idle_normal ) )
-            rows.append( ( 'Assume the client is idle if no general browsing activity has occurred in the past: ', self._idle_period ) )
-            rows.append( ( 'Assume the client is idle if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
-            rows.append( ( 'Assume the system is busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
-            
-            self._idle_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Run jobs on shutdown: ', self._idle_shutdown ) )
-            rows.append( ( 'Only run shutdown jobs once per: ', self._shutdown_work_period ) )
-            rows.append( ( 'Max number of minutes to run shutdown jobs: ', self._idle_shutdown_max_minutes ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
-            
-            self._shutdown_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            text = '***'
-            text += os.linesep
-            text +='If you are a new user or do not completely understand these options, please do not touch them! Do not set the client to be idle all the time unless you know what you are doing or are testing something and are prepared for potential problems!'
-            text += os.linesep
-            text += '***'
-            text += os.linesep * 2
-            text += 'Sometimes, the client needs to do some heavy maintenance. This could be reformatting the database to keep it running fast or processing a large number of tags from a repository. Typically, these jobs will not allow you to use the gui while they run, and on slower computers--or those with not much memory--they can take a long time to complete.'
-            text += os.linesep * 2
-            text += 'You can set these jobs to run only when the client is idle, or only during shutdown, or neither, or both. If you leave the client on all the time in the background, focusing on \'idle time\' processing is often ideal. If you have a slow computer, relying on \'shutdown\' processing (which you can manually start when convenient), is often better.'
-            text += os.linesep * 2
-            text += 'If the client switches from idle to not idle during a job, it will try to abandon it and give you back control. This is not always possible, and even when it is, it will sometimes take several minutes, particularly on slower machines or those on HDDs rather than SSDs.'
-            text += os.linesep * 2
-            text += 'If the client believes the system is busy, it will generally not start jobs.'
-            
-            st = ClientGUICommon.BetterStaticText( self._jobs_panel, label = text )
-            
-            st.SetWrapWidth( 550 )
-            
-            self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._jobs_panel.Add( self._shutdown_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period_days ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._maintenance_panel, rows )
-            
-            self._maintenance_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.Add( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-            self._EnableDisableIdleNormal()
-            self._EnableDisableIdleShutdown()
-            
-        
-        def _EnableDisableIdleNormal( self ):
-            
-            if self._idle_normal.GetValue() == True:
-                
-                self._idle_period.Enable()
-                self._idle_mouse_period.Enable()
-                self._idle_cpu_max.Enable()
-                
-            else:
-                
-                self._idle_period.Disable()
-                self._idle_mouse_period.Disable()
-                self._idle_cpu_max.Disable()
-                
-            
-        
-        def _EnableDisableIdleShutdown( self ):
-            
-            if self._idle_shutdown.GetChoice() == CC.IDLE_NOT_ON_SHUTDOWN:
-                
-                self._shutdown_work_period.Disable()
-                self._idle_shutdown_max_minutes.Disable()
-                
-            else:
-                
-                self._shutdown_work_period.Enable()
-                self._idle_shutdown_max_minutes.Enable()
-                
-            
-        
-        def EventIdleNormal( self, event ):
-            
-            self._EnableDisableIdleNormal()
-            
-        
-        def EventIdleShutdown( self, event ):
-            
-            self._EnableDisableIdleShutdown()
-            
-        
-        def UpdateOptions( self ):
-            
-            HC.options[ 'idle_normal' ] = self._idle_normal.GetValue()
-            
-            HC.options[ 'idle_period' ] = self._idle_period.GetValue()
-            HC.options[ 'idle_mouse_period' ] = self._idle_mouse_period.GetValue()
-            HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
-            
-            HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
-            HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
-            
-            self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
-            
-            self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
-            
-        
-    
     class _DefaultFileSystemPredicatesPanel( wx.Panel ):
         
         def __init__( self, parent, new_options ):
@@ -2229,31 +1992,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _FilesAndTrashPanel( wx.Panel ):
+    class _ExternalProgramsPanel( wx.Panel ):
         
         def __init__( self, parent ):
             
             wx.Panel.__init__( self, parent )
             
             self._new_options = HG.client_controller.new_options
-            
-            self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
-            
-            self._file_system_waits_on_wakeup = wx.CheckBox( self, label = '' )
-            self._file_system_waits_on_wakeup.SetToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' )
-            
-            self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
-            
-            self._confirm_trash = wx.CheckBox( self )
-            self._confirm_archive = wx.CheckBox( self )
-            
-            self._remove_filtered_files = wx.CheckBox( self, label = '' )
-            self._remove_trashed_files = wx.CheckBox( self, label = '' )
-            
-            self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
-            self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
-            
-            self._temp_path_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
             mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
             
@@ -2264,36 +2009,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, columns, self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
             
             #
-            
-            if HC.options[ 'export_path' ] is not None:
-                
-                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
-                
-                if abs_path is not None:
-                    
-                    self._export_location.SetPath( abs_path )
-                    
-                
-            
-            self._file_system_waits_on_wakeup.SetValue( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
-            
-            self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
-            
-            self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
-            
-            self._confirm_archive.SetValue( HC.options[ 'confirm_archive' ] )
-            
-            self._remove_filtered_files.SetValue( HC.options[ 'remove_filtered_files' ] )
-            self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
-            self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
-            self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
-            
-            temp_path_override = self._new_options.GetNoneableString( 'temp_path_override' )
-            
-            if temp_path_override is not None:
-                
-                self._temp_path_override.SetPath( temp_path_override )
-                
             
             web_browser_path = self._new_options.GetNoneableString( 'web_browser_path' )
             
@@ -2315,28 +2030,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
-            
-            vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
-            
-            rows = []
-            
-            rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
-            rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
-            rows.append( ( 'Wait 15s after computer resume before accessing files: ', self._file_system_waits_on_wakeup ) )
-            rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
-            rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
-            rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
-            rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
-            rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
-            rows.append( ( 'Default export directory: ', self._export_location ) )
-            rows.append( ( 'BUGFIX: Temp folder override (set blank for OS default): ', self._temp_path_override ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            text = 'Setting a specific web browser path here--like \'C:\\program files\\firefox\\firefox.exe "%path%"\'--can help with the \'share->open->in web browser\' command, which is buggy working with OS defaults, particularly on Windows. It also fixes #anchors, which are dropped in some OSes using default means. Use the same %path% format as the \'open externally\' commands below.'
+            text = 'Setting a specific web browser path here--like \'C:\\program files\\firefox\\firefox.exe "%path%"\'--can help with the \'share->open->in web browser\' command, which is buggy working with OS defaults, particularly on Windows. It also fixes #anchors, which are dropped in some OSes using default means. Use the same %path% format for the \'open externally\' commands below.'
             
             st = ClientGUICommon.BetterStaticText( mime_panel, text )
             
@@ -2428,34 +2122,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
-            
-            self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.GetValue() )
-            
-            HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
-            HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
-            HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
-            HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.GetValue()
-            HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
-            HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
-            HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
-            
-            temp_path_override = self._temp_path_override.GetPath()
-            
-            if temp_path_override == '':
-                
-                temp_path_override = None
-                
-            else:
-                
-                if not HydrusPaths.DirectoryIsWritable( temp_path_override ):
-                    
-                    raise HydrusExceptions.VetoException( 'The temporary path override either did not exist or was not writeable-to! Please change it or fix its permissions!' )
-                    
-                
-            
-            self._new_options.SetNoneableString( 'temp_path_override', temp_path_override )
-            
             web_browser_path = self._web_browser_path.GetValue()
             
             if web_browser_path == '':
@@ -2469,6 +2135,169 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._new_options.SetMimeLaunch( mime, launch_path )
                 
+            
+        
+    
+    class _FilesAndTrashPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = HG.client_controller.new_options
+            
+            self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
+            self._file_system_waits_on_wakeup = wx.CheckBox( self )
+            self._file_system_waits_on_wakeup.SetToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' )
+            
+            self._delete_to_recycle_bin = wx.CheckBox( self )
+            
+            self._confirm_trash = wx.CheckBox( self )
+            self._confirm_archive = wx.CheckBox( self )
+            
+            self._remove_filtered_files = wx.CheckBox( self )
+            self._remove_trashed_files = wx.CheckBox( self )
+            
+            self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
+            self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
+            
+            advanced_file_deletion_panel = ClientGUICommon.StaticBox( self, 'advanced file deletion and custom reasons' )
+            
+            self._use_advanced_file_deletion_dialog = wx.CheckBox( advanced_file_deletion_panel )
+            self._use_advanced_file_deletion_dialog.SetToolTip( 'If this is set, the client will present a more complicated file deletion confirmation dialog that will permit you to set your own deletion reason and perform \'clean\' deletes that leave no deletion record (making later re-import easier).' )
+            
+            self._advanced_file_deletion_reasons = ClientGUIListBoxes.QueueListBox( advanced_file_deletion_panel, 5, str, add_callable = self._AddAFDR, edit_callable = self._EditAFDR )
+            
+            #
+            
+            if HC.options[ 'export_path' ] is not None:
+                
+                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+                
+                if abs_path is not None:
+                    
+                    self._export_location.SetPath( abs_path )
+                    
+                
+            
+            self._file_system_waits_on_wakeup.SetValue( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
+            
+            self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
+            
+            self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
+            
+            self._confirm_archive.SetValue( HC.options[ 'confirm_archive' ] )
+            
+            self._remove_filtered_files.SetValue( HC.options[ 'remove_filtered_files' ] )
+            self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
+            self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
+            self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
+            
+            self._use_advanced_file_deletion_dialog.SetValue( self._new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ) )
+            
+            self._use_advanced_file_deletion_dialog.Bind( wx.EVT_CHECKBOX, self.EventAdvancedCheck )
+            
+            self._advanced_file_deletion_reasons.AddDatas( self._new_options.GetStringList( 'advanced_file_deletion_reasons' ) )
+            
+            self._UpdateAdvancedControls()
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
+            
+            vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
+            
+            rows = []
+            
+            rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
+            rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
+            rows.append( ( 'Wait 15s after computer resume before accessing files: ', self._file_system_waits_on_wakeup ) )
+            rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
+            rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
+            rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
+            rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
+            rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
+            rows.append( ( 'Default export directory: ', self._export_location ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Use the advanced file deletion dialog: ', self._use_advanced_file_deletion_dialog ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( advanced_file_deletion_panel, rows )
+            
+            advanced_file_deletion_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            advanced_file_deletion_panel.Add( self._advanced_file_deletion_reasons, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.Add( advanced_file_deletion_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
+            
+        
+        def _AddAFDR( self ):
+            
+            reason = 'I do not like the file.'
+            
+            return self._EditAFDR( reason )
+            
+        
+        def _EditAFDR( self, reason ):
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'enter the reason', default = reason, allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    reason = dlg.GetValue()
+                    
+                    return reason
+                    
+                else:
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
+        
+        def _UpdateAdvancedControls( self ):
+            
+            if self._use_advanced_file_deletion_dialog.GetValue():
+                
+                self._advanced_file_deletion_reasons.Enable()
+                
+            else:
+                
+                self._advanced_file_deletion_reasons.Disable()
+                
+            
+        
+        def EventAdvancedCheck( self, event ):
+            
+            self._UpdateAdvancedControls()
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+            
+            self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.GetValue() )
+            
+            HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
+            HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
+            HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
+            HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.GetValue()
+            HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
+            HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
+            HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            self._new_options.SetBoolean( 'use_advanced_file_deletion_dialog', self._use_advanced_file_deletion_dialog.GetValue() )
+            
+            self._new_options.SetStringList( 'advanced_file_deletion_reasons', self._advanced_file_deletion_reasons.GetData() )
             
         
     
@@ -2810,6 +2639,244 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
             self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.GetValue() )
+            
+        
+    
+    class _ImportingPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
+            
+            from . import ClientGUIImport
+            
+            show_downloader_options = True
+            
+            quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( 'quiet' )
+            
+            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options, show_downloader_options )
+            
+            loud_file_import_options = self._new_options.GetDefaultFileImportOptions( 'loud' )
+            
+            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options, show_downloader_options )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'For \'quiet\' import contexts like import folders and subscriptions:', self._quiet_fios ) )
+            rows.append( ( 'For import contexts that work on pages:', self._loud_fios ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( default_fios, rows )
+            
+            default_fios.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetDefaultFileImportOptions( 'quiet', self._quiet_fios.GetValue() )
+            self._new_options.SetDefaultFileImportOptions( 'loud', self._loud_fios.GetValue() )
+            
+        
+    
+    class _MaintenanceAndProcessingPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = HG.client_controller.new_options
+            
+            self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
+            self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
+            
+            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
+            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
+            
+            #
+            
+            self._idle_normal = wx.CheckBox( self._idle_panel )
+            self._idle_normal.Bind( wx.EVT_CHECKBOX, self.EventIdleNormal )
+            
+            self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
+            self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
+            self._idle_cpu_max = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, '', min = 5, max = 99, unit = '%', none_phrase = 'ignore cpu usage' )
+            
+            #
+            
+            self._idle_shutdown = ClientGUICommon.BetterChoice( self._shutdown_panel )
+            
+            for idle_id in ( CC.IDLE_NOT_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
+                
+                self._idle_shutdown.Append( CC.idle_string_lookup[ idle_id ], idle_id )
+                
+            
+            self._idle_shutdown.Bind( wx.EVT_CHOICE, self.EventIdleShutdown )
+            
+            self._idle_shutdown_max_minutes = wx.SpinCtrl( self._shutdown_panel, min = 1, max = 1440 )
+            self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 3600, days = True, hours = True )
+            
+            #
+            
+            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 28, max = 365, none_phrase = 'do not automatically vacuum' )
+            
+            tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 90 days+.'
+            
+            self._maintenance_vacuum_period_days.SetToolTip( tts )
+            
+            #
+            
+            self._idle_normal.SetValue( HC.options[ 'idle_normal' ] )
+            self._idle_period.SetValue( HC.options[ 'idle_period' ] )
+            self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] )
+            self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
+            
+            self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
+            self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
+            self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
+            
+            self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Run maintenance jobs when the client is idle and the system is not otherwise busy: ', self._idle_normal ) )
+            rows.append( ( 'Assume the client is idle if no general browsing activity has occurred in the past: ', self._idle_period ) )
+            rows.append( ( 'Assume the client is idle if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
+            rows.append( ( 'Assume the system is busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
+            
+            self._idle_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Run jobs on shutdown: ', self._idle_shutdown ) )
+            rows.append( ( 'Only run shutdown jobs once per: ', self._shutdown_work_period ) )
+            rows.append( ( 'Max number of minutes to run shutdown jobs: ', self._idle_shutdown_max_minutes ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
+            
+            self._shutdown_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            text = '***'
+            text += os.linesep
+            text +='If you are a new user or do not completely understand these options, please do not touch them! Do not set the client to be idle all the time unless you know what you are doing or are testing something and are prepared for potential problems!'
+            text += os.linesep
+            text += '***'
+            text += os.linesep * 2
+            text += 'Sometimes, the client needs to do some heavy maintenance. This could be reformatting the database to keep it running fast or processing a large number of tags from a repository. Typically, these jobs will not allow you to use the gui while they run, and on slower computers--or those with not much memory--they can take a long time to complete.'
+            text += os.linesep * 2
+            text += 'You can set these jobs to run only when the client is idle, or only during shutdown, or neither, or both. If you leave the client on all the time in the background, focusing on \'idle time\' processing is often ideal. If you have a slow computer, relying on \'shutdown\' processing (which you can manually start when convenient), is often better.'
+            text += os.linesep * 2
+            text += 'If the client switches from idle to not idle during a job, it will try to abandon it and give you back control. This is not always possible, and even when it is, it will sometimes take several minutes, particularly on slower machines or those on HDDs rather than SSDs.'
+            text += os.linesep * 2
+            text += 'If the client believes the system is busy, it will generally not start jobs.'
+            
+            st = ClientGUICommon.BetterStaticText( self._jobs_panel, label = text )
+            
+            st.SetWrapWidth( 550 )
+            
+            self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.Add( self._shutdown_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period_days ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._maintenance_panel, rows )
+            
+            self._maintenance_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+            self._EnableDisableIdleNormal()
+            self._EnableDisableIdleShutdown()
+            
+        
+        def _EnableDisableIdleNormal( self ):
+            
+            if self._idle_normal.GetValue() == True:
+                
+                self._idle_period.Enable()
+                self._idle_mouse_period.Enable()
+                self._idle_cpu_max.Enable()
+                
+            else:
+                
+                self._idle_period.Disable()
+                self._idle_mouse_period.Disable()
+                self._idle_cpu_max.Disable()
+                
+            
+        
+        def _EnableDisableIdleShutdown( self ):
+            
+            if self._idle_shutdown.GetChoice() == CC.IDLE_NOT_ON_SHUTDOWN:
+                
+                self._shutdown_work_period.Disable()
+                self._idle_shutdown_max_minutes.Disable()
+                
+            else:
+                
+                self._shutdown_work_period.Enable()
+                self._idle_shutdown_max_minutes.Enable()
+                
+            
+        
+        def EventIdleNormal( self, event ):
+            
+            self._EnableDisableIdleNormal()
+            
+        
+        def EventIdleShutdown( self, event ):
+            
+            self._EnableDisableIdleShutdown()
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'idle_normal' ] = self._idle_normal.GetValue()
+            
+            HC.options[ 'idle_period' ] = self._idle_period.GetValue()
+            HC.options[ 'idle_mouse_period' ] = self._idle_mouse_period.GetValue()
+            HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
+            
+            HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
+            HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
+            
+            self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
+            
+            self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
         
     

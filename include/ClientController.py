@@ -101,7 +101,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitTempDir( self ):
         
-        self.temp_dir = ClientPaths.GetTempDir()
+        self.temp_dir = HydrusPaths.GetTempDir()
         
     
     def _DestroySplash( self ):

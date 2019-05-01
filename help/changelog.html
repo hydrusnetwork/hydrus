@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 350</h3></li>
+				<ul>
+					<li>the duplicate filter no longer applies the implicit system limit (which defaults to 10,000 files) on its search domains, which solves the undercounting issue on large search domains. duplicate operations will be appropriately slower, so narrow your duplicate file queries (adding a creator: tag works great) if they take too long</li>
+					<li>fixed the duplicate pairs filter's 'ghost pair' issue. it was failing, when 'both files' was unchecked, to remove pairs that included one file that was non-local. this accidental inclusion resulted in incorrect non-zero count and filter/random pairs that could not display correctly</li>
+					<li>insulated against potential future iterations of this problem (likely that one of the pair was deleted by another process while a filter is ongoing), with a notification and graceful exiting of the duplicate filter while saving progress</li>
+					<li>the 'show random duplicates' button now puts the 'base' of the group (to which all the others are potentially matched) as the first thumbnail</li>
+					<li>added a new 'advanced file deletion' section to 'files and trash' options page to turn on a new advanced dialog and set custom file deletion reasons</li>
+					<li>if this new dialog is turned on, a delete event from thumbnail grid, regular media viewer, or the duplicate filter's manual delete will launch it. it permits you to delete physically (skipping trash) in one step or delete physically without leaving a deletion record (for easier later re-import) and choose one of the deletion reasons in the new options panel or set a one-time custom reason</li>
+					<li>export folders now have more run-controls: 'run regularly', 'paused', and 'run now'</li>
+					<li>the file menu now has a 'run export folder now' submenu just like for import folders-- it is simple now to set up an export folder that only runs when you tell it to</li>
+					<li>updated the on-boot missing file folder recovery process to automatically 'heal' file location mappings when a missing folder is actually in a location that is known (essentially, you can now manually move a bunch of folders from one known location to another while the client is off and it will recover automatically now). error dialogs will appear in this case summarising the problem and proposed fixes with a chance to bail out if you do not want it to happen</li>
+					<li>added a new frame type to 'gui' options page called 'regular_center_dialog' for yes/no style dialogs that are better in the center of the parent window</li>
+					<li>the custom web browser launch path and file type 'open externally' paths are moved from 'files and trash' to a new 'external programs' options page</li>
+					<li>as the superior '--temp_path' program launch parameter now exists for both client and server, I have removed the limited 'BUGFIX: temp folder override' option from the client's 'files and trash' page and use in the actual code. if this option was important to you, please migrate to the --temp_path launch parameter, which covers temp usage more comprehensively</li>
+					<li>as the artstation downloader is now non-functional, apparently by a cloudflare issue, the default gug for new users (and anyone with artstation set atm) is now safebooru</li>
+					<li>added dolphin file manager add-on link to the client api help</li>
+					<li>some misc file metadata fetching cleanup</li>
+				</ul>
 				<li><h3>version 349</h3></li>
 				<ul>
 					<li>duplicate filter:</li>

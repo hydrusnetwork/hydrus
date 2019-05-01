@@ -161,7 +161,7 @@ def DumpToPng( width, payload_bytes, title, payload_description, text, path ):
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = ClientPaths.GetTempPath( suffix = '.png' )
+    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath( suffix = '.png' )
     
     try:
         
@@ -238,7 +238,7 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
 def LoadFromPng( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
     
     try:
         

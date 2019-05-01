@@ -2203,13 +2203,9 @@ class PagesNotebook( wx.Notebook ):
         
         if do_add:
             
-            unsorted_media_results = self._controller.Read( 'media_results', hashes )
+            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_media_results }
-            
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-            
-            dest_page.GetMediaPanel().AddMediaResults( dest_page.GetPageKey(), sorted_media_results )
+            dest_page.GetMediaPanel().AddMediaResults( dest_page.GetPageKey(), media_results )
             
         else:
             
@@ -2638,13 +2634,9 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            unsorted_media_results = self._controller.Read( 'media_results', hashes )
+            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_media_results }
-            
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-            
-            page.GetMediaPanel().AddMediaResults( page.GetPageKey(), sorted_media_results )
+            page.GetMediaPanel().AddMediaResults( page.GetPageKey(), media_results )
             
         
         return page

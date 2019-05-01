@@ -20,6 +20,7 @@ from . import ClientGUITopLevelWindows
 from . import ClientImportFileSeeds
 from . import ClientImportOptions
 from . import ClientImportSubscriptions
+from . import ClientMedia
 from . import ClientNetworkingContexts
 from . import ClientNetworkingDomain
 from . import ClientParsing
@@ -555,6 +556,301 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         watchable_default_tag_import_options = self._watchable_default_tag_import_options_button.GetValue()
         
         return ( file_post_default_tag_import_options, watchable_default_tag_import_options, self._url_match_keys_to_tag_import_options )
+        
+    
+class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, media, default_reason, suggested_file_service_key = None ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._media = ClientMedia.FlattenMedia( media )
+        
+        self._question_is_already_resolved = False
+        
+        self._simple_description = ClientGUICommon.BetterStaticText( self, label = 'init' )
+        
+        self._permitted_action_choices = []
+        
+        self._InitialisePermittedActionChoices( suggested_file_service_key = suggested_file_service_key )
+        
+        self._action_radio = ClientGUICommon.BetterRadioBox( self, choices = self._permitted_action_choices, style = wx.RA_SPECIFY_ROWS )
+        
+        self._action_radio.SetSelection( 0 )
+        
+        self._reason_panel = ClientGUICommon.StaticBox( self, 'reason' )
+        
+        permitted_reason_choices = []
+        
+        permitted_reason_choices.append( ( default_reason, default_reason ) )
+        
+        for s in HG.client_controller.new_options.GetStringList( 'advanced_file_deletion_reasons' ):
+            
+            permitted_reason_choices.append( ( s, s ) )
+            
+        
+        permitted_reason_choices.append( ( 'custom', None ) )
+        
+        self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, style = wx.RA_SPECIFY_ROWS )
+        
+        self._reason_radio.SetSelection( 0 )
+        
+        self._custom_reason = wx.TextCtrl( self._reason_panel )
+        
+        #
+        
+        ( file_service_key, hashes, description ) = self._action_radio.GetChoice()
+        
+        self._simple_description.SetLabel( description )
+        
+        if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
+            
+            if len( self._permitted_action_choices ) == 1:
+                
+                self._action_radio.Hide()
+                
+            else:
+                
+                self._simple_description.Hide()
+                
+            
+        else:
+            
+            self._action_radio.Hide()
+            self._reason_panel.Hide()
+            
+        
+        self._action_radio.Bind( wx.EVT_RADIOBOX, self.EventRadio )
+        self._reason_radio.Bind( wx.EVT_RADIOBOX, self.EventRadio )
+        
+        self._UpdateControls()
+        
+        #
+        
+        self._reason_panel.Add( self._reason_radio, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'custom reason: ', self._custom_reason ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._reason_panel, rows )
+        
+        self._reason_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._simple_description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._action_radio, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._reason_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _GetReason( self ):
+        
+        reason = self._reason_radio.GetChoice()
+        
+        if reason is None:
+            
+            reason = self._custom_reason.GetValue()
+            
+        
+        return reason
+        
+    
+    def _InitialisePermittedActionChoices( self, suggested_file_service_key = None ):
+        
+        possible_file_service_keys = []
+        
+        if suggested_file_service_key is None:
+            
+            possible_file_service_keys.append( CC.LOCAL_FILE_SERVICE_KEY )
+            possible_file_service_keys.append( CC.TRASH_SERVICE_KEY )
+            possible_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+        else:
+            
+            possible_file_service_keys.append( suggested_file_service_key )
+            
+        
+        keys_to_hashes = { possible_file_service_key : [ m.GetHash() for m in self._media if possible_file_service_key in m.GetLocationsManager().GetCurrent() ] for possible_file_service_key in possible_file_service_keys }
+        
+        for possible_file_service_key in possible_file_service_keys:
+            
+            hashes = keys_to_hashes[ possible_file_service_key ]
+            
+            num_to_delete = len( hashes )
+            
+            if len( hashes ) > 0:
+                
+                if possible_file_service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                    
+                    if not HC.options[ 'confirm_trash' ]:
+                        
+                        # this dialog will never show
+                        self._question_is_already_resolved = True
+                        
+                    
+                    if num_to_delete == 1: text = 'Send this file to the trash?'
+                    else: text = 'Send these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files to the trash?'
+                    
+                elif possible_file_service_key == CC.TRASH_SERVICE_KEY:
+                    
+                    if num_to_delete == 1: text = 'Permanently delete this file?'
+                    else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
+                    
+                elif possible_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                    
+                    # do a physical delete, skipping trash
+                    # this is only a valid option when local delete has some values, but it applies to both local and trash, hence the combined local fsk
+                    
+                    if CC.LOCAL_FILE_SERVICE_KEY in keys_to_hashes and len( keys_to_hashes[ CC.LOCAL_FILE_SERVICE_KEY ] ) > 0:
+                        
+                        possible_file_service_key = 'physical_delete'
+                        
+                        if num_to_delete == 1: text = 'Permanently delete this file?'
+                        else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                else:
+                    
+                    if num_to_delete == 1: text = 'Admin-delete this file?'
+                    else: text = 'Admin-delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
+                    
+                
+                self._permitted_action_choices.append( ( text, ( possible_file_service_key, hashes, text ) ) )
+                
+            
+        
+        if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
+            
+            hashes = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
+            
+            num_to_delete = len( hashes )
+            
+            if len( hashes ) > 0:
+                
+                if num_to_delete == 1: text = 'Permanently delete this file and do not save a deletion record?'
+                else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
+                
+                self._permitted_action_choices.append( ( text, ( 'clear_delete', hashes, text ) ) )
+                
+            
+        
+        if len( self._permitted_action_choices ) == 0:
+            
+            raise HydrusExceptions.CancelledException( 'No valid delete choices!' )
+            
+        
+    
+    def _UpdateControls( self ):
+        
+        ( file_service_key, hashes, description ) = self._action_radio.GetChoice()
+        
+        reason_permitted = file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, 'physical_delete' )
+        
+        if reason_permitted:
+            
+            self._reason_radio.Enable()
+            
+        else:
+            
+            self._reason_radio.Disable()
+            self._custom_reason.Disable()
+            
+        
+        reason = self._reason_radio.GetChoice()
+        
+        if reason is None:
+            
+            self._custom_reason.Enable()
+            
+        else:
+            
+            self._custom_reason.Disable()
+            
+        
+    
+    def EventRadio( self, event ):
+        
+        self._UpdateControls()
+        
+    
+    def GetValue( self ):
+        
+        involves_physical_delete = False
+        
+        ( file_service_key, hashes, description ) = self._action_radio.GetChoice()
+        
+        reason = self._GetReason()
+        
+        local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
+        
+        if file_service_key in local_file_services:
+            
+            # split them into bits so we don't hang the gui with a huge delete transaction
+            
+            chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
+            
+            jobs = [ { file_service_key : [ content_update ] } for content_update in content_updates ]
+            
+            if file_service_key == CC.TRASH_SERVICE_KEY:
+                
+                involves_physical_delete = True
+                
+            
+        elif file_service_key == 'physical_delete':
+            
+            chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+            
+            jobs = []
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) for chunk_of_hashes in chunks_of_hashes ]
+            
+            jobs.extend( [ { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
+            jobs.extend( [ { CC.TRASH_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
+            
+            involves_physical_delete = True
+            
+        elif file_service_key == 'clear_delete':
+            
+            chunks_of_hashes = list( HydrusData.SplitListIntoChunks( hashes, 64 ) ) # iterator, so list it to use it more than once, jej
+            
+            jobs = []
+            
+            # no reason, since pointless
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
+            
+            jobs.extend( [ { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } for content_update in content_updates ] )
+            jobs.extend( [ { CC.TRASH_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', chunk_of_hashes ) ) for chunk_of_hashes in chunks_of_hashes ]
+            
+            jobs.extend( [ { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ content_update ] } for content_update in content_updates ] )
+            
+            involves_physical_delete = True
+            
+        else:
+            
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'admin' ) ]
+            
+            jobs = [ { file_service_key : content_updates } ]
+            
+        
+        return ( involves_physical_delete, jobs )
+        
+    
+    def QuestionIsAlreadyResolved( self ):
+        
+        return self._question_is_already_resolved
         
     
 class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):

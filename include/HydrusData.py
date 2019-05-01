@@ -1428,7 +1428,7 @@ class ContentUpdate( object ):
     
     def __repr__( self ):
         
-        return 'Content Update: ' + str( ( self._data_type, self._action, self._row ) )
+        return 'Content Update: ' + str( ( self._data_type, self._action, self._row, self._reason ) )
         
     
     def GetAction( self ):

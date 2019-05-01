@@ -288,6 +288,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyClosedPage', 'notify_closed_page' )
         self._controller.sub( self, 'NotifyDeletedPage', 'notify_deleted_page' )
+        self._controller.sub( self, 'NotifyNewExportFolders', 'notify_new_export_folders' )
         self._controller.sub( self, 'NotifyNewImportFolders', 'notify_new_import_folders' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'NotifyNewPages', 'notify_new_pages' )
@@ -366,7 +367,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
         library_versions.append( ( 'wx', wx.version() ) )
-        library_versions.append( ( 'temp dir', ClientPaths.GetCurrentTempDir() ) )
+        library_versions.append( ( 'temp dir', HydrusPaths.GetCurrentTempDir() ) )
         
         import locale
         
@@ -886,11 +887,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         else:
             
             import_folder = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
-            
-            if import_folder.Paused():
-                
-                import_folder.PausePlay()
-                
             
             import_folders = [ import_folder ]
             
@@ -1461,8 +1457,29 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check import folder now' )
                 
-                ClientGUIMenus.AppendSeparator( i_and_e_submenu )
+            
+            export_folder_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+            
+            if len( export_folder_names ) > 0:
                 
+                submenu = wx.Menu()
+                
+                if len( export_folder_names ) > 1:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'run all', 'Run all export folders.', self._RunExportFolder )
+                    
+                    ClientGUIMenus.AppendSeparator( submenu )
+                    
+                
+                for name in export_folder_names:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Check this export folder now.', self._RunExportFolder, name )
+                    
+                
+                ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check export folder now' )
+                
+            
+            ClientGUIMenus.AppendSeparator( i_and_e_submenu )
             
             ClientGUIMenus.AppendMenuItem( self, i_and_e_submenu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
             ClientGUIMenus.AppendMenuItem( self, i_and_e_submenu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
@@ -3509,6 +3526,34 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         frame.SetPanel( panel )
         
     
+    def _RunExportFolder( self, name = None ):
+        
+        if self._controller.options[ 'pause_export_folders_sync' ]:
+            
+            HydrusData.ShowText( 'Export folders are currently paused under the \'file\' menu. Please unpause them and try this again.' )
+            
+        
+        if name is None:
+            
+            export_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+            
+        else:
+            
+            export_folder = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
+            
+            export_folders = [ export_folder ]
+            
+        
+        for export_folder in export_folders:
+            
+            export_folder.RunNow()
+            
+            self._controller.WriteSynchronous( 'serialisable', export_folder )
+            
+        
+        self._controller.pub( 'notify_new_export_folders' )
+        
+    
     def _RunUITest( self ):
         
         def wx_open_pages():
@@ -4703,6 +4748,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._DestroyPages( ( page, ) )
         
         self._DirtyMenu( 'pages' )
+        
+        self._menu_updater.Update()
+        
+    
+    def NotifyNewExportFolders( self ):
+        
+        self._DirtyMenu( 'file' )
         
         self._menu_updater.Update()
         

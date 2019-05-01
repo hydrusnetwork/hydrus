@@ -127,7 +127,7 @@ def DAEMONDownloadFiles( controller ):
                         
                         try:
                             
-                            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+                            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                             
                             try:
                                 

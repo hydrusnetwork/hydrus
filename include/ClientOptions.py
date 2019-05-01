@@ -101,6 +101,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
         
+        self._dictionary[ 'booleans' ][ 'use_advanced_file_deletion_dialog' ] = False
+        
         self._dictionary[ 'booleans' ][ 'show_new_on_file_seed_short_summary' ] = False
         self._dictionary[ 'booleans' ][ 'show_deleted_on_file_seed_short_summary' ] = False
         
@@ -268,7 +270,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
         self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
         self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'temp_path_override' ] = None
         self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
         self._dictionary[ 'noneable_strings' ][ 'last_png_export_dir' ] = None
         self._dictionary[ 'noneable_strings' ][ 'media_background_bmp_path' ] = None
@@ -285,12 +286,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'thumbnail_scroll_rate' ] = '1.0'
         self._dictionary[ 'strings' ][ 'pause_character' ] = '\u23F8'
         self._dictionary[ 'strings' ][ 'stop_character' ] = '\u23F9'
-        self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'artstation artist lookup'
+        self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'safebooru tag search'
         
         self._dictionary[ 'string_list' ] = {}
         
         self._dictionary[ 'string_list' ][ 'default_media_viewer_custom_shortcuts' ] = []
         self._dictionary[ 'string_list' ][ 'favourite_tags' ] = []
+        self._dictionary[ 'string_list' ][ 'advanced_file_deletion_reasons' ] = [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ]
         
         #
         
@@ -406,6 +408,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'deeply_nested_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'regular_center_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
         
         #
         

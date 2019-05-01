@@ -782,6 +782,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def CheckNow( self ):
         
+        self._paused = False
         self._check_now = True
         
     

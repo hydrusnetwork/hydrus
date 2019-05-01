@@ -29,7 +29,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ]
+        columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'paused', 8 ), ( 'period', 16 ), ( 'phrase', 20 ) ]
         
         self._export_folders = ClientGUIListCtrl.BetterListCtrl( self._export_folders_panel, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -87,7 +87,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertExportFolderToListCtrlTuples( self, export_folder ):
         
-        ( name, path, export_type, delete_from_client_after_export, file_search_context, period, phrase ) = export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, last_checked, paused, run_now ) = export_folder.ToTuple()
         
         if export_type == HC.EXPORT_FOLDER_TYPE_REGULAR:
             
@@ -105,13 +105,34 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_file_search_context = ', '.join( predicate.ToString( with_count = False ) for predicate in file_search_context.GetPredicates() )
         
-        pretty_period = HydrusData.TimeDeltaToPrettyTimeDelta( period )
+        if run_regularly:
+            
+            pretty_period = HydrusData.TimeDeltaToPrettyTimeDelta( period )
+            
+        else:
+            
+            pretty_period = 'not running regularly'
+            
+        
+        if run_now:
+            
+            pretty_period += ' (running after dialog ok)'
+            
+        
+        if paused:
+            
+            pretty_paused = 'yes'
+            
+        else:
+            
+            pretty_paused = ''
+            
         
         pretty_phrase = phrase
         
-        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase )
+        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_paused, pretty_period, pretty_phrase )
         
-        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, period, phrase )
+        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, paused, period, phrase )
         
         return ( display_tuple, sort_tuple )
         
@@ -168,11 +189,11 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folder = export_folder
         
-        ( name, path, export_type, delete_from_client_after_export, file_search_context, period, phrase ) = self._export_folder.ToTuple()
+        ( name, path, export_type, delete_from_client_after_export, file_search_context, run_regularly, period, phrase, self._last_checked, paused, run_now ) = self._export_folder.ToTuple()
         
         self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
         
-        self._name = wx.TextCtrl( self._path_box)
+        self._name = wx.TextCtrl( self._path_box )
         
         self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
         
@@ -204,6 +225,12 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._period = ClientGUITime.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
+        self._run_regularly = wx.CheckBox( self._period_box )
+        
+        self._paused = wx.CheckBox( self._period_box )
+        
+        self._run_now = wx.CheckBox( self._period_box )
+        
         #
         
         self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
@@ -223,6 +250,12 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._delete_from_client_after_export.SetValue( delete_from_client_after_export )
         
         self._period.SetValue( period )
+        
+        self._run_regularly.SetValue( run_regularly )
+        
+        self._paused.SetValue( paused )
+        
+        self._run_now.SetValue( run_now )
         
         self._pattern.SetValue( phrase )
         
@@ -264,6 +297,16 @@ If you select synchronise, be careful!'''
         self._query_box.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'run regularly?: ', self._run_regularly ) )
+        rows.append( ( 'paused: ', self._paused ) )
+        rows.append( ( 'run on dialog ok: ', self._run_now ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._period_box, rows )
+        
+        self._period_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -352,6 +395,8 @@ If you select synchronise, be careful!'''
         
         file_search_context.SetPredicates( predicates )
         
+        run_regularly = self._run_regularly.GetValue()
+        
         period = self._period.GetValue()
         
         phrase = self._pattern.GetValue()
@@ -372,7 +417,11 @@ If you select synchronise, be careful!'''
             raise HydrusExceptions.VetoException( 'Could not parse that export phrase! ' + str( e ) )
             
         
-        export_folder = ClientExporting.ExportFolder( name, path = path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, period = period, phrase = phrase )
+        run_now = self._run_now.GetValue()
+        
+        paused = self._paused.GetValue()
+        
+        export_folder = ClientExporting.ExportFolder( name, path = path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, run_regularly = run_regularly, period = period, phrase = phrase, last_checked = self._last_checked, paused = paused, run_now = run_now )
         
         return export_folder
         

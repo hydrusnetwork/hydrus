@@ -1032,6 +1032,12 @@ class DB( HydrusDB.HydrusDB ):
             dupe_hash_ids.intersection_update( allowed_hash_ids )
             
         
+        dupe_hash_ids.discard( hash_id )
+        
+        dupe_hash_ids = list( dupe_hash_ids )
+        
+        dupe_hash_ids.insert( 0, hash_id )
+        
         dupe_hashes = self._GetHashes( dupe_hash_ids )
         
         return dupe_hashes
@@ -1049,13 +1055,13 @@ class DB( HydrusDB.HydrusDB ):
             service_id = self._GetServiceId( file_service_key )
             
             table_join = 'duplicate_pairs, current_files AS current_files_smaller, current_files AS current_files_larger ON ( smaller_hash_id = current_files_smaller.hash_id AND larger_hash_id = current_files_larger.hash_id )'
-            predicate_string = 'current_files_smaller.service_id = ' + str( service_id ) + ' AND current_files_larger.service_id = ' + str( service_id )
+            predicate_string = 'current_files_smaller.service_id = {} AND current_files_larger.service_id = {}'.format( service_id, service_id )
             
         
         return ( table_join, predicate_string )
         
     
-    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( self, results_table_name, both_files_match ):
+    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( self, file_service_key, results_table_name, both_files_match ):
         
         if both_files_match:
             
@@ -1064,8 +1070,10 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            table_join = 'duplicate_pairs, {} ON ( smaller_hash_id = {}.hash_id OR larger_hash_id = {}.hash_id )'.format( results_table_name, results_table_name, results_table_name )
-            predicate_string = '1=1'
+            service_id = self._GetServiceId( file_service_key )
+            
+            table_join = 'duplicate_pairs, {}, current_files ON ( ( smaller_hash_id = {}.hash_id AND larger_hash_id = current_files.hash_id ) OR ( smaller_hash_id = current_files.hash_id AND larger_hash_id = {}.hash_id ) )'.format( results_table_name, results_table_name, results_table_name )
+            predicate_string = 'current_files.service_id = {}'.format( service_id )
             
         
         return ( table_join, predicate_string )
@@ -1248,11 +1256,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 is_complicated_search = True
                 
-                query_hash_ids = self._GetHashIdsFromQuery( search_context )
+                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
                 
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( temp_table_name, both_files_match )
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
                 
             
             potential_hash_ids = set()
@@ -1280,6 +1288,11 @@ class DB( HydrusDB.HydrusDB ):
                     potential_hash_ids.add( larger_hash_id )
                     
                 
+            
+        
+        if len( potential_hash_ids ) == 0:
+            
+            return []
             
         
         hash_id = random.choice( list( potential_hash_ids ) )
@@ -1317,21 +1330,21 @@ class DB( HydrusDB.HydrusDB ):
         
         # now we will fetch some unknown pairs
         
+        file_service_key = search_context.GetFileServiceKey()
+        
         with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
             
             if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
-                
-                file_service_key = search_context.GetFileServiceKey()
                 
                 ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
                 
             else:
                 
-                query_hash_ids = self._GetHashIdsFromQuery( search_context )
+                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
                 
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( temp_table_name, both_files_match )
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
                 
             
             # distinct important here for the search results table join
@@ -1409,21 +1422,21 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesGetUnknownDuplicatesCount( self, search_context, both_files_match ):
         
+        file_service_key = search_context.GetFileServiceKey()
+        
         with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
             
             if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
-                
-                file_service_key = search_context.GetFileServiceKey()
                 
                 ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
                 
             else:
                 
-                query_hash_ids = self._GetHashIdsFromQuery( search_context )
+                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
                 
                 self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
                 
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( temp_table_name, both_files_match )
+                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
                 
             
             # distinct important here for the search results table join
@@ -4678,7 +4691,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromQuery( self, search_context, job_key = None, query_hash_ids = None ):
+    def _GetHashIdsFromQuery( self, search_context, job_key = None, query_hash_ids = None, apply_implicit_limit = True ):
         
         if job_key is None:
             
@@ -5470,7 +5483,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        limit = system_predicates.GetLimit()
+        limit = system_predicates.GetLimit( apply_implicit_limit = apply_implicit_limit )
         
         if limit is not None and limit <= len( query_hash_ids ):
             
@@ -6401,11 +6414,20 @@ class DB( HydrusDB.HydrusDB ):
         return media_results
         
     
-    def _GetMediaResultsFromHashes( self, hashes ):
+    def _GetMediaResultsFromHashes( self, hashes, sorted = False ):
         
         query_hash_ids = set( self._GetHashIds( hashes ) )
         
-        return self._GetMediaResults( query_hash_ids )
+        media_results = self._GetMediaResults( query_hash_ids )
+        
+        if sorted:
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            media_results = [ hashes_to_media_results[ hash ] for hash in hashes if hash in hashes_to_media_results ]
+            
+        
+        return media_results
         
     
     def _GetMime( self, hash_id ):
@@ -10182,9 +10204,12 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SetLocalFileDeletionReason( self, hash_ids, reason ):
         
-        reason_id = self._GetTextId( reason )
-        
-        self._c.executemany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
+        if reason is not None:
+            
+            reason_id = self._GetTextId( reason )
+            
+            self._c.executemany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
+            
         
     
     def _SetPassword( self, password ):
@@ -10414,216 +10439,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 292:
-            
-            if HC.SOFTWARE_VERSION < 296: # I don't need this info fifty weeks from now, so we'll just do it for a bit
-                
-                try:
-                    
-                    local_file_service_ids = self._GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) )
-                    
-                    local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id IN ' + HydrusData.SplayListForDB( local_file_service_ids ) + ';' ) )
-                    
-                    combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                    combined_local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( combined_local_file_service_id, ) ) )
-                    
-                    num_in_local_not_in_combined = len( local_hash_ids.difference( combined_local_hash_ids ) )
-                    num_in_combined_not_in_local = len( combined_local_hash_ids.difference( local_hash_ids ) )
-                    
-                    del local_hash_ids
-                    del combined_local_hash_ids
-                    
-                    if num_in_local_not_in_combined > 0 or num_in_combined_not_in_local > 0:
-                        
-                        message = 'While updating, hydrus counted a mismatch in your files. This likely means an orphan that can be cleaned up in a future version.'
-                        message += os.linesep * 2
-                        message += 'You have ' + HydrusData.ToHumanInt( num_in_local_not_in_combined ) + ' files in the local services but not in the combine service.'
-                        message += 'You have ' + HydrusData.ToHumanInt( num_in_combined_not_in_local ) + ' files in the combined services but not in the local services.'
-                        message += os.linesep * 2
-                        message += 'Please let hydrus dev know these numbers.'
-                        
-                        self.pub_initial_message( message )
-                        
-                    
-                except Exception as e:
-                    
-                    HydrusData.PrintException( e )
-                    
-                
-            
-            #
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                #
-                
-                url_matches = ClientDefaults.GetDefaultURLMatches()
-                
-                url_matches = [ url_match for url_match in url_matches if '420chan' in url_match.GetName() or url_match.GetName() == '4chan thread' ]
-                
-                existing_url_matches = [ url_match for url_match in domain_manager.GetURLMatches() if url_match.GetName() != '4chan thread' ]
-                
-                url_matches.extend( existing_url_matches )
-                
-                domain_manager.SetURLMatches( url_matches )
-                
-                #
-                
-                parsers = ClientDefaults.GetDefaultParsers()
-                
-                domain_manager.SetParsers( parsers )
-                
-                #
-                
-                domain_manager.TryToLinkURLMatchesAndParsers()
-                
-                #
-                
-                network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
-                
-                #
-                
-                # sank changed again, wew
-                
-                sank_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
-                
-                if sank_network_context in network_contexts_to_custom_header_dicts:
-                    
-                    custom_header_dict = network_contexts_to_custom_header_dicts[ sank_network_context ]
-                    
-                    if 'User-Agent' in custom_header_dict:
-                        
-                        ( value, approved, reason ) = custom_header_dict[ 'User-Agent' ]
-                        
-                        if value.startswith( 'SCChannelApp' ):
-                            
-                            value = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0'
-                            
-                            custom_header_dict[ 'User-Agent' ] = ( value, approved, reason )
-                            
-                        
-                    
-                
-                if ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT in network_contexts_to_custom_header_dicts:
-                    
-                    custom_header_dict = network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
-                    
-                    if 'User-Agent' in custom_header_dict:
-                        
-                        ( value, approved, reason ) = custom_header_dict[ 'User-Agent' ]
-                        
-                        if value == 'hydrus client':
-                            
-                            value = 'Mozilla/5.0 (compatible; Hydrus Client)'
-                            
-                            custom_header_dict[ 'User-Agent' ] = ( value, approved, reason )
-                            
-                        
-                    
-                
-                domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except:
-                
-                HydrusData.PrintException( e )
-                
-                self.pub_initial_message( 'The client was unable to add some new domain and parsing data. The error has been written to the log--hydrus_dev would be interested in this information.' )
-                
-            
-            #
-            
-            try:
-                
-                options = self._GetOptions()
-                
-                options[ 'file_system_predicates' ][ 'age' ] = ( '<', 'delta', ( 0, 0, 7, 0 ) )
-                
-                self._SaveOptions( options )
-                
-            except:
-                
-                HydrusData.PrintException( e )
-                
-                self.pub_initial_message( 'The client was unable to fix a predicate issue. The error has been written to the log--hydrus_dev would be interested in this information.' )
-                
-            
-        
-        if version == 294:
-            
-            try:
-            
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                #
-                
-                existing_parsers = domain_manager.GetParsers()
-                
-                new_parsers = list( existing_parsers )
-                
-                default_parsers = ClientDefaults.GetDefaultParsers()
-                
-                interesting_name = '420chan'
-                
-                if True not in ( interesting_name in parser.GetName() for parser in existing_parsers ): # if not already in there
-                    
-                    interesting_new_parsers = [ parser for parser in default_parsers if interesting_name in parser.GetName() ] # add it
-                    
-                    new_parsers.extend( interesting_new_parsers )
-                    
-                
-                domain_manager.SetParsers( new_parsers )
-                
-                #
-                
-                domain_manager.TryToLinkURLMatchesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except:
-                
-                HydrusData.PrintException( e )
-                
-                self.pub_initial_message( 'The client was unable to add some new parsing data. The error has been written to the log--hydrus_dev would be interested in this information.' )
-                
-            
-        
-        if version == 296:
-            
-            try:
-                
-                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-                
-                for subscription in subscriptions:
-                    
-                    subscription.ReviveDead()
-                    
-                    self._SetJSONDump( subscription )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.Print( 'While attempting to revive dead subscription queries, I had this problem:' )
-                HydrusData.PrintException( e )
-                
-            
-            #
-            
-            self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER PRIMARY KEY, notes TEXT );' )
-            
-            dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.LOCAL_NOTES )
-            
-            self._AddService( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, 'local notes', dictionary )
-            
         
         if version == 300:
             
@@ -12358,6 +12173,28 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 349:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                default_gug = new_options.GetString( 'default_gug_name' )
+                
+                if default_gug == 'artstation artist lookup':
+                    
+                    new_options.SetKey( 'default_gug_key', b'00' )
+                    new_options.SetString( 'default_gug_name', 'safebooru tag search' )
+                    
+                    self._SetJSONDump( new_options )
+                    
+                
+            except Exception as e:
+                
+                pass # nbd
                 
             
         

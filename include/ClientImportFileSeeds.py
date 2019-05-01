@@ -535,7 +535,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self.AddURL( file_url )
         
-        ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -819,7 +819,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
             try:
                 

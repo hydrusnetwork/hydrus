@@ -401,7 +401,7 @@ def CreateManagementPanel( parent, page, controller, management_controller ):
         
         jpeg = self._controller.DoHTTP( HC.GET, 'https://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
-        ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
@@ -1384,7 +1384,21 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         hashes = self._controller.Read( 'random_unknown_duplicate_hashes', file_search_context, both_files_match )
         
-        media_results = self._controller.Read( 'media_results', hashes )
+        if len( hashes ) == 0:
+            
+            wx.MessageBox( 'No files were found. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
+            
+            return
+            
+        
+        media_results = self._controller.Read( 'media_results', hashes, sorted = True )
+        
+        if len( media_results ) == 0:
+            
+            wx.MessageBox( 'Files were found, but no media results could be loaded for them. Try refreshing the count, and if this keeps happening, please let hydrus_dev know.' )
+            
+            return
+            
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, media_results )
         
@@ -2249,13 +2263,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             self._ClearExistingHighlightAndPanel()
             
-            media_results = self._controller.Read( 'media_results', hashes )
+            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-            
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
             
             self._page.SwapMediaPanel( panel )
             
@@ -2941,13 +2951,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             self._ClearExistingHighlightAndPanel()
             
-            media_results = self._controller.Read( 'media_results', hashes )
+            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
             
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-            
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
             
             self._page.SwapMediaPanel( panel )
             
@@ -4494,7 +4500,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         HG.client_controller.file_viewing_stats_manager.Flush()
         
-        query_hash_ids = controller.Read( 'file_query_ids', search_context, query_job_key )
+        query_hash_ids = controller.Read( 'file_query_ids', search_context, job_key = query_job_key )
         
         if query_job_key.IsCancelled():
             
