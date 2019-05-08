@@ -170,7 +170,7 @@ class FileImportJob( object ):
         self._pre_import_status = None
         
         self._file_info = None
-        self._thumbnail = None
+        self._thumbnail_bytes = None
         self._phashes = None
         self._extra_hashes = None
         
@@ -180,6 +180,85 @@ class FileImportJob( object ):
         ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
         
         self._file_import_options.CheckFileIsValid( size, mime, width, height )
+        
+    
+    def DoWork( self ):
+        
+        if HG.file_report_mode:
+            
+            HydrusData.ShowText( 'New file import job!' )
+            
+        
+        ( pre_import_status, hash, note ) = self.GenerateHashAndStatus()
+        
+        if self.IsNewToDB():
+            
+            self.GenerateInfo()
+            
+            self.CheckIsGoodToImport()
+            
+            mime = self.GetMime()
+            
+            HG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
+            
+            ( import_status, note ) = HG.client_controller.WriteSynchronous( 'import_file', self )
+            
+        else:
+            
+            import_status = pre_import_status
+            
+        
+        self.PubsubContentUpdates()
+        
+        return ( import_status, hash, note )
+        
+    
+    def GenerateHashAndStatus( self ):
+        
+        HydrusImageHandling.ConvertToPngIfBmp( self._temp_path )
+        
+        self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
+        
+        ( self._pre_import_status, hash, note ) = HG.client_controller.Read( 'hash_status', 'sha256', self._hash, prefix = 'file recognised' )
+        
+        return ( self._pre_import_status, self._hash, note )
+        
+    
+    def GenerateInfo( self ):
+        
+        mime = HydrusFileHandling.GetMime( self._temp_path )
+        
+        new_options = HG.client_controller.new_options
+        
+        if mime in HC.DECOMPRESSION_BOMB_IMAGES and not self._file_import_options.AllowsDecompressionBombs():
+            
+            if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
+                
+                raise HydrusExceptions.DecompressionBombException( 'Image seems to be a Decompression Bomb!' )
+                
+            
+        
+        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime )
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+            
+            target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
+            
+            percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+            
+            self._thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in )
+            
+        
+        if mime in HC.MIMES_WE_CAN_PHASH:
+            
+            self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
+            
+        
+        self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
     
     def GetExtraHashes( self ):
@@ -219,11 +298,6 @@ class FileImportJob( object ):
         return self._phashes
         
     
-    def GetTempPathAndThumbnail( self ):
-        
-        return ( self._temp_path, self._thumbnail )
-        
-    
     def PubsubContentUpdates( self ):
         
         if self._pre_import_status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
@@ -253,52 +327,6 @@ class FileImportJob( object ):
             
         
         return False
-        
-    
-    def GenerateHashAndStatus( self ):
-        
-        HydrusImageHandling.ConvertToPngIfBmp( self._temp_path )
-        
-        self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
-        
-        ( self._pre_import_status, hash, note ) = HG.client_controller.Read( 'hash_status', 'sha256', self._hash, prefix = 'file recognised' )
-        
-        return ( self._pre_import_status, self._hash, note )
-        
-    
-    def GenerateInfo( self ):
-        
-        mime = HydrusFileHandling.GetMime( self._temp_path )
-        
-        new_options = HG.client_controller.new_options
-        
-        if mime in HC.DECOMPRESSION_BOMB_IMAGES and not self._file_import_options.AllowsDecompressionBombs():
-            
-            if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
-                
-                raise HydrusExceptions.DecompressionBombException( 'Image seems to be a Decompression Bomb!' )
-                
-            
-        
-        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime )
-        
-        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
-        
-        if mime in HC.MIMES_WITH_THUMBNAILS:
-            
-            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-            
-            percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
-            
-            self._thumbnail = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, bounding_dimensions, mime, width, height, duration, num_frames, percentage_in = percentage_in )
-            
-        
-        if mime in HC.MIMES_WE_CAN_PHASH:
-            
-            self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
-            
-        
-        self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
     
 FILE_SEED_TYPE_HDD = 0
@@ -394,7 +422,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
-            except HydrusExceptions.URLMatchException:
+            except HydrusExceptions.URLClassException:
                 
                 continue # not a url--something like "file:///C:/Users/Tall%20Man/Downloads/maxresdefault.jpg" ha ha ha
                 
@@ -714,7 +742,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             if url != my_url:
                                 
-                                my_url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( my_url )
+                                my_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( my_url )
                                 
                                 ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
                                 
@@ -724,9 +752,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                     
                                     if this_files_url != my_url:
                                         
-                                        this_url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( this_files_url )
+                                        this_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( this_files_url )
                                         
-                                        if my_url_match == this_url_match:
+                                        if my_url_class == this_url_class:
                                             
                                             # oh no, the file this source url refers to has a different known url in this same domain
                                             # it is more likely that an edit on this site points to the original elsewhere
@@ -787,7 +815,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         file_import_job = FileImportJob( temp_path, file_import_options )
         
-        ( status, hash, note ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+        ( status, hash, note ) = file_import_job.DoWork()
         
         self.SetStatus( status, note = note )
         self.SetHash( hash )

@@ -2014,14 +2014,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             submenu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
             
             ClientGUIMenus.AppendSeparator( submenu )
@@ -2485,7 +2485,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             message += os.linesep * 2
             message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
             
-            raise HydrusExceptions.URLMatchException( message )
+            raise HydrusExceptions.URLClassException( message )
             
         
         if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
@@ -2616,22 +2616,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             domain_manager = self._controller.network_engine.domain_manager
             
-            ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options ) = domain_manager.GetDefaultTagImportOptions()
+            ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ) = domain_manager.GetDefaultTagImportOptions()
             
-            url_matches = domain_manager.GetURLMatches()
+            url_classes = domain_manager.GetURLClasses()
             parsers = domain_manager.GetParsers()
             
-            url_match_keys_to_parser_keys = domain_manager.GetURLMatchKeysToParserKeys()
+            url_class_keys_to_parser_keys = domain_manager.GetURLClassKeysToParserKeys()
             
-            panel = ClientGUIScrolledPanelsEdit.EditDefaultTagImportOptionsPanel( dlg, url_matches, parsers, url_match_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options )
+            panel = ClientGUIScrolledPanelsEdit.EditDefaultTagImportOptionsPanel( dlg, url_classes, parsers, url_class_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options ) = panel.GetValue()
+                ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options ) = panel.GetValue()
                 
-                domain_manager.SetDefaultTagImportOptions( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options )
+                domain_manager.SetDefaultTagImportOptions( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_tag_import_options )
                 
             
         
@@ -2648,20 +2648,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
             
-            url_matches = domain_manager.GetURLMatches()
+            url_classes = domain_manager.GetURLClasses()
             
-            url_match_keys_to_display = domain_manager.GetURLMatchKeysToDisplay()
+            url_class_keys_to_display = domain_manager.GetURLClassKeysToDisplay()
             
-            panel = ClientGUIScrolledPanelsEdit.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_matches, url_match_keys_to_display )
+            panel = ClientGUIScrolledPanelsEdit.EditDownloaderDisplayPanel( dlg, self._controller.network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( gug_keys_to_display, url_match_keys_to_display ) = panel.GetValue()
+                ( gug_keys_to_display, url_class_keys_to_display ) = panel.GetValue()
                 
                 domain_manager.SetGUGKeysToDisplay( gug_keys_to_display )
-                domain_manager.SetURLMatchKeysToDisplay( url_match_keys_to_display )
+                domain_manager.SetURLClassKeysToDisplay( url_class_keys_to_display )
                 
             
         
@@ -3213,7 +3213,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ManageURLMatches( self ):
+    def _ManageURLClasses( self ):
         
         title = 'manage url classes'
         
@@ -3221,22 +3221,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             domain_manager = self._controller.network_engine.domain_manager
             
-            url_matches = domain_manager.GetURLMatches()
+            url_classes = domain_manager.GetURLClasses()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLMatchesPanel( dlg, url_matches )
+            panel = ClientGUIScrolledPanelsEdit.EditURLClassesPanel( dlg, url_classes )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                url_matches = panel.GetValue()
+                url_classes = panel.GetValue()
                 
-                domain_manager.SetURLMatches( url_matches )
+                domain_manager.SetURLClasses( url_classes )
                 
             
         
     
-    def _ManageURLMatchLinks( self ):
+    def _ManageURLClassLinks( self ):
         
         title = 'manage url class links'
         
@@ -3244,20 +3244,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             domain_manager = self._controller.network_engine.domain_manager
             
-            url_matches = domain_manager.GetURLMatches()
+            url_classes = domain_manager.GetURLClasses()
             parsers = domain_manager.GetParsers()
             
-            url_match_keys_to_parser_keys = domain_manager.GetURLMatchKeysToParserKeys()
+            url_class_keys_to_parser_keys = domain_manager.GetURLClassKeysToParserKeys()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_matches, parsers, url_match_keys_to_parser_keys )
+            panel = ClientGUIScrolledPanelsEdit.EditURLClassLinksPanel( dlg, self._controller.network_engine, url_classes, parsers, url_class_keys_to_parser_keys )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                url_match_keys_to_parser_keys = panel.GetValue()
+                url_class_keys_to_parser_keys = panel.GetValue()
                 
-                domain_manager.SetURLMatchKeysToParserKeys( url_match_keys_to_parser_keys )
+                domain_manager.SetURLClassKeysToParserKeys( url_class_keys_to_parser_keys )
                 
             
         
@@ -3681,7 +3681,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             for i in range( 16 ):
                 
-                t += 0.5
+                t += 1.0
                 
                 for j in range( i + 1 ):
                     
@@ -3692,12 +3692,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
                 
-                t += 0.5
+                t += 1.0
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
                 
             
-            t += 0.5
+            t += 1.0
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_DOWN )
             

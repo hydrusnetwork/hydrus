@@ -50,7 +50,7 @@ def FrameIndexOutOfRange( index, range_start, range_end ):
     
 def GenerateHydrusBitmap( path, mime, compressed = True ):
     
-    numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+    numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
     
     return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
     
@@ -94,7 +94,7 @@ class ImageRenderer( object ):
     
     def _Initialise( self ):
         
-        self._numpy_image = ClientImageHandling.GenerateNumpyImage( self._path, self._mime )
+        self._numpy_image = ClientImageHandling.GenerateNumPyImage( self._path, self._mime )
         
     
     def GetEstimatedMemoryFootprint( self ):
@@ -129,7 +129,7 @@ class ImageRenderer( object ):
             
         else:
             
-            wx_numpy_image = ClientImageHandling.ResizeNumpyImageForMediaViewer( self._media.GetMime(), self._numpy_image, target_resolution )
+            wx_numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._media.GetMime(), self._numpy_image, target_resolution )
             
         
         ( wx_height, wx_width, wx_depth ) = wx_numpy_image.shape

@@ -3091,6 +3091,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         CanvasWithHovers.__init__( self, parent )
         
+        self._hover_duplicates = ClientGUIHoverFrames.FullscreenHoverFrameRightDuplicates( self, self, self._canvas_key )
+        
         self._file_search_context = file_search_context
         self._both_files_match = both_files_match
         
@@ -3293,33 +3295,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 self._ProcessPair( duplicate_type, duplicate_action_options )
                 
             
-        
-    
-    def _DrawAdditionalTopMiddleInfo( self, dc, current_y ):
-        
-        if self._current_media is not None:
-            
-            shown_media = self._current_media
-            comparison_media = self._media_list.GetNext( shown_media )
-            
-            if shown_media != comparison_media:
-                
-                ( statements, score ) = ClientMedia.GetDuplicateComparisonStatements( shown_media, comparison_media )
-                
-                ( client_width, client_height ) = self.GetClientSize()
-                
-                for statement in statements:
-                    
-                    ( width, height ) = dc.GetTextExtent( statement )
-                    
-                    dc.DrawText( statement, ( client_width - width ) // 2, current_y )
-                    
-                    current_y += height + 3
-                    
-                
-            
-        
-        return current_y
         
     
     def _DrawBackgroundDetails( self, dc ):
@@ -3599,7 +3574,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_media = ClientMedia.MediaSingleton( first_media_result )
             second_media = ClientMedia.MediaSingleton( second_media_result )
             
-            ( statements, score ) = ClientMedia.GetDuplicateComparisonStatements( first_media, second_media )
+            score = ClientMedia.GetDuplicateComparisonScore( first_media, second_media )
             
             if score > 0:
                 

@@ -61,7 +61,7 @@ def CopyMediaURLs( medias ):
     
     HG.client_controller.pub( 'clipboard', 'text', urls_string )
     
-def CopyMediaURLMatchURLs( medias, url_match ):
+def CopyMediaURLClassURLs( medias, url_class ):
     
     urls = set()
     
@@ -71,7 +71,7 @@ def CopyMediaURLMatchURLs( medias, url_match ):
         
         for url in media_urls:
             
-            if url_match.Matches( url ):
+            if url_class.Matches( url ):
                 
                 urls.add( url )
                 
@@ -97,15 +97,15 @@ def DoOpenKnownURLFromShortcut( win, media ):
         
         for url in urls:
             
-            url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url )
+            url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
             
-            if url_match is None:
+            if url_class is None:
                 
                 unmatched_urls.append( url )
                 
             else:
                 
-                label = url_match.GetName() + ': ' + url
+                label = url_class.GetName() + ': ' + url
                 
                 matched_labels_and_urls.append( ( label, url ) )
                 
@@ -226,7 +226,7 @@ def OpenMediaURLs( medias ):
     
     OpenURLs( urls )
     
-def OpenMediaURLMatchURLs( medias, url_match ):
+def OpenMediaURLClassURLs( medias, url_class ):
     
     urls = set()
     
@@ -236,7 +236,7 @@ def OpenMediaURLMatchURLs( medias, url_match ):
         
         for url in media_urls:
             
-            if url_match.Matches( url ):
+            if url_class.Matches( url ):
                 
                 urls.add( url )
                 
@@ -300,15 +300,15 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         for url in focus_urls:
             
-            url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url )
+            url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
             
-            if url_match is None:
+            if url_class is None:
                 
                 focus_unmatched_urls.append( url )
                 
             else:
                 
-                label = url_match.GetName() + ': ' + url
+                label = url_class.GetName() + ': ' + url
                 
                 focus_matched_labels_and_urls.append( ( label, url ) )
                 
@@ -324,8 +324,8 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
     
     # figure out which urls these selected files have
     
-    selected_media_url_matches = set()
-    multiple_or_unmatching_selection_url_matches = False
+    selected_media_url_classes = set()
+    multiple_or_unmatching_selection_url_classes = False
     
     if selected_media is not None and len( selected_media ) > 1:
         
@@ -348,26 +348,26 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             for url in media_urls:
                 
-                url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url )
+                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
                 
-                if url_match is None:
+                if url_class is None:
                     
-                    multiple_or_unmatching_selection_url_matches = True
+                    multiple_or_unmatching_selection_url_classes = True
                     
                 else:
                     
-                    selected_media_url_matches.add( url_match )
+                    selected_media_url_classes.add( url_class )
                     
                 
             
         
-        if len( selected_media_url_matches ) > 1:
+        if len( selected_media_url_classes ) > 1:
             
-            multiple_or_unmatching_selection_url_matches = True
+            multiple_or_unmatching_selection_url_classes = True
             
         
     
-    if len( focus_labels_and_urls ) > 0 or len( selected_media_url_matches ) > 0 or multiple_or_unmatching_selection_url_matches:
+    if len( focus_labels_and_urls ) > 0 or len( selected_media_url_classes ) > 0 or multiple_or_unmatching_selection_url_classes:
         
         urls_menu = wx.Menu()
         
@@ -387,16 +387,16 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         # copy this file's urls
         
-        there_are_focus_url_matches_to_action = len( focus_matched_labels_and_urls ) > 1
-        multiple_or_unmatching_focus_url_matches = len( focus_unmatched_urls ) > 0 and len( focus_labels_and_urls ) > 1 # if there are unmatched urls and more than one thing total
+        there_are_focus_url_classes_to_action = len( focus_matched_labels_and_urls ) > 1
+        multiple_or_unmatching_focus_url_classes = len( focus_unmatched_urls ) > 0 and len( focus_labels_and_urls ) > 1 # if there are unmatched urls and more than one thing total
         
-        if there_are_focus_url_matches_to_action or multiple_or_unmatching_focus_url_matches:
+        if there_are_focus_url_classes_to_action or multiple_or_unmatching_focus_url_classes:
             
             ClientGUIMenus.AppendSeparator( urls_visit_menu )
             ClientGUIMenus.AppendSeparator( urls_copy_menu )
             
         
-        if there_are_focus_url_matches_to_action:
+        if there_are_focus_url_classes_to_action:
             
             urls = [ url for ( label, url ) in focus_matched_labels_and_urls ]
             
@@ -411,7 +411,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             ClientGUIMenus.AppendMenuItem( win, urls_copy_menu, label, 'Copy these urls to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', urls_string )
             
         
-        if multiple_or_unmatching_focus_url_matches:
+        if multiple_or_unmatching_focus_url_classes:
             
             urls = [ url for ( label, url ) in focus_labels_and_urls ]
             
@@ -428,35 +428,35 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         # now by url match type
         
-        there_are_selection_url_matches_to_action = len( selected_media_url_matches ) > 0
+        there_are_selection_url_classes_to_action = len( selected_media_url_classes ) > 0
         
-        if there_are_selection_url_matches_to_action or multiple_or_unmatching_selection_url_matches:
+        if there_are_selection_url_classes_to_action or multiple_or_unmatching_selection_url_classes:
             
             ClientGUIMenus.AppendSeparator( urls_visit_menu )
             ClientGUIMenus.AppendSeparator( urls_copy_menu )
             
         
-        if there_are_selection_url_matches_to_action:
+        if there_are_selection_url_classes_to_action:
             
-            selected_media_url_matches = list( selected_media_url_matches )
+            selected_media_url_classes = list( selected_media_url_classes )
             
-            selected_media_url_matches.sort( key = lambda url_match: url_match.GetName() )
+            selected_media_url_classes.sort( key = lambda url_class: url_class.GetName() )
             
-            for url_match in selected_media_url_matches:
+            for url_class in selected_media_url_classes:
                 
-                label = 'open files\' ' + url_match.GetName() + ' urls in your web browser'
+                label = 'open files\' ' + url_class.GetName() + ' urls in your web browser'
                 
-                ClientGUIMenus.AppendMenuItem( win, urls_visit_menu, label, 'Open this url class in your web browser for all files.', OpenMediaURLMatchURLs, selected_media, url_match )
+                ClientGUIMenus.AppendMenuItem( win, urls_visit_menu, label, 'Open this url class in your web browser for all files.', OpenMediaURLClassURLs, selected_media, url_class )
                 
-                label = 'copy files\' ' + url_match.GetName() + ' urls'
+                label = 'copy files\' ' + url_class.GetName() + ' urls'
                 
-                ClientGUIMenus.AppendMenuItem( win, urls_copy_menu, label, 'Copy this url class for all files.', CopyMediaURLMatchURLs, selected_media, url_match )
+                ClientGUIMenus.AppendMenuItem( win, urls_copy_menu, label, 'Copy this url class for all files.', CopyMediaURLClassURLs, selected_media, url_class )
                 
             
         
         # now everything
         
-        if multiple_or_unmatching_selection_url_matches:
+        if multiple_or_unmatching_selection_url_classes:
             
             label = 'open all files\' urls'
             

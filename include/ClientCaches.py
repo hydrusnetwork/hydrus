@@ -84,7 +84,10 @@ def BuildSimpleChildrenToParents( pairs ):
             continue
             
         
-        if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
+        if parent in simple_children_to_parents and LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
+            
+            continue
+            
         
         simple_children_to_parents[ child ].add( parent )
         
@@ -185,13 +188,16 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     potential_loop_paths = { parent }
     
-    while len( potential_loop_paths.intersection( list(simple_children_to_parents.keys()) ) ) > 0:
+    while True:
         
         new_potential_loop_paths = set()
         
-        for potential_loop_path in potential_loop_paths.intersection( list(simple_children_to_parents.keys()) ):
+        for potential_loop_path in potential_loop_paths:
             
-            new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
+            if potential_loop_path in simple_children_to_parents:
+                
+                new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
+                
             
         
         potential_loop_paths = new_potential_loop_paths
@@ -200,9 +206,11 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
             
             return True
             
+        elif len( potential_loop_paths ) == 0:
+            
+            return False
+            
         
-    
-    return False
     
 class BitmapManager( object ):
     
@@ -604,11 +612,13 @@ class ClientFilesManager( object ):
         
         bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
         
+        target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
+        
         percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
         
         try:
             
-            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, bounding_dimensions, mime, width, height, duration, num_frames, percentage_in = percentage_in )
+            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, target_resolution, mime, duration, num_frames, percentage_in = percentage_in )
             
         except Exception as e:
             
@@ -956,6 +966,19 @@ class ClientFilesManager( object ):
             
         
     
+    def AddFile( self, hash, mime, source_path, thumbnail_bytes = None ):
+        
+        with self._rwlock.write:
+            
+            self._AddFile( hash, mime, source_path )
+            
+            if thumbnail_bytes is not None:
+                
+                self._AddThumbnailFromBytes( hash, thumbnail_bytes )
+                
+            
+        
+    
     def AddThumbnailFromBytes( self, hash, thumbnail_bytes ):
         
         with self._rwlock.write:
@@ -1226,47 +1249,6 @@ class ClientFilesManager( object ):
         return self._missing_locations
         
     
-    def ImportFile( self, file_import_job ):
-        
-        if HG.file_report_mode:
-            
-            HydrusData.ShowText( 'New file import job!' )
-            
-        
-        ( pre_import_status, hash, note ) = file_import_job.GenerateHashAndStatus()
-        
-        if file_import_job.IsNewToDB():
-            
-            file_import_job.GenerateInfo()
-            
-            file_import_job.CheckIsGoodToImport()
-            
-            ( temp_path, thumbnail ) = file_import_job.GetTempPathAndThumbnail()
-            
-            mime = file_import_job.GetMime()
-            
-            with self._rwlock.write:
-                
-                self._AddFile( hash, mime, temp_path )
-                
-                if thumbnail is not None:
-                    
-                    self._AddThumbnailFromBytes( hash, thumbnail )
-                    
-                
-            
-            ( import_status, note ) = self._controller.WriteSynchronous( 'import_file', file_import_job )
-            
-        else:
-            
-            import_status = pre_import_status
-            
-        
-        file_import_job.PubsubContentUpdates()
-        
-        return ( import_status, hash, note )
-        
-    
     def LocklessChangeFileExt( self, hash, old_mime, mime ):
         
         old_path = self._GenerateExpectedFilePath( hash, old_mime )
@@ -1511,9 +1493,9 @@ class ClientFilesManager( object ):
             
             path = self._GenerateExpectedThumbnailPath( hash )
             
-            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+            numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
             
-            ( current_width, current_height ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
+            ( current_width, current_height ) = HydrusImageHandling.GetResolutionNumPy( numpy_image )
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             
@@ -3262,7 +3244,7 @@ class ThumbnailCache( object ):
         
         try:
             
-            numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+            numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
             
         except Exception as e:
             
@@ -3282,7 +3264,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
+                numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
                 
             except Exception as e:
                 
@@ -3294,7 +3276,7 @@ class ThumbnailCache( object ):
                 
             
         
-        ( current_width, current_height ) = ClientImageHandling.GetNumPyImageResolution( numpy_image )
+        ( current_width, current_height ) = HydrusImageHandling.GetResolutionNumPy( numpy_image )
         
         ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions )
         
@@ -3319,7 +3301,7 @@ class ThumbnailCache( object ):
                 
                 # this is _resize_, not _thumbnail_, because we already know the dimensions we want
                 # and in some edge cases, doing getthumbresolution on existing thumb dimensions results in float/int conversion imprecision and you get 90px/91px regen cycles that never get fixed
-                numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, ( expected_width, expected_height ) )
+                numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( expected_width, expected_height ) )
                 
                 if locations_manager.IsLocal():
                     
@@ -3334,11 +3316,11 @@ class ThumbnailCache( object ):
                         
                         try:
                             
-                            thumbnail_bytes = ClientImageHandling.GenerateBytesFromCV( numpy_image, mime )
+                            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image, mime )
                             
                         except HydrusExceptions.CantRenderWithCVException:
                             
-                            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytesFromStaticImagePathPIL( path, bounding_dimensions, mime )
+                            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, ( expected_width, expected_height ), mime )
                             
                         
                     except:
@@ -3383,7 +3365,7 @@ class ThumbnailCache( object ):
                     
                 else:
                     
-                    numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, ( expected_width, expected_height ) )
+                    numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( expected_width, expected_height ) )
                     
                     if locations_manager.IsLocal():
                         
@@ -3555,9 +3537,13 @@ class ThumbnailCache( object ):
                 
                 path = os.path.join( HC.STATIC_DIR, name + '.png' )
                 
-                numpy_image = ClientImageHandling.GenerateNumpyImage( path, HC.IMAGE_PNG )
+                numpy_image = ClientImageHandling.GenerateNumPyImage( path, HC.IMAGE_PNG )
                 
-                numpy_image = ClientImageHandling.ThumbnailNumpyImage( numpy_image, bounding_dimensions )
+                numpy_image_resolution = HydrusImageHandling.GetResolutionNumPy( numpy_image )
+                
+                target_resolution = HydrusImageHandling.GetThumbnailResolution( numpy_image_resolution, bounding_dimensions )
+                
+                numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
                 
                 hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
                 

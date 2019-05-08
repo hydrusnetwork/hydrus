@@ -355,13 +355,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
                     
-                    url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url_to_check )
+                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url_to_check )
                     
-                    if url_match is not None and url_match.CanGenerateNextGalleryPage():
+                    if url_class is not None and url_class.CanGenerateNextGalleryPage():
                         
                         try:
                             
-                            next_page_url = url_match.GetNextGalleryPage( url_to_check )
+                            next_page_url = url_class.GetNextGalleryPage( url_to_check )
                             
                             next_page_urls = [ next_page_url ]
                             

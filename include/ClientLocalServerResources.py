@@ -698,7 +698,7 @@ class HydrusResourceClientAPIRestrictedAddFile( HydrusResourceClientAPIRestricte
         
         try:
             
-            ( status, hash, note ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+            ( status, hash, note ) = file_import_job.DoWork()
             
         except:
             

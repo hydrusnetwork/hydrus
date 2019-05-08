@@ -253,7 +253,9 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             
             bounding_dimensions = HC.SERVER_THUMBNAIL_DIMENSIONS
             
-            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( path, bounding_dimensions, mime, width, height, duration, num_frames )
+            target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
+            
+            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames )
             
         except Exception as e:
             

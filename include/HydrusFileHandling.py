@@ -13,7 +13,6 @@ from . import HydrusVideoHandling
 import os
 import threading
 import traceback
-import io
 
 # Mime
 
@@ -53,36 +52,13 @@ header_and_mime = [
     ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]
 
-def SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f ):
-    
-    # when the palette is limited, the thumbnail antialias won't add new colours, so you get nearest-neighbour-like behaviour
-    
-    original_file_was_png = pil_image.format == 'PNG'
-    
-    pil_image = HydrusImageHandling.Dequantize( pil_image )
-    
-    thumbnail_dimensions = HydrusImageHandling.GetThumbnailResolution( pil_image.size, bounding_dimensions )
-    
-    HydrusImageHandling.ResizePILImage( pil_image, thumbnail_dimensions )
-    
-    if original_file_was_png or pil_image.mode == 'RGBA':
-        
-        pil_image.save( f, 'PNG' )
-        
-    else:
-        
-        pil_image.save( f, 'JPEG', quality = 92 )
-        
-    
-def GenerateThumbnailBytes( path, bounding_dimensions, mime, width, height, duration, num_frames, percentage_in = 35 ):
+def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
         
-        thumbnail_bytes = GenerateThumbnailBytesFromStaticImagePath( path, bounding_dimensions, mime )
+        thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime )
         
     else:
-        
-        f = io.BytesIO()
         
         if mime == HC.APPLICATION_FLASH:
             
@@ -92,30 +68,22 @@ def GenerateThumbnailBytes( path, bounding_dimensions, mime, width, height, dura
                 
                 HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
                 
-                pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
-                
-                SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f )
+                thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, mime )
                 
             except:
                 
-                flash_default_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
+                thumb_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
                 
-                pil_image = HydrusImageHandling.GeneratePILImage( flash_default_path )
-                
-                SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f )
+                thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, mime )
                 
             finally:
-                
-                del pil_image
                 
                 HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                 
             
         else:
             
-            cropped_dimensions = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions )
-            
-            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, cropped_dimensions )
+            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
             
             renderer.read_frame() # this initialises the renderer and loads the first frame as a fallback
             
@@ -130,46 +98,18 @@ def GenerateThumbnailBytes( path, bounding_dimensions, mime, width, height, dura
                 raise Exception( 'Could not create a thumbnail from that video!' )
                 
             
-            pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
+            numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution ) # just in case ffmpeg doesn't deliver right
             
-            SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f )
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image, mime )
             
             renderer.Stop()
             
             del renderer
             
         
-        f.seek( 0 )
-        
-        thumbnail_bytes = f.read()
-        
-        f.close()
-        
     
     return thumbnail_bytes
     
-def GenerateThumbnailBytesFromPIL( pil_image, bounding_dimensions, mime ):
-    
-    f = io.BytesIO()
-    
-    SaveThumbnailToStreamPIL( pil_image, bounding_dimensions, f )
-    
-    f.seek( 0 )
-    
-    thumbnail_bytes = f.read()
-    
-    f.close()
-    
-    return thumbnail_bytes
-    
-def GenerateThumbnailBytesFromStaticImagePathPIL( path, bounding_dimensions, mime ):
-    
-    pil_image = HydrusImageHandling.GeneratePILImage( path )
-    
-    return GenerateThumbnailBytesFromPIL( pil_image, bounding_dimensions, mime )
-    
-GenerateThumbnailBytesFromStaticImagePath = GenerateThumbnailBytesFromStaticImagePathPIL
-
 def GetExtraHashesFromPath( path ):
     
     h_md5 = hashlib.md5()

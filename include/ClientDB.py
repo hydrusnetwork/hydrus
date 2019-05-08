@@ -242,7 +242,7 @@ class DB( HydrusDB.HydrusDB ):
             service_info_updates.append( ( num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             service_info_updates.append( ( num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
-            select_statement = 'SELECT COUNT( * ) FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) + ' AND hash_id IN %s;'
+            select_statement = 'SELECT COUNT( * ) FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) + ' AND hash_id IN {};'
             
             num_viewable_files = sum( self._STL( self._SelectFromList( select_statement, valid_hash_ids ) ) )
             
@@ -591,7 +591,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if current_mappings_exist:
                     
-                    select_statement = 'SELECT tag_id, COUNT( * ) FROM ' + current_mappings_table_name + ' WHERE tag_id IN %s GROUP BY tag_id;'
+                    select_statement = 'SELECT tag_id, COUNT( * ) FROM ' + current_mappings_table_name + ' WHERE tag_id IN {} GROUP BY tag_id;'
                     
                     for ( tag_id, count ) in self._SelectFromList( select_statement, group_of_ids ):
                         
@@ -608,7 +608,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if pending_mappings_exist:
                     
-                    select_statement = 'SELECT tag_id, COUNT( * ) FROM ' + pending_mappings_table_name + ' WHERE tag_id IN %s GROUP BY tag_id;'
+                    select_statement = 'SELECT tag_id, COUNT( * ) FROM ' + pending_mappings_table_name + ' WHERE tag_id IN {} GROUP BY tag_id;'
                     
                     for ( tag_id, count ) in self._SelectFromList( select_statement, group_of_ids ):
                         
@@ -636,7 +636,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ac_cache_table_name = GenerateCombinedFilesMappingsCacheTableName( service_id )
         
-        select_statement = 'SELECT tag_id, current_count, pending_count FROM ' + ac_cache_table_name + ' WHERE tag_id IN %s;'
+        select_statement = 'SELECT tag_id, current_count, pending_count FROM ' + ac_cache_table_name + ' WHERE tag_id IN {};'
         
         return self._SelectFromListFetchAll( select_statement, tag_ids )
         
@@ -650,6 +650,50 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'UPDATE ' + ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;', ( ( current_delta, pending_delta, tag_id ) for ( tag_id, current_delta, pending_delta ) in count_ids ) )
         
         self._c.executemany( 'DELETE FROM ' + ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( tag_id, 0, 0 ) for ( tag_id, current_delta, pending_delta ) in count_ids ) )
+        
+    
+    def _CacheLocalTagIdsGenerate( self ):
+        
+        self._c.execute( 'DELETE FROM local_tags_cache;' )
+        
+        tag_ids = set()
+        
+        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+        
+        for tag_service_id in tag_service_ids:
+            
+            ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( self._combined_local_file_service_id, tag_service_id )
+            
+            service_tag_ids = self._STL( self._c.execute( 'SELECT tag_id FROM ' + ac_cache_table_name + ' WHERE current_count > 0;' ) )
+            
+            tag_ids.update( service_tag_ids )
+            
+        
+        for block_of_tag_ids in HydrusData.SplitListIntoChunks( tag_ids, 1000 ):
+            
+            self._CacheLocalTagIdsPotentialAdd( block_of_tag_ids )
+            
+        
+    
+    def _CacheLocalTagIdsPotentialAdd( self, tag_ids ):
+        
+        self._PopulateTagIdsToTagsCache( tag_ids )
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO local_tags_cache ( tag_id, tag ) VALUES ( ?, ? );', ( ( tag_id, self._tag_ids_to_tags_cache[ tag_id ] ) for tag_id in tag_ids ) )
+        
+    
+    def _CacheLocalTagIdsPotentialDelete( self, tag_ids ):
+        
+        include_current = True
+        include_pending = False
+        
+        ids_to_count = self._GetAutocompleteCounts( self._combined_tag_service_id, self._combined_local_file_service_id, tag_ids, include_current, include_pending )
+        
+        useful_tag_ids = [ tag_id for ( tag_id, ( current_min, current_max, pending_min, pending_max ) ) in ids_to_count.items() if current_min > 0 ]
+        
+        bad_tag_ids = set( tag_ids ).difference( useful_tag_ids )
+        
+        self._c.executemany( 'DELETE FROM local_tags_cache WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in bad_tag_ids ) )
         
     
     def _CacheRepositoryAddHashes( self, service_id, service_hash_ids_to_hashes ):
@@ -706,7 +750,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
         
-        select_statement = 'SELECT hash_id FROM ' + hash_id_map_table_name + ' WHERE service_hash_id IN %s;'
+        select_statement = 'SELECT hash_id FROM ' + hash_id_map_table_name + ' WHERE service_hash_id IN {};'
         
         hash_ids = self._STL( self._SelectFromList( select_statement, service_hash_ids ) )
         
@@ -1288,6 +1332,11 @@ class DB( HydrusDB.HydrusDB ):
                     potential_hash_ids.add( larger_hash_id )
                     
                 
+                if len( potential_hash_ids ) == 1000:
+                    
+                    break
+                    
+                
             
         
         if len( potential_hash_ids ) == 0:
@@ -1348,7 +1397,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             # distinct important here for the search results table join
-            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
+            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? LIMIT 2500;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
             
         
         # convert them into possible groups per each possible 'master hash_id', and value them
@@ -1874,7 +1923,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
         
-        select_statement = 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN %s;'
+        select_statement = 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN {};'
         
         useful_phash_ids = self._STS( self._SelectFromList( select_statement, unbalanced_phash_ids ) )
         
@@ -2015,7 +2064,7 @@ class DB( HydrusDB.HydrusDB ):
                         # adding a delay in seemed to fix it as well. guess it was some memory maintenance buffer/bytes thing
                         # anyway, we now just get the whole lot of results first and then work on the whole lot
                         
-                        select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id IN %s;'
+                        select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id IN {};'
                         
                         results = list( self._SelectFromList( select_statement, group_of_current_potentials ) )
                         
@@ -2071,7 +2120,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ToHumanInt( num_cycles ) + ' cycles.' )
                 
             
-            select_statement = 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN %s;'
+            select_statement = 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN {};'
             
             similar_hash_ids = self._STL( self._SelectFromList( select_statement, similar_phash_ids ) )
             
@@ -2361,9 +2410,18 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.executemany( 'UPDATE ' + ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count + ? WHERE tag_id = ?;', ( ( num_current, num_pending, tag_id ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
             
+            if file_service_id == self._combined_local_file_service_id:
+                
+                potential_new_tag_ids = [ tag_id for ( tag_id, num_current, num_pending ) in ac_cache_changes if num_current > 0 ]
+                
+                self._CacheLocalTagIdsPotentialAdd( potential_new_tag_ids )
+                
+            
         
     
     def _CacheSpecificMappingsAddMappings( self, file_service_id, tag_service_id, mappings_ids ):
+        
+        potential_new_tag_ids = []
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
@@ -2385,11 +2443,18 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_pending_rescinded > 0:
                     
+                    potential_new_tag_ids.append( tag_id )
+                    
                     self._c.execute( 'UPDATE ' + ac_cache_table_name + ' SET current_count = current_count + ?, pending_count = pending_count - ? WHERE tag_id = ?;', ( num_added, num_pending_rescinded, tag_id ) )
                     
                 elif num_added > 0:
                     
                     self._c.execute( 'INSERT OR IGNORE INTO ' + ac_cache_table_name + ' ( tag_id, current_count, pending_count ) VALUES ( ?, ?, ? );', ( tag_id, 0, 0 ) )
+                    
+                    if self._GetRowCount() > 0:
+                        
+                        potential_new_tag_ids.append( tag_id )
+                        
                     
                     self._c.execute( 'UPDATE ' + ac_cache_table_name + ' SET current_count = current_count + ? WHERE tag_id = ?;', ( num_added, tag_id ) )
                     
@@ -2398,6 +2463,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.executemany( 'DELETE FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, tag_id ) for hash_id in hash_ids ) )
                 
+            
+        
+        if file_service_id == self._combined_local_file_service_id and len( potential_new_tag_ids ) > 0:
+            
+            self._CacheLocalTagIdsPotentialAdd( potential_new_tag_ids )
             
         
     
@@ -2487,9 +2557,18 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.executemany( 'DELETE FROM ' + ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( ( tag_id, 0, 0 ) for ( tag_id, num_current, num_pending ) in ac_cache_changes ) )
             
+            if file_service_id == self._combined_local_file_service_id:
+                
+                potential_deleted_tag_ids = [ tag_id for ( tag_id, num_current, num_pending ) in ac_cache_changes if num_current > 0 ]
+                
+                self._CacheLocalTagIdsPotentialDelete( potential_deleted_tag_ids )
+                
+            
         
     
     def _CacheSpecificMappingsDeleteMappings( self, file_service_id, tag_service_id, mappings_ids ):
+        
+        deleted_tag_ids = []
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
@@ -2509,6 +2588,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.execute( 'DELETE FROM ' + ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( tag_id, 0, 0 ) )
                     
+                    if self._GetRowCount() > 0:
+                        
+                        deleted_tag_ids.append( tag_id )
+                        
+                    
                 
                 #
                 
@@ -2516,12 +2600,17 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if file_service_id == self._combined_local_file_service_id and len( deleted_tag_ids ) > 0:
+            
+            self._CacheLocalTagIdsPotentialDelete( deleted_tag_ids )
+            
+        
     
     def _CacheSpecificMappingsFilterHashIds( self, file_service_id, tag_service_id, hash_ids ):
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        select_statement = 'SELECT hash_id FROM ' + cache_files_table_name + ' WHERE hash_id IN %s;'
+        select_statement = 'SELECT hash_id FROM ' + cache_files_table_name + ' WHERE hash_id IN {};'
         
         return self._STL( self._SelectFromList( select_statement, hash_ids ) )
         
@@ -2558,7 +2647,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        select_statement = 'SELECT tag_id, current_count, pending_count FROM ' + ac_cache_table_name + ' WHERE tag_id IN %s;'
+        select_statement = 'SELECT tag_id, current_count, pending_count FROM ' + ac_cache_table_name + ' WHERE tag_id IN {};'
         
         return self._SelectFromListFetchAll( select_statement, tag_ids )
         
@@ -3166,6 +3255,8 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
         self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
         
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
+        
     
     def _DeleteFiles( self, service_id, hash_ids ):
         
@@ -3188,7 +3279,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
-        existing_hash_ids = self._STS( self._SelectFromList( 'SELECT hash_id FROM current_files WHERE service_id = ' + str( service_id ) + ' AND hash_id IN %s;', hash_ids ) )
+        existing_hash_ids = self._STS( self._SelectFromList( 'SELECT hash_id FROM current_files WHERE service_id = ' + str( service_id ) + ' AND hash_id IN {};', hash_ids ) )
         
         service_info_updates = []
         
@@ -3212,7 +3303,7 @@ class DB( HydrusDB.HydrusDB ):
             service_info_updates.append( ( -num_existing_files_removed, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             service_info_updates.append( ( -num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
-            select_statement = 'SELECT COUNT( * ) FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) + ' AND hash_id IN %s;'
+            select_statement = 'SELECT COUNT( * ) FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) + ' AND hash_id IN {};'
             
             num_viewable_files = sum( self._STL( self._SelectFromList( select_statement, existing_hash_ids ) ) )
             
@@ -3674,7 +3765,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
         
-        child_hash_ids = self._STS( self._SelectFromList( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id IN %s;', sibling_tag_ids ) )
+        child_hash_ids = self._STS( self._SelectFromList( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id IN {};', sibling_tag_ids ) )
         
         for parent_tag_id in parent_tag_ids:
             
@@ -4342,7 +4433,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if hash_ids_to_current_file_service_ids is None:
             
-            hash_ids_to_current_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM current_files WHERE hash_id IN %s;', hash_ids ) )
+            hash_ids_to_current_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM current_files WHERE hash_id IN {};', hash_ids ) )
             
         
         # Let's figure out if there is a common specific file service to this batch
@@ -4386,20 +4477,20 @@ class DB( HydrusDB.HydrusDB ):
             
             if common_file_service_id is None:
                 
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
                 
             else:
                 
                 ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( common_file_service_id, tag_service_id )
                 
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_current_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
                 
             
-            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN {};', hash_ids ) )
             
         
         seen_tag_ids = { tag_id for ( hash_id, ( tag_service_id, status, tag_id ) ) in tag_data }
@@ -5149,7 +5240,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if not done_files_info_predicates and ( need_file_domain_cross_reference or there_are_simple_files_info_preds_to_search_for ):
             
-            files_info_predicates.append( 'hash_id IN %s' )
+            files_info_predicates.append( 'hash_id IN {}' )
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
@@ -5662,7 +5753,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            selects = [ select.replace( ';', ' AND hash_id IN %s;' ) for select in selects ]
+            selects = [ select.replace( ';', ' AND hash_id IN {};' ) for select in selects ]
             
             for select in selects:
                 
@@ -5681,14 +5772,14 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            query = self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id in %s;', hash_ids )
+            query = self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id in {};', hash_ids )
             
         
         result_hash_ids = set()
         
         for ( hash_id, url ) in query:
             
-            if rule_type == 'url_match':
+            if rule_type in ( 'url_class', 'url_match' ):
                 
                 if rule.Matches( url ):
                     
@@ -5808,7 +5899,7 @@ class DB( HydrusDB.HydrusDB ):
     
         table_union_to_select_from = '( ' + ' UNION ALL '.join( ( 'SELECT * FROM ' + table_name for table_name in table_names ) ) + ' )'
         
-        select_statement = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + table_union_to_select_from + ' WHERE hash_id IN %s GROUP BY hash_id;'
+        select_statement = 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM ' + table_union_to_select_from + ' WHERE hash_id IN {} GROUP BY hash_id;'
         
         hash_id_tag_counts = list( self._SelectFromList( select_statement, hash_ids ) )
         
@@ -6315,23 +6406,23 @@ class DB( HydrusDB.HydrusDB ):
             
             self._PopulateHashIdsToHashesCache( hash_ids )
             
-            hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
+            hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN {};', hash_ids ) }
             
-            hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN %s;', hash_ids ) ) )
+            hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN {};', hash_ids ) ) )
             
-            hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN %s;', hash_ids ) )
+            hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN {};', hash_ids ) )
             
-            hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN %s;', hash_ids ) )
+            hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN {};', hash_ids ) )
             
-            hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN %s;', hash_ids ) )
+            hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN {};', hash_ids ) )
             
-            hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id IN %s;', hash_ids ) )
+            hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id IN {};', hash_ids ) )
             
-            hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._SelectFromList( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id IN %s;', hash_ids ) ) )
+            hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._SelectFromList( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id IN {};', hash_ids ) ) )
             
-            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._SelectFromList( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN %s;', hash_ids ) ) )
+            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._SelectFromList( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN {};', hash_ids ) ) )
             
-            hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._SelectFromList( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats WHERE hash_id IN %s;', hash_ids ) }
+            hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._SelectFromList( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats WHERE hash_id IN {};', hash_ids ) }
             
             #
             
@@ -7422,8 +7513,8 @@ class DB( HydrusDB.HydrusDB ):
             service_predicate = ' AND service_id = ' + str( service_id )
             
         
-        good_select = 'SELECT good_tag_id FROM tag_siblings WHERE bad_tag_id IN %s' + service_predicate + ';'
-        bad_select = 'SELECT bad_tag_id FROM tag_siblings WHERE good_tag_id IN %s' + service_predicate + ';'
+        good_select = 'SELECT good_tag_id FROM tag_siblings WHERE bad_tag_id IN {}' + service_predicate + ';'
+        bad_select = 'SELECT bad_tag_id FROM tag_siblings WHERE good_tag_id IN {}' + service_predicate + ';'
         
         while len( search_tag_ids ) > 0:
             
@@ -7537,7 +7628,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
                 
-            except HydrusExceptions.URLMatchException:
+            except HydrusExceptions.URLClassException:
                 
                 domain = 'unknown.com'
                 
@@ -7897,7 +7988,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _LoadIntoDiskCache( self, stop_time = None, caller_limit = None ):
+    def _LoadIntoDiskCache( self, stop_time = None, caller_limit = None, for_processing = False ):
         
         self._CloseDBCursor()
         
@@ -7919,7 +8010,14 @@ class DB( HydrusDB.HydrusDB ):
             next_stop_time_presentation = 0
             next_gc_collect = 0
             
-            paths = [ os.path.join( self._db_dir, filename ) for filename in list(self._db_filenames.values()) ]
+            filenames = self._db_filenames.values()
+            
+            if not for_processing:
+                
+                filenames = [ filename for filename in filenames if 'mappings' not in filename and 'master' not in filename ]
+                
+            
+            paths = [ os.path.join( self._db_dir, filename ) for filename in filenames ]
             
             paths.sort( key = os.path.getsize )
             
@@ -8088,7 +8186,7 @@ class DB( HydrusDB.HydrusDB ):
             
             pubbed_error = False
             
-            select_statement = 'SELECT hash_id, hash FROM hashes WHERE hash_id IN %s;'
+            select_statement = 'SELECT hash_id, hash FROM hashes WHERE hash_id IN {};'
             
             uncached_hash_ids_to_hashes = dict( self._SelectFromList( select_statement, uncached_hash_ids ) )
             
@@ -8134,7 +8232,18 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( uncached_tag_ids ) > 0:
             
-            select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
+            select_statement = 'SELECT tag_id, tag FROM local_tags_cache WHERE tag_id IN {};'
+            
+            local_uncached_tag_ids_to_tags = { tag_id : tag for ( tag_id, tag ) in self._SelectFromList( select_statement, uncached_tag_ids ) }
+            
+            self._tag_ids_to_tags_cache.update( local_uncached_tag_ids_to_tags )
+            
+            uncached_tag_ids = [ tag_id for tag_id in tag_ids if tag_id not in self._tag_ids_to_tags_cache ]
+            
+        
+        if len( uncached_tag_ids ) > 0:
+            
+            select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN {};'
             
             uncached_tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, uncached_tag_ids ) }
             
@@ -9252,7 +9361,7 @@ class DB( HydrusDB.HydrusDB ):
             
             unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
             
-            select_statement = 'SELECT hash_id FROM current_files WHERE service_id = ' + str( self._local_update_service_id ) + ' and hash_id IN %s;'
+            select_statement = 'SELECT hash_id FROM current_files WHERE service_id = ' + str( self._local_update_service_id ) + ' and hash_id IN {};'
             
             local_hash_ids = self._STS( self._SelectFromList( select_statement, unprocessed_hash_ids ) )
             
@@ -9289,13 +9398,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 stop_time = HydrusData.GetNow() + min( 15 + ( num_updates_to_do * 30 ), 300 )
                 
-                self._LoadIntoDiskCache( stop_time = stop_time )
+                self._LoadIntoDiskCache( stop_time = stop_time, for_processing = True )
                 
                 num_updates_done = 0
                 
                 client_files_manager = self._controller.client_files_manager
                 
-                select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ) + ' AND hash_id IN %s;'
+                select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ) + ' AND hash_id IN {};'
                 
                 definition_hash_ids = self._STL( self._SelectFromList( select_statement, hash_ids_i_can_process ) )
                 
@@ -9382,7 +9491,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_CONTENT ) + ' AND hash_id IN %s;'
+                select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_CONTENT ) + ' AND hash_id IN {};'
                 
                 content_hash_ids = self._STL( self._SelectFromList( select_statement, hash_ids_i_can_process ) )
                 
@@ -9604,6 +9713,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._CacheCombinedFilesMappingsGenerate( tag_service_id )
                 
+            
+            job_key.SetVariable( 'popup_text_1', 'generating local tag cache' )
+            
+            self._CacheLocalTagIdsGenerate()
             
         finally:
             
@@ -10529,15 +10642,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 domain_manager.Initialise()
                 
-                url_matches = ClientDefaults.GetDefaultURLMatches()
+                url_classes = ClientDefaults.GetDefaultURLClasses()
                 
-                url_matches = [ url_match for url_match in url_matches if 'xbooru' in url_match.GetName() ]
+                url_classes = [ url_class for url_class in url_classes if 'xbooru' in url_class.GetName() ]
                 
-                existing_url_matches = [ url_match for url_match in domain_manager.GetURLMatches() if 'xbooru' not in url_match.GetName() ]
+                existing_url_classes = [ url_class for url_class in domain_manager.GetURLClasses() if 'xbooru' not in url_class.GetName() ]
                 
-                url_matches.extend( existing_url_matches )
+                url_classes.extend( existing_url_classes )
                 
-                domain_manager.SetURLMatches( url_matches )
+                domain_manager.SetURLClasses( url_classes )
                 
                 self._SetJSONDump( domain_manager )
                 
@@ -10615,15 +10728,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                url_matches = ClientDefaults.GetDefaultURLMatches()
+                url_classes = ClientDefaults.GetDefaultURLClasses()
                 
-                url_matches = [ url_match for url_match in url_matches if 'pixiv file page' in url_match.GetName() or 'yiff.party' in url_match.GetName() ]
+                url_classes = [ url_class for url_class in url_classes if 'pixiv file page' in url_class.GetName() or 'yiff.party' in url_class.GetName() ]
                 
-                existing_url_matches = [ url_match for url_match in domain_manager.GetURLMatches() if 'pixiv file page' not in url_match.GetName() and 'yiff.party' not in url_match.GetName() ]
+                existing_url_classes = [ url_class for url_class in domain_manager.GetURLClasses() if 'pixiv file page' not in url_class.GetName() and 'yiff.party' not in url_class.GetName() ]
                 
-                url_matches.extend( existing_url_matches )
+                url_classes.extend( existing_url_classes )
                 
-                domain_manager.SetURLMatches( url_matches )
+                domain_manager.SetURLClasses( url_classes )
                 
                 #
                 
@@ -10643,7 +10756,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10669,7 +10782,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'pixiv file page', 'twitter tweet' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv file page', 'twitter tweet' ) )
                 
                 #
                 
@@ -10677,7 +10790,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10711,7 +10824,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10737,11 +10850,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'tumblr file page', 'artstation file page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'tumblr file page', 'artstation file page' ) )
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10767,7 +10880,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'inkbunny file page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'inkbunny file page' ) )
                 
                 #
                 
@@ -10775,7 +10888,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10802,7 +10915,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
                         
-                    except HydrusExceptions.URLMatchException:
+                    except HydrusExceptions.URLClassException:
                         
                         domain = 'unknown.com'
                         
@@ -10859,7 +10972,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'inkbunny file page', 'artstation file page', 'artstation file page json api', 'pixiv file page', 'pixiv manga page', 'pixiv manga_big page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'inkbunny file page', 'artstation file page', 'artstation file page json api', 'pixiv file page', 'pixiv manga page', 'pixiv manga_big page' ) )
                 
                 #
                 
@@ -10867,7 +10980,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10899,21 +11012,21 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'inkbunny file page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'inkbunny file page' ) )
                 
                 #
                 
                 domain_manager.OverwriteDefaultParsers( ( 'inkbunny file page parser', 'pixiv single file page parser - new layout' ) )
                 
-                url_match = domain_manager.GetURLMatch( 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=69300276' )
+                url_class = domain_manager.GetURLClass( 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=69300276' )
                 
-                if url_match is not None:
+                if url_class is not None:
                     
                     new_pixiv_parser = domain_manager.GetParser( 'pixiv single file page parser - new layout' )
                     
                     if new_pixiv_parser is not None:
                         
-                        domain_manager.OverwriteParserLink( url_match, new_pixiv_parser )
+                        domain_manager.OverwriteParserLink( url_class, new_pixiv_parser )
                         
                     
                 
@@ -10945,7 +11058,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -10971,7 +11084,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'deviant art file page', 'deviant art file page (old format)' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'deviant art file page', 'deviant art file page (old format)' ) )
                 
                 #
                 
@@ -10979,7 +11092,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11005,7 +11118,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'sakugabooru gallery page', 'sakugabooru file page', 'tumblr api gallery page', 'tumblr file page api', 'tumblr file page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'sakugabooru gallery page', 'sakugabooru file page', 'tumblr api gallery page', 'tumblr file page api', 'tumblr file page' ) )
                 
                 #
                 
@@ -11013,7 +11126,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11047,7 +11160,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11073,7 +11186,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'artstation artist gallery page api', 'artstation artist gallery page', 'deviant art artist gallery page', 'deviant art artist gallery page - search initialisation', 'e621 gallery page - search initialisation' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'artstation artist gallery page api', 'artstation artist gallery page', 'deviant art artist gallery page', 'deviant art artist gallery page - search initialisation', 'e621 gallery page - search initialisation' ) )
                 
                 #
                 
@@ -11081,7 +11194,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11111,7 +11224,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'imgur media page api', 'imgur media page', 'imgur single media page', 'imgur tagged media page', 'imgur subreddit single media page', 'derpibooru file page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'imgur media page api', 'imgur media page', 'imgur single media page', 'imgur tagged media page', 'imgur subreddit single media page', 'derpibooru file page' ) )
                 
                 #
                 
@@ -11119,7 +11232,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11145,7 +11258,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( ( 'xbooru gallery page', 'artstation artist gallery page api', 'tumblr api gallery page', 'gelbooru gallery page - search initialisation', 'gelbooru gallery page' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'xbooru gallery page', 'artstation artist gallery page api', 'tumblr api gallery page', 'gelbooru gallery page - search initialisation', 'gelbooru gallery page' ) )
                 
                 #
                 
@@ -11153,7 +11266,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11274,19 +11387,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # lots of gallery updates this week, so let's just do them all
                 
-                default_url_matches = ClientDefaults.GetDefaultURLMatches()
+                default_url_classes = ClientDefaults.GetDefaultURLClasses()
                 
-                overwrite_names = [ url_match.GetName() for url_match in default_url_matches if url_match.GetURLType() == HC.URL_TYPE_GALLERY ]
+                overwrite_names = [ url_class.GetName() for url_class in default_url_classes if url_class.GetURLType() == HC.URL_TYPE_GALLERY ]
                 
-                domain_manager.OverwriteDefaultURLMatches( overwrite_names )
+                domain_manager.OverwriteDefaultURLClasses( overwrite_names )
                 
                 # now clear out some failed experiments
                 
-                url_matches = domain_manager.GetURLMatches()
+                url_classes = domain_manager.GetURLClasses()
                 
-                url_matches = [ url_match for url_match in url_matches if 'search initialisation' not in url_match.GetName() ]
+                url_classes = [ url_class for url_class in url_classes if 'search initialisation' not in url_class.GetName() ]
                 
-                domain_manager.SetURLMatches( url_matches )
+                domain_manager.SetURLClasses( url_classes )
                 
                 #
                 
@@ -11294,7 +11407,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11329,7 +11442,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'derpibooru gallery page' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'derpibooru gallery page' ] )
                 
                 #
                 
@@ -11395,7 +11508,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11429,7 +11542,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'gfycat file page', 'gfycat file page api', 'gfycat file page - gif url', 'gfycat file page - detail url' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'gfycat file page', 'gfycat file page api', 'gfycat file page - gif url', 'gfycat file page - detail url' ] )
                 
                 #
                 
@@ -11437,7 +11550,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11489,21 +11602,21 @@ class DB( HydrusDB.HydrusDB ):
                 
                 domain_manager.SetGUGs( new_gugs )
                 
-                url_matches = domain_manager.GetURLMatches()
+                url_classes = domain_manager.GetURLClasses()
                 
-                new_url_matches = []
+                new_url_classes = []
                 
-                for url_match in url_matches:
+                for url_class in url_classes:
                     
-                    if url_match.GetURLType() == HC.URL_TYPE_GALLERY and 'pixiv.net' in url_match.GetExampleURL() and 'zzz' not in url_match.GetName():
+                    if url_class.GetURLType() == HC.URL_TYPE_GALLERY and 'pixiv.net' in url_class.GetExampleURL() and 'zzz' not in url_class.GetName():
                         
-                        url_match.SetName( 'zzz - old url class - ' + url_match.GetName() )
+                        url_class.SetName( 'zzz - old url class - ' + url_class.GetName() )
                         
                     
-                    new_url_matches.append( url_match )
+                    new_url_classes.append( url_class )
                     
                 
-                domain_manager.SetURLMatches( new_url_matches )
+                domain_manager.SetURLClasses( new_url_classes )
                 
                 #
                 
@@ -11511,7 +11624,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'twitter tweets api', 'pixiv artist page', 'pixiv artist gallery page api' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'twitter tweets api', 'pixiv artist page', 'pixiv artist gallery page api' ] )
                 
                 #
                 
@@ -11519,7 +11632,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11553,7 +11666,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11583,7 +11696,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'pixiv file page', 'pixiv file page api', 'pixiv tag search gallery page' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'pixiv file page', 'pixiv file page api', 'pixiv tag search gallery page' ] )
                 
                 #
                 
@@ -11591,7 +11704,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11655,7 +11768,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11681,7 +11794,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'imgur single media page gifv format', 'pixiv manga page' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'imgur single media page gifv format', 'pixiv manga page' ] )
                 
                 #
                 
@@ -11689,7 +11802,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11735,7 +11848,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11781,11 +11894,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ '4channel thread' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ '4channel thread' ] )
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11855,7 +11968,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'gelbooru gallery favorites page', 'gelbooru gallery pool page' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'gelbooru gallery favorites page', 'gelbooru gallery pool page' ] )
                 
                 #
                 
@@ -11867,7 +11980,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11921,7 +12034,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'nijie artist page', 'nijie view', 'nijie view popup' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'nijie artist page', 'nijie view', 'nijie view popup' ] )
                 
                 #
                 
@@ -11929,7 +12042,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -11959,7 +12072,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -12156,11 +12269,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultURLMatches( [ 'yiff.party file attachment long' ] )
+                domain_manager.OverwriteDefaultURLClasses( [ 'yiff.party file attachment long' ] )
                 
                 #
                 
-                domain_manager.TryToLinkURLMatchesAndParsers()
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
                 #
                 
@@ -12195,6 +12308,54 @@ class DB( HydrusDB.HydrusDB ):
             except Exception as e:
                 
                 pass # nbd
+                
+            
+        
+        if version == 350:
+            
+            self._controller.pub( 'splash_set_status_subtext', 'generating new local tag cache' )
+            
+            try:
+                
+                self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
+                
+                combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                
+                tag_ids = set()
+                
+                tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+                
+                for tag_service_id in tag_service_ids:
+                    
+                    ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( combined_local_file_service_id, tag_service_id )
+                    
+                    service_tag_ids = self._STL( self._c.execute( 'SELECT tag_id FROM ' + ac_cache_table_name + ' WHERE current_count > 0;' ) )
+                    
+                    tag_ids.update( service_tag_ids )
+                    
+                
+                num_to_do = len( tag_ids )
+                
+                i = 0
+                
+                self._tag_ids_to_tags_cache = {}
+                
+                for block_of_tag_ids in HydrusData.SplitListIntoChunks( tag_ids, 1000 ):
+                    
+                    self._controller.pub( 'splash_set_status_subtext', 'generating new local tag cache: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) ) )
+                    
+                    self._PopulateTagIdsToTagsCache( block_of_tag_ids )
+                    
+                    self._c.executemany( 'INSERT OR IGNORE INTO local_tags_cache ( tag_id, tag ) VALUES ( ?, ? );', ( ( tag_id, self._tag_ids_to_tags_cache[ tag_id ] ) for tag_id in block_of_tag_ids ) )
+                    
+                    i += 1000
+                    
+                
+            except:
+                
+                wx.SafeShowMessage( 'When trying to update, I could not create a new local tag cache! Error information will follow. Please let hydrus dev know!' )
+                
+                raise
                 
             
         
@@ -12323,7 +12484,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( tag_id, hash_ids ) in pending_mappings_ids:
                 
-                select_statement = 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ' + str( tag_id ) + ' AND hash_id IN %s;'
+                select_statement = 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ' + str( tag_id ) + ' AND hash_id IN {};'
                 
                 existing_current_hash_ids = self._STS( self._SelectFromList( select_statement, hash_ids ) )
                 

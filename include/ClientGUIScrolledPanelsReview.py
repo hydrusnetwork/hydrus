@@ -1483,7 +1483,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     def _ImportPaths( self, paths ):
         
         gugs = []
-        url_matches = []
+        url_classes = []
         parsers = []
         domain_metadatas = []
         login_scripts = []
@@ -1518,7 +1518,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
-            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLMatch, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage, ClientNetworkingLogin.LoginScriptDomain ) ):
+            if isinstance( obj_list, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator, ClientNetworkingDomain.URLClass, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage, ClientNetworkingLogin.LoginScriptDomain ) ):
                 
                 obj_list = HydrusSerialisable.SerialisableList( [ obj_list ] )
                 
@@ -1536,9 +1536,9 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     gugs.append( obj )
                     
-                elif isinstance( obj, ClientNetworkingDomain.URLMatch ):
+                elif isinstance( obj, ClientNetworkingDomain.URLClass ):
                     
-                    url_matches.append( obj )
+                    url_classes.append( obj )
                     
                 elif isinstance( obj, ClientParsing.PageParser ):
                     
@@ -1571,29 +1571,45 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         # url matches first
         
-        dupe_url_matches = []
-        num_exact_dupe_url_matches = 0
-        new_url_matches = []
+        url_class_names_seen = set()
         
-        for url_match in url_matches:
+        dupe_url_classes = []
+        num_exact_dupe_url_classes = 0
+        new_url_classes = []
+        
+        for url_class in url_classes:
             
-            if domain_manager.AlreadyHaveExactlyThisURLMatch( url_match ):
+            if url_class.GetName() in url_class_names_seen:
                 
-                dupe_url_matches.append( url_match )
-                num_exact_dupe_url_matches += 1
+                continue
+                
+            
+            if domain_manager.AlreadyHaveExactlyThisURLClass( url_class ):
+                
+                dupe_url_classes.append( url_class )
+                num_exact_dupe_url_classes += 1
                 
             else:
                 
-                new_url_matches.append( url_match )
+                new_url_classes.append( url_class )
+                
+                url_class_names_seen.add( url_class.GetName() )
                 
             
         
         # now gugs
         
+        gug_names_seen = set()
+        
         num_exact_dupe_gugs = 0
         new_gugs = []
         
         for gug in gugs:
+            
+            if gug.GetName() in gug_names_seen:
+                
+                continue
+                
             
             if domain_manager.AlreadyHaveExactlyThisGUG( gug ):
                 
@@ -1603,14 +1619,23 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 new_gugs.append( gug )
                 
+                gug_names_seen.add( gug.GetName() )
+                
             
         
         # now parsers
+        
+        parser_names_seen = set()
         
         num_exact_dupe_parsers = 0
         new_parsers = []
         
         for parser in parsers:
+            
+            if parser.GetName() in parser_names_seen:
+                
+                continue
+                
             
             if domain_manager.AlreadyHaveExactlyThisParser( parser ):
                 
@@ -1620,14 +1645,23 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 new_parsers.append( parser )
                 
+                parser_names_seen.add( parser.GetName() )
+                
             
         
         # now login scripts
+        
+        login_script_names_seen = set()
         
         num_exact_dupe_login_scripts = 0
         new_login_scripts = []
         
         for login_script in login_scripts:
+            
+            if login_script.GetName() in login_script_names_seen:
+                
+                continue
+                
             
             if login_manager.AlreadyHaveExactlyThisLoginScript( login_script ):
                 
@@ -1637,9 +1671,13 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 new_login_scripts.append( login_script )
                 
+                login_script_names_seen.add( login_script.GetName() )
+                
             
         
         # now domain metadata
+        
+        domains_seen = set()
         
         num_exact_dupe_domain_metadatas = 0
         new_domain_metadatas = []
@@ -1651,6 +1689,11 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             domain = domain_metadata.GetDomain()
             headers_list = None
             bandwidth_rules = None
+            
+            if domain in domains_seen:
+                
+                continue
+                
             
             nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
             
@@ -1684,13 +1727,15 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 new_domain_metadatas.append( new_dm )
                 
+                domains_seen.add( domain )
+                
             
         
         #
         
-        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_matches + num_exact_dupe_parsers + num_exact_dupe_domain_metadatas + num_exact_dupe_login_scripts
+        total_num_dupes = num_exact_dupe_gugs + num_exact_dupe_url_classes + num_exact_dupe_parsers + num_exact_dupe_domain_metadatas + num_exact_dupe_login_scripts
         
-        if len( new_gugs ) + len( new_url_matches ) + len( new_parsers ) + len( new_domain_metadatas ) + len( new_login_scripts ) == 0:
+        if len( new_gugs ) + len( new_url_classes ) + len( new_parsers ) + len( new_domain_metadatas ) + len( new_login_scripts ) == 0:
             
             wx.MessageBox( 'All ' + HydrusData.ToHumanInt( total_num_dupes ) + ' downloader objects in that package appeared to already be in the client, so nothing need be added.' )
             
@@ -1703,7 +1748,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             choice_tuples = []
             choice_tuples.extend( [ ( 'GUG: ' + gug.GetName(), gug, True ) for gug in new_gugs ] )
-            choice_tuples.extend( [ ( 'URL Class: ' + url_match.GetName(), url_match, True ) for url_match in new_url_matches ] )
+            choice_tuples.extend( [ ( 'URL Class: ' + url_class.GetName(), url_class, True ) for url_class in new_url_classes ] )
             choice_tuples.extend( [ ( 'Parser: ' + parser.GetName(), parser, True ) for parser in new_parsers ] )
             choice_tuples.extend( [ ( 'Login Script: ' + login_script.GetName(), login_script, True ) for login_script in new_login_scripts ] )
             choice_tuples.extend( [ ( 'Domain Metadata: ' + domain_metadata.GetDomain(), domain_metadata, True ) for domain_metadata in new_domain_metadatas ] )
@@ -1719,7 +1764,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     new_objects = panel.GetValue()
                     
                     new_gugs = [ obj for obj in new_objects if isinstance( obj, ( ClientNetworkingDomain.GalleryURLGenerator, ClientNetworkingDomain.NestedGalleryURLGenerator ) ) ]
-                    new_url_matches = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.URLMatch ) ]
+                    new_url_classes = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.URLClass ) ]
                     new_parsers = [ obj for obj in new_objects if isinstance( obj, ClientParsing.PageParser ) ]
                     new_login_scripts = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingLogin.LoginScriptDomain ) ]
                     new_domain_metadatas = [ obj for obj in new_objects if isinstance( obj, ClientNetworkingDomain.DomainMetadataPackage ) ]
@@ -1734,7 +1779,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         # final ask
         
         new_gugs.sort( key = lambda o: o.GetName() )
-        new_url_matches.sort( key = lambda o: o.GetName() )
+        new_url_classes.sort( key = lambda o: o.GetName() )
         new_parsers.sort( key = lambda o: o.GetName() )
         new_login_scripts.sort( key = lambda o: o.GetName() )
         new_domain_metadatas.sort( key = lambda o: o.GetDomain() )
@@ -1760,7 +1805,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         all_to_add = list( new_gugs )
-        all_to_add.extend( new_url_matches )
+        all_to_add.extend( new_url_classes )
         all_to_add.extend( new_parsers )
         all_to_add.extend( new_login_scripts )
         all_to_add.extend( new_domain_metadatas )
@@ -1793,14 +1838,14 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             domain_manager.AddGUGs( new_gugs )
             
         
-        domain_manager.AutoAddURLMatchesAndParsers( new_url_matches, dupe_url_matches, new_parsers )
+        domain_manager.AutoAddURLClassesAndParsers( new_url_classes, dupe_url_classes, new_parsers )
         
         bandwidth_manager.AutoAddDomainMetadatas( new_domain_metadatas )
         domain_manager.AutoAddDomainMetadatas( new_domain_metadatas, approved = True )
         login_manager.AutoAddLoginScripts( new_login_scripts )
         
         num_new_gugs = len( new_gugs )
-        num_aux = len( new_url_matches ) + len( new_parsers ) + len( new_login_scripts ) + len( new_domain_metadatas )
+        num_aux = len( new_url_classes ) + len( new_parsers ) + len( new_login_scripts ) + len( new_domain_metadatas )
         
         final_message = 'Successfully added ' + HydrusData.ToHumanInt( num_new_gugs ) + ' new downloaders and ' + HydrusData.ToHumanInt( num_aux ) + ' auxiliary objects.'
         
@@ -2703,13 +2748,13 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = ClientGUICommon.BetterNotebook( self )
         
-        self._local_listbook = ClientGUICommon.ListBook( self._notebook )
-        self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
+        self._local_notebook = ClientGUICommon.BetterNotebook( self._notebook )
+        self._remote_notebook = ClientGUICommon.BetterNotebook( self._notebook )
         
-        self._notebook.AddPage( self._local_listbook, 'local' )
-        self._notebook.AddPage( self._remote_listbook, 'remote' )
+        self._notebook.AddPage( self._local_notebook, 'local' )
+        self._notebook.AddPage( self._remote_notebook, 'remote' )
         
         self._InitialiseServices()
         
@@ -2739,24 +2784,22 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             previous_service_key = page.GetServiceKey()
             
         
-        self._local_listbook.DeleteAllPages()
-        self._remote_listbook.DeleteAllPages()
+        self._local_notebook.DeleteAllPages()
+        self._remote_notebook.DeleteAllPages()
         
-        listbook_dict = {}
+        notebook_dict = {}
         
         services = self._controller.services_manager.GetServices( randomised = False )
         
-        lb_to_select = None
-        service_type_name_to_select = None
+        local_remote_notebook_to_select = None
         service_type_lb = None
-        service_name_to_select = None
         
         for service in services:
             
             service_type = service.GetServiceType()
             
-            if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
-            else: parent_listbook = self._remote_listbook
+            if service_type in HC.LOCAL_SERVICES: parent_notebook = self._local_notebook
+            else: parent_notebook = self._remote_notebook
             
             if service_type == HC.TAG_REPOSITORY: service_type_name = 'tag repositories'
             elif service_type == HC.FILE_REPOSITORY: service_type_name = 'file repositories'
@@ -2771,51 +2814,34 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             elif service_type == HC.IPFS: service_type_name = 'ipfs'
             else: continue
             
-            if service_type_name not in listbook_dict:
+            if service_type_name not in notebook_dict:
                 
-                listbook = ClientGUICommon.ListBook( parent_listbook )
+                services_notebook = ClientGUICommon.BetterNotebook( parent_notebook )
                 
-                listbook_dict[ service_type_name ] = listbook
+                notebook_dict[ service_type_name ] = services_notebook
                 
-                parent_listbook.AddPage( service_type_name, service_type_name, listbook )
+                parent_notebook.AddPage( services_notebook, service_type_name, select = False )
                 
             
-            listbook = listbook_dict[ service_type_name ]
+            services_notebook = notebook_dict[ service_type_name ]
             
-            name = service.GetName()
-            
-            panel_class = ClientGUIPanels.ReviewServicePanel
-            
-            listbook.AddPageArgs( name, name, panel_class, ( listbook, service ), {} )
+            page = ClientGUIPanels.ReviewServicePanel( services_notebook, service )
             
             if service.GetServiceKey() == previous_service_key:
                 
-                lb_to_select = parent_listbook
-                service_type_name_to_select = service_name_to_select
-                service_type_lb = listbook
-                name_to_select = name
+                self._notebook.SelectPage( parent_notebook )
+                parent_notebook.SelectPage( services_notebook )
+                
+                select = True
+                
+            else:
+                
+                select = False
                 
             
-        
-        if lb_to_select is not None:
+            name = service.GetName()
             
-            if self._notebook.GetCurrentPage() != lb_to_select:
-                
-                selection = self._notebook.GetSelection()
-                
-                if selection == 0:
-                    
-                    self._notebook.SetSelection( 1 )
-                    
-                else:
-                    
-                    self._notebook.SetSelection( 0 )
-                    
-                
-            
-            lb_to_select.Select( service_name_to_select )
-            
-            service_type_lb.Select( name_to_select )
+            services_notebook.AddPage( page, name, select = select )
             
         
     

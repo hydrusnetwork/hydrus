@@ -441,13 +441,13 @@ def GetDefaultSimpleDownloaderFormulae():
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
     
-def GetDefaultURLMatches():
+def GetDefaultURLClasses():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
     
     from . import ClientNetworkingDomain
     
-    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLMatch, ) )
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLClass, ) )
     
 def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
     
@@ -619,7 +619,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    domain_manager.SetURLMatches( GetDefaultURLMatches() )
+    domain_manager.SetURLClasses( GetDefaultURLClasses() )
     
     #
     
@@ -627,7 +627,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    domain_manager.TryToLinkURLMatchesAndParsers()
+    domain_manager.TryToLinkURLClassesAndParsers()
     
 def SetDefaultLoginManagerScripts( login_manager ):
     

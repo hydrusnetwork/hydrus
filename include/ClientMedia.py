@@ -37,6 +37,14 @@ def FlattenMedia( media_list ):
     
     return flat_media
     
+def GetDuplicateComparisonScore( shown_media, comparison_media ):
+    
+    statements_and_scores = GetDuplicateComparisonStatements( shown_media, comparison_media )
+    
+    total_score = sum( ( score for ( statement, score ) in statements_and_scores.values() ) )
+    
+    return total_score
+    
 def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     new_options = HG.client_controller.new_options
@@ -50,39 +58,46 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     #
     
-    statements = []
-    score = 0
+    statements_and_scores = {}
     
     # size
     
     s_size = shown_media.GetSize()
     c_size = comparison_media.GetSize()
     
-    size_ratio = s_size / c_size
-    
-    if size_ratio > 2.0:
+    if s_size != c_size:
         
-        statements.append( 'This has a much larger filesize.' )
+        size_ratio = s_size / c_size
         
-        score += duplicate_comparison_score_much_higher_filesize
+        if size_ratio > 2.0:
+            
+            operator = '>>'
+            score = duplicate_comparison_score_much_higher_filesize
+            
+        elif size_ratio > 1.05:
+            
+            operator = '>'
+            score = duplicate_comparison_score_higher_filesize
+            
+        elif size_ratio < 0.5:
+            
+            operator = '<<'
+            score = -duplicate_comparison_score_much_higher_filesize
+            
+        elif size_ratio < 0.95:
+            
+            operator = '<'
+            score = -duplicate_comparison_score_higher_filesize
+            
+        else:
+            
+            operator = '\u2248'
+            score = 0
+            
         
-    elif size_ratio > 1.05:
+        statement = '{} {} {}'.format( HydrusData.ToHumanBytes( s_size ), operator, HydrusData.ToHumanBytes( c_size ) )
         
-        statements.append( 'This has a larger filesize.' )
-        
-        score += duplicate_comparison_score_higher_filesize
-        
-    elif size_ratio < 0.5:
-        
-        statements.append( 'This has a much smaller filesize.' )
-        
-        score -= duplicate_comparison_score_more_tags
-        
-    elif size_ratio < 0.95:
-        
-        statements.append( 'This has a smaller filesize.' )
-        
-        score -= duplicate_comparison_score_higher_filesize
+        statements_and_scores[ 'filesize' ]  = ( statement, score )
         
     
     # higher/same res
@@ -90,7 +105,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_resolution = shown_media.GetResolution()
     c_resolution = comparison_media.GetResolution()
     
-    if s_resolution is not None and c_resolution is not None:
+    if s_resolution is not None and c_resolution is not None and s_resolution != c_resolution:
         
         ( s_w, s_h ) = shown_media.GetResolution()
         ( c_w, c_h ) = comparison_media.GetResolution()
@@ -99,35 +114,33 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if resolution_ratio == 1.0:
             
-            if s_resolution != c_resolution:
-                
-                statements.append( 'The files have the same number of pixels but different resolution.' )
-                
+            operator = '!='
+            score = 0
             
         elif resolution_ratio > 2.0:
             
-            statements.append( 'This has much higher resolution.' )
+            operator = '>>'
+            score = duplicate_comparison_score_much_higher_resolution
             
-            score += duplicate_comparison_score_much_higher_resolution
+        elif resolution_ratio > 1.00:
             
-        elif resolution_ratio > 1.0:
-            
-            statements.append( 'This has higher resolution.' )
-            
-            score += duplicate_comparison_score_higher_resolution
+            operator = '>'
+            score = duplicate_comparison_score_higher_resolution
             
         elif resolution_ratio < 0.5:
             
-            statements.append( 'This has much lower resolution.' )
+            operator = '<<'
+            score = -duplicate_comparison_score_much_higher_resolution
             
-            score -= duplicate_comparison_score_much_higher_resolution
+        else:
             
-        elif resolution_ratio < 1.0:
+            operator = '<'
+            score = -duplicate_comparison_score_higher_resolution
             
-            statements.append( 'This has lower resolution.' )
-            
-            score -= duplicate_comparison_score_higher_resolution
-            
+        
+        statement = '{} {} {}'.format( HydrusData.ConvertResolutionToPrettyString( s_resolution ), operator, HydrusData.ConvertResolutionToPrettyString( c_resolution ) )
+        
+        statements_and_scores[ 'resolution' ] = ( statement, score )
         
     
     # same/diff mime
@@ -137,7 +150,10 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     if s_mime != c_mime:
         
-        statements.append( 'This is ' + HC.mime_string_lookup[ s_mime ] + ', the other is ' + HC.mime_string_lookup[ c_mime ] + '.' )
+        statement = '{} vs {}'.format( HC.mime_string_lookup[ s_mime ], HC.mime_string_lookup[ c_mime ] )
+        score = 0
+        
+        statements_and_scores[ 'mime' ] = ( statement, score )
         
     
     # more tags
@@ -145,28 +161,35 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending() )
     c_num_tags = len( comparison_media.GetTagsManager().GetCurrentAndPending() )
     
-    if s_num_tags > 0 and c_num_tags > 0:
+    if s_num_tags != c_num_tags:
         
-        if s_num_tags > c_num_tags:
+        if s_num_tags > 0 and c_num_tags > 0:
             
-            statements.append( 'This has more tags.' )
+            if s_num_tags > c_num_tags:
+                
+                operator = '>'
+                score = duplicate_comparison_score_more_tags
+                
+            else:
+                
+                operator = '<'
+                score = -duplicate_comparison_score_more_tags
+                
             
-            score += duplicate_comparison_score_more_tags
+        elif s_num_tags > 0:
             
-        elif s_num_tags < c_num_tags:
+            operator = '>>'
+            score = duplicate_comparison_score_more_tags
             
-            statements.append( 'This has fewer tags.' )
+        elif c_num_tags > 0:
             
-            score += duplicate_comparison_score_more_tags
+            operator = '<<'
+            score = -duplicate_comparison_score_more_tags
             
         
-    elif s_num_tags > 0:
+        statement = '{} tags {} {} tags'.format( HydrusData.ToHumanInt( s_num_tags ), operator, HydrusData.ToHumanInt( c_num_tags ) )
         
-        statements.append( 'This has tags, the other does not.' )
-        
-    elif c_num_tags > 0:
-        
-        statements.append( 'This has no tags, the other does.' )
+        statements_and_scores[ 'num_tags' ] = ( statement, score )
         
     
     # older
@@ -174,23 +197,27 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_ts = shown_media.GetLocationsManager().GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
     c_ts = comparison_media.GetLocationsManager().GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
     
-    if s_ts is not None and c_ts is not None:
+    one_month = 86400 * 30
+    
+    if s_ts is not None and c_ts is not None and abs( s_ts - c_ts ) > one_month:
         
-        if s_ts < c_ts - 86400 * 30:
+        if s_ts < c_ts:
             
-            statements.append( 'This is older.' )
+            operator = 'older than'
+            score = duplicate_comparison_score_older
             
-            score += duplicate_comparison_score_older
+        else:
             
-        elif c_ts < s_ts - 86400 * 30:
+            operator = 'newer than'
+            score = -duplicate_comparison_score_older
             
-            statements.append( 'This is newer.' )
-            
-            score -= duplicate_comparison_score_older
-            
+        
+        statement = '{} {} {}'.format( HydrusData.TimestampToPrettyTimeDelta( s_ts ), operator, HydrusData.TimestampToPrettyTimeDelta( c_ts ) )
+        
+        statements_and_scores[ 'time_imported' ] = ( statement, score )
         
     
-    return ( statements, score )
+    return statements_and_scores
     
 def MergeTagsManagers( tags_managers ):
     

@@ -508,10 +508,7 @@ def LaunchFile( path, launch_path = None ):
     
 def MakeSureDirectoryExists( path ):
     
-    if not os.path.exists( path ):
-        
-        os.makedirs( path )
-        
+    os.makedirs( path, exist_ok = True )
     
 def MakeFileWritable( path, recursive = True ):
     

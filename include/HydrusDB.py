@@ -671,8 +671,8 @@ class HydrusDB( object ):
         # blah_id IN ( ?, ?, ? ) is fast and cacheable but there's a small limit (1024 is too many) to the number of params sql can handle
         # so lets do the latter but break it into 256-strong chunks to get a good medium
         
-        # this will take a select statement with %s like so:
-        # SELECT blah_id, blah FROM blahs WHERE blah_id IN %s;
+        # this will take a select statement with {} like so:
+        # SELECT blah_id, blah FROM blahs WHERE blah_id IN {};
         
         MAX_CHUNK_SIZE = 256
         
@@ -680,7 +680,7 @@ class HydrusDB( object ):
         # and also so we aren't overmaking it when this gets spammed with a lot of len() == 1 calls
         if len( xs ) >= MAX_CHUNK_SIZE:
             
-            max_statement = select_statement % ( '(' + ','.join( '?' * MAX_CHUNK_SIZE ) + ')' )
+            max_statement = select_statement.format( '({})'.format( ','.join( '?' * MAX_CHUNK_SIZE ) ) )
             
         
         for chunk in HydrusData.SplitListIntoChunks( xs, MAX_CHUNK_SIZE ):
@@ -691,7 +691,7 @@ class HydrusDB( object ):
                 
             else:
                 
-                chunk_statement = select_statement % ( '(' + ','.join( '?' * len( chunk ) ) + ')' )
+                chunk_statement = select_statement.format( '({})'.format( ','.join( '?' * len( chunk ) ) ) )
                 
             
             for row in self._c.execute( chunk_statement, chunk ):

@@ -1339,7 +1339,7 @@ class DialogInputTags( Dialog ):
         
         self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK )
         
-        self._ok = wx.Button( self, id= wx.ID_OK, label = 'OK' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -2002,6 +2002,8 @@ class DialogYesNo( Dialog ):
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
         
+        self.SetEscapeId( wx.ID_NO )
+        
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -2055,6 +2057,8 @@ class DialogYesYesNo( Dialog ):
         self._no = wx.Button( self, id = wx.ID_NO )
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
+        
+        self.SetEscapeId( wx.ID_NO )
         
         #
         

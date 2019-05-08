@@ -65,7 +65,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'add gug', self._AddGUG )
-        listctrl_panel.AddButton( 'add url class', self._AddURLMatch )
+        listctrl_panel.AddButton( 'add url class', self._AddURLClass )
         listctrl_panel.AddButton( 'add parser', self._AddParser )
         listctrl_panel.AddButton( 'add login script', self._AddLoginScript )
         listctrl_panel.AddButton( 'add headers/bandwidth rules', self._AddDomainMetadata )
@@ -141,15 +141,15 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         domain_metadatas_to_include = self._GetDomainMetadatasToInclude( domains )
         
-        url_matches_to_include = self._GetURLMatchesToInclude( gugs_to_include )
+        url_classes_to_include = self._GetURLClassesToInclude( gugs_to_include )
         
-        url_matches_to_include = self._FleshOutURLMatchesWithAPILinks( url_matches_to_include )
+        url_classes_to_include = self._FleshOutURLClassesWithAPILinks( url_classes_to_include )
         
-        parsers_to_include = self._GetParsersToInclude( url_matches_to_include )
+        parsers_to_include = self._GetParsersToInclude( url_classes_to_include )
         
         self._listctrl.AddDatas( domain_metadatas_to_include )
         self._listctrl.AddDatas( gugs_to_include )
-        self._listctrl.AddDatas( url_matches_to_include )
+        self._listctrl.AddDatas( url_classes_to_include )
         self._listctrl.AddDatas( parsers_to_include )
         
     
@@ -207,13 +207,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._listctrl.AddDatas( parsers_to_include )
         
     
-    def _AddURLMatch( self ):
+    def _AddURLClass( self ):
         
         existing_data = self._listctrl.GetData()
         
-        choosable_url_matches = [ u for u in self._network_engine.domain_manager.GetURLMatches() if u not in existing_data ]
+        choosable_url_classes = [ u for u in self._network_engine.domain_manager.GetURLClasses() if u not in existing_data ]
         
-        choice_tuples = [ ( url_match.GetName(), url_match, False ) for url_match in choosable_url_matches ]
+        choice_tuples = [ ( url_class.GetName(), url_class, False ) for url_class in choosable_url_classes ]
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'select url classes' ) as dlg:
             
@@ -223,7 +223,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                url_matches_to_include = panel.GetValue()
+                url_classes_to_include = panel.GetValue()
                 
             else:
                 
@@ -231,11 +231,11 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        url_matches_to_include = self._FleshOutURLMatchesWithAPILinks( url_matches_to_include )
+        url_classes_to_include = self._FleshOutURLClassesWithAPILinks( url_classes_to_include )
         
-        parsers_to_include = self._GetParsersToInclude( url_matches_to_include )
+        parsers_to_include = self._GetParsersToInclude( url_classes_to_include )
         
-        self._listctrl.AddDatas( url_matches_to_include )
+        self._listctrl.AddDatas( url_classes_to_include )
         self._listctrl.AddDatas( parsers_to_include )
         
     
@@ -354,31 +354,31 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _FleshOutURLMatchesWithAPILinks( self, url_matches ):
+    def _FleshOutURLClassesWithAPILinks( self, url_classes ):
         
-        url_matches_to_include = set( url_matches )
+        url_classes_to_include = set( url_classes )
         
-        api_links_dict = dict( ClientNetworkingDomain.ConvertURLMatchesIntoAPIPairs( self._network_engine.domain_manager.GetURLMatches() ) )
+        api_links_dict = dict( ClientNetworkingDomain.ConvertURLClassesIntoAPIPairs( self._network_engine.domain_manager.GetURLClasses() ) )
         
-        for url_match in url_matches:
+        for url_class in url_classes:
             
             added_this_cycle = set()
             
-            while url_match in api_links_dict and url_match not in added_this_cycle:
+            while url_class in api_links_dict and url_class not in added_this_cycle:
                 
-                added_this_cycle.add( url_match )
+                added_this_cycle.add( url_class )
                 
-                url_match = api_links_dict[ url_match ]
+                url_class = api_links_dict[ url_class ]
                 
-                url_matches_to_include.add( url_match )
+                url_classes_to_include.add( url_class )
                 
             
         
         existing_data = self._listctrl.GetData()
         
-        url_matches_to_include = [ u for u in url_matches_to_include if u not in existing_data ]
+        url_classes_to_include = [ u for u in url_classes_to_include if u not in existing_data ]
         
-        return url_matches_to_include
+        return url_classes_to_include
         
     
     def _GetDomainMetadatasToInclude( self, domains ):
@@ -433,13 +433,13 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return domain_metadatas
         
     
-    def _GetParsersToInclude( self, url_matches ):
+    def _GetParsersToInclude( self, url_classes ):
         
         parsers_to_include = set()
         
-        for url_match in url_matches:
+        for url_class in url_classes:
             
-            example_url = url_match.GetExampleURL()
+            example_url = url_class.GetExampleURL()
             
             ( url_type, match_name, can_parse ) = self._network_engine.domain_manager.GetURLParseCapability( example_url )
             
@@ -463,9 +463,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return [ p for p in parsers_to_include if p not in existing_data ]
         
     
-    def _GetURLMatchesToInclude( self, gugs ):
+    def _GetURLClassesToInclude( self, gugs ):
         
-        url_matches_to_include = set()
+        url_classes_to_include = set()
         
         for gug in gugs:
             
@@ -480,21 +480,21 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for example_url in example_urls:
                 
-                url_match = self._network_engine.domain_manager.GetURLMatch( example_url )
+                url_class = self._network_engine.domain_manager.GetURLClass( example_url )
                 
-                if url_match is not None:
+                if url_class is not None:
                     
-                    url_matches_to_include.add( url_match )
+                    url_classes_to_include.add( url_class )
                     
                     # add post url matches from same domain
                     
                     domain = ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( example_url )
                     
-                    for um in list( self._network_engine.domain_manager.GetURLMatches() ):
+                    for um in list( self._network_engine.domain_manager.GetURLClasses() ):
                         
                         if ClientNetworkingDomain.ConvertURLIntoSecondLevelDomain( um.GetExampleURL() ) == domain and um.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE ):
                             
-                            url_matches_to_include.add( um )
+                            url_classes_to_include.add( um )
                             
                         
                     
@@ -503,7 +503,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         existing_data = self._listctrl.GetData()
         
-        return [ u for u in url_matches_to_include if u not in existing_data ]
+        return [ u for u in url_classes_to_include if u not in existing_data ]
         
     
 class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):

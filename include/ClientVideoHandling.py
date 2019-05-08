@@ -44,16 +44,6 @@ def GetCVVideoProperties( path ):
     
     return ( ( width, height ), duration, num_frames )
     
-def GetVideoFrameDuration( path ):
-
-    cv_video = cv2.VideoCapture( path )
-    
-    fps = cv_video.get( CAP_PROP_FPS )
-    
-    if fps in ( 0, 1000 ): raise HydrusExceptions.CantRenderWithCVException()
-    
-    return 1000.0 / fps
-    
 # the cv code was initially written by @fluffy_cub
 class GIFRenderer( object ):
     
@@ -113,7 +103,7 @@ class GIFRenderer( object ):
                 self._pil_canvas = current_frame
                 
             
-            numpy_image = ClientImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
+            numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
             
         
         self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
@@ -195,7 +185,7 @@ class GIFRenderer( object ):
                 
                 numpy_image = self._GetCurrentFrame()
                 
-                numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, self._target_resolution )
+                numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
                 
                 numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
                 
@@ -222,7 +212,7 @@ class GIFRenderer( object ):
             
             numpy_image = self._GetCurrentFrame()
             
-            numpy_image = ClientImageHandling.ResizeNumpyImage( numpy_image, self._target_resolution )
+            numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
             
         
         self._last_frame = numpy_image

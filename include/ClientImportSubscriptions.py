@@ -496,11 +496,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             presentation_hashes = []
             presentation_hashes_fast = set()
             
+            starting_num_urls = file_seed_cache.GetFileSeedCount()
+            starting_num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
+            starting_num_done = starting_num_urls - starting_num_unknown
+            
             while True:
-                
-                num_urls = file_seed_cache.GetFileSeedCount()
-                num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
-                num_done = num_urls - num_unknown
                 
                 file_seed = file_seed_cache.GetNextFileSeed( CC.STATUS_UNKNOWN )
                 
@@ -541,9 +541,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 try:
                     
-                    x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( num_done + 1, num_urls ) + ': '
+                    num_urls = file_seed_cache.GetFileSeedCount()
+                    num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
+                    num_done = num_urls - num_unknown
                     
-                    job_key.SetVariable( 'popup_gauge_2', ( num_done, num_urls ) )
+                    # 4001/4003 is not as useful as 1/3
+                    
+                    human_num_urls = num_urls - starting_num_done
+                    human_num_done = num_done - starting_num_done
+                    
+                    x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( human_num_done + 1, human_num_urls ) + ': '
+                    
+                    job_key.SetVariable( 'popup_gauge_2', ( human_num_done, human_num_urls ) )
                     
                     def status_hook( text ):
                         

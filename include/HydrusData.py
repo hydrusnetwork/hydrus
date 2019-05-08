@@ -75,11 +75,6 @@ def ConvertFloatToPercentage( f ):
     
     return '{:.1f}%'.format( f * 100 )
     
-def ConvertIntToFirst( n ):
-    
-    # straight from stack, wew
-    return "%d%s" % (n,"tsnrhtdd"[(n/10%10!=1)*(n%10<4)*n%10::4])
-    
 def ConvertIntToPixels( i ):
     
     if i == 1: return 'pixels'

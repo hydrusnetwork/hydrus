@@ -25,13 +25,6 @@ else:
     IMREAD_UNCHANGED = cv2.IMREAD_UNCHANGED
     
 
-png_font = cv2.FONT_HERSHEY_TRIPLEX
-greyscale_text_color = 0
-
-title_size = 0.7
-payload_description_size = 0.5
-text_size = 0.4
-
 def CreateTopImage( width, title, payload_description, text ):
     
     text_extent_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )

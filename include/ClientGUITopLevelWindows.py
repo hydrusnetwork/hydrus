@@ -302,8 +302,6 @@ class NewDialog( wx.Dialog ):
         
         self.SetIcon( HG.client_controller.frame_icon )
         
-        self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
-        
         self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
         self.Bind( wx.EVT_MENU_HIGHLIGHT_ALL, self.EventMenuHighlight )
         self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
@@ -689,10 +687,11 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
         
         self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
         self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-        #self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventDialogButton )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel.Bind( wx.EVT_BUTTON, self.EventDialogButton )
         
         if self._hide_buttons:
             

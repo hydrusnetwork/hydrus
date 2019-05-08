@@ -804,7 +804,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( operator, rule_type, rule, description ) = self._value
             
-            if rule_type == 'url_match':
+            if rule_type in ( 'url_match', 'url_class' ):
                 
                 serialisable_rule = rule.GetSerialisableTuple()
                 
@@ -855,7 +855,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             ( operator, rule_type, serialisable_rule, description ) = serialisable_value
             
-            if rule_type == 'url_match':
+            if rule_type in ( 'url_match', 'url_class' ):
                 
                 rule = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rule )
                 

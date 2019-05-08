@@ -53,7 +53,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             pred_classes.append( PanelPredicateSystemKnownURLsExactURL )
             pred_classes.append( PanelPredicateSystemKnownURLsDomain )
             pred_classes.append( PanelPredicateSystemKnownURLsRegex )
-            pred_classes.append( PanelPredicateSystemKnownURLsURLMatch )
+            pred_classes.append( PanelPredicateSystemKnownURLsURLClass )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
@@ -777,7 +777,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         return ( operator, rule_type, rule, description )
         
     
-class PanelPredicateSystemKnownURLsURLMatch( PanelPredicateSystem ):
+class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
     
@@ -790,13 +790,13 @@ class PanelPredicateSystemKnownURLsURLMatch( PanelPredicateSystem ):
         self._operator.Append( 'has', True )
         self._operator.Append( 'does not have', False )
         
-        self._url_matches = ClientGUICommon.BetterChoice( self )
+        self._url_classes = ClientGUICommon.BetterChoice( self )
         
-        for url_match in HG.client_controller.network_engine.domain_manager.GetURLMatches():
+        for url_class in HG.client_controller.network_engine.domain_manager.GetURLClasses():
             
-            if url_match.ShouldAssociateWithFiles():
+            if url_class.ShouldAssociateWithFiles():
                 
-                self._url_matches.Append( url_match.GetName(), url_match )
+                self._url_classes.Append( url_class.GetName(), url_class )
                 
             
         
@@ -805,7 +805,7 @@ class PanelPredicateSystemKnownURLsURLMatch( PanelPredicateSystem ):
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
         hbox.Add( self._operator, CC.FLAGS_VCENTER )
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'url matching this class:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._url_matches, CC.FLAGS_VCENTER )
+        hbox.Add( self._url_classes, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -823,13 +823,13 @@ class PanelPredicateSystemKnownURLsURLMatch( PanelPredicateSystem ):
             operator_description = 'does not have '
             
         
-        rule_type = 'url_match'
+        rule_type = 'url_class'
         
-        url_match = self._url_matches.GetChoice()
+        url_class = self._url_classes.GetChoice()
         
-        rule = url_match
+        rule = url_class
         
-        description = operator_description + url_match.GetName() + ' url'
+        description = operator_description + url_class.GetName() + ' url'
         
         return ( operator, rule_type, rule, description )
         

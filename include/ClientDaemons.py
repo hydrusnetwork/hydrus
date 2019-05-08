@@ -154,7 +154,7 @@ def DAEMONDownloadFiles( controller ):
                                 
                                 file_import_job = ClientImportFileSeeds.FileImportJob( temp_path, file_import_options )
                                 
-                                client_files_manager.ImportFile( file_import_job )
+                                file_import_job.DoWork()
                                 
                                 successful_hashes.add( hash )
                                 

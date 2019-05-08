@@ -28,7 +28,7 @@ class DecompressionBombException( SizeException ): pass
 class ParseException( HydrusException ): pass
 class StringConvertException( ParseException ): pass
 class StringMatchException( ParseException ): pass
-class URLMatchException( ParseException ): pass
+class URLClassException( ParseException ): pass
 class GUGException( ParseException ): pass
 
 class NetworkException( HydrusException ): pass

@@ -955,9 +955,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             for url in urls:
                 
-                url_match = HG.client_controller.network_engine.domain_manager.GetURLMatch( url )
+                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
                 
-                if url_match is None or url_match.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+                if url_class is None or url_class.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
                     
                     file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
                     

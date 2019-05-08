@@ -36,6 +36,8 @@ class FullscreenHoverFrame( wx.Frame ):
         self._canvas_key = canvas_key
         self._current_media = None
         
+        self._always_on_top = False
+        
         self._last_ideal_position = None
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
@@ -66,6 +68,11 @@ class FullscreenHoverFrame( wx.Frame ):
                 self.SetSize( my_ideal_size )
                 
             
+            if HC.PLATFORM_OSX and self.GetPosition() != my_ideal_position and self._always_on_top:
+                
+                self.Raise()
+                
+            
             self.SetPosition( my_ideal_position )
             
         
@@ -82,7 +89,7 @@ class FullscreenHoverFrame( wx.Frame ):
         
         new_options = HG.client_controller.new_options
         
-        if new_options.GetBoolean( 'always_show_hover_windows' ):
+        if self._always_on_top or new_options.GetBoolean( 'always_show_hover_windows' ):
             
             self._SizeAndPosition()
             
@@ -103,7 +110,7 @@ class FullscreenHoverFrame( wx.Frame ):
                 
             
         
-        if self._current_media is None or not self.GetParent().IsShown():
+        if self._current_media is None or not self._my_canvas.IsShown():
             
             if self.IsShown():
                 
@@ -164,13 +171,15 @@ class FullscreenHoverFrame( wx.Frame ):
             
             mime = self._current_media.GetMime()
             
-            mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self.GetParent().MouseIsOverMedia()
+            mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self._my_canvas.MouseIsOverMedia()
             
-            mouse_is_near_animation_bar = self.GetParent().MouseIsNearAnimationBar()
+            mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
             
             mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
             
-            focus_is_good = ClientGUICommon.TLPHasFocus( self ) or ClientGUICommon.TLPHasFocus( self.GetParent() )
+            current_focus = ClientGUICommon.GetFocusTLP()
+            
+            focus_is_good = ClientGUICommon.IsWXAncestor( current_focus, self._my_canvas.GetTopLevelParent(), through_tlws = True )
             
             ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
             ready_to_hide = not menu_open and ( not in_position or dialog_open or not focus_is_good )
@@ -219,6 +228,263 @@ class FullscreenHoverFrame( wx.Frame ):
                 
             
         
+        
+    
+class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
+    
+    def __init__( self, parent, my_canvas, canvas_key ):
+        
+        FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        
+        self._always_on_top = True
+        
+        self._current_index_string = ''
+        
+        self._comparison_media = None
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
+        menu_items.append( ( 'separator', None, None, None ) )
+        menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
+        
+        self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
+        self._back_a_pair.SetToolTip( 'go back a pair' )
+        
+        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ), self._canvas_key )
+        self._previous_button.SetToolTip( 'previous' )
+        
+        self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
+        
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
+        self._next_button.SetToolTip( 'next' )
+        
+        self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
+        self._skip_a_pair.SetToolTip( 'show a different pair' )
+        
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        
+        dupe_commands = []
+        
+        dupe_commands.append( ( 'this is better', 'Set that the current file you are looking at is better than the other in the pair.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) ) )
+        dupe_commands.append( ( 'same quality', 'Set that the two files are duplicates of very similar quality.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_exactly_the_same' ) ) )
+        dupe_commands.append( ( 'alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) ) )
+        dupe_commands.append( ( 'not duplicates', 'Set that the files are not duplicates or otherwise related--that this pair is a false-positive match.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_not_dupes' ) ) )
+        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_custom_action' ) ) )
+        
+        command_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        for ( label, tooltip, command ) in dupe_commands:
+            
+            command_button = ClientGUICommon.BetterButton( self, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
+            
+            command_button.SetToolTip( tooltip )
+            
+            command_button_vbox.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        self._comparison_statements_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'mime', 'num_tags', 'time_imported' ]
+        
+        self._comparison_statements_sts = {}
+        
+        for name in self._comparison_statement_names:
+            
+            panel = wx.Panel( self )
+            
+            st = ClientGUICommon.BetterStaticText( panel, 'init' )
+            
+            self._comparison_statements_sts[ name ] = ( panel, st )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( st, CC.FLAGS_VCENTER )
+            hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            panel.SetSizer( hbox )
+            
+            panel.Hide()
+            
+            self._comparison_statements_vbox.Add( panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+        
+        
+        #
+        
+        navigation_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        navigation_button_hbox.Add( self._back_a_pair, CC.FLAGS_VCENTER )
+        navigation_button_hbox.Add( self._previous_button, CC.FLAGS_VCENTER )
+        navigation_button_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        navigation_button_hbox.Add( self._index_text, CC.FLAGS_VCENTER )
+        navigation_button_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        navigation_button_hbox.Add( self._next_button, CC.FLAGS_VCENTER )
+        navigation_button_hbox.Add( self._skip_a_pair, CC.FLAGS_VCENTER )
+        navigation_button_hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( navigation_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( command_button_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._comparison_statements_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
+        HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        
+        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
+        
+    
+    def _EditBackgroundSwitchIntensity( self ):
+        
+        new_options = HG.client_controller.new_options
+        
+        value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_value = panel.GetValue()
+                
+                new_options.SetNoneableInteger( 'duplicate_background_switch_intensity', new_value )
+                
+            
+        
+    
+    def _EditMergeOptions( self, duplicate_type ):
+        
+        new_options = HG.client_controller.new_options
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                duplicate_action_options = panel.GetValue()
+                
+                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
+                
+            
+        
+    
+    def _GetIdealSizeAndPosition( self ):
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetSize()
+        
+        my_ideal_width = int( parent_width * 0.2 )
+        
+        should_resize = my_ideal_width != my_width
+        
+        ideal_size = ( my_ideal_width, -1 )
+        ideal_position = ClientGUICommon.ClientToScreen( parent, ( int( parent_width * 0.8 ), int( parent_height * 0.3 ) ) )
+        
+        return ( should_resize, ideal_size, ideal_position )
+        
+    
+    def _ResetComparisonStatements( self ):
+        
+        fit_needed = False
+        
+        statements_and_scores = ClientMedia.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
+        
+        for name in self._comparison_statement_names:
+            
+            ( panel, st ) = self._comparison_statements_sts[ name ]
+            
+            if name in statements_and_scores:
+                
+                ( statement, score ) = statements_and_scores[ name ]
+                
+                if not panel.IsShown():
+                    
+                    fit_needed = True
+                    
+                    panel.Show()
+                    
+                
+                st.SetLabelText( statement )
+                
+                if score > 0:
+                    
+                    colour = ( 0, 128, 0 )
+                    
+                elif score < 0:
+                    
+                    colour = ( 128, 0, 0 )
+                    
+                else:
+                    
+                    colour = ( 0, 0, 128 )
+                    
+                
+                st.SetForegroundColour( colour )
+                
+            else:
+                
+                if panel.IsShown():
+                    
+                    fit_needed = True
+                    
+                    panel.Hide()
+                    
+                
+            
+        
+        if fit_needed:
+            
+            self.Fit()
+            
+        else:
+            
+            self.Layout()
+            
+        
+    
+    def EventMouseWheel( self, event ):
+        
+        event.ResumePropagation( 1 )
+        event.Skip()
+        
+    
+    def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = shown_media
+            self._comparison_media = comparison_media
+            
+            self._ResetComparisonStatements()
+            
+        
+    
+    def SetIndexString( self, canvas_key, text ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_index_string = text
+            
+            self._index_text.SetLabelText( self._current_index_string )
+            
         
     
 class FullscreenHoverFrameTop( FullscreenHoverFrame ):
@@ -644,90 +910,6 @@ class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
     
 class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable ):
     
-    def __init__( self, parent, my_canvas, canvas_key ):
-        
-        FullscreenHoverFrameTopNavigable.__init__( self, parent, my_canvas, canvas_key )
-        
-        HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
-        
-    
-    def _PopulateCenterButtons( self ):
-        
-        menu_items = []
-        
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
-        menu_items.append( ( 'separator', None, None, None ) )
-        menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
-        
-        cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
-        
-        self._top_hbox.Add( cog_button, CC.FLAGS_SIZER_VCENTER )
-        
-        FullscreenHoverFrameTopNavigable._PopulateCenterButtons( self )
-        
-        dupe_commands = []
-        
-        dupe_commands.append( ( 'this is better', 'Set that the current file you are looking at is better than the other in the pair.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) ) )
-        dupe_commands.append( ( 'same quality', 'Set that the two files are duplicates of very similar quality.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_exactly_the_same' ) ) )
-        dupe_commands.append( ( 'alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) ) )
-        dupe_commands.append( ( 'not duplicates', 'Set that the files are not duplicates or otherwise related--that this pair is a false-positive match.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_not_dupes' ) ) )
-        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_custom_action' ) ) )
-        
-        for ( label, tooltip, command ) in dupe_commands:
-            
-            command_button = ClientGUICommon.BetterButton( self, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
-            
-            command_button.SetToolTip( tooltip )
-            
-            self._button_hbox.Add( command_button, CC.FLAGS_VCENTER )
-            
-        
-    
-    def _EditBackgroundSwitchIntensity( self ):
-        
-        new_options = HG.client_controller.new_options
-        
-        value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                new_value = panel.GetValue()
-                
-                new_options.SetNoneableInteger( 'duplicate_background_switch_intensity', new_value )
-                
-            
-        
-    
-    def _EditMergeOptions( self, duplicate_type ):
-        
-        new_options = HG.client_controller.new_options
-        
-        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_type, duplicate_action_options )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                duplicate_action_options = panel.GetValue()
-                
-                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
-                
-            
-        
-    
     def _PopulateLeftButtons( self ):
         
         self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
@@ -741,33 +923,6 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
         self._last_button.SetToolTip( 'show a different pair' )
         
         self._top_hbox.Add( self._last_button, CC.FLAGS_VCENTER )
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            if media is None:
-                
-                self._additional_info_text.SetLabelText( '' )
-                
-            
-            FullscreenHoverFrameTopNavigable.SetDisplayMedia( self, canvas_key, media )
-            
-        
-    
-    def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            ( statements, score ) = ClientMedia.GetDuplicateComparisonStatements( shown_media, comparison_media )
-            
-            self._additional_info_text.SetLabelText( os.linesep.join( statements ) )
-            
-            self._ResetText()
-            
-            self._ResetButtons()
-            
         
     
 class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):

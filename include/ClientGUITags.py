@@ -46,7 +46,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = ClientGUICommon.BetterNotebook( self )
         
         #
         
@@ -82,22 +82,22 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if prefer_blacklist:
             
-            selection_tests.append( ( blacklist_possible, 0 ) )
-            selection_tests.append( ( whitelist_possible, 1 ) )
-            selection_tests.append( ( True, 2 ) )
+            selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
+            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
+            selection_tests.append( ( True, self._advanced_panel ) )
             
         else:
             
-            selection_tests.append( ( whitelist_possible, 0 ) )
-            selection_tests.append( ( blacklist_possible, 1 ) )
-            selection_tests.append( ( True, 2 ) )
+            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
+            selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
+            selection_tests.append( ( True, self._advanced_panel ) )
             
         
-        for ( test, index ) in selection_tests:
+        for ( test, page ) in selection_tests:
             
             if test:
                 
-                self._notebook.SetSelection( index )
+                self._notebook.SelectPage( page )
                 
                 break
                 

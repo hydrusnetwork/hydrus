@@ -25,6 +25,8 @@ class ReviewServicePanel( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
         self._service = service
         
         service_type = self._service.GetServiceType()
@@ -1189,12 +1191,18 @@ class ReviewServicePanel( wx.Panel ):
             
             self._check_running_button = ClientGUICommon.BetterButton( self, 'check daemon', self._CheckRunning )
             
-            self._ipfs_shares = ClientGUIListCtrl.SaneListCtrl( self, 200, [ ( 'multihash', 120 ), ( 'num files', 80 ), ( 'total size', 80 ), ( 'note', -1 ) ], delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+            self._ipfs_shares_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._copy_multihash_button = ClientGUICommon.BetterButton( self, 'copy multihashes', self._CopyMultihashes )
-            self._show_selected_button = ClientGUICommon.BetterButton( self, 'show selected in main gui', self._ShowSelectedInNewPages )
-            self._set_notes_button = ClientGUICommon.BetterButton( self, 'set notes', self._SetNotes )
-            self._unpin_button = ClientGUICommon.BetterButton( self, 'unpin selected', self._Unpin )
+            columns = [ ( 'multihash', 34 ), ( 'num files', 6 ), ( 'total size', 6 ), ( 'note', -1 ) ]
+            
+            self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, 'ipfs_shares', 12, 32, columns, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+            
+            self._ipfs_shares_panel.SetListCtrl( self._ipfs_shares )
+            
+            self._ipfs_shares_panel.AddButton( 'copy multihashes', self._CopyMultihashes, enabled_only_on_selection = True )
+            self._ipfs_shares_panel.AddButton( 'show selected in main gui', self._ShowSelectedInNewPages, enabled_only_on_selection = True )
+            self._ipfs_shares_panel.AddButton( 'set notes', self._SetNotes, enabled_only_on_selection = True )
+            self._ipfs_shares_panel.AddButton( 'unpin selected', self._Unpin, enabled_only_on_selection = True )
             
             #
             
@@ -1202,16 +1210,8 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            button_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            button_box.Add( self._copy_multihash_button, CC.FLAGS_VCENTER )
-            button_box.Add( self._show_selected_button, CC.FLAGS_VCENTER )
-            button_box.Add( self._set_notes_button, CC.FLAGS_VCENTER )
-            button_box.Add( self._unpin_button, CC.FLAGS_VCENTER )
-            
             self.Add( self._check_running_button, CC.FLAGS_LONE_BUTTON )
-            self.Add( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self.Add( button_box, CC.FLAGS_BUTTON_SIZER )
+            self.Add( self._ipfs_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1253,13 +1253,28 @@ class ReviewServicePanel( wx.Panel ):
             HG.client_controller.CallToThread( do_it )
             
         
+        def _ConvertDataToListCtrlTuple( self, data ):
+            
+            ( multihash, num_files, total_size, note ) = data
+            
+            pretty_multihash = multihash
+            pretty_num_files = HydrusData.ToHumanInt( num_files )
+            pretty_total_size = HydrusData.ToHumanBytes( total_size )
+            pretty_note = note
+            
+            display_tuple = ( pretty_multihash, pretty_num_files, pretty_total_size, pretty_note )
+            sort_tuple = ( multihash, num_files, total_size, note )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
         def _CopyMultihashes( self ):
             
-            multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData() ]
+            multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData( only_selected = True ) ]
             
             if len( multihashes ) == 0:
                 
-                multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetClientData() ]
+                multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData() ]
                 
             
             if len( multihashes ) > 0:
@@ -1270,18 +1285,6 @@ class ReviewServicePanel( wx.Panel ):
                 
                 HG.client_controller.pub( 'clipboard', 'text', text )
                 
-            
-        
-        def _GetDisplayTuple( self, sort_tuple ):
-            
-            ( multihash, num_files, total_size, note ) = sort_tuple
-            
-            pretty_multihash = multihash
-            pretty_num_files = HydrusData.ToHumanInt( num_files )
-            pretty_total_size = HydrusData.ToHumanBytes( total_size )
-            pretty_note = note
-            
-            return ( pretty_multihash, pretty_num_files, pretty_total_size, pretty_note )
             
         
         def _Refresh( self ):
@@ -1296,74 +1299,89 @@ class ReviewServicePanel( wx.Panel ):
         
         def _SetNotes( self ):
             
-            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+            datas = self._ipfs_shares.GetData( only_selected = True )
+            
+            if len( datas ) > 0:
                 
-                with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for ' + multihash + '.' ) as dlg:
+                with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for these shares.' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
-                        
                         note = dlg.GetValue()
                         
-                        content_update_row = ( hashes, multihash, note )
+                        content_updates = []
                         
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        for ( multihash, num_files, total_size, old_note ) in datas:
+                            
+                            hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
+                            
+                            content_update_row = ( hashes, multihash, note )
+                            
+                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
+                            
                         
                         HG.client_controller.Write( 'content_updates', { self._service.GetServiceKey() : content_updates } )
                         
-                    else:
-                        
-                        break
+                        self._my_updater.Update()
                         
                     
                 
-            
-            self._my_updater.Update()
             
         
         def _ShowSelectedInNewPages( self ):
             
-            def do_it( shares ):
+            def wx_done():
+                
+                self._ipfs_shares_panel.Enable()
+                
+            
+            def do_it( service_key, pages_of_hashes_to_show ):
                 
                 try:
                     
                     for ( multihash, num_files, total_size, note ) in shares:
                         
-                        hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
+                        hashes = HG.client_controller.Read( 'service_directory', service_key, multihash )
                         
                         HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'ipfs directory' )
+                        
+                        time.sleep( 0.5 )
                         
                     
                 finally:
                     
-                    wx.CallAfter( self._ipfs_shares.Enable )
+                    wx.CallAfter( wx_done )
                     
                 
             
-            shares = self._ipfs_shares.GetSelectedClientData()
+            shares = self._ipfs_shares.GetData( only_selected = True )
             
-            self._ipfs_shares.Disable()
+            self._ipfs_shares_panel.Disable()
             
-            HG.client_controller.CallToThread( do_it, shares )
+            HG.client_controller.CallToThread( do_it, self._service.GetServiceKey(), shares )
             
         
         def _Unpin( self ):
             
-            def do_it( multihashes ):
+            def wx_done():
+                
+                self._ipfs_shares_panel.Enable()
+                
+                self._my_updater.Update()
+                
+            
+            def do_it( service, multihashes ):
                 
                 try:
                     
-                    for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+                    for multihash in multihashes:
                         
-                        self._service.UnpinDirectory( multihash )
+                        service.UnpinDirectory( multihash )
                         
-                    
-                    self._ipfs_shares.RemoveAllSelected()
                     
                 finally:
                     
-                    wx.CallAfter( self._ipfs_shares.Enable )
+                    wx.CallAfter( wx_done )
                     
                 
             
@@ -1371,11 +1389,11 @@ class ReviewServicePanel( wx.Panel ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData() ]
+                    multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData( only_selected = True ) ]
                     
-                    self._ipfs_shares.Disable()
+                    self._ipfs_shares_panel.Disable()
                     
-                    HG.client_controller.CallToThread( do_it, multihashes )
+                    HG.client_controller.CallToThread( do_it, self._service, multihashes )
                     
                 
             
@@ -1399,16 +1417,9 @@ class ReviewServicePanel( wx.Panel ):
                     return
                     
                 
-                self._ipfs_shares.DeleteAllItems()
+                # list of ( multihash, num_files, total_size, note )
                 
-                for ( multihash, num_files, total_size, note ) in ipfs_shares:
-                    
-                    sort_tuple = ( multihash, num_files, total_size, note )
-                    
-                    display_tuple = self._GetDisplayTuple( sort_tuple )
-                    
-                    self._ipfs_shares.Append( display_tuple, sort_tuple )
-                    
+                self._ipfs_shares.SetData( ipfs_shares )
                 
             
             ipfs_shares = HG.client_controller.Read( 'service_directories', service.GetServiceKey() )

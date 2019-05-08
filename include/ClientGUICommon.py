@@ -750,9 +750,18 @@ class BetterChoice( wx.Choice ):
         
         selection = self.GetSelection()
         
-        if selection != wx.NOT_FOUND: return self.GetClientData( selection )
-        elif self.GetCount() > 0: return self.GetClientData( 0 )
-        else: return None
+        if selection != wx.NOT_FOUND:
+            
+            return self.GetClientData( selection )
+            
+        elif self.GetCount() > 0:
+            
+            return self.GetClientData( 0 )
+            
+        else:
+            
+            return None
+            
         
     
     def SelectClientData( self, client_data ):
@@ -862,6 +871,19 @@ class BetterNotebook( wx.Notebook ):
     def SelectLeft( self ):
         
         self._ShiftSelection( -1 )
+        
+    
+    def SelectPage( self, page ):
+        
+        for i in range( self.GetPageCount() ):
+            
+            if self.GetPage( i ) == page:
+                
+                self.SetSelection( i )
+                
+                return
+                
+            
         
     
     def SelectRight( self ):
