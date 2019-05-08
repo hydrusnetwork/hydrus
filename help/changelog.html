@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 351</h3></li>
+				<ul>
+					<li>wrote a new (always on top!) hover window for the duplicate filter that sits on the middle-right. the duplicate cog button and action buttons are moved to this new window, as are the file comparison statements</li>
+					<li>the duplicate file comparison statements now state the relevant actual metadata along with better '>>'-style operators to highlight differences and green/red/blue colouring based on given score. it is now much easier to see and action clearly better files at-a-glance</li>
+					<li>improved some hover window focus display calculations to play with the new always-on-top tech</li>
+					<li>both the 'show some random dupes' button and finding dupe pairs for the filter should be a bit faster for very large search domains. the basic file search and indexing still has to run, but the second sampling step in both cases will bail out earlier once it has a decent result</li>
+					<li>core image handling functions now uniformly use OpenCV (faster, more accurate) by default, falling to PIL/Pillow on errors. image importing in the client and server should be a bit faster, and some unusual image rotations should now be read correctly</li>
+					<li>the server now supports OpenCV for image operations, it _should_ also still work with only PIL/Pillow, if you are running from source and cannot get it</li>
+					<li>unified all thumbnail generation code and insulated it from suprises due to unexpectedly-sized source files, fixing a potential client-level thumbnail generation looping bug</li>
+					<li>gave all image processing a refactor and general cleanup pass, deleted a bunch of old code</li>
+					<li>wrote a new 'local tag cache' for the db that will speed up tag definition lookups for all local files. this should speed up a variety of tag and file result fetching, particularly right after client boot. it will take a minute or two on update to generate</li>
+					<li>sped up how fast the tag parent structure builds itself</li>
+					<li>the review services panel now uses nested notebooks, rather than the old badly coded listbook control. I don't really like how it looks, but the code is now saner</li>
+					<li>similar-files metadata generation now discards blank frames more reliably</li>
+					<li>subscription popups now report x/y progress in terms of the current job, discarding historical work previously done. 1001/1003 is gone, 1/3 is in</li>
+					<li>made the disk cache more conservative on non-pre-processing calls</li>
+					<li>cleaned up some file import code, moving responsibility from the file locations manager to the file import object</li>
+					<li>updated the ipfs service listctrl to use the new listctrl object. also cleaned up its action code to be more async and stable</li>
+					<li>I believe I fixed a rare vector for the 'tryendmodal' dialog bug</li>
+					<li>fixed a bug in presenting the available importable downloader objects in the easy drag-and-drop downloader import when the multiple downloaders dropped included objects of the same type and name--duplicate-named objects in this case will now be discarded</li>
+					<li>unified url_match/url_class code differences to url class everywhere</li>
+					<li>updated some common db list selection code to use new python string formatting</li>
+					<li>plenty of misc code cleanup</li>
+				</ul>
 				<li><h3>version 350</h3></li>
 				<ul>
 					<li>the duplicate filter no longer applies the implicit system limit (which defaults to 10,000 files) on its search domains, which solves the undercounting issue on large search domains. duplicate operations will be appropriately slower, so narrow your duplicate file queries (adding a creator: tag works great) if they take too long</li>
