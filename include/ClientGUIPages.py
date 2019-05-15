@@ -411,6 +411,13 @@ class Page( wx.SplitterWindow ):
         
         self._media_panel.ClearPageKey()
         
+        collect_by = self._management_panel.GetCollectBy()
+        
+        if collect_by != []:
+            
+            new_panel.Collect( self._page_key, collect_by )
+            
+        
         self.ReplaceWindow( self._media_panel, new_panel )
         
         self._media_panel.DestroyLater()

@@ -220,6 +220,7 @@ media_viewer_capabilities[ HC.IMAGE_JPEG ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_PNG ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_WEBP ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_TIFF ] = static_full_support
+media_viewer_capabilities[ HC.IMAGE_ICON ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_APNG ] = animated_full_support
 media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
 

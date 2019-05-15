@@ -73,6 +73,15 @@ def CreateManagementController( page_name, management_type, file_service_key = N
     management_controller.SetKey( 'file_service', file_service_key )
     management_controller.SetVariable( 'media_sort', new_options.GetDefaultSort() )
     
+    collect_by = HC.options[ 'default_collect' ]
+    
+    if collect_by is None:
+        
+        collect_by = []
+        
+    
+    management_controller.SetVariable( 'media_collect', collect_by )
+    
     return management_controller
     
 def CreateManagementControllerDuplicateFilter():
@@ -875,7 +884,19 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self._sort_by = ClientGUICommon.ChoiceSort( self, management_controller = self._management_controller )
         
-        self._collect_by = ClientGUICommon.CheckboxCollect( self, self._page_key )
+        self._collect_by = ClientGUICommon.CheckboxCollect( self, management_controller = self._management_controller )
+        
+    
+    def GetCollectBy( self ):
+        
+        if self._collect_by.IsShown():
+            
+            return self._collect_by.GetChoice()
+            
+        else:
+            
+            return []
+            
         
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
@@ -1235,6 +1256,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         def wx_code( unknown_duplicates_count ):
             
+            if not self:
+                
+                return
+                
+            
             self._currently_refreshing_dupe_count_numbers = False
             
             self._refresh_dupe_counts_button.Enable()
@@ -1266,6 +1292,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     def _RefreshMaintenanceStatus( self ):
         
         def wx_code( similar_files_maintenance_status ):
+            
+            if not self:
+                
+                return
+                
             
             self._currently_refreshing_maintenance_numbers = False
             

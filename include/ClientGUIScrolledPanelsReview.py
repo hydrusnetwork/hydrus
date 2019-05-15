@@ -2396,8 +2396,16 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            expiry = max( expires_numbers )
-            pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+            try:
+                
+                expiry = max( expires_numbers )
+                pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+                
+            except:
+                
+                expiry = -1
+                pretty_expiry = 'Unusual expiry numbers'
+                
             
         
         display_tuple = ( pretty_network_context, pretty_number_of_cookies, pretty_expiry )

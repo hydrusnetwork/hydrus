@@ -2075,7 +2075,12 @@ class Canvas( wx.Window ):
     
     def _ZoomSwitch( self ):
         
-        if self._current_media is not None and self._IsZoomable() and self._canvas_zoom != 1.0:
+        if self._current_media is not None and self._IsZoomable():
+            
+            if self._canvas_zoom == 1.0 and self._current_zoom == 1.0:
+                
+                return
+                
             
             ( my_width, my_height ) = self.GetClientSize()
             

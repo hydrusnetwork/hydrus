@@ -692,7 +692,7 @@ class MediaList( object ):
         keys_to_medias = collections.defaultdict( list )
         
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
-        ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
+        ratings_to_collect_by = [ bytes.fromhex( data ) for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
         services_manager = HG.client_controller.services_manager
         
@@ -2136,25 +2136,69 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
+                    # videos > images > pdfs
+                    # heavy vids first, heavy images first
+                    
                     duration = x.GetDuration()
+                    num_frames = x.GetNumFrames()
+                    size = x.GetSize()
+                    resolution = x.GetResolution()
                     
                     if duration is None or duration == 0:
                         
-                        return 0
-                        
-                    else:
-                        
-                        size = x.GetSize()
-                        
                         if size is None or size == 0:
                             
-                            return -1
+                            duration_bitrate = -1
+                            frame_bitrate = -1
                             
                         else:
                             
-                            return size / duration
+                            duration_bitrate = 0
+                            
+                            if resolution is None:
+                                
+                                frame_bitrate = 0
+                                
+                            else:
+                                
+                                ( width, height ) = x.GetResolution()
+                                
+                                num_pixels = width * height
+                                
+                                if size is None or size == 0 or num_pixels == 0:
+                                    
+                                    frame_bitrate = -1
+                                    
+                                else:
+                                    
+                                    frame_bitrate = size / num_pixels
+                                    
+                                
                             
                         
+                    else:
+                        
+                        if size is None or size == 0:
+                            
+                            duration_bitrate = -1
+                            frame_bitrate = -1
+                            
+                        else:
+                            
+                            duration_bitrate = size / duration
+                            
+                            if num_frames is None or num_frames == 0:
+                                
+                                frame_bitrate = 0
+                                
+                            else:
+                                
+                                frame_bitrate = duration_bitrate / num_frames
+                                
+                            
+                        
+                    
+                    return ( duration_bitrate, frame_bitrate )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_FILESIZE:
@@ -2306,19 +2350,19 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             sort_string_lookup = {}
             
-            sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = 'approximate bitrate'
-            sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = 'filesize'
-            sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = 'duration'
-            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'time imported'
-            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = 'mime'
+            sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = 'dimensions: duration'
+            sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = 'dimensions: height'
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = 'dimensions: number of pixels'
+            sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = 'dimensions: resolution ratio'
+            sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = 'dimensions: width'
+            sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = 'file: approximate bitrate'
+            sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = 'file: filesize'
+            sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = 'file: filetype'
+            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'file: time imported'
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = 'random'
-            sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = 'width'
-            sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = 'height'
-            sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = 'resolution ratio'
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_PIXELS ] = 'number of pixels'
-            sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = 'number of tags'
-            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = 'media views'
-            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = 'media viewtime'
+            sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = 'tags: number of tags'
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = 'views: media views'
+            sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWTIME ] = 'views: media viewtime'
             
             sort_string += sort_string_lookup[ sort_data ]
             

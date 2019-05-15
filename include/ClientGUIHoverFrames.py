@@ -68,7 +68,9 @@ class FullscreenHoverFrame( wx.Frame ):
                 self.SetSize( my_ideal_size )
                 
             
-            if HC.PLATFORM_OSX and self.GetPosition() != my_ideal_position and self._always_on_top:
+            changes_occurred = should_resize or self.GetPosition() != my_ideal_position
+            
+            if HC.PLATFORM_OSX and changes_occurred and self._always_on_top:
                 
                 self.Raise()
                 
@@ -87,6 +89,13 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def TIMERUIUpdate( self ):
         
+        current_focus_tlp = ClientGUICommon.GetFocusTLP()
+        
+        focus_is_on_descendant = ClientGUICommon.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
+        focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
+        
+        focus_is_good = focus_is_on_descendant and focus_has_right_window_type
+        
         new_options = HG.client_controller.new_options
         
         if self._always_on_top or new_options.GetBoolean( 'always_show_hover_windows' ):
@@ -94,6 +103,23 @@ class FullscreenHoverFrame( wx.Frame ):
             self._SizeAndPosition()
             
             self.Show()
+            
+            if HC.PLATFORM_OSX:
+                
+                ( mouse_x, mouse_y ) = wx.GetMousePosition()
+                
+                ( my_x, my_y ) = self.GetPosition()
+                
+                ( my_width, my_height ) = self.GetSize()
+                
+                in_actual_x = my_x <= mouse_x and mouse_x <= my_x + my_width
+                in_actual_y = my_y <= mouse_y and mouse_y <= my_y + my_height
+                
+                if in_actual_x and in_actual_y and focus_is_good:
+                    
+                    self.Raise()
+                    
+                
             
             return
             
@@ -176,10 +202,6 @@ class FullscreenHoverFrame( wx.Frame ):
             mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
             
             mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
-            
-            current_focus = ClientGUICommon.GetFocusTLP()
-            
-            focus_is_good = ClientGUICommon.IsWXAncestor( current_focus, self._my_canvas.GetTopLevelParent(), through_tlws = True )
             
             ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
             ready_to_hide = not menu_open and ( not in_position or dialog_open or not focus_is_good )

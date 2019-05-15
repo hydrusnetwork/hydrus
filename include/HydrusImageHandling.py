@@ -39,6 +39,8 @@ warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
+PIL_ONLY_MIMETYPES = { HC.IMAGE_GIF, HC.IMAGE_ICON }
+
 try:
     
     import cv2
@@ -129,15 +131,12 @@ def GenerateNumPyImage( path, mime, force_pil = False ):
         force_pil = True
         
     
-    if mime == HC.IMAGE_GIF or force_pil:
+    if mime in PIL_ONLY_MIMETYPES or force_pil:
         
         if HG.media_load_report_mode:
             
             HydrusData.ShowText( 'Loading with PIL' )
             
-        
-        # a regular cv.imread call, can crash the whole process on random thumbs, hooray, so have this as backup
-        # it was just the read that was the problem, so this seems to work fine, even if pil is only about half as fast
         
         pil_image = GeneratePILImage( path )
         
@@ -333,7 +332,7 @@ def GeneratePILImageFromNumPyImage( numpy_image ):
     
 def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime ):
     
-    if OPENCV_OK and mime != HC.IMAGE_GIF:
+    if OPENCV_OK:
         
         numpy_image = GenerateNumPyImage( path, mime )
         
@@ -475,7 +474,7 @@ def GetGIFFrameDurations( path ):
     
 def GetImageProperties( path, mime ):
     
-    if OPENCV_OK and mime != HC.IMAGE_GIF: # webp here too maybe eventually, or offload it all to ffmpeg
+    if OPENCV_OK and mime not in PIL_ONLY_MIMETYPES: # webp here too maybe eventually, or offload it all to ffmpeg
         
         numpy_image = GenerateNumPyImage( path, mime )
         
@@ -502,6 +501,58 @@ def GetImageProperties( path, mime ):
         
     
     return ( ( width, height ), duration, num_frames )
+    
+# bigger number is worse quality
+# this is very rough and misses some finesse
+def GetJPEGQuantizationQualityEstimate( path ):
+    
+    pil_image = GeneratePILImage( path )
+    
+    if hasattr( pil_image, 'quantization' ):
+        
+        table_arrays = list( pil_image.quantization.values() )
+        
+        quality = sum( ( sum( table_array ) for table_array in table_arrays ) )
+        
+        quality /= len( table_arrays )
+        
+        if quality >= 3400:
+            
+            label = 'very low'
+            
+        elif quality >= 2000:
+            
+            label = 'low'
+            
+        elif quality >= 1400:
+            
+            label = 'medium-low'
+            
+        elif quality >= 1000:
+            
+            label = 'medium'
+            
+        elif quality >= 700:
+            
+            label = 'medium-high'
+            
+        elif quality >= 400:
+            
+            label = 'high'
+            
+        elif quality >= 200:
+            
+            label = 'very high'
+            
+        else:
+            
+            label = 'extremely high'
+            
+        
+        return ( label, quality )
+        
+    
+    return ( 'unknown', None )
     
 def GetPSDResolution( path ):
     

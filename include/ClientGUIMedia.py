@@ -2144,7 +2144,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         self._page_key = 'dead media panel page key'
         
     
-    def Collect( self, page_key, collect_by = -1 ):
+    def Collect( self, page_key, collect_by = None ):
         
         if page_key == self._page_key:
             

@@ -849,7 +849,7 @@ class TestClientDB( unittest.TestCase ):
             
             if duration == 'apng_duration': # diff ffmpeg versions report differently
                 
-                self.assertIn( mr_duration, ( 3133, 1880, 1800 ) )
+                self.assertIn( mr_duration, ( 3133, 1880, 1125, 1800 ) )
                 
             elif duration == 'mp4_duration':
                 

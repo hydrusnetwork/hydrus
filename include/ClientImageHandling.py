@@ -17,6 +17,12 @@ cv_interpolation_enum_lookup[ CC.ZOOM_AREA ] = cv2.INTER_AREA
 cv_interpolation_enum_lookup[ CC.ZOOM_CUBIC ] = cv2.INTER_CUBIC
 cv_interpolation_enum_lookup[ CC.ZOOM_LANCZOS4 ] = cv2.INTER_LANCZOS4
 
+def DiscardBlankPerceptualHashes( phashes ):
+    
+    phashes = { phash for phash in phashes if HydrusData.Get64BitHammingDistance( phash, CC.BLANK_PHASH ) > 4 }
+    
+    return phashes
+    
 def GenerateNumPyImage( path, mime ):
     
     force_pil = HG.client_controller.new_options.GetBoolean( 'load_images_with_pil' )
@@ -134,12 +140,6 @@ def GenerateShapePerceptualHashes( path, mime ):
     phashes = DiscardBlankPerceptualHashes( phashes )
     
     # we good
-    
-    return phashes
-    
-def DiscardBlankPerceptualHashes( phashes ):
-    
-    phashes = { phash for phash in phashes if HydrusData.Get64BitHammingDistance( phash, CC.BLANK_PHASH ) > 4 }
     
     return phashes
     

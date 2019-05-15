@@ -92,6 +92,8 @@ def GetFFMPEGVersion():
     
     return 'unknown'
     
+FFMPEG_MISSING_ERROR_PUBBED = False
+
 # bits of this were originally cribbed from moviepy
 def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second = False ):
     
@@ -127,7 +129,31 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
         
     except FileNotFoundError as e:
         
-        raise FileNotFoundError( 'FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
+        global FFMPEG_MISSING_ERROR_PUBBED
+        
+        if not FFMPEG_MISSING_ERROR_PUBBED:
+            
+            message = 'FFMPEG, which hydrus uses to parse and render video, was not found! This may be due to it not being available on your system, or hydrus being unable to find it.'
+            message += os.linesep * 2
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                message += 'You are on Windows, so there should be a copy of ffmpeg.exe in your install_dir/bin folder. If not, please check if your anti-virus has removed it and restore it through a new install.'
+                
+            else:
+                
+                message += 'If you are certain that FFMPEG is installed on your OS and accessible in your PATH, please let hydrus_dev know, as this problem is likely due to an environment problem. You may be able to solve this problem immediately by putting a static build of the ffmpeg executable in your install_dir/bin folder.'
+                
+            
+            message += os.linesep * 2
+            message += 'You can check your current FFMPEG status through help->about.'
+            
+            HydrusData.ShowText( message )
+            
+            FFMPEG_MISSING_ERROR_PUBBED = True
+            
+        
+        raise FileNotFoundError( 'Cannot interact with video because FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
         
     
     data_bytes = proc.stderr.read()
@@ -155,21 +181,21 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
 def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
-    lines = GetFFMPEGInfoLines( path, count_frames_manually = True, only_first_second = True )
+    first_second_lines = GetFFMPEGInfoLines( path, count_frames_manually = True, only_first_second = True )
     
-    if not ParseFFMPEGHasVideo( lines ):
+    if not ParseFFMPEGHasVideo( first_second_lines ):
         
         raise HydrusExceptions.MimeException( 'File did not appear to have a video stream!' )
         
     
-    resolution = ParseFFMPEGVideoResolution( lines )
+    resolution = ParseFFMPEGVideoResolution( first_second_lines )
     
-    ( file_duration_in_s, stream_duration_in_s ) = ParseFFMPEGDuration( lines )
+    ( file_duration_in_s, stream_duration_in_s ) = ParseFFMPEGDuration( first_second_lines )
     
     # this will have to be fixed when I add audio, and dynamically accounted for on dual vid/audio rendering
     duration = stream_duration_in_s
     
-    ( fps, confident_fps ) = ParseFFMPEGFPS( lines )
+    ( fps, confident_fps ) = ParseFFMPEGFPS( first_second_lines )
     
     if duration is None and not confident_fps:
         
@@ -177,15 +203,35 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
         ( fps, confident_fps ) = ( 24, True )
         
     
-    cannot_infer_num_frames = duration is None or not confident_fps
+    if duration is None:
+        
+        force_count_frames_manually = True
+        
+        num_frames_inferrence_likely_odd = True # i.e. inferrence not possible!
+        
+    else:
+        
+        num_frames_estimate = int( duration * fps )
+        
+        # if file is big or long, don't try to force a manual count when one not explicitly asked for
+        # we don't care about a dropped frame on a 10min vid tbh
+        num_frames_seems_ok_to_count = num_frames_estimate < 2400
+        file_is_ok_size = os.path.getsize( path ) < 128 * 1024 * 1024
+        
+        if num_frames_seems_ok_to_count and file_is_ok_size:
+            
+            last_frame_has_unusual_duration = num_frames_estimate != duration * fps
+            
+            unusual_video_start = file_duration_in_s != stream_duration_in_s
+            
+            if not confident_fps or last_frame_has_unusual_duration or unusual_video_start:
+                
+                force_count_frames_manually = True
+                
+            
+        
     
-    unaccounted_for_frame_count = duration is not None and int( duration * fps ) != duration * fps
-    
-    unusual_video_start = file_duration_in_s != stream_duration_in_s
-    
-    num_frames_inferrence_likely_odd = unaccounted_for_frame_count or unusual_video_start
-    
-    if cannot_infer_num_frames or num_frames_inferrence_likely_odd or force_count_frames_manually:
+    if force_count_frames_manually:
         
         lines = GetFFMPEGInfoLines( path, count_frames_manually = True )
         
@@ -395,11 +441,11 @@ def ParseFFMPEGDuration( lines ):
         raise HydrusExceptions.MimeException( 'Error reading duration!' )
         
     
-def ParseFFMPEGFPS( lines ):
+def ParseFFMPEGFPS( first_second_lines ):
     
     try:
         
-        line = ParseFFMPEGVideoLine( lines )
+        line = ParseFFMPEGVideoLine( first_second_lines )
         
         # get the frame rate
         
@@ -435,7 +481,7 @@ def ParseFFMPEGFPS( lines ):
                 
             
         
-        num_frames_in_first_second = ParseFFMPEGNumFramesManually( lines )
+        num_frames_in_first_second = ParseFFMPEGNumFramesManually( first_second_lines )
         
         confident = len( possible_results ) <= 1
         
@@ -446,17 +492,27 @@ def ParseFFMPEGFPS( lines ):
             
         else:
             
-            # in some cases, fps is 0.77 and tbr is incorrectly 20. extreme values cause bad results. let's try erroring on the side of slow
-            
-            fps = min( possible_results )
-            
-            only_one_suggestion = len( possible_results ) == 1
+            # in some cases, fps is 0.77 and tbr is incorrectly 20. extreme values cause bad results. let's default to slowest, but test our actual first second for most legit-looking
             
             sensible_first_second = num_frames_in_first_second > 1
             
-            fps_matches = num_frames_in_first_second - 1 <= fps and fps <= num_frames_in_first_second + 1
+            fps = min( possible_results )
             
-            confident = only_one_suggestion and sensible_first_second and fps_matches
+            fps_matches_with_first_second = False
+            
+            for possible_fps in possible_results:
+                
+                if num_frames_in_first_second - 1 <= possible_fps and possible_fps <= num_frames_in_first_second + 1:
+                    
+                    fps = possible_fps
+                    
+                    fps_matches_with_first_second = True
+                    
+                    break
+                    
+                
+            
+            confident = sensible_first_second and fps_matches_with_first_second
             
         
         return ( fps, confident )
@@ -500,31 +556,33 @@ def ParseFFMPEGMimeText( lines ):
     
 def ParseFFMPEGNumFramesManually( lines ):
     
-    frame_lines = [ l for l in lines if l.startswith( 'frame= ' ) ]
+    frame_lines = [ l for l in lines if l.startswith( 'frame=' ) ]
     
     if len( frame_lines ) == 0:
         
         raise HydrusExceptions.MimeException( 'Video appears to be broken and non-renderable--perhaps a damaged single-frame video?' )
         
     
-    original_line = frame_lines[-1] # there will be several of these, counting up as the file renders. we hence want the final one
+    final_line = frame_lines[-1] # there will be many progress rows, counting up as the file renders. we hence want the final one
     
-    l = original_line
+    l = final_line
     
-    while '  ' in l:
+    l = l.replace( 'frame=', '' )
+    
+    while l.startswith( ' ' ):
         
-        l = l.replace( '  ', ' ' )
+        l = l[1:]
         
     
     try:
         
-        frames_string = l.split( ' ' )[1]
+        frames_string = l.split( ' ' )[0]
         
         num_frames = int( frames_string )
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Video was unable to render correctly--could not parse ffmpeg output line: "{}"'.format( original_line ) )
+        raise HydrusExceptions.MimeException( 'Video was unable to render correctly--could not parse ffmpeg output line: "{}"'.format( final_line ) )
         
     
     return num_frames
@@ -697,7 +755,16 @@ class VideoRendererFFMPEG( object ):
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs()
         
-        self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
+        try:
+            
+            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
+            
+        except FileNotFoundError as e:
+            
+            HydrusData.ShowText( 'Cannot render video--FFMPEG not found!' )
+            
+            raise
+            
         
         if skip_frames > 0:
             

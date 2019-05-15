@@ -890,7 +890,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:mime' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:filetype' ), CC.FLAGS_VCENTER )
         hbox.Add( self._mimes, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )

@@ -25,6 +25,8 @@ header_and_mime = [
     ( 0, b'II*\x00', HC.IMAGE_TIFF ),
     ( 0, b'MM\x00*', HC.IMAGE_TIFF ),
     ( 0, b'BM', HC.IMAGE_BMP ),
+    ( 0, b'\x00\x00\x01\x00', HC.IMAGE_ICON ),
+    ( 0, b'\x00\x00\x02\x00', HC.IMAGE_ICON ),
     ( 0, b'CWS', HC.APPLICATION_FLASH ),
     ( 0, b'FWS', HC.APPLICATION_FLASH ),
     ( 0, b'ZWS', HC.APPLICATION_FLASH ),
@@ -54,7 +56,7 @@ header_and_mime = [
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ): # not apng atm
         
         thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime )
         
@@ -168,7 +170,7 @@ def GetFileInfo( path, mime = None ):
     num_frames = None
     num_words = None
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         

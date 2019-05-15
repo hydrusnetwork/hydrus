@@ -1096,7 +1096,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     def do_it():
                         
-                        self._service.Sync( False )
+                        self._service.Sync( only_process_when_idle = False )
                         
                         self._my_updater.Update()
                         

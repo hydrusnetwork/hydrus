@@ -1073,13 +1073,25 @@ class BufferedWindowIcon( BufferedWindow ):
     
 class CheckboxCollect( wx.ComboCtrl ):
     
-    def __init__( self, parent, page_key = None ):
+    def __init__( self, parent, management_controller = None ):
         
         wx.ComboCtrl.__init__( self, parent, style = wx.CB_READONLY )
         
-        self._page_key = page_key
+        self._management_controller = management_controller
         
-        self._collect_by = HC.options[ 'default_collect' ]
+        if self._management_controller is not None and self._management_controller.HasVariable( 'media_collect' ):
+            
+            self._collect_by = self._management_controller.GetVariable( 'media_collect' )
+            
+        else:
+            
+            self._collect_by = HC.options[ 'default_collect' ]
+            
+        
+        if self._collect_by is None:
+            
+            self._collect_by = []
+            
         
         popup = self._Popup( self._collect_by )
         
@@ -1087,7 +1099,7 @@ class CheckboxCollect( wx.ComboCtrl ):
         
         self.SetPopupControl( popup )
         
-        self.SetValue( 'no collections' )
+        self.SetValue( 'no collections' ) # initialising to this because if there are no collections, no broadcast call goes through
         
     
     def GetChoice( self ):
@@ -1097,11 +1109,20 @@ class CheckboxCollect( wx.ComboCtrl ):
     
     def SetCollectTypes( self, collect_by, description ):
         
+        collect_by = list( collect_by )
+        
         self._collect_by = collect_by
         
         self.SetValue( description )
         
-        HG.client_controller.pub( 'collect_media', self._page_key, self._collect_by )
+        if self._management_controller is not None:
+            
+            self._management_controller.SetVariable( 'media_collect', collect_by )
+            
+            page_key = self._management_controller.GetKey( 'page' )
+            
+            HG.client_controller.pub( 'collect_media', page_key, self._collect_by )
+            
         
     
     class _Popup( wx.ComboPopup ):
@@ -1134,7 +1155,7 @@ class CheckboxCollect( wx.ComboCtrl ):
         
         def GetStringValue( self ):
             
-            # this is an abstract method that provides the strin to put in the comboctrl
+            # this is an abstract method that provides the string to put in the comboctrl
             # I've never used/needed it, but one user reported getting the NotImplemented thing by repeatedly clicking, so let's add it anyway
             
             if self._control is None:
@@ -1167,7 +1188,7 @@ class CheckboxCollect( wx.ComboCtrl ):
                 
                 for ratings_service in ratings_services:
                     
-                    text_and_data_tuples.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
+                    text_and_data_tuples.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey().hex() ) ) )
                     
                 
                 texts = [ text for ( text, data ) in text_and_data_tuples ] # we do this so it sizes its height properly on init
@@ -1251,29 +1272,39 @@ class CheckboxCollect( wx.ComboCtrl ):
             
             def SetValue( self, collect_by ):
                 
-                # an old possible value, now collapsed to []
-                if collect_by is None:
+                try:
                     
-                    collect_by = []
-                    
-                
-                desired_collect_by_rows = set( collect_by )
-                
-                indices_to_check = []
-                
-                for index in range( self.GetCount() ):
-                    
-                    if self.GetClientData( index ) in desired_collect_by_rows:
+                    # an old possible value, now collapsed to []
+                    if collect_by is None:
                         
-                        indices_to_check.append( index )
+                        collect_by = []
                         
                     
-                
-                if len( indices_to_check ) > 0:
+                    # tuple for the set hashing
+                    desired_collect_by_rows = { tuple( item ) for item in collect_by }
                     
-                    self.SetCheckedItems( indices_to_check )
+                    indices_to_check = []
                     
-                    self._BroadcastCollect()
+                    for index in range( self.GetCount() ):
+                        
+                        if self.GetClientData( index ) in desired_collect_by_rows:
+                            
+                            indices_to_check.append( index )
+                            
+                        
+                    
+                    if len( indices_to_check ) > 0:
+                        
+                        self.SetCheckedItems( indices_to_check )
+                        
+                        self._BroadcastCollect()
+                        
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowText( 'Failed to set a collect-by value!' )
+                    
+                    HydrusData.ShowException( e )
                     
                 
             

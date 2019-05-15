@@ -2002,8 +2002,6 @@ class DialogYesNo( Dialog ):
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
         
-        self.SetEscapeId( wx.ID_NO )
-        
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -2057,8 +2055,6 @@ class DialogYesYesNo( Dialog ):
         self._no = wx.Button( self, id = wx.ID_NO )
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
-        
-        self.SetEscapeId( wx.ID_NO )
         
         #
         

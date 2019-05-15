@@ -1277,7 +1277,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
                 
-                base = 'mime'
+                base = 'filetype'
                 
                 if self._value is not None:
                     

@@ -4065,7 +4065,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 return
                 
             
-            closed_page_index = 0
+            closed_page_index = len( self._closed_pages ) - 1
             
         
         ( time_closed, page ) = self._closed_pages.pop( closed_page_index )

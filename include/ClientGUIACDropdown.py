@@ -361,7 +361,7 @@ class AutoCompleteDropdown( wx.Panel ):
             self._float_mode = True
             
         
-        self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
+        self._text_ctrl = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
         
         self._UpdateBackgroundColour()
         

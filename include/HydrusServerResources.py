@@ -398,6 +398,14 @@ class HydrusResource( Resource ):
             return
             
         
+        if request.requestHeaders.hasHeader( 'Origin' ):
+            
+            if self._service.SupportsCORS():
+                
+                request.setHeader( 'Access-Control-Allow-Origin', '*' )
+                
+            
+        
         response_context = request.hydrus_response_context
         
         status_code = response_context.GetStatusCode()

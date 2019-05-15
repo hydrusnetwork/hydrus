@@ -314,17 +314,29 @@ def ConvertTimestampToPrettyExpires( timestamp ):
         return 'unknown expiration'
         
     
-    time_delta_string = TimestampToPrettyTimeDelta( timestamp )
-    
-    if TimeHasPassed( timestamp ):
+    try:
         
-        return 'expired ' + time_delta_string
+        time_delta_string = TimestampToPrettyTimeDelta( timestamp )
         
-    else:
-        return 'expires ' + time_delta_string
+        if TimeHasPassed( timestamp ):
+            
+            return 'expired ' + time_delta_string
+            
+        else:
+            return 'expires ' + time_delta_string
+            
+        
+    except:
+        
+        return 'unparseable time {}'.format( timestamp )
         
     
 def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = True ):
+    
+    if timestamp is None:
+        
+        return 'no time given'
+        
     
     if include_24h_time:
         
@@ -335,18 +347,25 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
         phrase = '%Y/%m/%d'
         
     
-    if in_gmt:
+    try:
         
-        struct_time = time.gmtime( timestamp )
+        if in_gmt:
+            
+            struct_time = time.gmtime( timestamp )
+            
+            phrase = phrase + ' GMT'
+            
+        else:
+            
+            struct_time = time.localtime( timestamp )
+            
         
-        phrase = phrase + ' GMT'
+        return time.strftime( phrase, struct_time )
         
-    else:
+    except:
         
-        struct_time = time.localtime( timestamp )
+        return 'unparseable time {}'.format( timestamp )
         
-    
-    return time.strftime( phrase, struct_time )
     
 def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3 ):
     
@@ -360,22 +379,29 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
         return ConvertTimestampToPrettyTime( timestamp )
         
     
-    time_delta = abs( timestamp - GetNow() )
-    
-    if time_delta <= just_now_threshold:
+    try:
         
-        return just_now_string
+        time_delta = abs( timestamp - GetNow() )
         
-    
-    time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta )
-    
-    if TimeHasPassed( timestamp ):
+        if time_delta <= just_now_threshold:
+            
+            return just_now_string
+            
         
-        return time_delta_string + ' ago'
+        time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta )
         
-    else:
+        if TimeHasPassed( timestamp ):
+            
+            return time_delta_string + ' ago'
+            
+        else:
+            
+            return 'in ' + time_delta_string
+            
         
-        return 'in ' + time_delta_string
+    except:
+        
+        return 'unparseable time {}'.format( timestamp )
         
     
 def ConvertUglyNamespaceToPrettyString( namespace ):
@@ -606,14 +632,14 @@ def GetSiblingProcessPorts( db_path, instance ):
     
 def GetSubprocessEnv():
     
-    if HC.RUNNING_FROM_FROZEN_BUILD:
+    if HG.subprocess_report_mode:
         
-        if HG.subprocess_report_mode:
-            
-            env = os.environ.copy()
-            
-            ShowText( 'Your pyinstaller env is: {}'.format( env ) )
-            
+        env = os.environ.copy()
+        
+        ShowText( 'Your unmodified env is: {}'.format( env ) )
+        
+    
+    if HC.RUNNING_FROM_FROZEN_BUILD:
         
         # let's make a proper env for subprocess that doesn't have pyinstaller woo woo in it
         
@@ -715,6 +741,8 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False ):
     if HG.subprocess_report_mode:
         
         message = 'KWargs are: {}'.format( sbp_kwargs )
+        
+        ShowText( message )
         
     
     return sbp_kwargs
