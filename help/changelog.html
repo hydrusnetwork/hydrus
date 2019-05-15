@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 352</h3></li>
+				<ul>
+					<li>the client now supports importing .ico files! (.cur should be supported too)</li>
+					<li>finally, 'collect by' is saved for sessions! if your default collect by previously included ratings services, it will forget them this one time--please reset it under the options->sort/collect</li>
+					<li>fixed the issue where the media viewer's hover windows were hovering over child dialogs (manage tags, ratings, or known urls)</li>
+					<li>improved some os x hover window focus handling for the new always-on-top duplicate action window</li>
+					<li>the entries on the 'sort by' list on gui pages are now subcategorised better. it should be a bit easier to find what you are looking for</li>
+					<li>the 'sort by file: approximate bitrate' sort option now sorts still images as well by filesize / num_pixels</li>
+					<li>to reduce confusion, sort by mime and system:mime are now renamed to 'filetype'</li>
+					<li>fixed an issue where the 'unclose_page' shortcut was restoring pages in reverse order (unclosing least-recently-closed-first rather than most-recently-closed-first)</li>
+					<li>improved rigour of video framerate estimation</li>
+					<li>stopped the video metadata parser from opting to manually frame count videos with size >128MB or num_frames estimate >2,400</li>
+					<li>fixed the forced manual frame count to deal with frame counts >9999</li>
+					<li>the 'ffmpeg not found' error on file import will now put up a popup message once per boot informing you of this problem more broadly and steps to address it</li>
+					<li>fixed some underreporting issues with subprocess_report_mode</li>
+					<li>fixed an issue with some yes/no dialogs returning 'no' on escape/window_close_button rather than 'cancel', which affected cancelability some db maintenance questions</li>
+					<li>fixed an issue where media that fitted the media viewer canvas width or height exactly at 100% zoom would not respond to zoom switch events to restore non-100% zoom to 100%</li>
+					<li>when a local server's CORS mode is turned on, Access-Control-Allow-Origin is now correctly added to GET/POST requests with an Origin request header</li>
+					<li>improved reliability of some timestamp rendering code, which should help some users who had trouble opening cookies management page after malformed cookie import</li>
+					<li>I believe I fixed an issue with 'open externally' on certain custom paths where the external program could spawn without an ui (flash projector did this). please let me know if your 'open externally' calls start making terminal windows everywhere</li>
+					<li>fixed a runtime stability issue with the new duplicates page and slow-updating counts that come in after the page has been deleted</li>
+				</ul>
 				<li><h3>version 351</h3></li>
 				<ul>
 					<li>wrote a new (always on top!) hover window for the duplicate filter that sits on the middle-right. the duplicate cog button and action buttons are moved to this new window, as are the file comparison statements</li>
