@@ -29,11 +29,6 @@ EXTERNAL_IP[ 'time' ] = 0
 
 def GetExternalIP():
     
-    if 'external_host' in HC.options and HC.options[ 'external_host' ] is not None:
-        
-        return HC.options[ 'external_host' ]
-        
-    
     if HydrusData.TimeHasPassed( EXTERNAL_IP[ 'time' ] + ( 3600 * 24 ) ):
         
         cmd = [ upnpc_path, '-l' ]
@@ -118,8 +113,6 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
 def GetUPnPMappings():
     
-    external_ip_address = GetExternalIP()
-    
     cmd = [ upnpc_path, '-l' ]
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
@@ -203,7 +196,7 @@ def GetUPnPMappings():
                 
                 lease_time = int( rest_of_line[1:] )
                 
-                processed_data.append( ( description, internal_client, internal_port, external_ip_address, external_port, protocol, lease_time ) )
+                processed_data.append( ( description, internal_client, internal_port, external_port, protocol, lease_time ) )
                 
             
             return processed_data
@@ -261,7 +254,7 @@ class ServicesUPnPManager( object ):
             
             current_mappings = GetUPnPMappings()
             
-            our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
+            our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_port, protocol, enabled ) in current_mappings }
             
         except:
             

@@ -392,8 +392,7 @@ class HydrusResource( Resource ):
         if request.channel is None:
             
             # Connection was lost, it seems.
-            
-            request.finish()
+            # no need for request.finish
             
             return
             
@@ -741,9 +740,9 @@ class HydrusResource( Resource ):
         
         d.addErrback( self._errbackHandleEmergencyError, request )
         
-        reactor.callLater( 0, d.callback, request )
-        
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        
+        reactor.callLater( 0, d.callback, request )
         
         return NOT_DONE_YET
         
@@ -764,9 +763,9 @@ class HydrusResource( Resource ):
         
         d.addErrback( self._errbackHandleEmergencyError, request )
         
-        reactor.callLater( 0, d.callback, request )
-        
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        
+        reactor.callLater( 0, d.callback, request )
         
         return NOT_DONE_YET
         
@@ -789,9 +788,9 @@ class HydrusResource( Resource ):
         
         d.addErrback( self._errbackHandleEmergencyError, request )
         
-        reactor.callLater( 0, d.callback, request )
-        
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
+        
+        reactor.callLater( 0, d.callback, request )
         
         return NOT_DONE_YET
         

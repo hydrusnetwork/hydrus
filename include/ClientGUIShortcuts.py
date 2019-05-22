@@ -437,7 +437,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __iter__( self ):
         
-        for ( shortcut, command ) in list(self._shortcuts_to_commands.items()):
+        for ( shortcut, command ) in list( self._shortcuts_to_commands.items() ):
             
             yield ( shortcut, command )
             

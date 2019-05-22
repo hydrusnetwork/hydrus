@@ -268,8 +268,6 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
         menu_items.append( ( 'normal', 'edit duplicate action options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
         menu_items.append( ( 'separator', None, None, None ) )
         menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
         
@@ -289,23 +287,40 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
-        dupe_commands = []
-        
-        dupe_commands.append( ( 'this is better', 'Set that the current file you are looking at is better than the other in the pair.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) ) )
-        dupe_commands.append( ( 'same quality', 'Set that the two files are duplicates of very similar quality.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_exactly_the_same' ) ) )
-        dupe_commands.append( ( 'alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) ) )
-        dupe_commands.append( ( 'not duplicates', 'Set that the files are not duplicates or otherwise related--that this pair is a false-positive match.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_not_dupes' ) ) )
-        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_custom_action' ) ) )
-        
         command_button_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        for ( label, tooltip, command ) in dupe_commands:
+        dupe_boxes = []
+        
+        dupe_commands = []
+        
+        dupe_commands.append( ( 'this is better, and delete the other', 'Set that the current file you are looking at is better than the other in the pair, and set the other file to be deleted.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_and_delete_other' ) ) )
+        dupe_commands.append( ( 'this is better, but keep both', 'Set that the current file you are looking at is better than the other in the pair, but keep both files.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better_but_keep_both' ) ) )
+        dupe_commands.append( ( 'they are the same quality', 'Set that the two files are duplicates of very similar quality.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_exactly_the_same' ) ) )
+        
+        dupe_boxes.append( ( 'they are duplicates', dupe_commands ) )
+        
+        dupe_commands = []
+        
+        dupe_commands.append( ( 'they are related alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) ) )
+        dupe_commands.append( ( 'they are not related', 'Set that the files are not duplicates or otherwise related--that this potential pair is a false positive match.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_false_positive' ) ) )
+        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_custom_action' ) ) )
+        
+        dupe_boxes.append( ( 'other', dupe_commands ) )
+        
+        for ( panel_name, dupe_commands ) in dupe_boxes:
             
-            command_button = ClientGUICommon.BetterButton( self, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
+            button_panel = ClientGUICommon.StaticBox( self, panel_name )
             
-            command_button.SetToolTip( tooltip )
+            for ( label, tooltip, command ) in dupe_commands:
+                
+                command_button = ClientGUICommon.BetterButton( button_panel, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
+                
+                command_button.SetToolTip( tooltip )
+                
+                button_panel.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
             
-            command_button_vbox.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            command_button_vbox.Add( button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         self._comparison_statements_vbox = wx.BoxSizer( wx.VERTICAL )

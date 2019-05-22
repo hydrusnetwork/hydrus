@@ -1531,6 +1531,16 @@ class ChoiceSort( wx.Panel ):
             
         
     
+    def _UserChoseASort( self ):
+        
+        if HG.client_controller.new_options.GetBoolean( 'save_page_sort_on_change' ):
+            
+            media_sort = self._GetCurrentSort()
+            
+            HG.client_controller.new_options.SetDefaultSort( media_sort )
+            
+        
+    
     def ACollectHappened( self, page_key, collect_by ):
         
         if self._management_controller is not None:
@@ -1556,10 +1566,14 @@ class ChoiceSort( wx.Panel ):
     
     def EventSortAscChoice( self, event ):
         
+        self._UserChoseASort()
+        
         self._BroadcastSort()
         
     
     def EventSortTypeChoice( self, event ):
+        
+        self._UserChoseASort()
         
         self._UpdateAscLabels( set_default_asc = True )
         

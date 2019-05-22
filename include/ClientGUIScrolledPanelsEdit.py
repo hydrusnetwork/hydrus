@@ -271,7 +271,7 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( expires_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
@@ -363,7 +363,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
@@ -1135,11 +1135,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._delete_second_file = wx.CheckBox( self )
         self._sync_archive = wx.CheckBox( self )
-        self._delete_both_files = wx.CheckBox( self )
-        
-        self._delete_both_files.SetToolTip( 'This is only enabled on custom actions.' )
         
         self._sync_urls_action = ClientGUICommon.BetterChoice( self )
         
@@ -1154,7 +1150,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( tag_service_options, rating_service_options, delete_second_file, sync_archive, delete_both_files, sync_urls_action ) = duplicate_action_options.ToTuple()
+        ( tag_service_options, rating_service_options, sync_archive, sync_urls_action ) = duplicate_action_options.ToTuple()
         
         services_manager = HG.client_controller.services_manager
         
@@ -1182,18 +1178,11 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._delete_second_file.SetValue( delete_second_file )
         self._sync_archive.SetValue( sync_archive )
-        self._delete_both_files.SetValue( delete_both_files )
         
         #
         
-        if not for_custom_action:
-            
-            self._delete_both_files.Disable()
-            
-        
-        if self._duplicate_action in ( HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ) and not for_custom_action:
+        if self._duplicate_action in ( HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE ) and not for_custom_action:
             
             self._sync_archive.Disable()
             self._sync_urls_action.Disable()
@@ -1203,11 +1192,6 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         else:
             
             self._sync_urls_action.SelectClientData( sync_urls_action )
-            
-        
-        if self._duplicate_action != HC.DUPLICATE_BETTER:
-            
-            self._delete_second_file.Disable()
             
         
         #
@@ -1244,8 +1228,6 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'delete worse file: ', self._delete_second_file ) )
-        rows.append( ( 'delete both files: ', self._delete_both_files ) )
         rows.append( ( 'if one file is archived, archive the other as well: ', self._sync_archive ) )
         rows.append( ( 'sync known urls?: ', self._sync_urls_action ) )
         
@@ -1574,12 +1556,10 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_service_actions = self._tag_service_actions.GetClientData()
         rating_service_actions = self._rating_service_actions.GetClientData()
-        delete_second_file = self._delete_second_file.GetValue()
         sync_archive = self._sync_archive.GetValue()
-        delete_both_files = self._delete_both_files.GetValue()
         sync_urls_action = self._sync_urls_action.GetChoice()
         
-        duplicate_action_options = ClientDuplicates.DuplicateActionOptions( tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action )
+        duplicate_action_options = ClientDuplicates.DuplicateActionOptions( tag_service_actions, rating_service_actions, sync_archive, sync_urls_action )
         
         return duplicate_action_options
         
@@ -5205,7 +5185,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( downloader_options_panel, rows )
         
-        downloader_options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        downloader_options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         if not self._show_downloader_options:
             

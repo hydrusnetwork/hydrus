@@ -798,1542 +798,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE ' + tag_id_map_table_name + ' ( service_tag_id INTEGER PRIMARY KEY, tag_id INTEGER );' )
         
     
-    def _CacheSimilarFilesAddLeaf( self, phash_id, phash ):
-        
-        result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
-        
-        if result is None:
-            
-            parent_id = None
-            
-        else:
-            
-            ( root_node_phash_id, ) = result
-            
-            ancestors_we_are_inside = []
-            ancestors_we_are_outside = []
-            
-            an_ancestor_is_unbalanced = False
-            
-            next_ancestor_id = root_node_phash_id
-            
-            while next_ancestor_id is not None:
-                
-                ancestor_id = next_ancestor_id
-                
-                ( ancestor_phash, ancestor_radius, ancestor_inner_id, ancestor_inner_population, ancestor_outer_id, ancestor_outer_population ) = self._c.execute( 'SELECT phash, radius, inner_id, inner_population, outer_id, outer_population FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id = ?;', ( ancestor_id, ) ).fetchone()
-                
-                distance_to_ancestor = HydrusData.Get64BitHammingDistance( phash, ancestor_phash )
-                
-                if ancestor_radius is None or distance_to_ancestor <= ancestor_radius:
-                    
-                    ancestors_we_are_inside.append( ancestor_id )
-                    ancestor_inner_population += 1
-                    next_ancestor_id = ancestor_inner_id
-                    
-                    if ancestor_inner_id is None:
-                        
-                        self._c.execute( 'UPDATE shape_vptree SET inner_id = ?, radius = ? WHERE phash_id = ?;', ( phash_id, distance_to_ancestor, ancestor_id ) )
-                        
-                        parent_id = ancestor_id
-                        
-                    
-                else:
-                    
-                    ancestors_we_are_outside.append( ancestor_id )
-                    ancestor_outer_population += 1
-                    next_ancestor_id = ancestor_outer_id
-                    
-                    if ancestor_outer_id is None:
-                        
-                        self._c.execute( 'UPDATE shape_vptree SET outer_id = ? WHERE phash_id = ?;', ( phash_id, ancestor_id ) )
-                        
-                        parent_id = ancestor_id
-                        
-                    
-                
-                if not an_ancestor_is_unbalanced and ancestor_inner_population + ancestor_outer_population > 16:
-                    
-                    larger = max( ancestor_inner_population, ancestor_outer_population )
-                    smaller = min( ancestor_inner_population, ancestor_outer_population )
-                    
-                    if smaller / larger < 0.5:
-                        
-                        self._c.execute( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ancestor_id, ) )
-                        
-                        # we only do this for the eldest ancestor, as the eventual rebalancing will affect all children
-                        
-                        an_ancestor_is_unbalanced = True
-                        
-                    
-                
-            
-            self._c.executemany( 'UPDATE shape_vptree SET inner_population = inner_population + 1 WHERE phash_id = ?;', ( ( ancestor_id, ) for ancestor_id in ancestors_we_are_inside ) )
-            self._c.executemany( 'UPDATE shape_vptree SET outer_population = outer_population + 1 WHERE phash_id = ?;', ( ( ancestor_id, ) for ancestor_id in ancestors_we_are_outside ) )
-            
-        
-        radius = None
-        inner_id = None
-        inner_population = 0
-        outer_id = None
-        outer_population = 0
-        
-        self._c.execute( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
-        
-    
-    def _CacheSimilarFilesAssociatePHashes( self, hash_id, phashes ):
-        
-        phash_ids = set()
-        
-        for phash in phashes:
-            
-            phash_id = self._CacheSimilarFilesGetPHashId( phash )
-            
-            phash_ids.add( phash_id )
-            
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
-        
-        if self._GetRowCount() > 0:
-            
-            self._c.execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
-            
-        
-        return phash_ids
-        
-    
-    def _CacheSimilarFilesDeleteFile( self, hash_id ):
-        
-        phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
-        
-        self._CacheSimilarFilesDisassociatePHashes( hash_id, phash_ids )
-        
-        self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
-        self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
-        
-    
-    def _CacheSimilarFilesDeleteUnknownDuplicatePairs( self ):
-        
-        hash_ids = set()
-        
-        for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
-            
-            hash_ids.add( smaller_hash_id )
-            hash_ids.add( larger_hash_id )
-            
-        
-        self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) )
-        
-        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
-        
-    
-    def _CacheSimilarFilesDisassociatePHashes( self, hash_id, phash_ids ):
-        
-        self._c.executemany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
-        
-        useful_phash_ids = { phash for ( phash, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN ' + HydrusData.SplayListForDB( phash_ids ) + ';' ) }
-        
-        useless_phash_ids = phash_ids.difference( useful_phash_ids )
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ( phash_id, ) for phash_id in useless_phash_ids ) )
-        
-    
-    def _CacheSimilarFilesGenerateBranch( self, job_key, parent_id, phash_id, phash, children ):
-        
-        process_queue = collections.deque()
-        
-        process_queue.append( ( parent_id, phash_id, phash, children ) )
-        
-        insert_rows = []
-        
-        num_done = 0
-        num_to_do = len( children ) + 1
-        
-        while len( process_queue ) > 0:
-            
-            job_key.SetVariable( 'popup_text_2', 'generating new branch -- ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
-            
-            ( parent_id, phash_id, phash, children ) = process_queue.popleft()
-            
-            if len( children ) == 0:
-                
-                inner_id = None
-                inner_population = 0
-                
-                outer_id = None
-                outer_population = 0
-                
-                radius = None
-                
-            else:
-                
-                children = [ ( HydrusData.Get64BitHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
-                
-                children.sort()
-                
-                median_index = len( children ) // 2
-                
-                median_radius = children[ median_index ][0]
-                
-                inner_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance < median_radius ]
-                radius_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance == median_radius ]
-                outer_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance > median_radius ]
-                
-                if len( inner_children ) <= len( outer_children ):
-                    
-                    radius = median_radius
-                    
-                    inner_children.extend( radius_children )
-                    
-                else:
-                    
-                    radius = median_radius - 1
-                    
-                    outer_children.extend( radius_children )
-                    
-                
-                inner_population = len( inner_children )
-                outer_population = len( outer_children )
-                
-                ( inner_id, inner_phash ) = self._CacheSimilarFilesPopBestRootNode( inner_children ) #HydrusData.MedianPop( inner_children )
-                
-                if len( outer_children ) == 0:
-                    
-                    outer_id = None
-                    
-                else:
-                    
-                    ( outer_id, outer_phash ) = self._CacheSimilarFilesPopBestRootNode( outer_children ) #HydrusData.MedianPop( outer_children )
-                    
-                
-            
-            insert_rows.append( ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
-            
-            if inner_id is not None:
-                
-                process_queue.append( ( phash_id, inner_id, inner_phash, inner_children ) )
-                
-            
-            if outer_id is not None:
-                
-                process_queue.append( ( phash_id, outer_id, outer_phash, outer_children ) )
-                
-            
-            num_done += 1
-            
-        
-        job_key.SetVariable( 'popup_text_2', 'branch constructed, now committing' )
-        
-        self._c.executemany( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
-        
-    
-    def _CacheSimilarFilesGetFileDuplicateHashes( self, file_service_key, hash, duplicate_type, allowed_hash_ids = None ):
-        
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-        
-        hash_id = self._GetHashId( hash )
-        
-        dupe_hash_ids = set()
-        
-        if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
-            
-            if duplicate_type == HC.DUPLICATE_BETTER:
-                
-                smaller_search_duplicate_type = HC.DUPLICATE_SMALLER_BETTER
-                larger_search_duplicate_type = HC.DUPLICATE_LARGER_BETTER
-                
-            elif duplicate_type == HC.DUPLICATE_WORSE:
-                
-                smaller_search_duplicate_type = HC.DUPLICATE_LARGER_BETTER
-                larger_search_duplicate_type = HC.DUPLICATE_SMALLER_BETTER
-                
-            
-            dupe_hash_ids.add( hash_id )
-            
-            dupe_hash_ids.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? AND smaller_hash_id = ?;', ( smaller_search_duplicate_type, hash_id ) ) ) )
-            dupe_hash_ids.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? AND larger_hash_id = ?;', ( larger_search_duplicate_type, hash_id ) ) ) )
-            
-        else:
-            
-            if duplicate_type == HC.DUPLICATE_BETTER_OR_WORSE:
-                
-                search_duplicate_types = ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER )
-                
-            else:
-                
-                search_duplicate_types = ( duplicate_type, )
-                
-            
-            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type IN ' + HydrusData.SplayListForDB( search_duplicate_types ) + ' AND ( smaller_hash_id = ? OR larger_hash_id = ? );', ( hash_id, hash_id ) ):
-                
-                dupe_hash_ids.add( smaller_hash_id )
-                dupe_hash_ids.add( larger_hash_id )
-                
-            
-        
-        if allowed_hash_ids is not None:
-            
-            dupe_hash_ids.intersection_update( allowed_hash_ids )
-            
-        
-        dupe_hash_ids.discard( hash_id )
-        
-        dupe_hash_ids = list( dupe_hash_ids )
-        
-        dupe_hash_ids.insert( 0, hash_id )
-        
-        dupe_hashes = self._GetHashes( dupe_hash_ids )
-        
-        return dupe_hashes
-        
-    
-    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( self, file_service_key ):
-        
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-            
-            table_join = 'duplicate_pairs'
-            predicate_string = '1=1'
-            
-        else:
-            
-            service_id = self._GetServiceId( file_service_key )
-            
-            table_join = 'duplicate_pairs, current_files AS current_files_smaller, current_files AS current_files_larger ON ( smaller_hash_id = current_files_smaller.hash_id AND larger_hash_id = current_files_larger.hash_id )'
-            predicate_string = 'current_files_smaller.service_id = {} AND current_files_larger.service_id = {}'.format( service_id, service_id )
-            
-        
-        return ( table_join, predicate_string )
-        
-    
-    def _CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( self, file_service_key, results_table_name, both_files_match ):
-        
-        if both_files_match:
-            
-            table_join = 'duplicate_pairs, {} AS results_smaller, {} AS results_larger ON ( smaller_hash_id = results_smaller.hash_id AND larger_hash_id = results_larger.hash_id )'.format( results_table_name, results_table_name )
-            predicate_string = '1=1'
-            
-        else:
-            
-            service_id = self._GetServiceId( file_service_key )
-            
-            table_join = 'duplicate_pairs, {}, current_files ON ( ( smaller_hash_id = {}.hash_id AND larger_hash_id = current_files.hash_id ) OR ( smaller_hash_id = current_files.hash_id AND larger_hash_id = {}.hash_id ) )'.format( results_table_name, results_table_name, results_table_name )
-            predicate_string = 'current_files.service_id = {}'.format( service_id )
-            
-        
-        return ( table_join, predicate_string )
-        
-    
-    def _CacheSimilarFilesGetFileDuplicateCounts( self, file_service_key, hash ):
-        
-        hash_id = self._GetHashId( hash )
-        
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-        
-        counter = collections.Counter()
-        
-        for ( dupe_status, count ) in self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND smaller_hash_id = ? GROUP BY duplicate_type;', ( hash_id, ) ):
-            
-            if dupe_status == HC.DUPLICATE_SMALLER_BETTER:
-                
-                dupe_status = HC.DUPLICATE_BETTER
-                
-            elif dupe_status == HC.DUPLICATE_LARGER_BETTER:
-                
-                dupe_status = HC.DUPLICATE_WORSE
-                
-            
-            counter[ dupe_status ] += count
-            
-        
-        for ( dupe_status, count ) in self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND larger_hash_id = ? GROUP BY duplicate_type;', ( hash_id, ) ):
-            
-            if dupe_status == HC.DUPLICATE_SMALLER_BETTER:
-                
-                dupe_status = HC.DUPLICATE_WORSE
-                
-            elif dupe_status == HC.DUPLICATE_LARGER_BETTER:
-                
-                dupe_status = HC.DUPLICATE_BETTER
-                
-            
-            counter[ dupe_status ] += count
-            
-        
-        if HC.DUPLICATE_BETTER in counter and HC.DUPLICATE_WORSE in counter:
-            
-            counter[ HC.DUPLICATE_BETTER_OR_WORSE ] += counter[ HC.DUPLICATE_BETTER ] + counter[ HC.DUPLICATE_WORSE ]
-            
-        
-        return counter
-        
-    
-    def _CacheSimilarFilesGetHashIdsFromDuplicatePredicate( self, file_service_key, operator, num_relationships, dupe_type ):
-        
-        # doesn't work for '= 0' or '< 1'
-        
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-        
-        hash_ids_to_counts = collections.Counter()
-        
-        if dupe_type == HC.DUPLICATE_BETTER_OR_WORSE:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type IN ( ' + str( HC.DUPLICATE_SMALLER_BETTER ) + ', ' + str( HC.DUPLICATE_LARGER_BETTER ) + ' )'
-            larger_duplicate_predicate_string = smaller_duplicate_predicate_string
-            
-        elif dupe_type == HC.DUPLICATE_BETTER:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
-            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
-            
-        elif dupe_type == HC.DUPLICATE_WORSE:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
-            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
-            
-        else:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
-            larger_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
-            
-        
-        smaller_query = 'SELECT smaller_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + smaller_duplicate_predicate_string + ' GROUP BY smaller_hash_id;'
-        larger_query = 'SELECT larger_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + larger_duplicate_predicate_string + ' GROUP BY larger_hash_id;'
-        
-        for ( hash_id, count ) in self._c.execute( smaller_query ):
-            
-            hash_ids_to_counts[ hash_id ] += count
-            
-        
-        for ( hash_id, count ) in self._c.execute( larger_query ):
-            
-            hash_ids_to_counts[ hash_id ] += count
-            
-        
-        if operator == '\u2248':
-            
-            lower_bound = 0.8 * num_relationships
-            upper_bound = 1.2 * num_relationships
-            
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
-                
-                return lower_bound < count and count < upper_bound
-                
-            
-        elif operator == '<':
-            
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
-                
-                return count < num_relationships
-                
-            
-        elif operator == '>':
-            
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
-                
-                return count > num_relationships
-                
-            
-        elif operator == '=':
-            
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
-                
-                return count == num_relationships
-                
-            
-        
-        hash_ids = { hash_id for ( hash_id, count ) in filter( filter_func, list(hash_ids_to_counts.items()) ) }
-        
-        return hash_ids
-        
-    
-    def _CacheSimilarFilesGetMaintenanceStatus( self ):
-        
-        ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
-        ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
-        
-        searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
-        
-        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count )
-        
-    
-    def _CacheSimilarFilesGetPHashId( self, phash ):
-        
-        result = self._c.execute( 'SELECT phash_id FROM shape_perceptual_hashes WHERE phash = ?;', ( sqlite3.Binary( phash ), ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO shape_perceptual_hashes ( phash ) VALUES ( ? );', ( sqlite3.Binary( phash ), ) )
-            
-            phash_id = self._c.lastrowid
-            
-            self._CacheSimilarFilesAddLeaf( phash_id, phash )
-            
-        else:
-            
-            ( phash_id, ) = result
-            
-        
-        return phash_id
-        
-    
-    def _CacheSimilarFilesGetRandomUnknownDuplicateHashes( self, search_context, both_files_match ):
-        
-        file_service_key = search_context.GetFileServiceKey()
-        
-        is_complicated_search = False
-        
-        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
-            
-            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
-                
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-                
-            else:
-                
-                is_complicated_search = True
-                
-                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
-                
-                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
-                
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
-                
-            
-            potential_hash_ids = set()
-            
-            # distinct important here for the search results table join
-            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
-                
-                if is_complicated_search:
-                    
-                    # we only want ones that match our query above, not the other half of the pair
-                    
-                    if smaller_hash_id in query_hash_ids:
-                        
-                        potential_hash_ids.add( smaller_hash_id )
-                        
-                    
-                    if larger_hash_id in query_hash_ids:
-                        
-                        potential_hash_ids.add( larger_hash_id )
-                        
-                    
-                else:
-                    
-                    potential_hash_ids.add( smaller_hash_id )
-                    potential_hash_ids.add( larger_hash_id )
-                    
-                
-                if len( potential_hash_ids ) == 1000:
-                    
-                    break
-                    
-                
-            
-        
-        if len( potential_hash_ids ) == 0:
-            
-            return []
-            
-        
-        hash_id = random.choice( list( potential_hash_ids ) )
-        
-        hash = self._GetHash( hash_id )
-        
-        if is_complicated_search and both_files_match:
-            
-            allowed_hash_ids = query_hash_ids
-            
-        else:
-            
-            allowed_hash_ids = None
-            
-        
-        return self._CacheSimilarFilesGetFileDuplicateHashes( file_service_key, hash, HC.DUPLICATE_UNKNOWN, allowed_hash_ids = allowed_hash_ids )
-        
-    
-    def _CacheSimilarFilesGetDuplicatePairsForFiltering( self, search_context, both_files_match ):
-        
-        # we need to batch non-intersecting decisions here to keep it simple at the gui-level
-        # we also want to clear things out in groups, and maximising per-decision value
-        # first, let's sample our existing dupe relationships so we know 'useful' nodes that will tend to generate higher value decisions
-        
-        node_value_estimate_counter = collections.Counter()
-        
-        # note this doesn't use the table_join so we can see results that may have caused one of the pair to be moved into trash domain or whatever
-        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_QUALITY ) ).fetchall()
-        
-        for ( smaller_hash_id, larger_hash_id ) in result:
-            
-            node_value_estimate_counter[ smaller_hash_id ] += 1
-            node_value_estimate_counter[ larger_hash_id ] += 1
-            
-        
-        # now we will fetch some unknown pairs
-        
-        file_service_key = search_context.GetFileServiceKey()
-        
-        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
-            
-            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
-                
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-                
-            else:
-                
-                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
-                
-                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
-                
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
-                
-            
-            # distinct important here for the search results table join
-            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? LIMIT 2500;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
-            
-        
-        # convert them into possible groups per each possible 'master hash_id', and value them
-        
-        master_hash_ids_to_values = collections.Counter()
-        master_hash_ids_to_groups = collections.defaultdict( list )
-        
-        for pair in result:
-            
-            ( smaller_hash_id, larger_hash_id ) = pair
-            
-            master_hash_ids_to_groups[ smaller_hash_id ].append( pair )
-            master_hash_ids_to_groups[ larger_hash_id ].append( pair )
-            
-            pair_value = node_value_estimate_counter[ smaller_hash_id ] + node_value_estimate_counter[ larger_hash_id ]
-            
-            master_hash_ids_to_values[ smaller_hash_id ] += pair_value
-            master_hash_ids_to_values[ larger_hash_id ] += pair_value
-            
-        
-        # now let's add decision groups to our batch, based on descending value
-        
-        MAX_BATCH_SIZE = 250
-        
-        pairs_of_hash_ids = []
-        seen_hash_ids = set()
-        
-        for ( master_hash_id, count ) in master_hash_ids_to_values.most_common():
-            
-            if master_hash_id in seen_hash_ids:
-                
-                continue
-                
-            
-            seen_hash_ids_for_this_master_hash_id = set()
-            
-            for pair in master_hash_ids_to_groups[ master_hash_id ]:
-                
-                ( smaller_hash_id, larger_hash_id ) = pair
-                
-                if smaller_hash_id in seen_hash_ids or larger_hash_id in seen_hash_ids:
-                    
-                    continue
-                    
-                
-                seen_hash_ids_for_this_master_hash_id.add( smaller_hash_id )
-                seen_hash_ids_for_this_master_hash_id.add( larger_hash_id )
-                
-                pairs_of_hash_ids.append( pair )
-                
-                if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
-                    
-                    break
-                    
-                
-            
-            seen_hash_ids.update( seen_hash_ids_for_this_master_hash_id )
-            
-            if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
-                
-                break
-                
-            
-        
-        self._PopulateHashIdsToHashesCache( seen_hash_ids )
-        
-        pairs_of_hashes = [ ( self._hash_ids_to_hashes_cache[ smaller_hash_id ], self._hash_ids_to_hashes_cache[ larger_hash_id ] ) for ( smaller_hash_id, larger_hash_id ) in pairs_of_hash_ids ]
-        
-        return pairs_of_hashes
-        
-    
-    def _CacheSimilarFilesGetUnknownDuplicatesCount( self, search_context, both_files_match ):
-        
-        file_service_key = search_context.GetFileServiceKey()
-        
-        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
-            
-            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
-                
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-                
-            else:
-                
-                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
-                
-                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
-                
-                ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
-                
-            
-            # distinct important here for the search results table join
-            ( unknown_duplicates_count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? );', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
-            
-        
-        return unknown_duplicates_count
-        
-    
-    def _CacheSimilarFilesMaintainDuplicatePairs( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
-        
-        if abandon_if_other_work_to_do:
-            
-            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
-            
-            if result is not None:
-                
-                return
-                
-            
-            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
-            
-            if result is not None:
-                
-                return
-                
-            
-        
-        time_started = HydrusData.GetNow()
-        pub_job_key = False
-        job_key_pubbed = False
-        
-        if job_key is None:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            pub_job_key = True
-            
-        
-        try:
-            
-            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) )
-            
-            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
-            
-            for ( i, hash_id ) in enumerate( hash_ids ):
-                
-                job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
-                
-                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
-                    
-                    self._controller.pub( 'modal_message', job_key )
-                    
-                    job_key_pubbed = True
-                    
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
-                
-                if should_quit or should_stop:
-                    
-                    return
-                    
-                
-                if i % 25 == 0:
-                    
-                    text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files'
-                    
-                    job_key.SetVariable( 'popup_text_1', text )
-                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-                    
-                    HG.client_controller.pub( 'splash_set_status_subtext', text )
-                    
-                
-                duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
-                
-                # double-check the files exist in shape_search_cache, as I think stale branches are producing deleted file pairs here
-                
-                self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( ( min( hash_id, duplicate_hash_id ), max( hash_id, duplicate_hash_id ), HC.DUPLICATE_UNKNOWN ) for duplicate_hash_id in duplicate_hash_ids ) )
-                
-                self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            
-            job_key.Finish()
-            
-            job_key.Delete( 5 )
-            
-        
-    
-    def _CacheSimilarFilesMaintainFiles( self, job_key = None, stop_time = None ):
-        
-        time_started = HydrusData.GetNow()
-        pub_job_key = False
-        job_key_pubbed = False
-        
-        if job_key is None:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            pub_job_key = True
-            
-        
-        try:
-            
-            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) )
-            
-            client_files_manager = self._controller.client_files_manager
-            
-            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
-            
-            for ( i, hash_id ) in enumerate( hash_ids ):
-                
-                job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
-                
-                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
-                    
-                    self._controller.pub( 'modal_message', job_key )
-                    
-                    job_key_pubbed = True
-                    
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
-                
-                if should_quit or should_stop:
-                    
-                    return
-                    
-                
-                if i % 50 == 0:
-                    
-                    gc.collect()
-                    
-                
-                if i % 10 == 0:
-                    
-                    text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
-                    
-                    HG.client_controller.pub( 'splash_set_status_subtext', text )
-                    job_key.SetVariable( 'popup_text_1', text )
-                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-                    
-                
-                try:
-                    
-                    hash = self._GetHash( hash_id )
-                    mime = self._GetMime( hash_id )
-                    
-                    if mime in HC.MIMES_WE_CAN_PHASH:
-                        
-                        path = client_files_manager.GetFilePath( hash, mime )
-                        
-                        if mime in HC.MIMES_WE_CAN_PHASH:
-                            
-                            try:
-                                
-                                phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
-                                
-                            except Exception as e:
-                                
-                                HydrusData.Print( 'Could not generate phashes for ' + path )
-                                
-                                HydrusData.PrintException( e )
-                                
-                                phashes = []
-                                
-                            
-                        
-                    else:
-                        
-                        phashes = []
-                        
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    phashes = []
-                    
-                
-                existing_phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
-                
-                correct_phash_ids = self._CacheSimilarFilesAssociatePHashes( hash_id, phashes )
-                
-                incorrect_phash_ids = existing_phash_ids.difference( correct_phash_ids )
-                
-                if len( incorrect_phash_ids ) > 0:
-                    
-                    self._CacheSimilarFilesDisassociatePHashes( hash_id, incorrect_phash_ids )
-                    
-                
-                self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            
-            job_key.Finish()
-            
-            job_key.Delete( 5 )
-            
-        
-    
-    def _CacheSimilarFilesMaintainTree( self, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
-        
-        if abandon_if_other_work_to_do:
-            
-            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
-            
-            if result is not None:
-                
-                return
-                
-            
-        
-        time_started = HydrusData.GetNow()
-        pub_job_key = False
-        job_key_pubbed = False
-        
-        if job_key is None:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            pub_job_key = True
-            
-        
-        try:
-            
-            job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
-            
-            rebalance_phash_ids = self._STL( self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) )
-            
-            num_to_do = len( rebalance_phash_ids )
-            
-            while len( rebalance_phash_ids ) > 0:
-                
-                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
-                    
-                    self._controller.pub( 'modal_message', job_key )
-                    
-                    job_key_pubbed = True
-                    
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
-                
-                if should_quit or should_stop:
-                    
-                    return
-                    
-                
-                num_done = num_to_do - len( rebalance_phash_ids )
-                
-                text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
-                
-                HG.client_controller.pub( 'splash_set_status_subtext', text )
-                job_key.SetVariable( 'popup_text_1', text )
-                job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
-                
-                with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
-                    
-                    # can't turn this into selectfromlist due to the order clause. we need to do this all at once
-                    
-                    ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree NATURAL JOIN ' + temp_table_name + ' ORDER BY inner_population + outer_population DESC;' ).fetchone()
-                    
-                
-                self._CacheSimilarFilesRegenerateBranch( job_key, biggest_phash_id )
-                
-                rebalance_phash_ids = self._STL( self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.DeleteVariable( 'popup_text_2' ) # used in the regenbranch call
-            
-            job_key.Finish()
-            
-            job_key.Delete( 5 )
-            
-        
-    
-    def _CacheSimilarFilesMaintenanceDue( self ):
-        
-        new_options = HG.client_controller.new_options
-        
-        if new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
-            
-            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
-            
-            if count > 0:
-                
-                return True
-                
-            
-            search_distance = new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
-            
-            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchone()
-            
-            if count > 100:
-                
-                return True
-                
-            
-        
-        return False
-        
-    
-    def _CacheSimilarFilesPopBestRootNode( self, node_rows ):
-        
-        if len( node_rows ) == 1:
-            
-            root_row = node_rows.pop()
-            
-            return root_row
-            
-        
-        MAX_VIEWPOINTS = 256
-        MAX_SAMPLE = 64
-        
-        if len( node_rows ) > MAX_VIEWPOINTS:
-            
-            viewpoints = random.sample( node_rows, MAX_VIEWPOINTS )
-            
-        else:
-            
-            viewpoints = node_rows
-            
-        
-        if len( node_rows ) > MAX_SAMPLE:
-            
-            sample = random.sample( node_rows, MAX_SAMPLE )
-            
-        else:
-            
-            sample = node_rows
-            
-        
-        final_scores = []
-        
-        for ( v_id, v_phash ) in viewpoints:
-            
-            views = [ HydrusData.Get64BitHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ]
-            
-            views.sort()
-            
-            # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discrete integer score
-            
-            median_index = len( views ) // 2
-            
-            radius = views[ median_index ]
-            
-            num_left = len( [ 1 for view in views if view < radius ] )
-            num_radius = len( [ 1 for view in views if view == radius ] )
-            num_right = len( [ 1 for view in views if view > radius ] )
-            
-            if num_left <= num_right:
-                
-                num_left += num_radius
-                
-            else:
-                
-                num_right += num_radius
-                
-            
-            smaller = min( num_left, num_right )
-            larger = max( num_left, num_right )
-            
-            ratio = smaller / larger
-            
-            ratio_score = int( ratio * MAX_SAMPLE / 2 )
-            
-            # now let's calc the standard deviation--larger sd tends to mean less sphere overlap when searching
-            
-            mean_view = sum( views ) / len( views )
-            squared_diffs = [ ( view - mean_view  ) ** 2 for view in views ]
-            sd = ( sum( squared_diffs ) / len( squared_diffs ) ) ** 0.5
-            
-            final_scores.append( ( ratio_score, sd, v_id ) )
-            
-        
-        final_scores.sort()
-        
-        # we now have a list like [ ( 11, 4.0, [id] ), ( 15, 3.7, [id] ), ( 15, 4.3, [id] ) ]
-        
-        ( ratio_gumpf, sd_gumpf, root_id ) = final_scores.pop()
-        
-        for ( i, ( v_id, v_phash ) ) in enumerate( node_rows ):
-            
-            if v_id == root_id:
-                
-                root_row = node_rows.pop( i )
-                
-                return root_row
-                
-            
-        
-    
-    def _CacheSimilarFilesRegenerateBranch( self, job_key, phash_id ):
-        
-        job_key.SetVariable( 'popup_text_2', 'reviewing existing branch' )
-        
-        # grab everything in the branch
-        
-        ( parent_id, ) = self._c.execute( 'SELECT parent_id FROM shape_vptree WHERE phash_id = ?;', ( phash_id, ) ).fetchone()
-        
-        cte_table_name = 'branch ( branch_phash_id )'
-        initial_select = 'SELECT ?'
-        recursive_select = 'SELECT phash_id FROM shape_vptree, branch ON parent_id = branch_phash_id'
-        
-        with_clause = 'WITH RECURSIVE ' + cte_table_name + ' AS ( ' + initial_select + ' UNION ALL ' +  recursive_select +  ')'
-        
-        unbalanced_nodes = self._c.execute( with_clause + ' SELECT branch_phash_id, phash FROM branch, shape_perceptual_hashes ON phash_id = branch_phash_id;', ( phash_id, ) ).fetchall()
-        
-        # removal of old branch, maintenance schedule, and orphan phashes
-        
-        job_key.SetVariable( 'popup_text_2', HydrusData.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch' )
-        
-        unbalanced_phash_ids = { p_id for ( p_id, p_h ) in unbalanced_nodes }
-        
-        self._c.executemany( 'DELETE FROM shape_vptree WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
-        
-        self._c.executemany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
-        
-        select_statement = 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN {};'
-        
-        useful_phash_ids = self._STS( self._SelectFromList( select_statement, unbalanced_phash_ids ) )
-        
-        orphan_phash_ids = unbalanced_phash_ids.difference( useful_phash_ids )
-        
-        self._c.executemany( 'DELETE FROM shape_perceptual_hashes WHERE phash_id = ?;', ( ( p_id, ) for p_id in orphan_phash_ids ) )
-        
-        useful_nodes = [ row for row in unbalanced_nodes if row[0] in useful_phash_ids ]
-        
-        useful_population = len( useful_nodes )
-        
-        # now create the new branch, starting by choosing a new root and updating the parent's left/right reference to that
-        
-        if useful_population > 0:
-            
-            ( new_phash_id, new_phash ) = self._CacheSimilarFilesPopBestRootNode( useful_nodes ) #HydrusData.RandomPop( useful_nodes )
-            
-        else:
-            
-            new_phash_id = None
-            
-        
-        if parent_id is not None:
-            
-            ( parent_inner_id, ) = self._c.execute( 'SELECT inner_id FROM shape_vptree WHERE phash_id = ?;', ( parent_id, ) ).fetchone()
-            
-            if parent_inner_id == phash_id:
-                
-                query = 'UPDATE shape_vptree SET inner_id = ?, inner_population = ? WHERE phash_id = ?;'
-                
-            else:
-                
-                query = 'UPDATE shape_vptree SET outer_id = ?, outer_population = ? WHERE phash_id = ?;'
-                
-            
-            self._c.execute( query, ( new_phash_id, useful_population, parent_id ) )
-            
-        
-        if useful_population > 0:
-            
-            self._CacheSimilarFilesGenerateBranch( job_key, parent_id, new_phash_id, new_phash, useful_nodes )
-            
-        
-    
-    def _CacheSimilarFilesRegenerateTree( self ):
-        
-        job_key = ClientThreading.JobKey()
-        
-        try:
-            
-            job_key.SetVariable( 'popup_title', 'regenerating similar file search data' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            job_key.SetVariable( 'popup_text_1', 'purging search info of orphans' )
-            
-            self._c.execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id NOT IN ( SELECT hash_id FROM current_files );' )
-            
-            job_key.SetVariable( 'popup_text_1', 'gathering all leaves' )
-            
-            self._c.execute( 'DELETE FROM shape_vptree;' )
-            
-            all_nodes = self._c.execute( 'SELECT phash_id, phash FROM shape_perceptual_hashes;' ).fetchall()
-            
-            job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
-            
-            ( root_id, root_phash ) = self._CacheSimilarFilesPopBestRootNode( all_nodes ) #HydrusData.RandomPop( all_nodes )
-            
-            self._CacheSimilarFilesGenerateBranch( job_key, None, root_id, root_phash, all_nodes )
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_text_2' )
-            
-            job_key.Finish()
-            
-            job_key.Delete( 5 )
-            
-        
-    
-    def _CacheSimilarFilesSchedulePHashRegeneration( self, hash_ids = None ):
-        
-        if hash_ids is None:
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM files_info NATURAL JOIN current_files WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( self._combined_local_file_service_id, ) ) )
-            
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_phash_regen ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
-        
-    
-    def _CacheSimilarFilesSearch( self, hash_id, max_hamming_distance ):
-        
-        if max_hamming_distance == 0:
-            
-            similar_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN ( SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ? );', ( hash_id, ) ) )
-            
-        else:
-            
-            search_radius = max_hamming_distance
-            
-            top_node_result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
-            
-            if top_node_result is None:
-                
-                return []
-                
-            
-            ( root_node_phash_id, ) = top_node_result
-            
-            search_phashes = self._STL( self._c.execute( 'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
-            
-            if len( search_phashes ) == 0:
-                
-                return []
-                
-            
-            similar_phash_ids = set()
-            
-            num_cycles = 0
-            
-            for search_phash in search_phashes:
-                
-                next_potentials = [ root_node_phash_id ]
-                
-                while len( next_potentials ) > 0:
-                    
-                    current_potentials = next_potentials
-                    next_potentials = []
-                    
-                    num_cycles += 1
-                    
-                    for group_of_current_potentials in HydrusData.SplitListIntoChunks( current_potentials, 1024 ):
-                        
-                        # this is split into fixed lists of results of subgroups because as an iterable it was causing crashes on linux!!
-                        # after investigation, it seemed to be SQLite having a problem with part of Get64BitHammingDistance touching phashes it presumably was still hanging on to
-                        # the crash was in sqlite code, again presumably on subsequent fetch
-                        # adding a delay in seemed to fix it as well. guess it was some memory maintenance buffer/bytes thing
-                        # anyway, we now just get the whole lot of results first and then work on the whole lot
-                        
-                        select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id IN {};'
-                        
-                        results = list( self._SelectFromList( select_statement, group_of_current_potentials ) )
-                        
-                        for ( node_phash_id, node_phash, node_radius, inner_phash_id, outer_phash_id ) in results:
-                            
-                            # first check the node itself--is it similar?
-                            
-                            node_hamming_distance = HydrusData.Get64BitHammingDistance( search_phash, node_phash )
-                            
-                            if node_hamming_distance <= search_radius:
-                                
-                                similar_phash_ids.add( node_phash_id )
-                                
-                            
-                            # now how about its children?
-                            
-                            if node_radius is not None:
-                                
-                                # we have two spheres--node and search--their centers separated by node_hamming_distance
-                                # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
-                                # there are four possibles:
-                                # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
-                                # (----N---(-)-S--)      intersects with both
-                                # (----N-(--S-)-)        intersects with both
-                                # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
-                                
-                                if inner_phash_id is not None:
-                                    
-                                    spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
-                                    
-                                    if not spheres_disjoint: # i.e. they intersect at some point
-                                        
-                                        next_potentials.append( inner_phash_id )
-                                        
-                                    
-                                
-                                if outer_phash_id is not None:
-                                    
-                                    search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
-                                    
-                                    if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
-                                        
-                                        next_potentials.append( outer_phash_id )
-                                        
-                                    
-                                
-                            
-                        
-                
-            
-            if HG.db_report_mode:
-                
-                HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ToHumanInt( num_cycles ) + ' cycles.' )
-                
-            
-            select_statement = 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN {};'
-            
-            similar_hash_ids = self._STL( self._SelectFromList( select_statement, similar_phash_ids ) )
-            
-        
-        return similar_hash_ids
-        
-    
-    def _CacheSimilarFilesSetDuplicatePairStatus( self, pair_info ):
-        
-        for ( duplicate_type, hash_a, hash_b, service_keys_to_content_updates ) in pair_info:
-            
-            if len( service_keys_to_content_updates ) > 0:
-                
-                self._ProcessContentUpdates( service_keys_to_content_updates )
-                
-            
-            if duplicate_type is None:
-                
-                hash_id_a = self._GetHashId( hash_a )
-                hash_id_b = self._GetHashId( hash_b )
-                
-                smaller_hash_id = min( hash_id_a, hash_id_b )
-                larger_hash_id = max( hash_id_a, hash_id_b )
-                
-                self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ?;', ( smaller_hash_id, larger_hash_id ) )
-                
-                continue
-                
-            
-            if duplicate_type == HC.DUPLICATE_WORSE:
-                
-                ( hash_a, hash_b ) = ( hash_b, hash_a )
-                
-                duplicate_type = HC.DUPLICATE_BETTER
-                
-            
-            hash_id_a = self._GetHashId( hash_a )
-            hash_id_b = self._GetHashId( hash_b )
-            
-            self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_type, hash_id_a, hash_id_b )
-            
-            if duplicate_type == HC.DUPLICATE_BETTER:
-                
-                # anything better than A is now better than B
-                # i.e. for all X for which X > A, set X > B
-                # anything worse than B is now worse than A
-                # i.e. for all X for which B > X, set A > X
-                
-                better_than_a = set()
-                
-                better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
-                better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
-                
-                for better_than_a_hash_id in better_than_a:
-                    
-                    self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
-                    
-                
-                worse_than_b = set()
-                
-                worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
-                worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
-                
-                for worse_than_b_hash_id in worse_than_b:
-                    
-                    self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
-                    
-                
-            
-            if duplicate_type != HC.DUPLICATE_UNKNOWN:
-                
-                self._CacheSimilarFilesSyncSameQualityDuplicates( hash_id_a )
-                self._CacheSimilarFilesSyncSameQualityDuplicates( hash_id_b )
-                
-                self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_a )
-                self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_b )
-                
-            
-        
-    
-    def _CacheSimilarFilesSetDuplicatePairStatusSingleRow( self, duplicate_type, hash_id_a, hash_id_b, only_update_given_previous_status = None ):
-        
-        smaller_hash_id = min( hash_id_a, hash_id_b )
-        larger_hash_id = max( hash_id_a, hash_id_b )
-        
-        if duplicate_type == HC.DUPLICATE_BETTER:
-            
-            if smaller_hash_id == hash_id_a:
-                
-                duplicate_type = HC.DUPLICATE_SMALLER_BETTER
-                
-            else:
-                
-                duplicate_type = HC.DUPLICATE_LARGER_BETTER
-                
-            
-        elif duplicate_type == HC.DUPLICATE_WORSE:
-            
-            if smaller_hash_id == hash_id_a:
-                
-                duplicate_type = HC.DUPLICATE_LARGER_BETTER
-                
-            else:
-                
-                duplicate_type = HC.DUPLICATE_SMALLER_BETTER
-                
-            
-        
-        if only_update_given_previous_status is None:
-            
-            result = self._c.execute( 'SELECT 1 FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( smaller_hash_id, larger_hash_id, duplicate_type ) ).fetchone()
-            
-            if result is None: # i.e. we are not needlessly overwriting
-                
-                self._c.execute( 'REPLACE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( smaller_hash_id, larger_hash_id, duplicate_type ) )
-                
-            
-        else:
-            
-            self._c.execute( 'UPDATE duplicate_pairs SET duplicate_type = ? WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( duplicate_type, smaller_hash_id, larger_hash_id, only_update_given_previous_status ) )
-            
-        
-    
-    def _CacheSimilarFilesSyncBetterWorseDuplicates( self, hash_id ):
-        
-        # better/worse files are inherantly 'the same' in some very close way, so 'not dupe' and 'alternate' relationships should apply to them all the same
-        # so, replicate all of our file's 'not dupe' and 'alternate' relationships to all of its 'better/worse' siblings
-        
-        applicable_relationships = set()
-        
-        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
-            
-            applicable_relationships.add( ( smaller_hash_id, duplicate_type ) )
-            
-        
-        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
-            
-            applicable_relationships.add( ( larger_hash_id, duplicate_type ) )
-            
-        
-        all_better_worse_siblings = set()
-        
-        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
-        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
-        
-        for sibling_hash_id in all_better_worse_siblings:
-            
-            for ( other_hash_id, duplicate_type ) in applicable_relationships:
-                
-                if other_hash_id == sibling_hash_id:
-                    
-                    continue
-                    
-                
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_type, sibling_hash_id, other_hash_id )
-                
-            
-        
-    
-    def _CacheSimilarFilesSyncSameQualityDuplicates( self, hash_id ):
-        
-        # exactly similar files should have exactly the same relationships with other files
-        # so, replicate all of our file's known relationships to all of its 'same file' siblings
-        
-        all_relationships = set()
-        
-        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND larger_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
-            
-            if duplicate_type == HC.DUPLICATE_SMALLER_BETTER:
-                
-                duplicate_type = HC.DUPLICATE_WORSE
-                
-            elif duplicate_type == HC.DUPLICATE_LARGER_BETTER:
-                
-                duplicate_type = HC.DUPLICATE_BETTER
-                
-            
-            all_relationships.add( ( smaller_hash_id, duplicate_type ) )
-            
-        
-        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
-            
-            if duplicate_type == HC.DUPLICATE_SMALLER_BETTER:
-                
-                duplicate_type = HC.DUPLICATE_BETTER
-                
-            elif duplicate_type == HC.DUPLICATE_LARGER_BETTER:
-                
-                duplicate_type = HC.DUPLICATE_WORSE
-                
-            
-            all_relationships.add( ( larger_hash_id, duplicate_type ) )
-            
-        
-        all_same_quality_siblings = set()
-        
-        all_same_quality_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_QUALITY, hash_id ) ) ) )
-        all_same_quality_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_QUALITY, hash_id ) ) ) )
-        
-        for sibling_hash_id in all_same_quality_siblings:
-            
-            for ( other_hash_id, duplicate_type ) in all_relationships:
-                
-                if other_hash_id == sibling_hash_id:
-                    
-                    continue
-                    
-                
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_type, sibling_hash_id, other_hash_id )
-                
-            
-        
-    
     def _CacheSpecificMappingsAddFiles( self, file_service_id, tag_service_id, hash_ids ):
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
@@ -2946,7 +1410,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for hash_id in in_local_not_in_combined:
                     
-                    self._CacheSimilarFilesDeleteFile( hash_id )
+                    self._PHashesDeleteFile( hash_id )
                     
                 
                 HydrusData.ShowText( 'Found and deleted ' + HydrusData.ToHumanInt( len( in_local_not_in_combined ) ) + ' local domain orphan file records.' )
@@ -2967,7 +1431,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for hash_id in in_combined_not_in_local:
                     
-                    self._CacheSimilarFilesDeleteFile( hash_id )
+                    self._PHashesDeleteFile( hash_id )
                     
                 
                 HydrusData.ShowText( 'Found and deleted ' + HydrusData.ToHumanInt( len( in_combined_not_in_local ) ) + ' combined domain orphan file records.' )
@@ -3091,8 +1555,6 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'remote_ratings', [ 'score' ] )
         
         self._c.execute( 'CREATE TABLE remote_thumbnails ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-        
-        self._c.execute( 'CREATE TABLE reparse_files_queue ( hash_id INTEGER PRIMARY KEY );' )
         
         self._c.execute( 'CREATE TABLE service_filenames ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, filename TEXT, PRIMARY KEY ( service_id, hash_id ) );' )
         self._c.execute( 'CREATE TABLE service_directories ( service_id INTEGER REFERENCES services ON DELETE CASCADE, directory_id INTEGER, num_files INTEGER, total_size INTEGER, note TEXT, PRIMARY KEY ( service_id, directory_id ) );' )
@@ -3235,6 +1697,8 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _CreateDBCaches( self ):
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.file_maintenance_jobs ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
         
@@ -3428,9 +1892,16 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeletePhysicalFiles( self, hash_ids ):
         
+        hash_ids = set( hash_ids )
+        
         self._ArchiveFiles( hash_ids )
         
-        hash_ids = set( hash_ids )
+        for hash_id in hash_ids:
+            
+            self._PHashesDeleteFile( hash_id )
+            
+        
+        self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
         potentially_pending_upload_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM file_transfers;', ) )
         
@@ -3454,11 +1925,6 @@ class DB( HydrusDB.HydrusDB ):
             thumbnail_hashes = self._GetHashes( deletable_thumbnail_hash_ids )
             
             self._controller.CallToThread( client_files_manager.DelayedDeleteThumbnails, thumbnail_hashes )
-            
-        
-        for hash_id in hash_ids:
-            
-            self._CacheSimilarFilesDeleteFile( hash_id )
             
         
     
@@ -3593,6 +2059,693 @@ class DB( HydrusDB.HydrusDB ):
         wx.SafeShowMessage( 'hydrus db failed', message )
         
     
+    def _DuplicatesAddPotentialDuplicates( self, hash_id, potential_duplicate_hash_ids ):
+        
+        inserts = []
+        
+        for potential_duplicate_hash_id in potential_duplicate_hash_ids:
+            
+            # get media ids
+            # if same media ids, continue
+            # if same alternate ids, continue
+            # if false positives, continue
+            
+            if hash_id == potential_duplicate_hash_id:
+                
+                continue
+                
+            
+            smaller_hash_id = min( hash_id, potential_duplicate_hash_id )
+            larger_hash_id = max( hash_id, potential_duplicate_hash_id )
+            
+            inserts.append( ( smaller_hash_id, larger_hash_id, HC.DUPLICATE_UNKNOWN ) )
+            
+        
+        if len( inserts ) > 0:
+            
+            self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', inserts )
+            
+        
+    
+    def _DuplicatesDeleteUnknownDuplicatePairs( self ):
+        
+        hash_ids = set()
+        
+        for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
+            
+            hash_ids.add( smaller_hash_id )
+            hash_ids.add( larger_hash_id )
+            
+        
+        self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) )
+        
+        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
+    def _DuplicatesGetFileDuplicateHashes( self, file_service_key, hash, duplicate_type, allowed_hash_ids = None ):
+        
+        ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+        
+        hash_id = self._GetHashId( hash )
+        
+        dupe_hash_ids = set()
+        
+        if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
+            
+            if duplicate_type == HC.DUPLICATE_BETTER:
+                
+                smaller_search_duplicate_type = HC.DUPLICATE_SMALLER_BETTER
+                larger_search_duplicate_type = HC.DUPLICATE_LARGER_BETTER
+                
+            elif duplicate_type == HC.DUPLICATE_WORSE:
+                
+                smaller_search_duplicate_type = HC.DUPLICATE_LARGER_BETTER
+                larger_search_duplicate_type = HC.DUPLICATE_SMALLER_BETTER
+                
+            
+            dupe_hash_ids.add( hash_id )
+            
+            dupe_hash_ids.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? AND smaller_hash_id = ?;', ( smaller_search_duplicate_type, hash_id ) ) ) )
+            dupe_hash_ids.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? AND larger_hash_id = ?;', ( larger_search_duplicate_type, hash_id ) ) ) )
+            
+        else:
+            
+            if duplicate_type == HC.DUPLICATE_BETTER_OR_WORSE:
+                
+                search_duplicate_types = ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER )
+                
+            else:
+                
+                search_duplicate_types = ( duplicate_type, )
+                
+            
+            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type IN ' + HydrusData.SplayListForDB( search_duplicate_types ) + ' AND ( smaller_hash_id = ? OR larger_hash_id = ? );', ( hash_id, hash_id ) ):
+                
+                dupe_hash_ids.add( smaller_hash_id )
+                dupe_hash_ids.add( larger_hash_id )
+                
+            
+        
+        if allowed_hash_ids is not None:
+            
+            dupe_hash_ids.intersection_update( allowed_hash_ids )
+            
+        
+        dupe_hash_ids.discard( hash_id )
+        
+        dupe_hash_ids = list( dupe_hash_ids )
+        
+        dupe_hash_ids.insert( 0, hash_id )
+        
+        dupe_hashes = self._GetHashes( dupe_hash_ids )
+        
+        return dupe_hashes
+        
+    
+    def _DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( self, file_service_key ):
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            table_join = 'duplicate_pairs'
+            predicate_string = '1=1'
+            
+        else:
+            
+            service_id = self._GetServiceId( file_service_key )
+            
+            table_join = 'duplicate_pairs, current_files AS current_files_smaller, current_files AS current_files_larger ON ( smaller_hash_id = current_files_smaller.hash_id AND larger_hash_id = current_files_larger.hash_id )'
+            predicate_string = 'current_files_smaller.service_id = {} AND current_files_larger.service_id = {}'.format( service_id, service_id )
+            
+        
+        return ( table_join, predicate_string )
+        
+    
+    def _DuplicatesGetDuplicatePairsTableJoinInfoOnSearchResults( self, file_service_key, results_table_name, both_files_match ):
+        
+        if both_files_match:
+            
+            table_join = 'duplicate_pairs, {} AS results_smaller, {} AS results_larger ON ( smaller_hash_id = results_smaller.hash_id AND larger_hash_id = results_larger.hash_id )'.format( results_table_name, results_table_name )
+            predicate_string = '1=1'
+            
+        else:
+            
+            service_id = self._GetServiceId( file_service_key )
+            
+            table_join = 'duplicate_pairs, {}, current_files ON ( ( smaller_hash_id = {}.hash_id AND larger_hash_id = current_files.hash_id ) OR ( smaller_hash_id = current_files.hash_id AND larger_hash_id = {}.hash_id ) )'.format( results_table_name, results_table_name, results_table_name )
+            predicate_string = 'current_files.service_id = {}'.format( service_id )
+            
+        
+        return ( table_join, predicate_string )
+        
+    
+    def _DuplicatesGetFileDuplicateCounts( self, file_service_key, hash ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+        
+        counter = collections.Counter()
+        
+        for ( dupe_status, count ) in self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND smaller_hash_id = ? GROUP BY duplicate_type;', ( hash_id, ) ):
+            
+            if dupe_status == HC.DUPLICATE_SMALLER_BETTER:
+                
+                dupe_status = HC.DUPLICATE_BETTER
+                
+            elif dupe_status == HC.DUPLICATE_LARGER_BETTER:
+                
+                dupe_status = HC.DUPLICATE_WORSE
+                
+            
+            counter[ dupe_status ] += count
+            
+        
+        for ( dupe_status, count ) in self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND larger_hash_id = ? GROUP BY duplicate_type;', ( hash_id, ) ):
+            
+            if dupe_status == HC.DUPLICATE_SMALLER_BETTER:
+                
+                dupe_status = HC.DUPLICATE_WORSE
+                
+            elif dupe_status == HC.DUPLICATE_LARGER_BETTER:
+                
+                dupe_status = HC.DUPLICATE_BETTER
+                
+            
+            counter[ dupe_status ] += count
+            
+        
+        if HC.DUPLICATE_BETTER in counter and HC.DUPLICATE_WORSE in counter:
+            
+            counter[ HC.DUPLICATE_BETTER_OR_WORSE ] += counter[ HC.DUPLICATE_BETTER ] + counter[ HC.DUPLICATE_WORSE ]
+            
+        
+        return counter
+        
+    
+    def _DuplicatesGetHashIdsFromDuplicatePredicate( self, file_service_key, operator, num_relationships, dupe_type ):
+        
+        # doesn't work for '= 0' or '< 1'
+        
+        ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+        
+        hash_ids_to_counts = collections.Counter()
+        
+        if dupe_type == HC.DUPLICATE_BETTER_OR_WORSE:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type IN ( ' + str( HC.DUPLICATE_SMALLER_BETTER ) + ', ' + str( HC.DUPLICATE_LARGER_BETTER ) + ' )'
+            larger_duplicate_predicate_string = smaller_duplicate_predicate_string
+            
+        elif dupe_type == HC.DUPLICATE_BETTER:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
+            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
+            
+        elif dupe_type == HC.DUPLICATE_WORSE:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
+            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
+            
+        else:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
+            larger_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
+            
+        
+        smaller_query = 'SELECT smaller_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + smaller_duplicate_predicate_string + ' GROUP BY smaller_hash_id;'
+        larger_query = 'SELECT larger_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + larger_duplicate_predicate_string + ' GROUP BY larger_hash_id;'
+        
+        for ( hash_id, count ) in self._c.execute( smaller_query ):
+            
+            hash_ids_to_counts[ hash_id ] += count
+            
+        
+        for ( hash_id, count ) in self._c.execute( larger_query ):
+            
+            hash_ids_to_counts[ hash_id ] += count
+            
+        
+        if operator == '\u2248':
+            
+            lower_bound = 0.8 * num_relationships
+            upper_bound = 1.2 * num_relationships
+            
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
+                
+                return lower_bound < count and count < upper_bound
+                
+            
+        elif operator == '<':
+            
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
+                
+                return count < num_relationships
+                
+            
+        elif operator == '>':
+            
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
+                
+                return count > num_relationships
+                
+            
+        elif operator == '=':
+            
+            def filter_func( item ):
+                
+                ( hash_id, count ) = item
+                
+                return count == num_relationships
+                
+            
+        
+        hash_ids = { hash_id for ( hash_id, count ) in filter( filter_func, list(hash_ids_to_counts.items()) ) }
+        
+        return hash_ids
+        
+    
+    def _DuplicatesGetRandomUnknownDuplicateHashes( self, search_context, both_files_match ):
+        
+        file_service_key = search_context.GetFileServiceKey()
+        
+        is_complicated_search = False
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
+            
+            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+                
+                ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+                
+            else:
+                
+                is_complicated_search = True
+                
+                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                
+                ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
+                
+            
+            potential_hash_ids = set()
+            
+            # distinct important here for the search results table join
+            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
+                
+                if is_complicated_search:
+                    
+                    # we only want ones that match our query above, not the other half of the pair
+                    
+                    if smaller_hash_id in query_hash_ids:
+                        
+                        potential_hash_ids.add( smaller_hash_id )
+                        
+                    
+                    if larger_hash_id in query_hash_ids:
+                        
+                        potential_hash_ids.add( larger_hash_id )
+                        
+                    
+                else:
+                    
+                    potential_hash_ids.add( smaller_hash_id )
+                    potential_hash_ids.add( larger_hash_id )
+                    
+                
+                if len( potential_hash_ids ) == 1000:
+                    
+                    break
+                    
+                
+            
+        
+        if len( potential_hash_ids ) == 0:
+            
+            return []
+            
+        
+        hash_id = random.choice( list( potential_hash_ids ) )
+        
+        hash = self._GetHash( hash_id )
+        
+        if is_complicated_search and both_files_match:
+            
+            allowed_hash_ids = query_hash_ids
+            
+        else:
+            
+            allowed_hash_ids = None
+            
+        
+        return self._DuplicatesGetFileDuplicateHashes( file_service_key, hash, HC.DUPLICATE_UNKNOWN, allowed_hash_ids = allowed_hash_ids )
+        
+    
+    def _DuplicatesGetDuplicatePairsForFiltering( self, search_context, both_files_match ):
+        
+        # we need to batch non-intersecting decisions here to keep it simple at the gui-level
+        # we also want to clear things out in groups, and maximising per-decision value
+        # first, let's sample our existing dupe relationships so we know 'useful' nodes that will tend to generate higher value decisions
+        
+        node_value_estimate_counter = collections.Counter()
+        
+        # note this doesn't use the table_join so we can see results that may have caused one of the pair to be moved into trash domain or whatever
+        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_QUALITY ) ).fetchall()
+        
+        for ( smaller_hash_id, larger_hash_id ) in result:
+            
+            node_value_estimate_counter[ smaller_hash_id ] += 1
+            node_value_estimate_counter[ larger_hash_id ] += 1
+            
+        
+        # now we will fetch some unknown pairs
+        
+        file_service_key = search_context.GetFileServiceKey()
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
+            
+            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+                
+                ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+                
+            else:
+                
+                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                
+                ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
+                
+            
+            # distinct important here for the search results table join
+            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? LIMIT 2500;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
+            
+        
+        # convert them into possible groups per each possible 'master hash_id', and value them
+        
+        master_hash_ids_to_values = collections.Counter()
+        master_hash_ids_to_groups = collections.defaultdict( list )
+        
+        for pair in result:
+            
+            ( smaller_hash_id, larger_hash_id ) = pair
+            
+            master_hash_ids_to_groups[ smaller_hash_id ].append( pair )
+            master_hash_ids_to_groups[ larger_hash_id ].append( pair )
+            
+            pair_value = node_value_estimate_counter[ smaller_hash_id ] + node_value_estimate_counter[ larger_hash_id ]
+            
+            master_hash_ids_to_values[ smaller_hash_id ] += pair_value
+            master_hash_ids_to_values[ larger_hash_id ] += pair_value
+            
+        
+        # now let's add decision groups to our batch, based on descending value
+        
+        MAX_BATCH_SIZE = 250
+        
+        pairs_of_hash_ids = []
+        seen_hash_ids = set()
+        
+        for ( master_hash_id, count ) in master_hash_ids_to_values.most_common():
+            
+            if master_hash_id in seen_hash_ids:
+                
+                continue
+                
+            
+            seen_hash_ids_for_this_master_hash_id = set()
+            
+            for pair in master_hash_ids_to_groups[ master_hash_id ]:
+                
+                ( smaller_hash_id, larger_hash_id ) = pair
+                
+                if smaller_hash_id in seen_hash_ids or larger_hash_id in seen_hash_ids:
+                    
+                    continue
+                    
+                
+                seen_hash_ids_for_this_master_hash_id.add( smaller_hash_id )
+                seen_hash_ids_for_this_master_hash_id.add( larger_hash_id )
+                
+                pairs_of_hash_ids.append( pair )
+                
+                if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
+                    
+                    break
+                    
+                
+            
+            seen_hash_ids.update( seen_hash_ids_for_this_master_hash_id )
+            
+            if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
+                
+                break
+                
+            
+        
+        self._PopulateHashIdsToHashesCache( seen_hash_ids )
+        
+        pairs_of_hashes = [ ( self._hash_ids_to_hashes_cache[ smaller_hash_id ], self._hash_ids_to_hashes_cache[ larger_hash_id ] ) for ( smaller_hash_id, larger_hash_id ) in pairs_of_hash_ids ]
+        
+        return pairs_of_hashes
+        
+    
+    def _DuplicatesGetUnknownDuplicatesCount( self, search_context, both_files_match ):
+        
+        file_service_key = search_context.GetFileServiceKey()
+        
+        with HydrusDB.TemporaryIntegerTable( self._c, [], 'hash_id' ) as temp_table_name:
+            
+            if search_context.IsJustSystemEverything() or search_context.HasNoPredicates():
+                
+                ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+                
+            else:
+                
+                query_hash_ids = self._GetHashIdsFromQuery( search_context, apply_implicit_limit = False )
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( hash_id ) VALUES ( ? );'.format( temp_table_name ), ( ( hash_id, ) for hash_id in query_hash_ids ) )
+                
+                ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnSearchResults( file_service_key, temp_table_name, both_files_match )
+                
+            
+            # distinct important here for the search results table join
+            ( unknown_duplicates_count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? );', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
+            
+        
+        return unknown_duplicates_count
+        
+    
+    def _DuplicatesSetDuplicatePairStatus( self, pair_info ):
+        
+        for ( duplicate_type, hash_a, hash_b, service_keys_to_content_updates ) in pair_info:
+            
+            if len( service_keys_to_content_updates ) > 0:
+                
+                self._ProcessContentUpdates( service_keys_to_content_updates )
+                
+            
+            if duplicate_type is None:
+                
+                hash_id_a = self._GetHashId( hash_a )
+                hash_id_b = self._GetHashId( hash_b )
+                
+                smaller_hash_id = min( hash_id_a, hash_id_b )
+                larger_hash_id = max( hash_id_a, hash_id_b )
+                
+                self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ?;', ( smaller_hash_id, larger_hash_id ) )
+                
+                continue
+                
+            
+            if duplicate_type == HC.DUPLICATE_WORSE:
+                
+                ( hash_a, hash_b ) = ( hash_b, hash_a )
+                
+                duplicate_type = HC.DUPLICATE_BETTER
+                
+            
+            hash_id_a = self._GetHashId( hash_a )
+            hash_id_b = self._GetHashId( hash_b )
+            
+            self._DuplicatesSetDuplicatePairStatusSingleRow( duplicate_type, hash_id_a, hash_id_b )
+            
+            if duplicate_type == HC.DUPLICATE_BETTER:
+                
+                # anything better than A is now better than B
+                # i.e. for all X for which X > A, set X > B
+                # anything worse than B is now worse than A
+                # i.e. for all X for which B > X, set A > X
+                
+                better_than_a = set()
+                
+                better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
+                better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
+                
+                for better_than_a_hash_id in better_than_a:
+                    
+                    self._DuplicatesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
+                    
+                
+                worse_than_b = set()
+                
+                worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
+                worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
+                
+                for worse_than_b_hash_id in worse_than_b:
+                    
+                    self._DuplicatesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
+                    
+                
+            
+            if duplicate_type != HC.DUPLICATE_UNKNOWN:
+                
+                self._DuplicatesSyncSameQualityDuplicates( hash_id_a )
+                self._DuplicatesSyncSameQualityDuplicates( hash_id_b )
+                
+                self._DuplicatesSyncBetterWorseDuplicates( hash_id_a )
+                self._DuplicatesSyncBetterWorseDuplicates( hash_id_b )
+                
+            
+        
+    
+    def _DuplicatesSetDuplicatePairStatusSingleRow( self, duplicate_type, hash_id_a, hash_id_b, only_update_given_previous_status = None ):
+        
+        smaller_hash_id = min( hash_id_a, hash_id_b )
+        larger_hash_id = max( hash_id_a, hash_id_b )
+        
+        if duplicate_type == HC.DUPLICATE_BETTER:
+            
+            if smaller_hash_id == hash_id_a:
+                
+                duplicate_type = HC.DUPLICATE_SMALLER_BETTER
+                
+            else:
+                
+                duplicate_type = HC.DUPLICATE_LARGER_BETTER
+                
+            
+        elif duplicate_type == HC.DUPLICATE_WORSE:
+            
+            if smaller_hash_id == hash_id_a:
+                
+                duplicate_type = HC.DUPLICATE_LARGER_BETTER
+                
+            else:
+                
+                duplicate_type = HC.DUPLICATE_SMALLER_BETTER
+                
+            
+        
+        if only_update_given_previous_status is None:
+            
+            result = self._c.execute( 'SELECT 1 FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( smaller_hash_id, larger_hash_id, duplicate_type ) ).fetchone()
+            
+            if result is None: # i.e. we are not needlessly overwriting
+                
+                self._c.execute( 'REPLACE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( smaller_hash_id, larger_hash_id, duplicate_type ) )
+                
+            
+        else:
+            
+            self._c.execute( 'UPDATE duplicate_pairs SET duplicate_type = ? WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( duplicate_type, smaller_hash_id, larger_hash_id, only_update_given_previous_status ) )
+            
+        
+    
+    def _DuplicatesSyncBetterWorseDuplicates( self, hash_id ):
+        
+        # better/worse files are inherantly 'the same' in some very close way, so 'not dupe' and 'alternate' relationships should apply to them all the same
+        # so, replicate all of our file's 'not dupe' and 'alternate' relationships to all of its 'better/worse' siblings
+        
+        applicable_relationships = set()
+        
+        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
+            
+            applicable_relationships.add( ( smaller_hash_id, duplicate_type ) )
+            
+        
+        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
+            
+            applicable_relationships.add( ( larger_hash_id, duplicate_type ) )
+            
+        
+        all_better_worse_siblings = set()
+        
+        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
+        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
+        
+        for sibling_hash_id in all_better_worse_siblings:
+            
+            for ( other_hash_id, duplicate_type ) in applicable_relationships:
+                
+                if other_hash_id == sibling_hash_id:
+                    
+                    continue
+                    
+                
+                self._DuplicatesSetDuplicatePairStatusSingleRow( duplicate_type, sibling_hash_id, other_hash_id )
+                
+            
+        
+    
+    def _DuplicatesSyncSameQualityDuplicates( self, hash_id ):
+        
+        # exactly similar files should have exactly the same relationships with other files
+        # so, replicate all of our file's known relationships to all of its 'same file' siblings
+        
+        all_relationships = set()
+        
+        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND larger_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
+            
+            if duplicate_type == HC.DUPLICATE_SMALLER_BETTER:
+                
+                duplicate_type = HC.DUPLICATE_WORSE
+                
+            elif duplicate_type == HC.DUPLICATE_LARGER_BETTER:
+                
+                duplicate_type = HC.DUPLICATE_BETTER
+                
+            
+            all_relationships.add( ( smaller_hash_id, duplicate_type ) )
+            
+        
+        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
+            
+            if duplicate_type == HC.DUPLICATE_SMALLER_BETTER:
+                
+                duplicate_type = HC.DUPLICATE_BETTER
+                
+            elif duplicate_type == HC.DUPLICATE_LARGER_BETTER:
+                
+                duplicate_type = HC.DUPLICATE_WORSE
+                
+            
+            all_relationships.add( ( larger_hash_id, duplicate_type ) )
+            
+        
+        all_same_quality_siblings = set()
+        
+        all_same_quality_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_QUALITY, hash_id ) ) ) )
+        all_same_quality_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_QUALITY, hash_id ) ) ) )
+        
+        for sibling_hash_id in all_same_quality_siblings:
+            
+            for ( other_hash_id, duplicate_type ) in all_relationships:
+                
+                if other_hash_id == sibling_hash_id:
+                    
+                    continue
+                    
+                
+                self._DuplicatesSetDuplicatePairStatusSingleRow( duplicate_type, sibling_hash_id, other_hash_id )
+                
+            
+        
+    
     def _ExportToTagArchive( self, path, service_key, hash_type, hashes = None ):
         
         # This could nicely take a whitelist or a blacklist for namespace filtering
@@ -3705,6 +2858,109 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.Finish()
             
+        
+    
+    def _FileMaintenanceAddJobs( self, hashes, job_type, time_can_start = 0 ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        deletee_job_types =  ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ]
+        
+        for deletee_job_type in deletee_job_types:
+            
+            self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, deletee_job_type ) for hash_id in hash_ids ) )
+            
+        
+        #
+        
+        self._c.executemany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
+        
+    
+    def _FileMaintenanceClearJobs( self, cleared_job_tuples ):
+        
+        new_file_info_hashes = set()
+        
+        for ( hash, job_type, additional_data ) in cleared_job_tuples:
+            
+            hash_id = self._GetHashId( hash )
+            
+            if additional_data is not None:
+                
+                if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE:
+                    
+                    ( size, mime, width, height, duration, num_frames, num_words ) = additional_data
+                    
+                    self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
+                    
+                    self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+                    
+                    new_file_info_hashes.add( hash )
+                    
+                    result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                    
+                    if result is None:
+                        
+                        self._FileMaintenanceAddJobs( { hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
+                        
+                    
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
+                    
+                    ( md5, sha1, sha512 ) = additional_data
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+                    
+                
+            
+            job_types_to_delete = [ job_type ]
+            
+            # if a user-made 'force regen thumb' call happens to come in while a 'regen thumb if wrong size' job is queued, we can clear it
+            
+            job_types_to_delete.extend( ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ] )
+            
+            self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, job_type_to_delete ) for job_type_to_delete in job_types_to_delete ) )
+            
+        
+        if len( new_file_info_hashes ) > 0:
+            
+            self._controller.pub( 'new_file_info', new_file_info_hashes )
+            
+        
+    
+    def _FileMaintenanceGetJob( self, job_type = None ):
+        
+        if job_type is None:
+            
+            possible_job_types = ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER
+            
+        else:
+            
+            possible_job_types = [ job_type ]
+            
+        
+        for job_type in possible_job_types:
+            
+            ideal_job_size = ClientFiles.regen_file_enum_to_ideal_job_size_lookup[ job_type ]
+            
+            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), ideal_job_size ) ) )
+            
+            if len( hash_ids ) > 0:
+                
+                hashes = self._GetHashes( hash_ids )
+                
+                return ( hashes, job_type )
+                
+            
+        
+        return None
+        
+    
+    def _FileMaintenanceGetJobCounts( self ):
+        
+        result = self._c.execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusData.GetNow(), ) ).fetchall()
+        
+        job_types_to_count = dict( result )
+        
+        return job_types_to_count
         
     
     def _FillInParents( self, service_id, fill_in_tag_id, make_content_updates = False ):
@@ -5054,7 +4310,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_id = self._GetHashId( similar_to_hash )
             
-            similar_hash_ids = self._CacheSimilarFilesSearch( hash_id, max_hamming )
+            similar_hash_ids = self._PHashesSearch( hash_id, max_hamming )
             
             query_hash_ids = update_qhi( query_hash_ids, similar_hash_ids )
             
@@ -5139,7 +4395,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                dupe_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type )
+                dupe_hash_ids = self._DuplicatesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type )
                 
                 query_hash_ids = update_qhi( query_hash_ids, dupe_hash_ids )
                 
@@ -5357,17 +4613,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if only_do_zero:
                 
-                nonzero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, '>', 0, dupe_type )
+                nonzero_hash_ids = self._DuplicatesGetHashIdsFromDuplicatePredicate( file_service_key, '>', 0, dupe_type )
                 
                 query_hash_ids.difference_update( nonzero_hash_ids )
                 
             elif include_zero:
                 
-                nonzero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, '>', 0, dupe_type )
+                nonzero_hash_ids = self._DuplicatesGetHashIdsFromDuplicatePredicate( file_service_key, '>', 0, dupe_type )
                 
                 zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
                 
-                accurate_except_zero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type )
+                accurate_except_zero_hash_ids = self._DuplicatesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type )
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
@@ -6205,16 +5461,11 @@ class DB( HydrusDB.HydrusDB ):
             jobs_to_do.append( 'analyze ' + HydrusData.ToHumanInt( len( names_to_analyze ) ) + ' tables' )
             
         
-        similar_files_due = self._CacheSimilarFilesMaintenanceDue()
+        similar_files_due = self._PHashesMaintenanceDue()
         
         if similar_files_due:
             
             jobs_to_do.append( 'similar files work' )
-            
-        
-        if self._MaintainReparseFilesDue():
-            
-            jobs_to_do.append( 'reparse files work' )
             
         
         return jobs_to_do
@@ -7749,7 +7000,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if phashes is not None:
                 
-                self._CacheSimilarFilesAssociatePHashes( hash_id, phashes )
+                self._PHashesAssociatePHashes( hash_id, phashes )
                 
             
             self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
@@ -8076,41 +7327,6 @@ class DB( HydrusDB.HydrusDB ):
         return True
         
     
-    def _MaintainReparseFiles( self, stop_time = None ):
-        
-        if stop_time is None:
-            
-            stop_time = HydrusData.GetNow() + 600
-            
-        
-        # I should probably publish to the splash screen here
-        
-        hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM reparse_files_queue LIMIT 10;' ) )
-        
-        while len( hash_ids ) > 0:
-            
-            if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
-                
-                return
-                
-            
-            hashes = self._GetHashes( hash_ids )
-            
-            self._RegenerateFileData( ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE, hashes, pub_job_key = False )
-            
-            self._c.executemany( 'DELETE FROM reparse_files_queue WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM reparse_files_queue LIMIT 10;' ) )
-            
-        
-    
-    def _MaintainReparseFilesDue( self ):
-        
-        # return any in the table
-        
-        return False
-        
-    
     def _ManageDBError( self, job, e ):
         
         if isinstance( e, MemoryError ):
@@ -8171,6 +7387,881 @@ class DB( HydrusDB.HydrusDB ):
             
             self._SetJSONDump( obj )
             
+        
+    
+    def _PHashesAddLeaf( self, phash_id, phash ):
+        
+        result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
+        
+        if result is None:
+            
+            parent_id = None
+            
+        else:
+            
+            ( root_node_phash_id, ) = result
+            
+            ancestors_we_are_inside = []
+            ancestors_we_are_outside = []
+            
+            an_ancestor_is_unbalanced = False
+            
+            next_ancestor_id = root_node_phash_id
+            
+            while next_ancestor_id is not None:
+                
+                ancestor_id = next_ancestor_id
+                
+                ( ancestor_phash, ancestor_radius, ancestor_inner_id, ancestor_inner_population, ancestor_outer_id, ancestor_outer_population ) = self._c.execute( 'SELECT phash, radius, inner_id, inner_population, outer_id, outer_population FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id = ?;', ( ancestor_id, ) ).fetchone()
+                
+                distance_to_ancestor = HydrusData.Get64BitHammingDistance( phash, ancestor_phash )
+                
+                if ancestor_radius is None or distance_to_ancestor <= ancestor_radius:
+                    
+                    ancestors_we_are_inside.append( ancestor_id )
+                    ancestor_inner_population += 1
+                    next_ancestor_id = ancestor_inner_id
+                    
+                    if ancestor_inner_id is None:
+                        
+                        self._c.execute( 'UPDATE shape_vptree SET inner_id = ?, radius = ? WHERE phash_id = ?;', ( phash_id, distance_to_ancestor, ancestor_id ) )
+                        
+                        parent_id = ancestor_id
+                        
+                    
+                else:
+                    
+                    ancestors_we_are_outside.append( ancestor_id )
+                    ancestor_outer_population += 1
+                    next_ancestor_id = ancestor_outer_id
+                    
+                    if ancestor_outer_id is None:
+                        
+                        self._c.execute( 'UPDATE shape_vptree SET outer_id = ? WHERE phash_id = ?;', ( phash_id, ancestor_id ) )
+                        
+                        parent_id = ancestor_id
+                        
+                    
+                
+                if not an_ancestor_is_unbalanced and ancestor_inner_population + ancestor_outer_population > 16:
+                    
+                    larger = max( ancestor_inner_population, ancestor_outer_population )
+                    smaller = min( ancestor_inner_population, ancestor_outer_population )
+                    
+                    if smaller / larger < 0.5:
+                        
+                        self._c.execute( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ancestor_id, ) )
+                        
+                        # we only do this for the eldest ancestor, as the eventual rebalancing will affect all children
+                        
+                        an_ancestor_is_unbalanced = True
+                        
+                    
+                
+            
+            self._c.executemany( 'UPDATE shape_vptree SET inner_population = inner_population + 1 WHERE phash_id = ?;', ( ( ancestor_id, ) for ancestor_id in ancestors_we_are_inside ) )
+            self._c.executemany( 'UPDATE shape_vptree SET outer_population = outer_population + 1 WHERE phash_id = ?;', ( ( ancestor_id, ) for ancestor_id in ancestors_we_are_outside ) )
+            
+        
+        radius = None
+        inner_id = None
+        inner_population = 0
+        outer_id = None
+        outer_population = 0
+        
+        self._c.execute( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
+        
+    
+    def _PHashesAssociatePHashes( self, hash_id, phashes ):
+        
+        phash_ids = set()
+        
+        for phash in phashes:
+            
+            phash_id = self._PHashesGetPHashId( phash )
+            
+            phash_ids.add( phash_id )
+            
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
+        
+        if self._GetRowCount() > 0:
+            
+            self._c.execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, None ) )
+            
+        
+        return phash_ids
+        
+    
+    def _PHashesDeleteFile( self, hash_id ):
+        
+        phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+        
+        self._PHashesDisassociatePHashes( hash_id, phash_ids )
+        
+        self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
+        self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
+        
+    
+    def _PHashesDisassociatePHashes( self, hash_id, phash_ids ):
+        
+        self._c.executemany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( phash_id, hash_id ) for phash_id in phash_ids ) )
+        
+        useful_phash_ids = { phash for ( phash, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN ' + HydrusData.SplayListForDB( phash_ids ) + ';' ) }
+        
+        useless_phash_ids = phash_ids.difference( useful_phash_ids )
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ( phash_id, ) for phash_id in useless_phash_ids ) )
+        
+    
+    def _PHashesGenerateBranch( self, job_key, parent_id, phash_id, phash, children ):
+        
+        process_queue = collections.deque()
+        
+        process_queue.append( ( parent_id, phash_id, phash, children ) )
+        
+        insert_rows = []
+        
+        num_done = 0
+        num_to_do = len( children ) + 1
+        
+        while len( process_queue ) > 0:
+            
+            job_key.SetVariable( 'popup_text_2', 'generating new branch -- ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+            
+            ( parent_id, phash_id, phash, children ) = process_queue.popleft()
+            
+            if len( children ) == 0:
+                
+                inner_id = None
+                inner_population = 0
+                
+                outer_id = None
+                outer_population = 0
+                
+                radius = None
+                
+            else:
+                
+                children = [ ( HydrusData.Get64BitHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
+                
+                children.sort()
+                
+                median_index = len( children ) // 2
+                
+                median_radius = children[ median_index ][0]
+                
+                inner_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance < median_radius ]
+                radius_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance == median_radius ]
+                outer_children = [ ( child_id, child_phash ) for ( distance, child_id, child_phash ) in children if distance > median_radius ]
+                
+                if len( inner_children ) <= len( outer_children ):
+                    
+                    radius = median_radius
+                    
+                    inner_children.extend( radius_children )
+                    
+                else:
+                    
+                    radius = median_radius - 1
+                    
+                    outer_children.extend( radius_children )
+                    
+                
+                inner_population = len( inner_children )
+                outer_population = len( outer_children )
+                
+                ( inner_id, inner_phash ) = self._PHashesPopBestRootNode( inner_children ) #HydrusData.MedianPop( inner_children )
+                
+                if len( outer_children ) == 0:
+                    
+                    outer_id = None
+                    
+                else:
+                    
+                    ( outer_id, outer_phash ) = self._PHashesPopBestRootNode( outer_children ) #HydrusData.MedianPop( outer_children )
+                    
+                
+            
+            insert_rows.append( ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
+            
+            if inner_id is not None:
+                
+                process_queue.append( ( phash_id, inner_id, inner_phash, inner_children ) )
+                
+            
+            if outer_id is not None:
+                
+                process_queue.append( ( phash_id, outer_id, outer_phash, outer_children ) )
+                
+            
+            num_done += 1
+            
+        
+        job_key.SetVariable( 'popup_text_2', 'branch constructed, now committing' )
+        
+        self._c.executemany( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
+        
+    
+    def _PHashesGetMaintenanceStatus( self ):
+        
+        ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
+        ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
+        
+        searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
+        
+        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count )
+        
+    
+    def _PHashesGetPHashId( self, phash ):
+        
+        result = self._c.execute( 'SELECT phash_id FROM shape_perceptual_hashes WHERE phash = ?;', ( sqlite3.Binary( phash ), ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO shape_perceptual_hashes ( phash ) VALUES ( ? );', ( sqlite3.Binary( phash ), ) )
+            
+            phash_id = self._c.lastrowid
+            
+            self._PHashesAddLeaf( phash_id, phash )
+            
+        else:
+            
+            ( phash_id, ) = result
+            
+        
+        return phash_id
+        
+    
+    def _PHashesMaintainFiles( self, job_key = None, stop_time = None ):
+        
+        time_started = HydrusData.GetNow()
+        pub_job_key = False
+        job_key_pubbed = False
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            pub_job_key = True
+            
+        
+        try:
+            
+            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
+            
+            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) )
+            
+            client_files_manager = self._controller.client_files_manager
+            
+            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
+            
+            for ( i, hash_id ) in enumerate( hash_ids ):
+                
+                job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
+                
+                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
+                    
+                    self._controller.pub( 'modal_message', job_key )
+                    
+                    job_key_pubbed = True
+                    
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                
+                if should_quit or should_stop:
+                    
+                    return
+                    
+                
+                if i % 50 == 0:
+                    
+                    gc.collect()
+                    
+                
+                if i % 10 == 0:
+                    
+                    text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
+                    
+                    HG.client_controller.pub( 'splash_set_status_subtext', text )
+                    job_key.SetVariable( 'popup_text_1', text )
+                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
+                    
+                
+                try:
+                    
+                    hash = self._GetHash( hash_id )
+                    mime = self._GetMime( hash_id )
+                    
+                    if mime in HC.MIMES_WE_CAN_PHASH:
+                        
+                        path = client_files_manager.GetFilePath( hash, mime )
+                        
+                        if mime in HC.MIMES_WE_CAN_PHASH:
+                            
+                            try:
+                                
+                                phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
+                                
+                            except Exception as e:
+                                
+                                HydrusData.Print( 'Could not generate phashes for ' + path )
+                                
+                                HydrusData.PrintException( e )
+                                
+                                phashes = []
+                                
+                            
+                        
+                    else:
+                        
+                        phashes = []
+                        
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    phashes = []
+                    
+                
+                existing_phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+                
+                correct_phash_ids = self._PHashesAssociatePHashes( hash_id, phashes )
+                
+                incorrect_phash_ids = existing_phash_ids.difference( correct_phash_ids )
+                
+                if len( incorrect_phash_ids ) > 0:
+                    
+                    self._PHashesDisassociatePHashes( hash_id, incorrect_phash_ids )
+                    
+                
+                self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
+    def _PHashesMaintainTree( self, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
+        
+        if abandon_if_other_work_to_do:
+            
+            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
+            
+            if result is not None:
+                
+                return
+                
+            
+        
+        time_started = HydrusData.GetNow()
+        pub_job_key = False
+        job_key_pubbed = False
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            pub_job_key = True
+            
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
+            
+            rebalance_phash_ids = self._STL( self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) )
+            
+            num_to_do = len( rebalance_phash_ids )
+            
+            while len( rebalance_phash_ids ) > 0:
+                
+                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
+                    
+                    self._controller.pub( 'modal_message', job_key )
+                    
+                    job_key_pubbed = True
+                    
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                
+                if should_quit or should_stop:
+                    
+                    return
+                    
+                
+                num_done = num_to_do - len( rebalance_phash_ids )
+                
+                text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                
+                HG.client_controller.pub( 'splash_set_status_subtext', text )
+                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
+                    
+                    # can't turn this into selectfromlist due to the order clause. we need to do this all at once
+                    
+                    ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree NATURAL JOIN ' + temp_table_name + ' ORDER BY inner_population + outer_population DESC;' ).fetchone()
+                    
+                
+                self._PHashesRegenerateBranch( job_key, biggest_phash_id )
+                
+                rebalance_phash_ids = self._STL( self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_key.DeleteVariable( 'popup_text_2' ) # used in the regenbranch call
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
+    def _PHashesMaintenanceDue( self ):
+        
+        new_options = HG.client_controller.new_options
+        
+        if new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
+            
+            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
+            
+            if count > 0:
+                
+                return True
+                
+            
+            search_distance = new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            
+            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchone()
+            
+            if count > 100:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _PHashesPopBestRootNode( self, node_rows ):
+        
+        if len( node_rows ) == 1:
+            
+            root_row = node_rows.pop()
+            
+            return root_row
+            
+        
+        MAX_VIEWPOINTS = 256
+        MAX_SAMPLE = 64
+        
+        if len( node_rows ) > MAX_VIEWPOINTS:
+            
+            viewpoints = random.sample( node_rows, MAX_VIEWPOINTS )
+            
+        else:
+            
+            viewpoints = node_rows
+            
+        
+        if len( node_rows ) > MAX_SAMPLE:
+            
+            sample = random.sample( node_rows, MAX_SAMPLE )
+            
+        else:
+            
+            sample = node_rows
+            
+        
+        final_scores = []
+        
+        for ( v_id, v_phash ) in viewpoints:
+            
+            views = [ HydrusData.Get64BitHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ]
+            
+            views.sort()
+            
+            # let's figure out the ratio of left_children to right_children, preferring 1:1, and convert it to a discrete integer score
+            
+            median_index = len( views ) // 2
+            
+            radius = views[ median_index ]
+            
+            num_left = len( [ 1 for view in views if view < radius ] )
+            num_radius = len( [ 1 for view in views if view == radius ] )
+            num_right = len( [ 1 for view in views if view > radius ] )
+            
+            if num_left <= num_right:
+                
+                num_left += num_radius
+                
+            else:
+                
+                num_right += num_radius
+                
+            
+            smaller = min( num_left, num_right )
+            larger = max( num_left, num_right )
+            
+            ratio = smaller / larger
+            
+            ratio_score = int( ratio * MAX_SAMPLE / 2 )
+            
+            # now let's calc the standard deviation--larger sd tends to mean less sphere overlap when searching
+            
+            mean_view = sum( views ) / len( views )
+            squared_diffs = [ ( view - mean_view  ) ** 2 for view in views ]
+            sd = ( sum( squared_diffs ) / len( squared_diffs ) ) ** 0.5
+            
+            final_scores.append( ( ratio_score, sd, v_id ) )
+            
+        
+        final_scores.sort()
+        
+        # we now have a list like [ ( 11, 4.0, [id] ), ( 15, 3.7, [id] ), ( 15, 4.3, [id] ) ]
+        
+        ( ratio_gumpf, sd_gumpf, root_id ) = final_scores.pop()
+        
+        for ( i, ( v_id, v_phash ) ) in enumerate( node_rows ):
+            
+            if v_id == root_id:
+                
+                root_row = node_rows.pop( i )
+                
+                return root_row
+                
+            
+        
+    
+    def _PHashesRegenerateBranch( self, job_key, phash_id ):
+        
+        job_key.SetVariable( 'popup_text_2', 'reviewing existing branch' )
+        
+        # grab everything in the branch
+        
+        ( parent_id, ) = self._c.execute( 'SELECT parent_id FROM shape_vptree WHERE phash_id = ?;', ( phash_id, ) ).fetchone()
+        
+        cte_table_name = 'branch ( branch_phash_id )'
+        initial_select = 'SELECT ?'
+        recursive_select = 'SELECT phash_id FROM shape_vptree, branch ON parent_id = branch_phash_id'
+        
+        with_clause = 'WITH RECURSIVE ' + cte_table_name + ' AS ( ' + initial_select + ' UNION ALL ' +  recursive_select +  ')'
+        
+        unbalanced_nodes = self._c.execute( with_clause + ' SELECT branch_phash_id, phash FROM branch, shape_perceptual_hashes ON phash_id = branch_phash_id;', ( phash_id, ) ).fetchall()
+        
+        # removal of old branch, maintenance schedule, and orphan phashes
+        
+        job_key.SetVariable( 'popup_text_2', HydrusData.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch' )
+        
+        unbalanced_phash_ids = { p_id for ( p_id, p_h ) in unbalanced_nodes }
+        
+        self._c.executemany( 'DELETE FROM shape_vptree WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
+        
+        self._c.executemany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_phash_ids ) )
+        
+        select_statement = 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN {};'
+        
+        useful_phash_ids = self._STS( self._SelectFromList( select_statement, unbalanced_phash_ids ) )
+        
+        orphan_phash_ids = unbalanced_phash_ids.difference( useful_phash_ids )
+        
+        self._c.executemany( 'DELETE FROM shape_perceptual_hashes WHERE phash_id = ?;', ( ( p_id, ) for p_id in orphan_phash_ids ) )
+        
+        useful_nodes = [ row for row in unbalanced_nodes if row[0] in useful_phash_ids ]
+        
+        useful_population = len( useful_nodes )
+        
+        # now create the new branch, starting by choosing a new root and updating the parent's left/right reference to that
+        
+        if useful_population > 0:
+            
+            ( new_phash_id, new_phash ) = self._PHashesPopBestRootNode( useful_nodes ) #HydrusData.RandomPop( useful_nodes )
+            
+        else:
+            
+            new_phash_id = None
+            
+        
+        if parent_id is not None:
+            
+            ( parent_inner_id, ) = self._c.execute( 'SELECT inner_id FROM shape_vptree WHERE phash_id = ?;', ( parent_id, ) ).fetchone()
+            
+            if parent_inner_id == phash_id:
+                
+                query = 'UPDATE shape_vptree SET inner_id = ?, inner_population = ? WHERE phash_id = ?;'
+                
+            else:
+                
+                query = 'UPDATE shape_vptree SET outer_id = ?, outer_population = ? WHERE phash_id = ?;'
+                
+            
+            self._c.execute( query, ( new_phash_id, useful_population, parent_id ) )
+            
+        
+        if useful_population > 0:
+            
+            self._PHashesGenerateBranch( job_key, parent_id, new_phash_id, new_phash, useful_nodes )
+            
+        
+    
+    def _PHashesRegenerateTree( self ):
+        
+        job_key = ClientThreading.JobKey()
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'regenerating similar file search data' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            job_key.SetVariable( 'popup_text_1', 'purging search info of orphans' )
+            
+            self._c.execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id NOT IN ( SELECT hash_id FROM current_files );' )
+            
+            job_key.SetVariable( 'popup_text_1', 'gathering all leaves' )
+            
+            self._c.execute( 'DELETE FROM shape_vptree;' )
+            
+            all_nodes = self._c.execute( 'SELECT phash_id, phash FROM shape_perceptual_hashes;' ).fetchall()
+            
+            job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
+            
+            ( root_id, root_phash ) = self._PHashesPopBestRootNode( all_nodes ) #HydrusData.RandomPop( all_nodes )
+            
+            self._PHashesGenerateBranch( job_key, None, root_id, root_phash, all_nodes )
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_text_2' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
+    def _PHashesSearchForPotentialDuplicates( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
+        
+        if abandon_if_other_work_to_do:
+            
+            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
+            
+            if result is not None:
+                
+                return
+                
+            
+            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
+            
+            if result is not None:
+                
+                return
+                
+            
+        
+        time_started = HydrusData.GetNow()
+        pub_job_key = False
+        job_key_pubbed = False
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            pub_job_key = True
+            
+        
+        try:
+            
+            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
+            
+            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) )
+            
+            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
+            
+            for ( i, hash_id ) in enumerate( hash_ids ):
+                
+                job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
+                
+                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
+                    
+                    self._controller.pub( 'modal_message', job_key )
+                    
+                    job_key_pubbed = True
+                    
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                
+                if should_quit or should_stop:
+                    
+                    return
+                    
+                
+                if i % 25 == 0:
+                    
+                    text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files'
+                    
+                    job_key.SetVariable( 'popup_text_1', text )
+                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
+                    
+                    HG.client_controller.pub( 'splash_set_status_subtext', text )
+                    
+                
+                potential_duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._PHashesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
+                
+                self._DuplicatesAddPotentialDuplicates( hash_id, potential_duplicate_hash_ids )
+                
+                self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
+            
+            job_key.Delete( 5 )
+            
+        
+    
+    def _PHashesSchedulePHashRegeneration( self, hash_ids = None ):
+        
+        if hash_ids is None:
+            
+            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM files_info NATURAL JOIN current_files WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( self._combined_local_file_service_id, ) ) )
+            
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_phash_regen ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
+    def _PHashesSearch( self, hash_id, max_hamming_distance ):
+        
+        if max_hamming_distance == 0:
+            
+            similar_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN ( SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ? );', ( hash_id, ) ) )
+            
+        else:
+            
+            search_radius = max_hamming_distance
+            
+            top_node_result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
+            
+            if top_node_result is None:
+                
+                return []
+                
+            
+            ( root_node_phash_id, ) = top_node_result
+            
+            search_phashes = self._STL( self._c.execute( 'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+            
+            if len( search_phashes ) == 0:
+                
+                return []
+                
+            
+            similar_phash_ids = set()
+            
+            num_cycles = 0
+            
+            for search_phash in search_phashes:
+                
+                next_potentials = [ root_node_phash_id ]
+                
+                while len( next_potentials ) > 0:
+                    
+                    current_potentials = next_potentials
+                    next_potentials = []
+                    
+                    num_cycles += 1
+                    
+                    for group_of_current_potentials in HydrusData.SplitListIntoChunks( current_potentials, 1024 ):
+                        
+                        # this is split into fixed lists of results of subgroups because as an iterable it was causing crashes on linux!!
+                        # after investigation, it seemed to be SQLite having a problem with part of Get64BitHammingDistance touching phashes it presumably was still hanging on to
+                        # the crash was in sqlite code, again presumably on subsequent fetch
+                        # adding a delay in seemed to fix it as well. guess it was some memory maintenance buffer/bytes thing
+                        # anyway, we now just get the whole lot of results first and then work on the whole lot
+                        
+                        select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id IN {};'
+                        
+                        results = list( self._SelectFromList( select_statement, group_of_current_potentials ) )
+                        
+                        for ( node_phash_id, node_phash, node_radius, inner_phash_id, outer_phash_id ) in results:
+                            
+                            # first check the node itself--is it similar?
+                            
+                            node_hamming_distance = HydrusData.Get64BitHammingDistance( search_phash, node_phash )
+                            
+                            if node_hamming_distance <= search_radius:
+                                
+                                similar_phash_ids.add( node_phash_id )
+                                
+                            
+                            # now how about its children?
+                            
+                            if node_radius is not None:
+                                
+                                # we have two spheres--node and search--their centers separated by node_hamming_distance
+                                # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
+                                # there are four possibles:
+                                # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
+                                # (----N---(-)-S--)      intersects with both
+                                # (----N-(--S-)-)        intersects with both
+                                # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                                
+                                if inner_phash_id is not None:
+                                    
+                                    spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
+                                    
+                                    if not spheres_disjoint: # i.e. they intersect at some point
+                                        
+                                        next_potentials.append( inner_phash_id )
+                                        
+                                    
+                                
+                                if outer_phash_id is not None:
+                                    
+                                    search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
+                                    
+                                    if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
+                                        
+                                        next_potentials.append( outer_phash_id )
+                                        
+                                    
+                                
+                            
+                        
+                
+            
+            if HG.db_report_mode:
+                
+                HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ToHumanInt( num_cycles ) + ' cycles.' )
+                
+            
+            select_statement = 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN {};'
+            
+            similar_hash_ids = self._STL( self._SelectFromList( select_statement, similar_phash_ids ) )
+            
+        
+        return similar_hash_ids
         
     
     def _PopulateHashIdsToHashesCache( self, hash_ids, exception_on_error = False ):
@@ -9618,10 +9709,12 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
-        elif action == 'duplicate_pairs_for_filtering': result = self._CacheSimilarFilesGetDuplicatePairsForFiltering( *args, **kwargs )
-        elif action == 'file_duplicate_hashes': result = self._CacheSimilarFilesGetFileDuplicateHashes( *args, **kwargs )
-        elif action == 'file_duplicate_types_to_counts': result = self._CacheSimilarFilesGetFileDuplicateCounts( *args, **kwargs )
+        elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetDuplicatePairsForFiltering( *args, **kwargs )
+        elif action == 'file_duplicate_hashes': result = self._DuplicatesGetFileDuplicateHashes( *args, **kwargs )
+        elif action == 'file_duplicate_types_to_counts': result = self._DuplicatesGetFileDuplicateCounts( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
+        elif action == 'file_maintenance_get_job': result = self._FileMaintenanceGetJob( *args, **kwargs )
+        elif action == 'file_maintenance_get_job_counts': result = self._FileMaintenanceGetJobCounts( *args, **kwargs )
         elif action == 'file_notes': result = self._GetFileNotes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
@@ -9648,7 +9741,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
-        elif action == 'random_unknown_duplicate_hashes': result = self._CacheSimilarFilesGetRandomUnknownDuplicateHashes( *args, **kwargs )
+        elif action == 'random_unknown_duplicate_hashes': result = self._DuplicatesGetRandomUnknownDuplicateHashes( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'repository_progress': result = self._GetRepositoryProgress( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
@@ -9661,12 +9754,12 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'service_filenames': result = self._GetServiceFilenames( *args, **kwargs )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
         elif action == 'services': result = self._GetServices( *args, **kwargs )
-        elif action == 'similar_files_maintenance_status': result = self._CacheSimilarFilesGetMaintenanceStatus( *args, **kwargs )
+        elif action == 'similar_files_maintenance_status': result = self._PHashesGetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
-        elif action == 'unknown_duplicates_count': result = self._CacheSimilarFilesGetUnknownDuplicatesCount( *args, **kwargs )
+        elif action == 'unknown_duplicates_count': result = self._DuplicatesGetUnknownDuplicatesCount( *args, **kwargs )
         elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
@@ -9721,146 +9814,6 @@ class DB( HydrusDB.HydrusDB ):
         finally:
             
             job_key.SetVariable( 'popup_text_1', 'done!' )
-            
-            job_key.Finish()
-            
-            job_key.Delete( 5 )
-            
-        
-    
-    def _RegenerateFileData( self, job_type, hashes, pub_job_key = True ):
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        try:
-            
-            job_key.SetVariable( 'popup_title', 'regenerating file data' )
-            
-            if pub_job_key:
-                
-                self._controller.pub( 'modal_message', job_key )
-                
-            
-            client_files_manager = self._controller.client_files_manager
-            
-            num_thumb_refits = 0
-            
-            num_to_do = len( hashes )
-            
-            needed_to_dupe_some_files = False
-            
-            for ( i, hash ) in enumerate( hashes ):
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    break
-                    
-                
-                job_key.SetVariable( 'popup_text_1', 'processing ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
-                
-                hash_id = self._GetHashId( hash )
-                
-                try:
-                    
-                    ( current_mime, width, height ) = self._c.execute( 'SELECT mime, width, height FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                    
-                    path = client_files_manager.LocklessGetFilePath( hash, current_mime )
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    continue
-                    
-                
-                mime = current_mime
-                
-                try:
-                    
-                    do_thumbnail = False
-                    
-                    if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE:
-                        
-                        ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
-                        
-                        self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
-                        
-                        if mime != current_mime:
-                            
-                            needed_to_dupe_the_file = client_files_manager.LocklessChangeFileExt( hash, current_mime, mime )
-                            
-                            if needed_to_dupe_the_file:
-                                
-                                needed_to_dupe_some_files = True
-                                
-                            
-                            path = client_files_manager.LocklessGetFilePath( hash, mime )
-                            
-                        
-                        result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                        
-                        if result is None:
-                            
-                            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( path )
-                            
-                            self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
-                            
-                        
-                        self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
-                        
-                        self._controller.pub( 'new_file_info', { hash } )
-                        
-                        do_thumbnail = True
-                        
-                    
-                    if mime in HC.MIMES_WITH_THUMBNAILS:
-                        
-                        ( media_result, ) = self._GetMediaResults( ( hash_id, ) )
-                        
-                        if do_thumbnail or job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
-                            
-                            client_files_manager.LocklessRegenerateThumbnail( media_result )
-                            
-                        elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
-                            
-                            was_regenerated = client_files_manager.LocklessRegenerateThumbnailIfWrongSize( media_result )
-                            
-                            if was_regenerated:
-                                
-                                num_thumb_refits += 1
-                                
-                            
-                            job_key.SetVariable( 'popup_text_2', 'thumbs needing regen: {}'.format( HydrusData.ToHumanInt( num_thumb_refits ) ) )
-                            
-                        
-                    
-                except Exception as e:
-                    
-                    HydrusData.PrintException( e )
-                    
-                    message = 'There was a problem reparsing or re-thumbnailing file ' + path + '! A full traceback of this error should be written to the log!'
-                    message += os.linesep * 2
-                    message += str( e )
-                    
-                    HydrusData.ShowText( message )
-                    
-                
-            
-            if needed_to_dupe_some_files:
-                
-                message = 'Some files that were reparsed needed to be moved, but the move was not possible and they were copied instead.'
-                message += os.linesep * 2
-                message += 'At some point, you should run _network->clear orphan files_ to clear out the duplicates.'
-                
-                HydrusData.ShowText( message )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
             
             job_key.Finish()
             
@@ -12359,6 +12312,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 352:
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.file_maintenance_jobs ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );' )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -12921,31 +12879,31 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
         elif action == 'delete_serialisable_named': self._DeleteJSONDumpNamed( *args, **kwargs )
         elif action == 'delete_service_info': self._DeleteServiceInfo( *args, **kwargs )
-        elif action == 'delete_unknown_duplicate_pairs': self._CacheSimilarFilesDeleteUnknownDuplicatePairs( *args, **kwargs )
+        elif action == 'delete_unknown_duplicate_pairs': self._DuplicatesDeleteUnknownDuplicatePairs( *args, **kwargs )
         elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
-        elif action == 'duplicate_pair_status': self._CacheSimilarFilesSetDuplicatePairStatus( *args, **kwargs )
+        elif action == 'duplicate_pair_status': self._DuplicatesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'export_mappings': self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_integrity': self._CheckFileIntegrity( *args, **kwargs )
+        elif action == 'file_maintenance_add_jobs': self._FileMaintenanceAddJobs( *args, **kwargs )
+        elif action == 'file_maintenance_clear_jobs': self._FileMaintenanceClearJobs( *args, **kwargs )
         elif action == 'imageboard': self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'ideal_client_files_locations': self._SetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
         elif action == 'last_shutdown_work_time': self._SetLastShutdownWorkTime( *args, **kwargs )
         elif action == 'local_booru_share': self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-        elif action == 'maintain_file_reparsing': self._MaintainReparseFiles( *args, **kwargs )
-        elif action == 'maintain_similar_files_duplicate_pairs': self._CacheSimilarFilesMaintainDuplicatePairs( *args, **kwargs )
-        elif action == 'maintain_similar_files_phashes': self._CacheSimilarFilesMaintainFiles( *args, **kwargs )
-        elif action == 'maintain_similar_files_tree': self._CacheSimilarFilesMaintainTree( *args, **kwargs )
+        elif action == 'maintain_similar_files_search_for_potential_duplicates': self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
+        elif action == 'maintain_similar_files_phashes': self._PHashesMaintainFiles( *args, **kwargs )
+        elif action == 'maintain_similar_files_tree': self._PHashesMaintainTree( *args, **kwargs )
         elif action == 'process_repository': result = self._ProcessRepositoryUpdates( *args, **kwargs )
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': self._RegenerateACCache( *args, **kwargs )
-        elif action == 'regenerate_similar_files': self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
+        elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
-        elif action == 'regenerate_file_data': self._RegenerateFileData( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
-        elif action == 'schedule_full_phash_regen': self._CacheSimilarFilesSchedulePHashRegeneration()
+        elif action == 'schedule_full_phash_regen': self._PHashesSchedulePHashRegeneration()
         elif action == 'serialisable_simple': self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisable': self._SetJSONDump( *args, **kwargs )
         elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )

@@ -16,6 +16,7 @@ from . import ClientCaches
 from . import ClientData
 from . import ClientDaemons
 from . import ClientDefaults
+from . import ClientFiles
 from . import ClientGUICommon
 from . import ClientGUIMenus
 from . import ClientNetworking
@@ -428,6 +429,11 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        if self.new_options.GetBoolean( 'file_maintenance_on_shutdown' ):
+            
+            self.files_maintenance_manager.DoMaintenance( only_when_idle = False, stop_time = stop_time )
+            
+        
         self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
         
     
@@ -565,6 +571,11 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        if self.new_options.GetBoolean( 'file_maintenance_on_shutdown' ):
+            
+            work_to_do.extend( self.files_maintenance_manager.GetIdleShutdownWorkDue() )
+            
+        
         return work_to_do
         
     
@@ -585,7 +596,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    self.client_files_manager = ClientCaches.ClientFilesManager( self )
+                    self.client_files_manager = ClientFiles.ClientFilesManager( self )
                     
                     missing_locations = self.client_files_manager.GetMissing()
                     
@@ -598,7 +609,9 @@ class Controller( HydrusController.HydrusController ):
             return missing_locations
             
         
-        self.client_files_manager = ClientCaches.ClientFilesManager( self )
+        self.client_files_manager = ClientFiles.ClientFilesManager( self )
+        
+        self.files_maintenance_manager = ClientFiles.FilesMaintenanceManager( self )
         
         missing_locations = self.client_files_manager.GetMissing()
         
@@ -811,7 +824,7 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 4 * 3600, init_wait = 60, pre_call_wait = 3 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 4 * 3600, pre_call_wait = 1 ) )
+            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions', 'wake_idle_workers' ), period = 4 * 3600, pre_call_wait = 1 ) )
             
         
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
@@ -819,6 +832,11 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'notify_new_import_folders' )
         job.ShouldDelayOnWakeup( True )
         self._daemon_jobs[ 'import_folders' ] = job
+        
+        job = self.CallRepeating( 60.0, 300.0, self.files_maintenance_manager.DoMaintenance )
+        job.ShouldDelayOnWakeup( True )
+        job.WakeOnPubSub( 'wake_idle_workers' )
+        self._daemon_jobs[ 'maintain_files' ] = job
         
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckExportFolders )
         job.WakeOnPubSub( 'notify_restart_export_folders_daemon' )
@@ -906,12 +924,7 @@ class Controller( HydrusController.HydrusController ):
                 search_stop_time = HydrusData.GetNow() + 60
                 
             
-            self.WriteSynchronous( 'maintain_similar_files_duplicate_pairs', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
-            
-        
-        if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
-            
-            self.WriteSynchronous( 'maintain_file_reparsing', stop_time = stop_time )
+            self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
             
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):

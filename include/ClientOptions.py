@@ -90,6 +90,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
         
+        self._dictionary[ 'booleans' ][ 'file_maintenance_on_shutdown' ] = True
+        self._dictionary[ 'booleans' ][ 'file_maintenance_during_idle' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'file_maintenance_throttle_enable' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
+        
         self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_file_queues' ] = False
         self._dictionary[ 'booleans' ][ 'pause_all_watcher_checkers' ] = False
@@ -163,10 +170,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         from . import ClientTags
         
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], True, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], False, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = ClientDuplicates.DuplicateActionOptions( [], [], False )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_NOT_DUPLICATE ] = ClientDuplicates.DuplicateActionOptions( [], [], False )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         
         #
         
@@ -222,6 +227,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'thumbnail_border' ] = 1
         self._dictionary[ 'integers' ][ 'thumbnail_margin' ] = 2
+        
+        self._dictionary[ 'integers' ][ 'file_maintenance_throttle_files' ] = 200
+        self._dictionary[ 'integers' ][ 'file_maintenance_throttle_time_delta' ] = 86400
         
         self._dictionary[ 'integers' ][ 'subscription_network_error_delay' ] = 12 * 3600
         self._dictionary[ 'integers' ][ 'subscription_other_error_delay' ] = 36 * 3600
@@ -693,7 +701,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._dictionary[ 'duplicate_action_options' ][ duplicate_type ]
+            if duplicate_type in self._dictionary[ 'duplicate_action_options' ]:
+                
+                return self._dictionary[ 'duplicate_action_options' ][ duplicate_type ]
+                
+            else:
+                
+                return ClientDuplicates.DuplicateActionOptions( [], [] )
+                
             
         
     

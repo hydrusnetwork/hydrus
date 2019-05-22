@@ -5,6 +5,7 @@ from . import HydrusGlobals as HG
 from . import ClientCaches
 from . import ClientConstants as CC
 from . import ClientData
+from . import ClientDuplicates
 from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
@@ -3170,28 +3171,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         pair_info = []
         
-        for ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs:
+        for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
             
-            if duplicate_type == HC.DUPLICATE_UNKNOWN:
+            if duplicate_type == HC.DUPLICATE_UNKNOWN or was_auto_skipped:
                 
                 continue # it was a 'skip' decision
                 
             
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
-            
-            if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_BETTER_OR_WORSE ):
-                
-                file_deletion_reason = 'better/worse'
-                
-            else:
-                
-                file_deletion_reason = HC.duplicate_type_string_lookup[ duplicate_type ]
-                
-            
-            file_deletion_reason = 'Deleted in Duplicate Filter ({}).'.format( file_deletion_reason )
-            
-            service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason )
             
             pair_info.append( ( duplicate_type, first_hash, second_hash, service_keys_to_content_updates ) )
             
@@ -3205,9 +3193,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._hashes_due_to_be_deleted_in_this_batch = set()
         
     
-    def _CurrentMediaIsBetter( self ):
+    def _CurrentMediaIsBetter( self, delete_second = True ):
         
-        self._ProcessPair( HC.DUPLICATE_BETTER )
+        self._ProcessPair( HC.DUPLICATE_BETTER, delete_second = delete_second )
         
     
     def _Delete( self, media = None, reason = None, file_service_key = None ):
@@ -3270,7 +3258,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
-        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
+        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE ]
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
@@ -3285,21 +3273,73 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         new_options = HG.client_controller.new_options
         
-        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
+            
+            duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
+                
+                dlg_2.SetPanel( panel )
+                
+                if dlg_2.ShowModal() == wx.ID_OK:
+                    
+                    duplicate_action_options = panel.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            duplicate_action_options = None
+            
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+        text = 'Delete any of the files?'
+        
+        yes_tuples = []
+        
+        yes_tuples.append( ( 'delete this one', 'delete_first' ) )
+        yes_tuples.append( ( 'delete the other', 'delete_second' ) )
+        yes_tuples.append( ( 'delete both', 'delete_both' ) )
+        
+        delete_first = False
+        delete_second = False
+        delete_both = False
+        
+        with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
-            
-            dlg_2.SetPanel( panel )
-            
-            if dlg_2.ShowModal() == wx.ID_OK:
+            if dlg.ShowModal() == wx.ID_YES:
                 
-                duplicate_action_options = panel.GetValue()
+                value = dlg.GetValue()
                 
-                self._ProcessPair( duplicate_type, duplicate_action_options )
+                if value == 'delete_first':
+                    
+                    delete_first = True
+                    
+                elif value == 'delete_second':
+                    
+                    delete_second = True
+                    
+                elif value == 'delete_both':
+                    
+                    delete_both = True
+                    
+                else:
+                    
+                    return
+                    
+                
+            else:
+                
+                return
                 
             
+        
+        self._ProcessPair( duplicate_type, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, duplicate_action_options = duplicate_action_options )
         
     
     def _DrawBackgroundDetails( self, dc ):
@@ -3384,7 +3424,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs if duplicate_type != HC.DUPLICATE_UNKNOWN ] )
+        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type != HC.DUPLICATE_UNKNOWN ] )
         
     
     def _GoBack( self ):
@@ -3393,13 +3433,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._unprocessed_pairs.append( self._current_pair )
             
-            ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+            ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
             
             self._unprocessed_pairs.append( hash_pair )
             
             while was_auto_skipped:
                 
-                ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                 
                 self._unprocessed_pairs.append( hash_pair )
                 
@@ -3415,9 +3455,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( HC.DUPLICATE_ALTERNATE )
         
     
-    def _MediaAreNotDupes( self ):
+    def _MediaAreFalsePositive( self ):
         
-        self._ProcessPair( HC.DUPLICATE_NOT_DUPLICATE )
+        self._ProcessPair( HC.DUPLICATE_FALSE_POSITIVE )
         
     
     def _MediaAreTheSame( self ):
@@ -3425,7 +3465,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( HC.DUPLICATE_SAME_QUALITY )
         
     
-    def _ProcessPair( self, duplicate_type, duplicate_action_options = None ):
+    def _ProcessPair( self, duplicate_type, delete_first = False, delete_second = False, delete_both = False, duplicate_action_options = None ):
         
         if self._current_media is None:
             
@@ -3434,20 +3474,64 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if duplicate_action_options is None:
             
-            new_options = HG.client_controller.new_options
+            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
+                
+                new_options = HG.client_controller.new_options
+                
+                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+                
+            else:
+                
+                duplicate_action_options = ClientDuplicates.DuplicateActionOptions( [], [] )
+                
             
-            duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-            
         
-        other_media = self._media_list.GetNext( self._current_media )
-        
-        deleted_hashes = duplicate_action_options.GetDeletedHashes( self._current_media, other_media )
-        
-        self._hashes_due_to_be_deleted_in_this_batch.update( deleted_hashes )
+        first_media = self._current_media
+        second_media = self._media_list.GetNext( first_media )
         
         was_auto_skipped = False
         
-        self._processed_pairs.append( ( self._current_pair, duplicate_type, self._current_media, other_media, duplicate_action_options, was_auto_skipped ) )
+        if delete_first or delete_second or delete_both:
+            
+            if delete_first or delete_both:
+                
+                self._hashes_due_to_be_deleted_in_this_batch.update( first_media.GetHashes() )
+                
+            
+            if delete_second or delete_both:
+                
+                self._hashes_due_to_be_deleted_in_this_batch.update( second_media.GetHashes() )
+                
+            
+            if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_BETTER_OR_WORSE ):
+                
+                file_deletion_reason = 'better/worse'
+                
+                if delete_second:
+                    
+                    file_deletion_reason += ', worse file deleted'
+                    
+                
+            else:
+                
+                file_deletion_reason = HC.duplicate_type_string_lookup[ duplicate_type ]
+                
+            
+            if delete_both:
+                
+                file_deletion_reason += ', both files deleted'
+                
+            
+            file_deletion_reason = 'Deleted in Duplicate Filter ({}).'.format( file_deletion_reason )
+            
+        else:
+            
+            file_deletion_reason = None
+            
+        
+        service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, file_deletion_reason = file_deletion_reason )
+        
+        self._processed_pairs.append( ( self._current_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) )
         
         self._ShowNewPair()
         
@@ -3475,13 +3559,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 else:
                     
-                    ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                    ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                     
                     self._unprocessed_pairs.append( hash_pair )
                     
                     while was_auto_skipped:
                         
-                        ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                        ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                         
                         self._unprocessed_pairs.append( hash_pair )
                         
@@ -3538,7 +3622,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 was_auto_skipped = True
                 
-                self._processed_pairs.append( ( potential_pair, HC.DUPLICATE_UNKNOWN, None, None, None, was_auto_skipped ) )
+                self._processed_pairs.append( ( potential_pair, HC.DUPLICATE_UNKNOWN, None, None, {}, was_auto_skipped ) )
                 
                 if len( self._unprocessed_pairs ) == 0:
                     
@@ -3609,7 +3693,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         was_auto_skipped = False
         
-        self._processed_pairs.append( ( self._current_pair, HC.DUPLICATE_UNKNOWN, None, None, None, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._current_pair, HC.DUPLICATE_UNKNOWN, None, None, {}, was_auto_skipped ) )
         
         self._ShowNewPair()
         
@@ -3768,9 +3852,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             action = data
             
-            if action == 'duplicate_filter_this_is_better':
+            if action == 'duplicate_filter_this_is_better_and_delete_other':
                 
-                self._CurrentMediaIsBetter()
+                self._CurrentMediaIsBetter( delete_second = True )
+                
+            elif action == 'duplicate_filter_this_is_better_but_keep_both':
+                
+                self._CurrentMediaIsBetter( delete_second = False )
                 
             elif action == 'duplicate_filter_exactly_the_same':
                 
@@ -3780,9 +3868,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 self._MediaAreAlternates()
                 
-            elif action == 'duplicate_filter_not_dupes':
+            elif action == 'duplicate_filter_false_positive':
                 
-                self._MediaAreNotDupes()
+                self._MediaAreFalsePositive()
                 
             elif action == 'duplicate_filter_custom_action':
                 

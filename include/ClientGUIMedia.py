@@ -1627,9 +1627,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         flat_media = self._GetSelectedFlatMedia()
         
-        hashes = { media.GetHash() for media in flat_media }
-        
-        num_files = len( hashes )
+        num_files = len( flat_media )
         
         if num_files > 0:
             
@@ -1648,19 +1646,67 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 text = 'This will regenerate the {} selected files\' thumbnails, but only if they are the wrong size.'.format( HydrusData.ToHumanInt( num_files ) )
                 
             
-            text += os.linesep * 2
-            text += 'It may take some time to finish this job.'
+            do_it_now = True
             
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+            if num_files > 50:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                text += os.linesep * 2
+                text += 'You have selected {} files, so this job may take some time. If you would like, you can simply schedule it to happen in idle time.'.format( HydrusData.ToHumanInt( num_files ) )
+                
+                yes_tuples = []
+                
+                yes_tuples.append( ( 'do it now', 'now' ) )
+                yes_tuples.append( ( 'do it later', 'later' ) )
+                
+                with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
                     
-                    self._SetFocussedMedia( None )
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        value = dlg.GetValue()
+                        
+                        if value == 'now':
+                            
+                            do_it_now = True
+                            
+                        elif value == 'later':
+                            
+                            do_it_now = False
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    else:
+                        
+                        return
+                        
                     
-                    time.sleep( 1 )
+                
+            else:
+                
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                     
-                    HG.client_controller.Write( 'regenerate_file_data', job_type, hashes )
+                    if dlg.ShowModal() != wx.ID_YES:
+                        
+                        return
+                        
                     
+                
+            
+            if do_it_now:
+                
+                self._SetFocussedMedia( None )
+                
+                time.sleep( 0.1 )
+                
+                HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.RunJobImmediately, flat_media, job_type )
+                
+            else:
+                
+                hashes = { media.GetHash() for media in flat_media }
+                
+                HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.ScheduleJob, hashes, job_type )
                 
             
         
@@ -1819,11 +1865,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         elif duplicate_action_options is None:
             
-            yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with default duplicate action/merge options)'
+            yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ]
             
-            new_options = HG.client_controller.new_options
             
-            duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
+                
+                yes_no_text += ' (with default duplicate action/merge options)'
+                
+                new_options = HG.client_controller.new_options
+                
+                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+                
+            else:
+                
+                duplicate_action_options = None
+                
             
         else:
             
@@ -1917,7 +1973,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _SetDuplicatesCustom( self ):
         
-        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
+        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
@@ -2242,9 +2298,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 self._SetDuplicatesFocusedBetter()
                 
-            elif action == 'duplicate_media_set_not_duplicate':
+            elif action == 'duplicate_media_set_false_positive':
                 
-                self._SetDuplicates( HC.DUPLICATE_NOT_DUPLICATE )
+                self._SetDuplicates( HC.DUPLICATE_FALSE_POSITIVE )
                 
             elif action == 'duplicate_media_set_same_quality':
                 
@@ -4117,8 +4173,6 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_alternate' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as not duplicates', 'Set all the selected files as not duplicates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_not_duplicate' ) )
-                    
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_custom' ) )
                     
                     if collections_selected:
@@ -4138,7 +4192,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     duplicates_edit_action_submenu = wx.Menu()
                     
-                    for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ):
+                    for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
                         
                         ClientGUIMenus.AppendMenuItem( self, duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[ duplicate_type ], 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, duplicate_type )
                         
@@ -4160,7 +4214,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         duplicates_view_menu = wx.Menu()
                         
-                        for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ):
+                        for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_UNKNOWN ):
                             
                             if duplicate_type in file_duplicate_types_to_counts:
                                 

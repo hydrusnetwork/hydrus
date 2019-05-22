@@ -1155,7 +1155,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
         services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
-        services.append( services_manager.GetService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            services.append( services_manager.GetService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            
+        
         services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
         
         advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )

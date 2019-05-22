@@ -15,6 +15,7 @@ from . import ClientConstants as CC
 from . import HydrusGlobals as HG
 from . import ClientAPI
 from . import ClientDefaults
+from . import ClientFiles
 from . import ClientNetworking
 from . import ClientNetworkingBandwidth
 from . import ClientNetworkingDomain
@@ -253,7 +254,7 @@ class Controller( object ):
         self._managers = {}
         
         self.services_manager = ClientCaches.ServicesManager( self )
-        self.client_files_manager = ClientCaches.ClientFilesManager( self )
+        self.client_files_manager = ClientFiles.ClientFilesManager( self )
         
         self.parsing_cache = ClientCaches.ParsingCache()
         

@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 353</h3></li>
+				<ul>
+					<li>duplicate filter:</li>
+					<li>duplicate action options no longer handle file deletion</li>
+					<li>renamed 'not duplicates' across the program to 'not related' or 'false positive'</li>
+					<li>'alternates' and 'not related/false positive' duplicate actions no longer have duplicate action options. no merge content update now occurs on these actions</li>
+					<li>the duplicate filter hover panel now splits 'this is better' decisions into two buttons--whether to delete or keep the worse file</li>
+					<li>when selecting 'custom action' in the duplicate filter hover panel, it now asks if you would like to delete the current file, the other file, or both</li>
+					<li>the 'duplicate_filter_this_is_better' shortcut action will be auto-updated to 'duplicate_filter_this_is_better_and_delete_other'. an alternate 'duplicate_filter_this_is_better_but_keep_both' is now also available</li>
+					<li>the 'duplicate_filter_not_dupes' shortcut action will be auto-updated to 'duplicate_filter_false_positive'</li>
+					<li>separated the buttons on the duplicate filter hover panel to more carefully split 'yes, files are duplicates' vs other decisions</li>
+					<li>in prep for the duplicate db overhaul, refactored all PHash search code and Duplicate management code apart</li>
+					<li>misc other prep work for duplicate db overhaul</li>
+					<li>.</li>
+					<li>file maintenance:</li>
+					<li>wrote a new unified manager to handle various long-term file maintenance tasks like regenerating file metadata and thumbnails</li>
+					<li>options to govern how this manager can run are now in options->maintenance and processing. you can enable it for idle and shutdown maintenance time and give it a throttle to limit how fast it will work on files, defaulting to 200 per day</li>
+					<li>unified the previous db-level attempts at file maintenance to the new system, which supports async job queueing, and moving regen code up to the new manager, out of the db lock</li>
+					<li>unified a variety of file and thumbnail regen code to work through the new simpler and saner path</li>
+					<li>the right-click->regen thumbnail commands now run through the new manager and no longer need a modal popup. you can keep browsing while they work. they will also not hang the ui as the old system could on big jobs</li>
+					<li>when right-click->regenning on more than 50 thumbnails, you now get a dialog asking if you want to do the job now or put it off later</li>
+					<li>file maintenance tasks can now run in shutdown time! you will get previews of the jobs with file counts and status progress reports on the shutdown splash</li>
+					<li>cleaned up some file extension renaming and dupe-removing code</li>
+					<li>in future, I will move the current file integrity check to this new system and have some ui to prompt and set up other big jobs, like fixing various historical misparsing issues</li>
+					<li>thumbnail resizing during thumbnail fade that resizes down is now more efficient</li>
+					<li>moved the ClientFilesManager to ClientFiles.py</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>the 'manage upnp' dialog now moves the duplicated external ip display from the column up to the status text at the top. it fetches the ip after the initial mappings fetch is done. this ip is no longer affected by the external host override option</li>
+					<li>cleaned up options->connection page and removed the now defunct external host override option</li>
+					<li>the manage services page for the local booru now has optional override for scheme, host, and port for the 'copy external url' function</li>
+					<li>fixed an issue with the recent 'collect by' session saving where a restored session that needed a collect was not sorted</li>
+					<li>fixed an issue with collections being sorted by approx bitrate</li>
+					<li>added a new checkbox to options->sort/collect to set it so the default sort updates every time you choose a new sort anywhere</li>
+					<li>fixed an issue with 'remove trashed files from view', which was incorrectly removing on 'all local files' pages</li>
+					<li>the 'all local files' file domain, which is frequently confusing to new users, is now no longer an option for new file pages or the autocomplete file domain if the user is not in advanced mode</li>
+					<li>the client now searches for versions of urls both with and without a final '/' character when looking up file url import status at the db level and in import lists. system:known_url is unfortunately still an inefficient mess</li>
+					<li>improved how the server code deals with some connectionLost errors</li>
+					<li>cleaned up and unified some older dialog button code</li>
+					<li>fixed a problem in manage tag siblings when petitioning existing pairs and then cancelling when asked for a reason</li>
+					<li>fixed a miscount issue when uploading pending tags while many new tags are coming in. progress would sometimes be -754/1,234, ha ha</li>
+					<li>db maintenance, repository sync, and file maintenance processing will all now wake on a force idle mode call</li>
+					<li>deleted some old code</li>
+					<li>misc fixes and cleanup</li>
+					<li>some misc gui layout fixes</li>
+				</ul>
 				<li><h3>version 352</h3></li>
 				<ul>
 					<li>the client now supports importing .ico files! (.cur should be supported too)</li>

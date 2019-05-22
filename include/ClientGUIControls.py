@@ -365,7 +365,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -901,7 +901,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )

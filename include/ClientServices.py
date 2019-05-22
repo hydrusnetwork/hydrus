@@ -10,6 +10,7 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
+from . import HydrusNATPunch
 from . import HydrusNetwork
 from . import HydrusNetworking
 from . import HydrusSerialisable
@@ -64,6 +65,10 @@ def GenerateDefaultServiceDictionary( service_type ):
         
         dictionary[ 'support_cors' ] = False
         dictionary[ 'log_requests' ] = False
+        
+        dictionary[ 'external_scheme_override' ] = None
+        dictionary[ 'external_host_override' ] = None
+        dictionary[ 'external_port_override' ] = None
         
         if service_type == HC.LOCAL_BOORU:
             
@@ -339,6 +344,9 @@ class ServiceLocalServerService( Service ):
         dictionary[ 'log_requests' ] = self._log_requests
         dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
+        dictionary[ 'external_scheme_override' ] = self._external_scheme_override
+        dictionary[ 'external_host_override' ] = self._external_host_override
+        dictionary[ 'external_port_override' ] = self._external_port_override
         
         return dictionary
         
@@ -354,6 +362,9 @@ class ServiceLocalServerService( Service ):
         self._log_requests = dictionary[ 'log_requests' ]
         self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
+        self._external_scheme_override = dictionary[ 'external_scheme_override' ]
+        self._external_host_override = dictionary[ 'external_host_override' ]
+        self._external_port_override = dictionary[ 'external_port_override' ]
         
         # this should support the same serverservice interface so we can just toss it at the regular serverengine and all the bandwidth will work ok
         
@@ -424,7 +435,46 @@ class ServiceLocalServerService( Service ):
     
 class ServiceLocalBooru( ServiceLocalServerService ):
     
-    pass
+    def GetExternalShareURL( self, share_key ):
+        
+        if self._external_scheme_override is None:
+            
+            scheme = 'http'
+            
+        else:
+            
+            scheme = self._external_scheme_override
+            
+        
+        if self._external_host_override is None:
+            
+            host = HydrusNATPunch.GetExternalIP()
+            
+        else:
+            
+            host = self._external_host_override
+            
+        
+        if self._external_port_override is None:
+            
+            if self._upnp_port is None:
+                
+                port = self._port
+                
+            else:
+                
+                port = self._upnp_port
+                
+            
+        else:
+            
+            port = self._external_port_override
+            
+        
+        url = '{}://{}:{}/gallery?share_key={}'.format( scheme, host, port, share_key.hex() )
+        
+        return url
+        
     
 class ServiceClientAPI( ServiceLocalServerService ):
     

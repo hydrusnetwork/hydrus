@@ -2109,7 +2109,7 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( required_credentials_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( temp_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )

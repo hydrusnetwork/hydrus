@@ -1075,6 +1075,17 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
                 
+                self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'scheme (http/https) override when copying external links' )
+                self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'host override when copying external links' )
+                self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'port override when copying external links' )
+                
+                if service_type != HC.LOCAL_BOORU:
+                    
+                    self._external_scheme_override.Hide()
+                    self._external_host_override.Hide()
+                    self._external_port_override.Hide()
+                    
+                
                 self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._client_server_options_panel, dictionary[ 'bandwidth_rules' ] )
                 
                 #
@@ -1089,6 +1100,10 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._support_cors.SetValue( dictionary[ 'support_cors' ] )
                 self._log_requests.SetValue( dictionary[ 'log_requests' ] )
                 
+                self._external_scheme_override.SetValue( dictionary[ 'external_scheme_override' ] )
+                self._external_host_override.SetValue( dictionary[ 'external_host_override' ] )
+                self._external_port_override.SetValue( dictionary[ 'external_port_override' ] )
+                
                 #
                 
                 self._client_server_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1096,6 +1111,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._client_server_options_panel.Add( self._support_cors, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._log_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._external_scheme_override, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._external_host_override, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._client_server_options_panel.Add( self._external_port_override, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._client_server_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self.Add( self._client_server_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1131,6 +1149,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 dictionary_part[ 'allow_non_local_connections' ] = self._allow_non_local_connections.GetValue()
                 dictionary_part[ 'support_cors' ] = self._support_cors.GetValue()
                 dictionary_part[ 'log_requests' ] = self._log_requests.GetValue()
+                dictionary_part[ 'external_scheme_override' ] = self._external_scheme_override.GetValue()
+                dictionary_part[ 'external_host_override' ] = self._external_host_override.GetValue()
+                dictionary_part[ 'external_port_override' ] = self._external_port_override.GetValue()
                 dictionary_part[ 'bandwidth_rules' ] = self._bandwidth_rules.GetValue()
                 
                 return dictionary_part
@@ -1268,7 +1289,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 gridbox = ClientGUICommon.WrapInGrid( self, rows )
                 
-                self.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -1319,7 +1340,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 gridbox = ClientGUICommon.WrapInGrid( self, rows )
                 
-                self.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -1548,14 +1569,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._verify_regular_https = wx.CheckBox( general )
             
-            self._external_host = wx.TextCtrl( self )
-            self._external_host.SetToolTip( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
-            
-            self._network_timeout = wx.SpinCtrl( self, min = 3, max = 300 )
+            self._network_timeout = wx.SpinCtrl( general, min = 3, max = 300 )
             self._network_timeout.SetToolTip( 'If a network connection cannot be made in this duration or, if once started, it experiences uninterrupted inactivity for six times this duration, it will be abandoned.' )
             
-            self._max_network_jobs = wx.SpinCtrl( self, min = 1, max = 30 )
-            self._max_network_jobs_per_domain = wx.SpinCtrl( self, min = 1, max = 5 )
+            self._max_network_jobs = wx.SpinCtrl( general, min = 1, max = 30 )
+            self._max_network_jobs_per_domain = wx.SpinCtrl( general, min = 1, max = 5 )
+            
+            #
             
             proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
             
@@ -1576,15 +1596,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._max_network_jobs.SetValue( self._new_options.GetInteger( 'max_network_jobs' ) )
             self._max_network_jobs_per_domain.SetValue( self._new_options.GetInteger( 'max_network_jobs_per_domain' ) )
             
-            if HC.options[ 'external_host' ] is not None:
-                
-                self._external_host.SetValue( HC.options[ 'external_host' ] )
-                
-            
             #
             
             rows = []
             
+            rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
+            rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
+            rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
             rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
@@ -1616,19 +1634,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
-            rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
-            rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
-            rows.append( ( 'external ip/host override: ', self._external_host ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( general, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.Add( proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
@@ -1640,15 +1648,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableString( 'http_proxy', self._http_proxy.GetValue() )
             self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )
-            
-            external_host = self._external_host.GetValue()
-            
-            if external_host == '':
-                
-                external_host = None
-                
-            
-            HC.options[ 'external_host' ] = external_host
             
             self._new_options.SetInteger( 'network_timeout', self._network_timeout.GetValue() )
             self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.GetValue() )
@@ -2044,7 +2043,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( mime_panel, rows )
             
-            mime_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            mime_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             mime_panel.Add( self._mime_launch_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.Add( mime_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2412,7 +2411,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.Add( frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
@@ -2610,7 +2609,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2702,7 +2701,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = HG.client_controller.new_options
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
-            self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
+            self._file_maintenance_panel = ClientGUICommon.StaticBox( self, 'file maintenance' )
+            self._vacuum_panel = ClientGUICommon.StaticBox( self, 'vacuum' )
             
             self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
             self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
@@ -2728,11 +2728,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_shutdown.Bind( wx.EVT_CHOICE, self.EventIdleShutdown )
             
             self._idle_shutdown_max_minutes = wx.SpinCtrl( self._shutdown_panel, min = 1, max = 1440 )
-            self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 3600, days = True, hours = True )
+            self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 60, days = True, hours = True, minutes = True )
             
             #
             
-            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 28, max = 365, none_phrase = 'do not automatically vacuum' )
+            self._file_maintenance_during_idle = wx.CheckBox( self._file_maintenance_panel )
+            self._file_maintenance_on_shutdown = wx.CheckBox( self._file_maintenance_panel )
+            self._file_maintenance_throttle_enable = wx.CheckBox( self._file_maintenance_panel )
+            
+            min_unit_value = 10
+            max_unit_value = 100000
+            min_time_delta = 3600
+            
+            self._file_maintenance_throttle_velocity = ClientGUITime.VelocityCtrl( self._file_maintenance_panel, min_unit_value, max_unit_value, min_time_delta, days = True, hours = True, per_phrase = 'every', unit = 'files' )
+            
+            tt = 'Please note that this throttle is not very rigorous, as file processing history is not currently saved on client restart. If you restart the client, the file manager thinks it has run on 0 files and will be happy to run until the throttle kicks in again.'
+            
+            self._file_maintenance_throttle_enable.SetToolTip( tt )
+            self._file_maintenance_throttle_velocity.SetToolTip( tt )
+            
+            #
+            
+            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._vacuum_panel, '', min = 28, max = 365, none_phrase = 'do not automatically vacuum' )
             
             tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 90 days+.'
             
@@ -2749,7 +2766,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
             self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
             
+            self._file_maintenance_during_idle.SetValue( self._new_options.GetBoolean( 'file_maintenance_during_idle' ) )
+            self._file_maintenance_on_shutdown.SetValue( self._new_options.GetBoolean( 'file_maintenance_on_shutdown' ) )
+            self._file_maintenance_throttle_enable.SetValue( self._new_options.GetBoolean( 'file_maintenance_throttle_enable' ) )
+            
+            file_maintenance_throttle_files = self._new_options.GetInteger( 'file_maintenance_throttle_files' )
+            file_maintenance_throttle_time_delta = self._new_options.GetInteger( 'file_maintenance_throttle_time_delta' )
+            
+            file_maintenance_throttle_velocity = ( file_maintenance_throttle_files, file_maintenance_throttle_time_delta )
+            
+            self._file_maintenance_throttle_velocity.SetValue( file_maintenance_throttle_velocity )
+            
             self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
+            
+            self._file_maintenance_throttle_enable.Bind( wx.EVT_CHECKBOX, self.EventFileMaintenanceThrottle )
             
             #
             
@@ -2762,7 +2792,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
             
-            self._idle_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._idle_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -2774,7 +2804,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
             
-            self._shutdown_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._shutdown_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
@@ -2802,23 +2832,42 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            message = 'File maintenance jobs include reparsing file metadata and regenerating thumbnails.'
+            
+            self._file_maintenance_panel.Add( ClientGUICommon.BetterStaticText( self._file_maintenance_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Permit file maintenance to run during idle time: ', self._file_maintenance_during_idle ) )
+            rows.append( ( 'Permit file maintenance to run during shutdown: ', self._file_maintenance_on_shutdown ) )
+            rows.append( ( 'Throttle file maintenance: ', self._file_maintenance_throttle_enable ) )
+            rows.append( ( 'Throttle to this value: ', self._file_maintenance_throttle_velocity ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._file_maintenance_panel, rows )
+            
+            self._file_maintenance_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
             rows = []
             
             rows.append( ( 'Number of days to wait between vacuums: ', self._maintenance_vacuum_period_days ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self._maintenance_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( self._vacuum_panel, rows )
             
-            self._maintenance_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._vacuum_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._vacuum_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
+            self._EnableDisableFileMaintenanceThrottle()
             self._EnableDisableIdleNormal()
             self._EnableDisableIdleShutdown()
             
@@ -2831,11 +2880,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._idle_mouse_period.Enable()
                 self._idle_cpu_max.Enable()
                 
+                self._file_maintenance_during_idle.Enable()
+                
             else:
                 
                 self._idle_period.Disable()
                 self._idle_mouse_period.Disable()
                 self._idle_cpu_max.Disable()
+                
+                self._file_maintenance_during_idle.Disable()
                 
             
         
@@ -2846,10 +2899,26 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._shutdown_work_period.Disable()
                 self._idle_shutdown_max_minutes.Disable()
                 
+                self._file_maintenance_on_shutdown.Disable()
+                
             else:
                 
                 self._shutdown_work_period.Enable()
                 self._idle_shutdown_max_minutes.Enable()
+                
+                self._file_maintenance_on_shutdown.Enable()
+                
+            
+        
+        def _EnableDisableFileMaintenanceThrottle( self ):
+            
+            if self._file_maintenance_throttle_enable.GetValue() == True:
+                
+                self._file_maintenance_throttle_velocity.Enable()
+                
+            else:
+                
+                self._file_maintenance_throttle_velocity.Disable()
                 
             
         
@@ -2861,6 +2930,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def EventIdleShutdown( self, event ):
             
             self._EnableDisableIdleShutdown()
+            
+        
+        def EventFileMaintenanceThrottle( self, event ):
+            
+            self._EnableDisableFileMaintenanceThrottle()
             
         
         def UpdateOptions( self ):
@@ -2875,6 +2949,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
             
             self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
+            
+            self._new_options.SetBoolean( 'file_maintenance_during_idle', self._file_maintenance_during_idle.GetValue() )
+            self._new_options.SetBoolean( 'file_maintenance_on_shutdown', self._file_maintenance_on_shutdown.GetValue() )
+            self._new_options.SetBoolean( 'file_maintenance_throttle_enable', self._file_maintenance_throttle_enable.GetValue() )
+            
+            file_maintenance_throttle_velocity = self._file_maintenance_throttle_velocity.GetValue()
+            
+            ( file_maintenance_throttle_files, file_maintenance_throttle_time_delta ) = file_maintenance_throttle_velocity
+            
+            self._new_options.SetInteger( 'file_maintenance_throttle_files', file_maintenance_throttle_files )
+            self._new_options.SetInteger( 'file_maintenance_throttle_time_delta', file_maintenance_throttle_time_delta )
             
             self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
@@ -2963,7 +3048,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self._media_viewer_panel.Add( self._media_viewer_options, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._media_viewer_panel.Add( self._media_viewer_edit_button, CC.FLAGS_LONE_BUTTON )
@@ -3123,6 +3208,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._fallback_sort = ClientGUICommon.ChoiceSort( self )
             
+            self._save_page_sort_on_change = wx.CheckBox( self )
+            
             self._default_collect = ClientGUICommon.CheckboxCollect( self )
             
             self._sort_by = wx.ListBox( self )
@@ -3162,12 +3249,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._sort_by.Append( '-'.join( sort_by ), sort_by )
                 
             
+            self._save_page_sort_on_change.SetValue( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
+            
             #
             
             rows = []
             
             rows.append( ( 'Default sort: ', self._default_sort ) )
             rows.append( ( 'Secondary sort (when primary gives two equal values): ', self._fallback_sort ) )
+            rows.append( ( 'Update default sort every time a new sort is manually chosen: ', self._save_page_sort_on_change ) )
             rows.append( ( 'Default collect: ', self._default_collect ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -3228,6 +3318,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetDefaultSort( self._default_sort.GetSort() )
             self._new_options.SetFallbackSort( self._fallback_sort.GetSort() )
+            self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.GetValue() )
             HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
             
             sort_by_choices = []
@@ -3422,7 +3513,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
-            media_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            media_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( media_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3444,7 +3535,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( buffer_panel, rows )
             
-            buffer_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            buffer_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( buffer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3464,7 +3555,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( ac_panel, rows )
             
-            ac_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            ac_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( ac_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3476,7 +3567,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( misc_panel, rows )
             
-            misc_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            misc_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3700,7 +3791,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
             
-            general_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            general_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3818,7 +3909,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
             
             render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            render_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            render_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4015,7 +4106,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             desc = 'This will search the database for statistically related tags based on what your focused file already has.'
             
             panel_vbox.Add( ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             suggested_tags_related_panel.SetSizer( panel_vbox )
             
@@ -4030,7 +4121,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_file_lookup_script_panel, rows )
             
-            panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             suggested_tags_file_lookup_script_panel.SetSizer( panel_vbox )
             
@@ -4061,7 +4152,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             desc = 'The manage tags dialog can provide several kinds of tag suggestions. For simplicity, most are turned off by default.'
             
             suggested_tags_panel.Add( ClientGUICommon.BetterStaticText( suggested_tags_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            suggested_tags_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             suggested_tags_panel.Add( suggest_tags_panel_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
@@ -4202,7 +4293,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
             

@@ -1041,6 +1041,11 @@ class PopupMessageManager( wx.Frame ):
     
     def EventMove( self, event ):
         
+        if not self: # funny runtime error caused this
+            
+            return
+            
+        
         if self._OKToAlterUI():
             
             self._SizeAndPositionAndShow()

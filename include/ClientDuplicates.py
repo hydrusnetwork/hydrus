@@ -10,9 +10,9 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS
     SERIALISABLE_NAME = 'Duplicate Action Options'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, tag_service_actions = None, rating_service_actions = None, delete_second_file = False, sync_archive = False, delete_both_files = False, sync_urls_action = None ):
+    def __init__( self, tag_service_actions = None, rating_service_actions = None, sync_archive = False, sync_urls_action = None ):
         
         if tag_service_actions is None:
             
@@ -28,9 +28,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         self._tag_service_actions = tag_service_actions
         self._rating_service_actions = rating_service_actions
-        self._delete_second_file = delete_second_file
         self._sync_archive = sync_archive
-        self._delete_both_files = delete_both_files
         self._sync_urls_action = sync_urls_action
         
     
@@ -47,12 +45,12 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_tag_service_actions = [ ( service_key.hex(), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
         serialisable_rating_service_actions = [ ( service_key.hex(), action ) for ( service_key, action ) in self._rating_service_actions ]
         
-        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action )
+        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive, self._sync_urls_action )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action ) = serialisable_info
+        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._sync_archive, self._sync_urls_action ) = serialisable_info
         
         self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
@@ -104,42 +102,30 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
-    
-    def GetDeletedHashes( self, first_media, second_media ):
-        
-        first_hashes = first_media.GetHashes()
-        second_hashes = second_media.GetHashes()
-        
-        if self._delete_second_file:
+        if version == 3:
             
-            return second_hashes
+            ( serialisable_tag_service_actions, serialisable_rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action ) = old_serialisable_info
             
-        elif self._delete_both_files:
+            new_serialisable_info = ( serialisable_tag_service_actions, serialisable_rating_service_actions, sync_archive, sync_urls_action )
             
-            return first_hashes.union( second_hashes )
-            
-        else:
-            
-            return set()
+            return ( 4, new_serialisable_info )
             
         
     
-    def SetTuple( self, tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action ):
+    def SetTuple( self, tag_service_actions, rating_service_actions, sync_archive, sync_urls_action ):
         
         self._tag_service_actions = tag_service_actions
         self._rating_service_actions = rating_service_actions
-        self._delete_second_file = delete_second_file
         self._sync_archive = sync_archive
-        self._delete_both_files = delete_both_files
         self._sync_urls_action = sync_urls_action
         
     
     def ToTuple( self ):
         
-        return ( self._tag_service_actions, self._rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action )
+        return ( self._tag_service_actions, self._rating_service_actions, self._sync_archive, self._sync_urls_action )
         
     
-    def ProcessPairIntoContentUpdates( self, first_media, second_media, file_deletion_reason = None ):
+    def ProcessPairIntoContentUpdates( self, first_media, second_media, delete_first = False, delete_second = False, delete_both = False, file_deletion_reason = None ):
         
         if file_deletion_reason is None:
             
@@ -341,20 +327,17 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         deletee_media = []
         
-        if self._delete_second_file or self._delete_both_files:
+        if delete_first or delete_second or delete_both:
             
-            if self._delete_both_files:
+            if delete_first or delete_both:
                 
                 deletee_media.append( first_media )
                 
-                file_deletion_reason += ': both files deleted'
-                
-            else:
-                
-                file_deletion_reason += ': \'worse\' file deleted'
-                
             
-            deletee_media.append( second_media )
+            if delete_second or delete_both:
+                
+                deletee_media.append( second_media )
+                
             
         
         for media in deletee_media:

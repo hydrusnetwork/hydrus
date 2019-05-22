@@ -1504,7 +1504,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox.Add( self._parse_rule_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._string_match, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -3070,7 +3070,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( test_url_fetch_panel, rows )
         
-        test_url_fetch_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_url_fetch_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         test_url_fetch_panel.Add( self._fetch_example_data, CC.FLAGS_EXPAND_PERPENDICULAR )
         test_url_fetch_panel.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         

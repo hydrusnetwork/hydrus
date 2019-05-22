@@ -38,7 +38,11 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._death_file_velocity = VelocityCtrl( self, min_time_delta = 60, days = True, hours = True, minutes = True, per_phrase = 'in', unit = 'files' )
+        min_unit_value = 0
+        max_unit_value = 1000
+        min_time_delta = 60
+        
+        self._death_file_velocity = VelocityCtrl( self, min_unit_value, max_unit_value, min_time_delta, days = True, hours = True, minutes = True, per_phrase = 'in', unit = 'files' )
         
         self._flat_check_period_checkbox = wx.CheckBox( self )
         
@@ -489,11 +493,11 @@ class TimeDeltaCtrl( wx.Panel ):
     
 class VelocityCtrl( wx.Panel ):
     
-    def __init__( self, parent, min_time_delta = 60, days = False, hours = False, minutes = False, seconds = False, per_phrase = 'per', unit = None ):
+    def __init__( self, parent, min_unit_value, max_unit_value, min_time_delta, days = False, hours = False, minutes = False, seconds = False, per_phrase = 'per', unit = None ):
         
         wx.Panel.__init__( self, parent )
         
-        self._num = wx.SpinCtrl( self, min = 0, max = 1000, size = ( 60, -1 ) )
+        self._num = wx.SpinCtrl( self, min = min_unit_value, max = max_unit_value, size = ( 60, -1 ) )
         
         self._times = TimeDeltaCtrl( self, min = min_time_delta, days = days, hours = hours, minutes = minutes, seconds = seconds )
         

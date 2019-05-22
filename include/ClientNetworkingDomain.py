@@ -313,6 +313,18 @@ def GetSearchURLs( url ):
         search_urls.add( r.geturl() )
         
     
+    for url in list( search_urls ):
+        
+        if url.endswith( '/' ):
+            
+            search_urls.add( url[:-1] )
+            
+        else:
+            
+            search_urls.add( url + '/' )
+            
+        
+    
     return search_urls
     
 VALID_DENIED = 0

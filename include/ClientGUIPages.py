@@ -218,7 +218,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
             entries.append( ( 'page_query', CC.LOCAL_FILE_SERVICE_KEY ) )
             entries.append( ( 'page_query', CC.TRASH_SERVICE_KEY ) )
-            entries.append( ( 'page_query', CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            
+            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                entries.append( ( 'page_query', CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                
             
             for service in self._services:
                 
@@ -416,6 +420,10 @@ class Page( wx.SplitterWindow ):
         if collect_by != []:
             
             new_panel.Collect( self._page_key, collect_by )
+            
+            sort_by = self._management_panel.GetSortBy()
+            
+            new_panel.Sort( self._page_key, sort_by )
             
         
         self.ReplaceWindow( self._media_panel, new_panel )

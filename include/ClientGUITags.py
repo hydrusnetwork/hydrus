@@ -2450,7 +2450,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                 
                                 reason = dlg.GetValue()
                                 
-                            else: do_it = False
+                            else:
+                                
+                                do_it = False
+                                
                             
                         
                     
@@ -2506,7 +2509,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                             
                                             reason = dlg.GetValue()
                                             
-                                        else: do_it = False
+                                        else:
+                                            
+                                            do_it = False
+                                            
                                         
                                     
                                 
@@ -3356,7 +3362,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
+                    if do_it:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
+                        
                     
                 
                 if len( pending_pairs ) > 0:

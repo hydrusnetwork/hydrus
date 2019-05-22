@@ -351,7 +351,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'description', -1 ), ( 'internal ip', 17 ), ( 'internal port', 7 ), ( 'external ip', 17 ), ( 'external port', 7 ), ( 'prototcol', 5 ), ( 'lease', 12 ) ]
+        columns = [ ( 'description', -1 ), ( 'internal ip', 17 ), ( 'internal port', 7 ), ( 'external port', 7 ), ( 'prototcol', 5 ), ( 'lease', 12 ) ]
         
         self._mappings_list_ctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'manage_upnp_mappings', 12, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Remove, activation_callback = self._Edit )
         
@@ -387,6 +387,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._mappings_list_ctrl.Sort( 0 )
         
+        self._started_external_ip_fetch = False
+        
         self._RefreshMappings()
         
     
@@ -406,7 +408,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                 
-                for ( existing_description, existing_internal_ip, existing_internal_port, existing_external_ip, existing_external_port, existing_protocol, existing_lease ) in self._mappings:
+                for ( existing_description, existing_internal_ip, existing_internal_port, existing_external_port, existing_protocol, existing_lease ) in self._mappings:
                     
                     if external_port == existing_external_port and protocol == existing_protocol:
                         
@@ -432,7 +434,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def _ConvertDataToListCtrlTuples( self, mapping ):
         
-        ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = mapping
+        ( description, internal_ip, internal_port, external_port, protocol, duration ) = mapping
         
         if duration == 0:
             
@@ -443,7 +445,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             pretty_duration = HydrusData.TimeDeltaToPrettyTimeDelta( duration )
             
         
-        display_tuple = ( description, internal_ip, str( internal_port ), external_ip, str( external_port ), protocol, pretty_duration )
+        display_tuple = ( description, internal_ip, str( internal_port ), str( external_port ), protocol, pretty_duration )
         sort_tuple = mapping
         
         return ( display_tuple, sort_tuple )
@@ -457,7 +459,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         for selected_mapping in selected_mappings:
             
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = selected_mapping
+            ( description, internal_ip, internal_port, external_port, protocol, duration ) = selected_mapping
             
             with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
                 
@@ -486,6 +488,41 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
         
     
+    def _RefreshExternalIP( self ):
+        
+        def wx_code( external_ip_text ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._status_st.SetLabelText( external_ip_text )
+            
+        
+        def THREADdo_it():
+            
+            try:
+                
+                external_ip = HydrusNATPunch.GetExternalIP()
+                
+                external_ip_text = 'External IP: {}'.format( external_ip )
+                
+            except Exception as e:
+                
+                external_ip_text = 'Error finding external IP: ' + str( e )
+                
+                return
+                
+            
+            wx.CallAfter( wx_code, external_ip_text )
+            
+        
+        self._status_st.SetLabelText( 'Loading external IP\u2026' )
+        
+        HG.client_controller.CallToThread( THREADdo_it )
+        
+    
     def _RefreshMappings( self ):
         
         def wx_code( mappings ):
@@ -500,6 +537,13 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             self._mappings_list_ctrl.SetData( self._mappings )
             
             self._status_st.SetLabelText( '' )
+            
+            if not self._started_external_ip_fetch:
+                
+                self._started_external_ip_fetch = True
+                
+                self._RefreshExternalIP()
+                
             
         
         def THREADdo_it():
@@ -520,7 +564,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             wx.CallAfter( wx_code, mappings )
             
         
-        self._status_st.SetLabelText( 'Refreshing mappings--please wait...' )
+        self._status_st.SetLabelText( 'Refreshing mappings--please wait\u2026' )
         
         self._mappings_list_ctrl.SetData( [] )
         
@@ -535,7 +579,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         for selected_mapping in selected_mappings:
             
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = selected_mapping
+            ( description, internal_ip, internal_port, external_port, protocol, duration ) = selected_mapping
             
             HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
             

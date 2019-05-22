@@ -1226,7 +1226,10 @@ class MediaList( object ):
         return False
         
     
-    def HasNoMedia( self ): return len( self._sorted_media ) == 0
+    def HasNoMedia( self ):
+        
+        return len( self._sorted_media ) == 0
+        
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
@@ -1255,11 +1258,11 @@ class MediaList( object ):
                         
                         deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_file_services
                         
-                        trashed_and_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and service_key in non_trash_local_file_services and self._file_service_key in non_trash_local_file_services
+                        trashed_from_our_local_file_domain = HC.options[ 'remove_trashed_files' ] and service_key in local_file_domains and self._file_service_key == service_key
                         
                         deleted_from_repo_and_repo_view = service_key not in local_file_services and self._file_service_key == service_key
                         
-                        if deleted_from_trash_and_local_view or trashed_and_non_trash_local_view or deleted_from_repo_and_repo_view:
+                        if deleted_from_trash_and_local_view or trashed_from_our_local_file_domain or deleted_from_repo_and_repo_view:
                             
                             self._RemoveMediaByHashes( hashes )
                             
@@ -1474,11 +1477,24 @@ class MediaCollection( MediaList, Media ):
         return len( self._hashes )
         
     
-    def GetNumInbox( self ): return sum( ( media.GetNumInbox() for media in self._sorted_media ) )
+    def GetNumInbox( self ):
+        
+        return sum( ( media.GetNumInbox() for media in self._sorted_media ) )
+        
     
-    def GetNumFrames( self ): return sum( ( media.GetNumFrames() for media in self._sorted_media ) )
+    def GetNumFrames( self ):
+        
+        num_frames = ( media.GetNumFrames() for media in self._sorted_media )
+        
+        return sum( ( nf for nf in num_frames if nf is not None ) )
+        
     
-    def GetNumWords( self ): return sum( ( media.GetNumWords() for media in self._sorted_media ) )
+    def GetNumWords( self ):
+        
+        num_words = ( media.GetNumWords() for media in self._sorted_media )
+        
+        return sum( ( nw for nw in num_words if nw is not None ) )
+        
     
     def GetPrettyInfoLines( self ):
         
@@ -1498,7 +1514,17 @@ class MediaCollection( MediaList, Media ):
         return self._ratings_manager
         
     
-    def GetResolution( self ): return ( self._width, self._height )
+    def GetResolution( self ):
+        
+        if self._width is None:
+            
+            return ( 0, 0 )
+            
+        else:
+            
+            return ( self._width, self._height )
+            
+        
     
     def GetSingletonsTagsManagers( self ):
         
@@ -1709,8 +1735,14 @@ class MediaSingleton( Media ):
         
         ( width, height ) = self._media_result.GetResolution()
         
-        if width is None: return ( 0, 0 )
-        else: return ( width, height )
+        if width is None:
+            
+            return ( 0, 0 )
+            
+        else:
+            
+            return ( width, height )
+            
         
     
     def GetSize( self ):

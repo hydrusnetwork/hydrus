@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 352
+SOFTWARE_VERSION = 353
 CLIENT_API_VERSION = 6
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -196,7 +196,7 @@ DEFINITIONS_TYPE_HASHES = 0
 DEFINITIONS_TYPE_TAGS = 1
 
 DUPLICATE_UNKNOWN = 0
-DUPLICATE_NOT_DUPLICATE = 1
+DUPLICATE_FALSE_POSITIVE = 1
 DUPLICATE_SAME_QUALITY = 2
 DUPLICATE_ALTERNATE = 3
 DUPLICATE_BETTER = 4
@@ -208,7 +208,7 @@ DUPLICATE_BETTER_OR_WORSE = 8
 duplicate_type_string_lookup = {}
 
 duplicate_type_string_lookup[ DUPLICATE_UNKNOWN ] = 'potential duplicates'
-duplicate_type_string_lookup[ DUPLICATE_NOT_DUPLICATE ] = 'not duplicates'
+duplicate_type_string_lookup[ DUPLICATE_FALSE_POSITIVE ] = 'not related/false positive'
 duplicate_type_string_lookup[ DUPLICATE_SAME_QUALITY ] = 'same quality'
 duplicate_type_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'
 duplicate_type_string_lookup[ DUPLICATE_BETTER ] = 'this is better'

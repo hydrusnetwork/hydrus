@@ -135,7 +135,6 @@ class Dialog( wx.Dialog ):
         
         self.SetIcon( HG.client_controller.frame_icon )
         
-        self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         if parent is not None and position == 'center':
@@ -157,14 +156,6 @@ class Dialog( wx.Dialog ):
         else:
             
             event.Skip()
-            
-        
-    
-    def EventDialogButton( self, event ):
-        
-        if self.IsModal():
-            
-            self.EndModal( event.GetId() )
             
         
     
@@ -224,7 +215,10 @@ class DialogChooseNewServiceMethod( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-    def GetRegister( self ): return self._should_register
+    def GetRegister( self ):
+        
+        return self._should_register
+        
     
 class DialogCommitInterstitialFiltering( Dialog ):
     
@@ -232,10 +226,10 @@ class DialogCommitInterstitialFiltering( Dialog ):
         
         Dialog.__init__( self, parent, 'commit and continue?', position = 'center' )
         
-        self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit and continue' )
+        self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.EndModal, wx.ID_YES )
         self._commit.SetForegroundColour( ( 0, 128, 0 ) )
         
-        self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'go back' )
+        self._back = ClientGUICommon.BetterButton( self, 'go back', self.EndModal, wx.ID_NO )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -266,7 +260,6 @@ class DialogFinishFiltering( Dialog ):
         self._forget.SetForegroundColour( ( 128, 0, 0 ) )
         
         self._back = ClientGUICommon.BetterButton( self, 'back to filtering', self.EndModal, wx.ID_CANCEL )
-        self._back.SetId( wx.ID_CANCEL )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -303,7 +296,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._lifetime = ClientGUICommon.BetterChoice( self )
         
-        self._ok = wx.Button( self, label = 'OK' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
@@ -520,18 +513,25 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        internal_port = self._service.GetPort()
         
-        external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
-        
-        external_port = self._service.GetUPnPPort()
-        
-        if external_port is None:
+        if internal_port is None:
             
-            external_port = self._service.GetPort()
+            wx.MessageBox( 'The local booru is not currently running!' )
             
         
-        url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.hex()
+        try:
+            
+            url = self._service.GetExternalShareURL( self._share_key )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            wx.MessageBox( 'Unfortunately, could not generate an external URL: {}'.format( e ) )
+            
+            return
+            
         
         HG.client_controller.pub( 'clipboard', 'text', url )
         
@@ -697,6 +697,8 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self.Show()
         
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        
         HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
         HG.client_controller.CallToThreadLongRunning( self.THREADParseImportablePaths, self._unparsed_paths_queue, self._currently_parsing, self._work_to_do, self._parsed_path_queue, self._progress_updater, self._pause_event, self._cancel_event )
@@ -766,6 +768,22 @@ class FrameInputLocalFiles( wx.Frame ):
         self._TidyUp()
         
         self.Close()
+        
+    
+    def EventCharHook( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key == wx.WXK_ESCAPE:
+            
+            self._TidyUp()
+            
+            self.Close()
+            
+        else:
+            
+            event.Skip()
+            
         
     
     def EventDeleteAfterSuccessCheck( self, event ):
@@ -1247,84 +1265,6 @@ class DialogInputNamespaceRegex( Dialog ):
         return ( namespace, regex )
         
     
-class DialogInputNewFormField( Dialog ):
-    
-    def __init__( self, parent, form_field = None ):
-        
-        Dialog.__init__( self, parent, 'configure form field' )
-        
-        if form_field is None: ( name, field_type, default, editable ) = ( '', CC.FIELD_TEXT, '', True )
-        else: ( name, field_type, default, editable ) = form_field
-        
-        self._name = wx.TextCtrl( self )
-        
-        self._type = wx.Choice( self )
-        
-        self._default = wx.TextCtrl( self )
-        
-        self._editable = wx.CheckBox( self )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )   
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        self._name.SetValue( name )
-        
-        for temp_type in CC.FIELDS: self._type.Append( CC.field_string_lookup[ temp_type ], temp_type )
-        self._type.Select( field_type )
-        
-        self._default.SetValue( default )
-        
-        self._editable.SetValue( editable )
-        
-        #
-        
-        
-        rows = []
-        
-        rows.append( ( 'name: ', self._name ) )
-        rows.append( ( 'type: ', self._type ) )
-        rows.append( ( 'default: ', self._default ) )
-        rows.append( ( 'editable: ', self._editable ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        b_box.Add( self._ok, CC.FLAGS_VCENTER )
-        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def GetFormField( self ):
-        
-        name = self._name.GetValue()
-        
-        field_type = self._type.GetClientData( self._type.GetSelection() )
-        
-        default = self._default.GetValue()
-        
-        editable = self._editable.GetValue()
-        
-        return ( name, field_type, default, editable )
-        
-    
 class DialogInputTags( Dialog ):
     
     def __init__( self, parent, service_key, tags, message = '' ):
@@ -1339,7 +1279,7 @@ class DialogInputTags( Dialog ):
         
         self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -1424,7 +1364,7 @@ class DialogInputUPnPMapping( Dialog ):
         self._description = wx.TextCtrl( self )
         self._duration = wx.SpinCtrl( self, min = 0, max = 86400 )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -1702,10 +1642,10 @@ class DialogSelectFromURLTree( Dialog ):
         
         self._tree = wx.lib.agw.customtreectrl.CustomTreeCtrl( self, agwStyle = agwStyle )
         
-        self._ok = wx.Button( self, id = wx.ID_OK )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL )
+        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
         self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
         
         #
@@ -1807,7 +1747,6 @@ class DialogSelectFromURLTree( Dialog ):
         return urls
         
     
-    
 class DialogSelectImageboard( Dialog ):
     
     def __init__( self, parent ):
@@ -1896,7 +1835,7 @@ class DialogTextEntry( Dialog ):
             self._text.SetMaxLength( self._max_chars )
             
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok = ClientGUICommon.BetterButton( self, 'ok', self.EndModal, wx.ID_OK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
@@ -1994,11 +1933,11 @@ class DialogYesNo( Dialog ):
         
         Dialog.__init__( self, parent, title, position = 'center' )
         
-        self._yes = wx.Button( self, id = wx.ID_YES )
+        self._yes = ClientGUICommon.BetterButton( self, yes_label, self.EndModal, wx.ID_YES )
         self._yes.SetForegroundColour( ( 0, 128, 0 ) )
         self._yes.SetLabelText( yes_label )
         
-        self._no = wx.Button( self, id = wx.ID_NO )
+        self._no = ClientGUICommon.BetterButton( self, no_label, self.EndModal, wx.ID_NO )
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
         self._no.SetLabelText( no_label )
         
@@ -2052,9 +1991,8 @@ class DialogYesYesNo( Dialog ):
             yes_buttons.append( yes_button )
             
         
-        self._no = wx.Button( self, id = wx.ID_NO )
+        self._no = ClientGUICommon.BetterButton( self, no_label, self.EndModal, wx.ID_NO )
         self._no.SetForegroundColour( ( 128, 0, 0 ) )
-        self._no.SetLabelText( no_label )
         
         #
         

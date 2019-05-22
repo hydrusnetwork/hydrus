@@ -100,10 +100,14 @@ def THREADUploadPending( service_key ):
             info = nums_pending[ service_key ]
             
             remaining_num_pending = sum( info.values() )
-            done_num_pending = initial_num_pending - remaining_num_pending
             
-            job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( done_num_pending, initial_num_pending ) )
-            job_key.SetVariable( 'popup_gauge_1', ( done_num_pending, initial_num_pending ) )
+            # sometimes more come in while we are pending, -754/1,234 ha ha
+            num_to_do = max( initial_num_pending, remaining_num_pending )
+            
+            done_num_pending = num_to_do - remaining_num_pending
+            
+            job_key.SetVariable( 'popup_text_1', 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( done_num_pending, num_to_do ) )
+            job_key.SetVariable( 'popup_gauge_1', ( done_num_pending, num_to_do ) )
             
             while job_key.IsPaused() or job_key.IsCancelled():
                 
@@ -4047,7 +4051,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.force_idle_mode = not HG.force_idle_mode
             
-            self._controller.pub( 'wake_daemons' )
+            self._controller.pub( 'wake_idle_workers' )
             self.SetStatusBarDirty()
             
         elif name == 'no_page_limit_mode':

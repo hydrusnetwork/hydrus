@@ -319,7 +319,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         self._num = wx.SpinCtrl( self, min = 0, max = 65535 )
         
-        choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ) ]
+        choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_UNKNOWN ) ]
         
         self._dupe_type = ClientGUICommon.BetterRadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
         

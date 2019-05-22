@@ -1505,17 +1505,6 @@ class ReviewServicePanel( wx.Panel ):
         
         def _CopyExternalShareURL( self ):
             
-            try:
-                
-                external_ip = HydrusNATPunch.GetExternalIP()
-                
-            except Exception as e:
-                
-                wx.MessageBox( str( e ) )
-                
-                return
-                
-            
             internal_port = self._service.GetPort()
             
             if internal_port is None:
@@ -1523,18 +1512,22 @@ class ReviewServicePanel( wx.Panel ):
                 wx.MessageBox( 'The local booru is not currently running!' )
                 
             
-            external_port = self._service.GetUPnPPort()
-            
-            if external_port is None:
-                
-                external_port = internal_port
-                
-            
             urls = []
             
             for share_key in self._booru_shares.GetData( only_selected = True ):
                 
-                url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + share_key.hex()
+                try:
+                    
+                    url = self._service.GetExternalShareURL( share_key )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    wx.MessageBox( 'Unfortunately, could not generate an external URL: {}'.format( e ) )
+                    
+                    return
+                    
                 
                 urls.append( url )
                 

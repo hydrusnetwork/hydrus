@@ -493,6 +493,7 @@ class HydrusController( object ):
         
         job = self.CallRepeating( 60.0, 300.0, self.MaintainDB )
         
+        job.WakeOnPubSub( 'wake_idle_workers' )
         job.ShouldDelayOnWakeup( True )
         
         self._daemon_jobs[ 'maintain_db' ] = job

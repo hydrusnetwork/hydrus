@@ -899,6 +899,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
             
         
     
+    def GetSortBy( self ):
+        
+        return self._sort_by.GetSort()
+        
+    
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
         tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
@@ -1044,8 +1049,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
         menu_items.append( ( 'normal', 'edit duplicate action options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
         
         self._edit_merge_options = ClientGUICommon.MenuButton( self._main_right_panel, 'edit default duplicate action options', menu_items )
         
@@ -1073,9 +1076,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         random_filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'quick and dirty processing' )
         
         self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential pairs', self._ShowSomeDupes )
-        self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
-        self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
-        self._set_random_as_not_duplicates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as not duplicates', self._SetCurrentMediaAs, HC.DUPLICATE_NOT_DUPLICATE )
+        
+        self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as duplicates of the same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
+        self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all related alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
+        self._set_random_as_false_positives_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as not related/false positive', self._SetCurrentMediaAs, HC.DUPLICATE_FALSE_POSITIVE )
         
         #
         
@@ -1167,9 +1171,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        random_filtering_panel.Add( self._set_random_as_not_duplicates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_false_positives_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
@@ -1381,7 +1385,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         search_distance = self._search_distance_spinctrl.GetValue()
         
-        self._controller.Write( 'maintain_similar_files_duplicate_pairs', search_distance, job_key = job_key )
+        self._controller.Write( 'maintain_similar_files_search_for_potential_duplicates', search_distance, job_key = job_key )
         
         self._controller.pub( 'modal_message', job_key )
         
