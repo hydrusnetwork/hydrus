@@ -1240,7 +1240,17 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
             
-            self._do_siblings_and_parents = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.family, self._DoSiblingsAndParents )
+            menu_items = []
+            
+            call = HydrusData.Call( self._DoSiblingsAndParents, self._tag_service_key )
+            
+            menu_items.append( ( 'normal', 'Hard-replace all applicable tags with their siblings and add missing parents. (Just this service\'s siblings and parents)', 'Fix siblings and parents.', call ) )
+            
+            call = HydrusData.Call( self._DoSiblingsAndParents, CC.COMBINED_TAG_SERVICE_KEY )
+            
+            menu_items.append( ( 'normal', 'Hard-replace all applicable tags with their siblings and add missing parents. (All service siblings and parents)', 'Fix siblings and parents.', call ) )
+            
+            self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.family, menu_items )
             self._do_siblings_and_parents.SetToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )
             
             self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.copy, self._Copy )
@@ -1683,7 +1693,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def _DoSiblingsAndParents( self ):
+        def _DoSiblingsAndParents( self, service_key ):
             
             try:
                 
@@ -1702,9 +1712,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     tags = tags_manager.GetCurrent( self._tag_service_key ).union( tags_manager.GetPending( self._tag_service_key ) )
                     
-                    sibling_correct_tags = tag_siblings_manager.CollapseTags( self._tag_service_key, tags )
+                    sibling_correct_tags = tag_siblings_manager.CollapseTags( service_key, tags, service_strict = True )
                     
-                    sibling_and_parent_correct_tags = tag_parents_manager.ExpandTags( self._tag_service_key, sibling_correct_tags )
+                    sibling_and_parent_correct_tags = tag_parents_manager.ExpandTags( service_key, sibling_correct_tags, service_strict = True )
                     
                     removee_tags = tags.difference( sibling_and_parent_correct_tags )
                     addee_tags = sibling_and_parent_correct_tags.difference( tags )

@@ -3006,6 +3006,8 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             if delta_distance > 0:
                 
+                touchscreen_canvas_drags_unanchor = HG.client_controller.new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' )
+                
                 if not self._current_drag_is_touch and delta_distance > 50:
                     
                     # if user is able to generate such a large distance, they are almost certainly touching
@@ -3013,11 +3015,12 @@ class CanvasWithHovers( CanvasWithDetails ):
                     self._current_drag_is_touch = True
                     
                 
+                # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
+                
+                touch_anchor_override = touchscreen_canvas_drags_unanchor and self._current_drag_is_touch
                 anchor_and_hide_canvas_drags = HG.client_controller.new_options.GetBoolean( 'anchor_and_hide_canvas_drags' )
                 
-                if HC.PLATFORM_WINDOWS and anchor_and_hide_canvas_drags and not self._current_drag_is_touch:
-                    
-                    # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
+                if anchor_and_hide_canvas_drags and not touch_anchor_override:
                     
                     show_mouse = False
                     
@@ -3173,7 +3176,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
             
-            if duplicate_type == HC.DUPLICATE_UNKNOWN or was_auto_skipped:
+            if duplicate_type is None or was_auto_skipped:
                 
                 continue # it was a 'skip' decision
                 
@@ -3424,7 +3427,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type != HC.DUPLICATE_UNKNOWN ] )
+        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
         
     
     def _GoBack( self ):
@@ -3622,7 +3625,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 was_auto_skipped = True
                 
-                self._processed_pairs.append( ( potential_pair, HC.DUPLICATE_UNKNOWN, None, None, {}, was_auto_skipped ) )
+                self._processed_pairs.append( ( potential_pair, None, None, None, {}, was_auto_skipped ) )
                 
                 if len( self._unprocessed_pairs ) == 0:
                     
@@ -3693,7 +3696,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         was_auto_skipped = False
         
-        self._processed_pairs.append( ( self._current_pair, HC.DUPLICATE_UNKNOWN, None, None, {}, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._current_pair, None, None, None, {}, was_auto_skipped ) )
         
         self._ShowNewPair()
         

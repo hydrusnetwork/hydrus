@@ -637,9 +637,12 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         
         HydrusResourceClientAPI._callbackCheckRestrictions( self, request )
         
-        self._EstablishAPIPermissions( request )
-        
-        self._CheckAPIPermissions( request )
+        if request.method != b'OPTIONS':
+            
+            self._EstablishAPIPermissions( request )
+            
+            self._CheckAPIPermissions( request )
+            
         
         return request
         

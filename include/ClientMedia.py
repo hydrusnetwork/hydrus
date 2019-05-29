@@ -1254,15 +1254,19 @@ class MediaList( object ):
                         
                         non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
                         
-                        local_file_services = list( non_trash_local_file_services ) + [ CC.TRASH_SERVICE_KEY ]
+                        all_local_file_services = list( non_trash_local_file_services ) + [ CC.TRASH_SERVICE_KEY ]
                         
-                        deleted_from_trash_and_local_view = service_key == CC.TRASH_SERVICE_KEY and self._file_service_key in local_file_services
+                        physically_deleted = service_key in ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                        trashed = service_key in local_file_domains
+                        deleted_from_our_domain = service_key = self._file_service_key
                         
-                        trashed_from_our_local_file_domain = HC.options[ 'remove_trashed_files' ] and service_key in local_file_domains and self._file_service_key == service_key
+                        physically_deleted_and_local_view = physically_deleted and self._file_service_key in all_local_file_services
                         
-                        deleted_from_repo_and_repo_view = service_key not in local_file_services and self._file_service_key == service_key
+                        user_says_remove_and_trashed_from_our_local_file_domain = HC.options[ 'remove_trashed_files' ] and trashed and deleted_from_our_domain
                         
-                        if deleted_from_trash_and_local_view or trashed_from_our_local_file_domain or deleted_from_repo_and_repo_view:
+                        deleted_from_repo_and_repo_view = service_key not in all_local_file_services and deleted_from_our_domain
+                        
+                        if physically_deleted_and_local_view or user_says_remove_and_trashed_from_our_local_file_domain or deleted_from_repo_and_repo_view:
                             
                             self._RemoveMediaByHashes( hashes )
                             

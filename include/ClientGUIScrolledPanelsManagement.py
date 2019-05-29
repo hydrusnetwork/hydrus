@@ -1079,6 +1079,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'host override when copying external links' )
                 self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, message = 'port override when copying external links' )
                 
+                self._external_port_override.SetToolTip( 'Setting this to a non-none empty string will forego the \':\' in the URL.' )
+                
                 if service_type != HC.LOCAL_BOORU:
                     
                     self._external_scheme_override.Hide()
@@ -2993,6 +2995,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_stats_menu_display.Append( 'show media and preview combined', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED )
             
             self._anchor_and_hide_canvas_drags = wx.CheckBox( self )
+            self._touchscreen_canvas_drags_unanchor = wx.CheckBox( self )
             
             self._media_zooms = wx.TextCtrl( self )
             self._media_zooms.Bind( wx.EVT_TEXT, self.EventZoomsChanged )
@@ -3012,6 +3015,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._file_viewing_stats_menu_display.SelectClientData( self._new_options.GetInteger( 'file_viewing_stats_menu_display' ) )
             self._anchor_and_hide_canvas_drags.SetValue( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
+            self._touchscreen_canvas_drags_unanchor.SetValue( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
@@ -3038,13 +3042,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
-            rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
-            rows.append( ( 'Media zooms: ', self._media_zooms ) )
-            rows.append( ( 'Show media/preview viewing stats or media right-click menus?: ', self._file_viewing_stats_menu_display ) )
-            rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
-            rows.append( ( 'BUGFIX: Load images with PIL (slower): ', self._load_images_with_pil ) )
-            rows.append( ( 'BUGFIX: Load gifs with PIL instead of OpenCV (slower, bad transparency): ', self._disable_cv_for_gifs ) )
+            rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
+            rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
+            rows.append( ( 'Media zooms:', self._media_zooms ) )
+            rows.append( ( 'Show media/preview viewing stats or media right-click menus?:', self._file_viewing_stats_menu_display ) )
+            rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
+            rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
+            rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
+            rows.append( ( 'BUGFIX: Load gifs with PIL instead of OpenCV (slower, bad transparency):', self._disable_cv_for_gifs ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -3143,6 +3148,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.GetValue() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.GetValue() )
+            self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.GetValue() )
             
             try:
                 

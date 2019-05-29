@@ -1837,40 +1837,26 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                     for collection in collections:
                         
-                        collection_pairs = list( itertools.combinations( collection.GetFlatMedia(), 2 ) )
+                        media_group = collection.GetFlatMedia()
                         
-                        self._SetDuplicates( HC.DUPLICATE_ALTERNATE, media_pairs = collection_pairs, silent = True )
+                        self._SetDuplicates( HC.DUPLICATE_ALTERNATE, media_group = media_group, silent = True )
                         
                     
                 
             
         
     
-    def _SetDuplicates( self, duplicate_type, media_pairs = None, duplicate_action_options = None, silent = False ):
+    def _SetDuplicates( self, duplicate_type, media_pairs = None, media_group = None, duplicate_action_options = None, silent = False ):
         
         yes_no_text = 'unknown duplicate action'
         
-        if duplicate_type is None or duplicate_type == HC.DUPLICATE_UNKNOWN:
-            
-            if duplicate_type is None:
-                
-                yes_no_text = 'completely delete all pair duplicate relationships'
-                
-            elif duplicate_type == HC.DUPLICATE_UNKNOWN:
-                
-                yes_no_text = 'set all pair duplicate relationships to unknown/potential'
-                
-            
-            duplicate_action_options = None
-            
-        elif duplicate_action_options is None:
+        if duplicate_action_options is None:
             
             yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ]
             
-            
             if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
                 
-                yes_no_text += ' (with default duplicate action/merge options)'
+                yes_no_text += ' (with default duplicate metadata merge options)'
                 
                 new_options = HG.client_controller.new_options
                 
@@ -1883,41 +1869,57 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         else:
             
-            yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with custom duplicate action/merge options)'
+            yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with custom duplicate metadata merge options)'
             
         
         file_deletion_reason = 'Deleted from duplicate action on Media Page ({}).'.format( yes_no_text )
         
         if media_pairs is None:
             
-            flat_media = self._GetSelectedFlatMedia()
+            if media_group is None:
+                
+                flat_media = self._GetSelectedFlatMedia()
+                
+            else:
+                
+                flat_media = ClientMedia.FlattenMedia( media_group )
+                
             
             if len( flat_media ) < 2:
                 
                 return False
                 
             
-            media_pairs = list( itertools.combinations( flat_media, 2 ) )
+            first_media = flat_media[0]
+            
+            if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                
+                media_pairs = list( itertools.combinations( flat_media, 2 ) )
+                
+                if len( media_pairs ) > 100 and not silent:
+                    
+                    message = 'False positive records are complicated, and setting that relationship for many files at once is likely a mistake.'
+                    message += os.linesep * 2
+                    message += 'Are you sure all of these files are all potential duplicates and that they are all false positive matches with each other? If not, I recommend you step back for now.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I know what I am doing', no_label = 'step back for now' ) as dlg:
+                        
+                        if dlg.ShowModal() != wx.ID_YES:
+                            
+                            return False
+                            
+                        
+                    
+                
+            else:
+                
+                media_pairs = [ ( first_media, other_media ) for other_media in flat_media if other_media != first_media ]
+                
             
         
         if len( media_pairs ) == 0:
             
             return False
-            
-        
-        if len( media_pairs ) > 100 and not silent:
-            
-            message = 'The duplicate system does not yet work well for large groups of duplicates. This is about to ask if you want to apply a dupe status for more than 100 pairs.'
-            message += os.linesep * 2
-            message += 'Unless you are testing the system or have another good reason to try this, I recommend you step back for now.'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I know what I am doing', no_label = 'step back for now' ) as dlg:
-                
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return False
-                    
-                
             
         
         if silent:
@@ -2007,9 +2009,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _SetDuplicatesFocusedBetter( self, duplicate_action_options = None ):
         
-        focused_hash = self._focussed_media.GetDisplayMedia().GetHash()
-        
         flat_media = self._GetSelectedFlatMedia()
+        
+        if self._focussed_media is None:
+            
+            if len( flat_media ) > 1:
+                
+                wx.MessageBox( 'No file is focused, so cannot set the focused file as better!' )
+                
+            
+            return
+            
+        
+        focused_hash = self._focussed_media.GetDisplayMedia().GetHash()
         
         ( better_media, ) = [ media for media in flat_media if media.GetHash() == focused_hash ]
         
@@ -2101,7 +2113,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes, do_sort = True )
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
             
         
     
@@ -2274,14 +2286,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 self._CopyHashesToClipboard( 'sha256' )
                 
-            elif action == 'duplicate_media_remove_relationships':
-                
-                self._SetDuplicates( None )
-                
-            elif action == 'duplicate_media_reset_to_potential':
-                
-                self._SetDuplicates( HC.DUPLICATE_UNKNOWN )
-                
             elif action == 'duplicate_media_set_alternate':
                 
                 self._SetDuplicates( HC.DUPLICATE_ALTERNATE )
@@ -2297,10 +2301,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             elif action == 'duplicate_media_set_focused_better':
                 
                 self._SetDuplicatesFocusedBetter()
-                
-            elif action == 'duplicate_media_set_false_positive':
-                
-                self._SetDuplicates( HC.DUPLICATE_FALSE_POSITIVE )
                 
             elif action == 'duplicate_media_set_same_quality':
                 
@@ -2465,11 +2465,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def SetDuplicateStatusForAll( self, duplicate_type ):
         
-        flat_media = ClientMedia.FlattenMedia( self._sorted_media )
+        media_group = ClientMedia.FlattenMedia( self._sorted_media )
         
-        media_pairs = list( itertools.combinations( flat_media, 2 ) )
-        
-        return self._SetDuplicates( duplicate_type, media_pairs = media_pairs )
+        return self._SetDuplicates( duplicate_type, media_group = media_group )
         
     
     def SetFocussedMedia( self, page_key, media ):
@@ -2639,7 +2637,10 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnails = [ thumbnail for ( thumbnail_index, thumbnail ) in self._GetThumbnailsFromPageIndex( clean_index ) ]
         
-        HG.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
+        if len( thumbnails ) > 0:
+            
+            HG.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
+            
         
         self._dirty_canvas_pages.append( bmp )
         
@@ -2735,7 +2736,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if self._GetPageIndexFromThumbnailIndex( thumbnail_index ) not in self._clean_canvas_pages:
                 
-                return
+                continue
                 
             
             hash = thumbnail.GetDisplayMedia().GetHash()
@@ -4171,9 +4172,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as same quality', 'Set all the selected files as same quality duplicates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_same_quality' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_alternate' ) )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set as duplicates with custom metadata merge options', 'Choose which duplicates status to set to this selection and customise non-default duplicate metadata merge options.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_custom' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_custom' ) )
+                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_alternate' ) )
                     
                     if collections_selected:
                         
@@ -4182,13 +4185,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_alternate_collections' ) )
                         
                     
-                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'send the ' + num_pairs_text + ' in this selection to be compared in the duplicates filter', 'Set all the possible pairs in the selection as unknown/potential duplicate pairs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_reset_to_potential' ) )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'remove the ' + num_pairs_text + ' in this selection from the duplicates system', 'Remove all duplicates relationships from all the pairs in this selection.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_relationships' ) )
-                    
-                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set duplicate relationships' )
+                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
                     
                     duplicates_edit_action_submenu = wx.Menu()
                     
@@ -4197,7 +4194,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         ClientGUIMenus.AppendMenuItem( self, duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[ duplicate_type ], 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, duplicate_type )
                         
                     
-                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_edit_action_submenu, 'edit default merge options' )
+                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
                     
                     ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'duplicates' )
                     
@@ -4214,7 +4211,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         duplicates_view_menu = wx.Menu()
                         
-                        for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_UNKNOWN ):
+                        for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ):
                             
                             if duplicate_type in file_duplicate_types_to_counts:
                                 
@@ -4226,7 +4223,7 @@ class MediaPanelThumbnails( MediaPanel ):
                                 
                             
                         
-                        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, 'view this file\'s duplicates' )
+                        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, 'view this file\'s relations' )
                         
                     
                 

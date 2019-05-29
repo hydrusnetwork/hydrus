@@ -232,7 +232,7 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( response.status, 204 )
+        self.assertEqual( response.status, 200 )
         
         self.assertEqual( response.getheader( 'Allow' ), 'GET' )
         
@@ -255,7 +255,7 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( response.status, 204 )
+        self.assertEqual( response.status, 200 )
         
         self.assertEqual( response.getheader( 'Allow' ), 'GET' )
         
@@ -267,9 +267,10 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        self.assertEqual( response.status, 204 )
+        self.assertEqual( response.status, 200 )
         
         self.assertEqual( response.getheader( 'Access-Control-Allow-Methods' ), 'GET' )
+        self.assertEqual( response.getheader( 'Access-Control-Allow-Headers' ), 'Hydrus-Client-API-Access-Key' )
         self.assertEqual( response.getheader( 'Access-Control-Allow-Origin' ), '*' )
         
     

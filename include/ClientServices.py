@@ -459,19 +459,24 @@ class ServiceLocalBooru( ServiceLocalServerService ):
             
             if self._upnp_port is None:
                 
-                port = self._port
+                port = ':' + self._port
                 
             else:
                 
-                port = self._upnp_port
+                port = ':' + self._upnp_port
                 
             
         else:
             
             port = self._external_port_override
             
+            if port != '':
+                
+                port = ':' + port
+                
+            
         
-        url = '{}://{}:{}/gallery?share_key={}'.format( scheme, host, port, share_key.hex() )
+        url = '{}://{}{}/gallery?share_key={}'.format( scheme, host, port, share_key.hex() )
         
         return url
         

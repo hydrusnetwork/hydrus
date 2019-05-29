@@ -79,6 +79,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'reverse_page_shift_drag_behaviour' ] = False
         
         self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
+        self._dictionary[ 'booleans' ][ 'touchscreen_canvas_drags_unanchor' ] = False
         
         self._dictionary[ 'booleans' ][ 'thumbnail_fill' ] = False
         

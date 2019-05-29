@@ -174,9 +174,12 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
         
         HydrusResourceHydrusNetwork._callbackCheckRestrictions( self, request )
         
-        self._checkSession( request )
-        
-        self._checkAccount( request )
+        if request.method != b'OPTIONS':
+            
+            self._checkSession( request )
+            
+            self._checkAccount( request )
+            
         
         return request
         

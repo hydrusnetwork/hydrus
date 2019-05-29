@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 353
+SOFTWARE_VERSION = 354
 CLIENT_API_VERSION = 6
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -195,7 +195,7 @@ content_update_string_lookup[ CONTENT_UPDATE_FLIP ] = 'flip on/off'
 DEFINITIONS_TYPE_HASHES = 0
 DEFINITIONS_TYPE_TAGS = 1
 
-DUPLICATE_UNKNOWN = 0
+DUPLICATE_POTENTIAL = 0
 DUPLICATE_FALSE_POSITIVE = 1
 DUPLICATE_SAME_QUALITY = 2
 DUPLICATE_ALTERNATE = 3
@@ -207,7 +207,7 @@ DUPLICATE_BETTER_OR_WORSE = 8
 
 duplicate_type_string_lookup = {}
 
-duplicate_type_string_lookup[ DUPLICATE_UNKNOWN ] = 'potential duplicates'
+duplicate_type_string_lookup[ DUPLICATE_POTENTIAL ] = 'potential duplicates'
 duplicate_type_string_lookup[ DUPLICATE_FALSE_POSITIVE ] = 'not related/false positive'
 duplicate_type_string_lookup[ DUPLICATE_SAME_QUALITY ] = 'same quality'
 duplicate_type_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'

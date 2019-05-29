@@ -701,7 +701,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def __init__( self, parent, service ):
             
-            ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus service account' )
+            ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus service account - shared by all clients using the same access key' )
             
             self._service = service
             
@@ -1047,11 +1047,13 @@ class ReviewServicePanel( wx.Panel ):
             
             if service_paused:
                 
-                self._pause_play_button.SetLabelText( 'unpause' )
+                self._pause_play_button.SetLabelText( 'paused' )
+                self._pause_play_button.SetForegroundColour( ( 128, 0, 0 ) )
                 
             else:
                 
-                self._pause_play_button.SetLabelText( 'pause' )
+                self._pause_play_button.SetLabelText( 'working' )
+                self._pause_play_button.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
             self._metadata_st.SetLabelText( self._service.GetNextUpdateDueString() )

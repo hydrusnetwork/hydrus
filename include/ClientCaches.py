@@ -1595,17 +1595,20 @@ class TagParentsManager( object ):
         
         # first collapse siblings
         
-        sibling_manager = self._controller.tag_siblings_manager
+        siblings_manager = self._controller.tag_siblings_manager
         
         collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
         
-        for ( service_key, statuses_to_pairs ) in list(service_keys_to_statuses_to_pairs.items()):
+        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
             
-            if service_key == CC.COMBINED_TAG_SERVICE_KEY: continue
-            
-            for ( status, pairs ) in list(statuses_to_pairs.items()):
+            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
-                pairs = sibling_manager.CollapsePairs( service_key, pairs )
+                continue
+                
+            
+            for ( status, pairs ) in statuses_to_pairs.items():
+                
+                pairs = siblings_manager.CollapsePairs( service_key, pairs )
                 
                 collapsed_service_keys_to_statuses_to_pairs[ service_key ][ status ] = pairs
                 
@@ -1640,9 +1643,9 @@ class TagParentsManager( object ):
         self._service_keys_to_children_to_parents = BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents )
         
     
-    def ExpandPredicates( self, service_key, predicates ):
+    def ExpandPredicates( self, service_key, predicates, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1674,9 +1677,9 @@ class TagParentsManager( object ):
             
         
     
-    def ExpandTags( self, service_key, tags ):
+    def ExpandTags( self, service_key, tags, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1694,9 +1697,9 @@ class TagParentsManager( object ):
             
         
     
-    def GetParents( self, service_key, tag ):
+    def GetParents( self, service_key, tag, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1815,9 +1818,9 @@ class TagSiblingsManager( object ):
         self._controller.pub( 'new_siblings_gui' )
         
     
-    def CollapsePredicates( self, service_key, predicates ):
+    def CollapsePredicates( self, service_key, predicates, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1872,9 +1875,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapsePairs( self, service_key, pairs ):
+    def CollapsePairs( self, service_key, pairs, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1904,9 +1907,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapseStatusesToTags( self, service_key, statuses_to_tags ):
+    def CollapseStatusesToTags( self, service_key, statuses_to_tags, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1926,9 +1929,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapseTag( self, service_key, tag ):
+    def CollapseTag( self, service_key, tag, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1948,9 +1951,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapseTags( self, service_key, tags ):
+    def CollapseTags( self, service_key, tags, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1961,9 +1964,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def CollapseTagsToCount( self, service_key, tags_to_count ):
+    def CollapseTagsToCount( self, service_key, tags_to_count, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -1988,9 +1991,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def GetSibling( self, service_key, tag ):
+    def GetSibling( self, service_key, tag, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2010,9 +2013,9 @@ class TagSiblingsManager( object ):
             
         
     
-    def GetAllSiblings( self, service_key, tag ):
+    def GetAllSiblings( self, service_key, tag, service_strict = False ):
         
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if not service_strict and self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2412,7 +2415,16 @@ class ThumbnailCache( object ):
             
             self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
             
-            # don't cancel regen--that's useful and not time sensitive
+            cancelled_media_results = { media.GetMediaResult() for media in medias }
+            
+            outstanding_delayed_hashes = { media_result.GetHash() for media_result in cancelled_media_results if media_result in self._delayed_regeneration_queue_quick }
+            
+            if len( outstanding_delayed_hashes ) > 0:
+                
+                self._controller.files_maintenance_manager.ScheduleJob( outstanding_delayed_hashes, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                
+            
+            self._delayed_regeneration_queue_quick.difference_update( cancelled_media_results )
             
             self._RecalcQueues()
             

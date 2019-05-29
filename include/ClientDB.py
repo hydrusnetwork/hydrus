@@ -174,6 +174,11 @@ def report_speed_to_job_key( job_key, precise_timestamp, num_rows, row_name ):
     
 def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
+    if num_rows == 0:
+        
+        return
+        
+    
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
     rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
@@ -1503,6 +1508,10 @@ class DB( HydrusDB.HydrusDB ):
         
         # main
         
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS alternate_file_groups ( alternates_group_id INTEGER PRIMARY KEY );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS alternate_file_group_members ( alternates_group_id INTEGER, media_id INTEGER UNIQUE, PRIMARY KEY ( alternates_group_id, media_id ) );' )
+        
         self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, num_rows INTEGER, timestamp INTEGER );' )
         
         self._c.execute( 'CREATE TABLE client_files_locations ( prefix TEXT, location TEXT );' )
@@ -1514,6 +1523,13 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'current_files', [ 'timestamp' ] )
         
         self._c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_files ( media_id INTEGER PRIMARY KEY, king_hash_id INTEGER UNIQUE );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_file_members ( media_id INTEGER, hash_id INTEGER UNIQUE, PRIMARY KEY ( media_id, hash_id ) );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_false_positives ( smaller_alternates_group_id INTEGER, larger_alternates_group_id INTEGER, PRIMARY KEY ( smaller_alternates_group_id, larger_alternates_group_id ) );' )
+        self._CreateIndex( 'duplicate_false_positives', [ 'larger_alternates_group_id', 'smaller_alternates_group_id' ], unique = True )
         
         self._c.execute( 'CREATE TABLE local_file_deletion_reasons ( hash_id INTEGER PRIMARY KEY, reason_id INTEGER );' )
         
@@ -2063,14 +2079,28 @@ class DB( HydrusDB.HydrusDB ):
         
         inserts = []
         
+        media_id = self._DuplicatesGetMediaId( hash_id )
+        
         for potential_duplicate_hash_id in potential_duplicate_hash_ids:
             
-            # get media ids
-            # if same media ids, continue
-            # if same alternate ids, continue
-            # if false positives, continue
-            
             if hash_id == potential_duplicate_hash_id:
+                
+                continue
+                
+            
+            potential_media_id = self._DuplicatesGetMediaId( potential_duplicate_hash_id )
+            
+            if potential_media_id == media_id: # already duplicates!
+                
+                continue
+                
+            
+            if self._DuplicatesMediasAreFalsePositive( media_id, potential_media_id ):
+                
+                continue
+                
+            
+            if self._DuplicatesMediasAreAlternates( media_id, potential_media_id ):
                 
                 continue
                 
@@ -2078,7 +2108,7 @@ class DB( HydrusDB.HydrusDB ):
             smaller_hash_id = min( hash_id, potential_duplicate_hash_id )
             larger_hash_id = max( hash_id, potential_duplicate_hash_id )
             
-            inserts.append( ( smaller_hash_id, larger_hash_id, HC.DUPLICATE_UNKNOWN ) )
+            inserts.append( ( smaller_hash_id, larger_hash_id, HC.DUPLICATE_POTENTIAL ) )
             
         
         if len( inserts ) > 0:
@@ -2087,22 +2117,139 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _DuplicatesDeleteUnknownDuplicatePairs( self ):
+    def _DuplicatesAlternatesGroupsAreFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
+        
+        if alternates_group_id_a == alternates_group_id_b:
+            
+            return False
+            
+        
+        smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
+        larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
+        
+        result = self._c.execute( 'SELECT 1 FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( alternates_group_id_a, larger_alternates_group_id ) ).fetchone()
+        
+        false_positive_pair_found = result is not None
+        
+        return false_positive_pair_found
+        
+    
+    def _DuplicatesDeletePotentialDuplicatePairs( self ):
         
         hash_ids = set()
         
-        for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
+        for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_POTENTIAL, ) ):
             
             hash_ids.add( smaller_hash_id )
             hash_ids.add( larger_hash_id )
             
         
-        self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) )
+        self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_POTENTIAL, ) )
         
         self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def _DuplicatesGetFileDuplicateHashes( self, file_service_key, hash, duplicate_type, allowed_hash_ids = None ):
+    def _DuplicatesDissolveHashId( self, hash_id ):
+        
+        media_id = self._DuplicatesGetMediaId( hash_id )
+        
+        king_hash_id = self._DuplicatesGetKingHashId( media_id )
+        
+        hash_ids = self._DuplicatesGetDuplicateHashIds( media_id )
+        
+        if len( hash_ids ) == 1 or hash_id == king_hash_id:
+            
+            self._DuplicatesDissolveMediaId( media_id )
+            
+        else:
+            
+            self._c.execute( 'DELETE FROM duplicate_file_members WHERE hash_id = ?;', ( hash_id, ) )
+            
+            self._c.execute( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( hash_id, ) )
+            
+        
+    
+    def _DuplicatesDissolveMediaId( self, media_id ):
+        
+        self._DuplicatesRemoveAlternateMember( media_id )
+        
+        self._DuplicatesRemovePotentialMember( media_id )
+        
+        hash_ids = self._DuplicatesGetDuplicateHashIds( media_id )
+        
+        self._c.execute( 'DELETE FROM duplicate_file_members WHERE media_id = ?;', ( media_id, ) )
+        self._c.execute( 'DELETE FROM duplicate_files WHERE media_id = ?;', ( media_id, ) )
+        
+        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
+    def _DuplicatesGetAlternatesGroupId( self, media_id, do_not_create = False ):
+        
+        result = self._c.execute( 'SELECT alternates_group_id FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) ).fetchone()
+        
+        if result is None:
+            
+            if do_not_create:
+                
+                return None
+                
+            
+            self._c.execute( 'INSERT INTO alternate_file_groups DEFAULT VALUES;' )
+            
+            alternates_group_id = self._c.lastrowid
+            
+            self._c.execute( 'INSERT INTO alternate_file_group_members ( alternates_group_id, media_id ) VALUES ( ?, ? );', ( alternates_group_id, media_id ) )
+            
+        else:
+            
+            ( alternates_group_id, ) = result
+            
+        
+        return alternates_group_id
+        
+    
+    def _DuplicatesGetAlternateMediaIds( self, alternates_group_id ):
+        
+        media_ids = self._STS( self._c.execute( 'SELECT media_id FROM alternate_file_group_members WHERE alternates_group_id = ?;', ( alternates_group_id, ) ) )
+        
+        return media_ids
+        
+    
+    def _DuplicatesGetBestKingId( self, media_id, file_service_id ):
+        
+        media_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id )
+        
+        if len( media_hash_ids ) > 0:
+            
+            king_hash_id = self._DuplicatesGetKingHashId( media_id )
+            
+            if king_hash_id not in media_hash_ids:
+                
+                king_hash_id = random.sample( media_hash_ids, 1 )
+                
+            
+            return king_hash_id
+            
+        
+        return None
+        
+    
+    def _DuplicatesGetFalsePositiveAlternatesGroupIds( self, alternates_group_id ):
+        
+        false_positive_alternates_group_ids = set()
+        
+        results = self._c.execute( 'SELECT smaller_alternates_group_id, larger_alternates_group_id FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) ).fetchall()
+        
+        for ( smaller_alternates_group_id, larger_alternates_group_id ) in results:
+            
+            false_positive_alternates_group_ids.add( smaller_alternates_group_id )
+            false_positive_alternates_group_ids.add( larger_alternates_group_id )
+            
+        
+        return false_positive_alternates_group_ids
+        
+    
+    def _DuplicatesGetFileHashesByDuplicateType( self, file_service_key, hash, duplicate_type, allowed_hash_ids = None ):
         
         ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
         
@@ -2110,7 +2257,70 @@ class DB( HydrusDB.HydrusDB ):
         
         dupe_hash_ids = set()
         
-        if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
+        if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+            
+            media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+                
+                if alternates_group_id is not None:
+                    
+                    false_positive_alternates_group_ids = self._DuplicatesGetFalsePositiveAlternatesGroupIds( alternates_group_id )
+                    
+                    false_positive_alternates_group_ids.discard( alternates_group_id )
+                    
+                    false_positive_media_ids = set()
+                    
+                    for false_positive_alternates_group_id in false_positive_alternates_group_ids:
+                        
+                        false_positive_media_ids.update( self._DuplicatesGetAlternateMediaIds( false_positive_alternates_group_id ) )
+                        
+                    
+                    file_service_id = self._GetServiceId( file_service_key )
+                    
+                    for false_positive_media_id in false_positive_media_ids:
+                        
+                        best_king_hash_id = self._DuplicatesGetBestKingId( false_positive_media_id, file_service_id )
+                        
+                        if best_king_hash_id is not None:
+                            
+                            dupe_hash_ids.add( best_king_hash_id )
+                            
+                        
+                    
+                
+            
+        elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+            
+            media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+                
+                if alternates_group_id is not None:
+                    
+                    alternates_media_ids = self._STS( self._c.execute( 'SELECT media_id FROM alternate_file_group_members WHERE alternates_group_id = ?;', ( alternates_group_id, ) ) )
+                    
+                    alternates_media_ids.discard( media_id )
+                    
+                    file_service_id = self._GetServiceId( file_service_key )
+                    
+                    for alternates_media_id in alternates_media_ids:
+                        
+                        best_king_hash_id = self._DuplicatesGetBestKingId( alternates_media_id, file_service_id )
+                        
+                        if best_king_hash_id is not None:
+                            
+                            dupe_hash_ids.add( best_king_hash_id )
+                            
+                        
+                    
+                
+            
+        elif duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
             
             if duplicate_type == HC.DUPLICATE_BETTER:
                 
@@ -2160,6 +2370,20 @@ class DB( HydrusDB.HydrusDB ):
         dupe_hashes = self._GetHashes( dupe_hash_ids )
         
         return dupe_hashes
+        
+    
+    def _DuplicatesGetDuplicateHashIds( self, media_id, file_service_id = None ):
+        
+        if file_service_id is None or file_service_id == self._combined_file_service_id:
+            
+            hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM duplicate_file_members WHERE media_id = ?;', ( media_id, ) ) )
+            
+        else:
+            
+            hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM duplicate_file_members NATURAL JOIN current_files WHERE media_id = ? AND service_id = ?;', ( media_id, file_service_id ) ) )
+            
+        
+        return hash_ids
         
     
     def _DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( self, file_service_key ):
@@ -2239,6 +2463,65 @@ class DB( HydrusDB.HydrusDB ):
             counter[ HC.DUPLICATE_BETTER_OR_WORSE ] += counter[ HC.DUPLICATE_BETTER ] + counter[ HC.DUPLICATE_WORSE ]
             
         
+        media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+        
+        if media_id is not None:
+            
+            alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+            
+            if alternates_group_id is not None:
+                
+                file_service_id = self._GetServiceId( file_service_key )
+                
+                false_positive_alternates_group_ids = self._DuplicatesGetFalsePositiveAlternatesGroupIds( alternates_group_id )
+                
+                false_positive_alternates_group_ids.discard( alternates_group_id )
+                
+                num_false_positives = 0
+                
+                for false_positive_alternates_group_id in false_positive_alternates_group_ids:
+                    
+                    fp_media_ids = self._DuplicatesGetAlternateMediaIds( false_positive_alternates_group_id )
+                    
+                    for fp_media_id in fp_media_ids:
+                        
+                        fp_hash_ids = self._DuplicatesGetDuplicateHashIds( fp_media_id, file_service_id = file_service_id )
+                        
+                        if len( fp_hash_ids ) > 0:
+                            
+                            num_false_positives += 1
+                            
+                        
+                    
+                
+                if num_false_positives > 0:
+                    
+                    counter[ HC.DUPLICATE_FALSE_POSITIVE ] = num_false_positives
+                    
+                
+                num_alternates = 0
+                
+                alt_media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+                
+                alt_media_ids.discard( media_id )
+                
+                for alt_media_id in alt_media_ids:
+                    
+                    alt_hash_ids = self._DuplicatesGetDuplicateHashIds( alt_media_id, file_service_id = file_service_id )
+                    
+                    if len( alt_hash_ids ) > 0:
+                        
+                        num_alternates += 1
+                        
+                    
+                
+                if num_alternates > 0:
+                    
+                    counter[ HC.DUPLICATE_ALTERNATE ] = num_alternates
+                    
+                
+            
+        
         return counter
         
     
@@ -2246,90 +2529,217 @@ class DB( HydrusDB.HydrusDB ):
         
         # doesn't work for '= 0' or '< 1'
         
-        ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
-        
-        hash_ids_to_counts = collections.Counter()
-        
-        if dupe_type == HC.DUPLICATE_BETTER_OR_WORSE:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type IN ( ' + str( HC.DUPLICATE_SMALLER_BETTER ) + ', ' + str( HC.DUPLICATE_LARGER_BETTER ) + ' )'
-            larger_duplicate_predicate_string = smaller_duplicate_predicate_string
-            
-        elif dupe_type == HC.DUPLICATE_BETTER:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
-            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
-            
-        elif dupe_type == HC.DUPLICATE_WORSE:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
-            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
-            
-        else:
-            
-            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
-            larger_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
-            
-        
-        smaller_query = 'SELECT smaller_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + smaller_duplicate_predicate_string + ' GROUP BY smaller_hash_id;'
-        larger_query = 'SELECT larger_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + larger_duplicate_predicate_string + ' GROUP BY larger_hash_id;'
-        
-        for ( hash_id, count ) in self._c.execute( smaller_query ):
-            
-            hash_ids_to_counts[ hash_id ] += count
-            
-        
-        for ( hash_id, count ) in self._c.execute( larger_query ):
-            
-            hash_ids_to_counts[ hash_id ] += count
-            
-        
         if operator == '\u2248':
             
             lower_bound = 0.8 * num_relationships
             upper_bound = 1.2 * num_relationships
             
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
+            def filter_func( count ):
                 
                 return lower_bound < count and count < upper_bound
                 
             
         elif operator == '<':
             
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
+            def filter_func( count ):
                 
                 return count < num_relationships
                 
             
         elif operator == '>':
             
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
+            def filter_func( count ):
                 
                 return count > num_relationships
                 
             
         elif operator == '=':
             
-            def filter_func( item ):
-                
-                ( hash_id, count ) = item
+            def filter_func( count ):
                 
                 return count == num_relationships
                 
             
         
-        hash_ids = { hash_id for ( hash_id, count ) in filter( filter_func, list(hash_ids_to_counts.items()) ) }
+        if dupe_type == HC.DUPLICATE_FALSE_POSITIVE:
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            alternates_group_ids_to_valid_for_file_domain = {}
+            alternates_group_ids_to_false_positives = collections.defaultdict( list )
+            
+            query = 'SELECT smaller_alternates_group_id, larger_alternates_group_id FROM duplicate_false_positives;'
+            
+            for ( alternates_group_id_a, alternates_group_id_b ) in self._c.execute( query ):
+                
+                alternates_group_ids_to_false_positives[ alternates_group_id_a ].append( alternates_group_id_b )
+                alternates_group_ids_to_false_positives[ alternates_group_id_b ].append( alternates_group_id_a )
+                
+            
+            hash_ids = set()
+            
+            for ( alternates_group_id, false_positive_alternates_group_ids ) in alternates_group_ids_to_false_positives.items():
+                
+                count = 0
+                
+                for false_positive_alternates_group_id in false_positive_alternates_group_ids:
+                    
+                    if false_positive_alternates_group_id not in alternates_group_ids_to_valid_for_file_domain:
+                        
+                        valid = False
+                        
+                        fp_media_ids = self._DuplicatesGetAlternateMediaIds( false_positive_alternates_group_id )
+                        
+                        for fp_media_id in fp_media_ids:
+                            
+                            fp_hash_ids = self._DuplicatesGetDuplicateHashIds( fp_media_id, file_service_id = file_service_id )
+                            
+                            if len( fp_hash_ids ) > 0:
+                                
+                                valid = True
+                                
+                                break
+                                
+                            
+                        
+                        alternates_group_ids_to_valid_for_file_domain[ false_positive_alternates_group_id ] = valid
+                        
+                    
+                    if alternates_group_ids_to_valid_for_file_domain[ false_positive_alternates_group_id ]:
+                        
+                        count += 1
+                        
+                    
+                
+                if filter_func( count ):
+                    
+                    media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+                    
+                    for media_id in media_ids:
+                        
+                        hash_ids.update( self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id ) )
+                        
+                    
+                
+            
+        elif dupe_type == HC.DUPLICATE_ALTERNATE:
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            query = 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;'
+            
+            hash_ids = set()
+            
+            results = self._c.execute( query ).fetchall()
+            
+            for ( alternates_group_id, count ) in results:
+                
+                count -= 1 # num relationships is number group members - 1
+                
+                media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+                
+                alternates_group_id_hash_ids = []
+                
+                for media_id in media_ids:
+                    
+                    media_id_hash_ids = self._DuplicatesGetDuplicateHashIds( media_id, file_service_id = file_service_id )
+                    
+                    if len( media_id_hash_ids ) == 0:
+                        
+                        # this alternate relation does not count for our current file domain, so it should not contribute to the count
+                        count -= 1
+                        
+                    else:
+                        
+                        alternates_group_id_hash_ids.extend( media_id_hash_ids )
+                        
+                    
+                
+                if filter_func( count ):
+                    
+                    hash_ids.update( alternates_group_id_hash_ids )
+                    
+                
+            
+        else:
+            
+            hash_ids_to_counts = collections.Counter()
+            
+            ( table_join, predicate_string ) = self._DuplicatesGetDuplicatePairsTableJoinInfoOnFileService( file_service_key )
+            
+            if dupe_type == HC.DUPLICATE_BETTER_OR_WORSE:
+                
+                smaller_duplicate_predicate_string = 'duplicate_type IN ( ' + str( HC.DUPLICATE_SMALLER_BETTER ) + ', ' + str( HC.DUPLICATE_LARGER_BETTER ) + ' )'
+                larger_duplicate_predicate_string = smaller_duplicate_predicate_string
+                
+            elif dupe_type == HC.DUPLICATE_BETTER:
+                
+                smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
+                larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
+                
+            elif dupe_type == HC.DUPLICATE_WORSE:
+                
+                smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
+                larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
+                
+            else:
+                
+                smaller_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
+                larger_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
+                
+            
+            smaller_query = 'SELECT smaller_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + smaller_duplicate_predicate_string + ' GROUP BY smaller_hash_id;'
+            larger_query = 'SELECT larger_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + larger_duplicate_predicate_string + ' GROUP BY larger_hash_id;'
+            
+            for ( hash_id, count ) in self._c.execute( smaller_query ):
+                
+                hash_ids_to_counts[ hash_id ] += count
+                
+            
+            for ( hash_id, count ) in self._c.execute( larger_query ):
+                
+                hash_ids_to_counts[ hash_id ] += count
+                
+            
+            hash_ids = { hash_id for ( hash_id, count ) in hash_ids_to_counts.items() if filter_func( count ) }
+            
         
         return hash_ids
         
     
-    def _DuplicatesGetRandomUnknownDuplicateHashes( self, search_context, both_files_match ):
+    def _DuplicatesGetKingHashId( self, media_id ):
+        
+        ( king_hash_id, ) = self._c.execute( 'SELECT king_hash_id FROM duplicate_files WHERE media_id = ?;', ( media_id, ) ).fetchone()
+        
+        return king_hash_id
+        
+    
+    def _DuplicatesGetMediaId( self, hash_id, do_not_create = False ):
+        
+        result = self._c.execute( 'SELECT media_id FROM duplicate_file_members WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            if do_not_create:
+                
+                return None
+                
+            
+            self._c.execute( 'INSERT INTO duplicate_files ( king_hash_id ) VALUES ( ? );', ( hash_id, ) )
+            
+            media_id = self._c.lastrowid
+            
+            self._c.execute( 'INSERT INTO duplicate_file_members ( media_id, hash_id ) VALUES ( ?, ? );', ( media_id, hash_id ) )
+            
+        else:
+            
+            ( media_id, ) = result
+            
+        
+        return media_id
+        
+    
+    def _DuplicatesGetRandomPotentialDuplicateHashes( self, search_context, both_files_match ):
         
         file_service_key = search_context.GetFileServiceKey()
         
@@ -2355,7 +2765,7 @@ class DB( HydrusDB.HydrusDB ):
             potential_hash_ids = set()
             
             # distinct important here for the search results table join
-            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( HC.DUPLICATE_UNKNOWN, ) ):
+            for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ?;', ( HC.DUPLICATE_POTENTIAL, ) ):
                 
                 if is_complicated_search:
                     
@@ -2402,7 +2812,7 @@ class DB( HydrusDB.HydrusDB ):
             allowed_hash_ids = None
             
         
-        return self._DuplicatesGetFileDuplicateHashes( file_service_key, hash, HC.DUPLICATE_UNKNOWN, allowed_hash_ids = allowed_hash_ids )
+        return self._DuplicatesGetFileHashesByDuplicateType( file_service_key, hash, HC.DUPLICATE_POTENTIAL, allowed_hash_ids = allowed_hash_ids )
         
     
     def _DuplicatesGetDuplicatePairsForFiltering( self, search_context, both_files_match ):
@@ -2442,7 +2852,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             # distinct important here for the search results table join
-            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? LIMIT 2500;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
+            result = self._c.execute( 'SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? LIMIT 2500;', ( HC.DUPLICATE_POTENTIAL, ) ).fetchall()
             
         
         # convert them into possible groups per each possible 'master hash_id', and value them
@@ -2514,7 +2924,7 @@ class DB( HydrusDB.HydrusDB ):
         return pairs_of_hashes
         
     
-    def _DuplicatesGetUnknownDuplicatesCount( self, search_context, both_files_match ):
+    def _DuplicatesGetPotentialDuplicatesCount( self, search_context, both_files_match ):
         
         file_service_key = search_context.GetFileServiceKey()
         
@@ -2534,10 +2944,118 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             # distinct important here for the search results table join
-            ( unknown_duplicates_count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? );', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
+            ( potential_duplicates_count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? );', ( HC.DUPLICATE_POTENTIAL, ) ).fetchone()
             
         
-        return unknown_duplicates_count
+        return potential_duplicates_count
+        
+    
+    def _DuplicatesMediasAreAlternates( self, media_id_a, media_id_b ):
+        
+        alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a, do_not_create = True )
+        
+        if alternates_group_id_a is None:
+            
+            return False
+            
+        
+        alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b, do_not_create = True )
+        
+        if alternates_group_id_b is None:
+            
+            return False
+            
+        
+        return alternates_group_id_a == alternates_group_id_b
+        
+    
+    def _DuplicatesMediasAreFalsePositive( self, media_id_a, media_id_b ):
+        
+        alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a, do_not_create = True )
+        
+        if alternates_group_id_a is None:
+            
+            return False
+            
+        
+        alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b, do_not_create = True )
+        
+        if alternates_group_id_b is None:
+            
+            return False
+            
+        
+        return self._DuplicatesAlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b )
+        
+    
+    def _DuplicatesRemoveAlternateMember( self, media_id ):
+        
+        alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id )
+        
+        alternates_media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+        
+        self._c.execute( 'DELETE FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) )
+        
+        if len( alternates_media_ids ) == 1:
+            
+            self._c.execute( 'DELETE FROM alternate_file_groups WHERE alternates_group_id = ?;', ( alternates_group_id, ) )
+            
+            self._c.execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
+            
+        
+    
+    def _DuplicatesRemovePotentialMember( self, media_id ):
+        
+        # update this to just clear it from groups and remove groups left with only one member
+        
+        hash_ids = self._DuplicatesGetDuplicateHashIds( media_id )
+        
+        self._c.executemany( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? OR larger_hash_id = ? AND duplicate_type = ?;', ( ( hash_id, hash_id, HC.DUPLICATE_POTENTIAL ) for hash_id in hash_ids ) )
+        
+    
+    def _DuplicatesSetAlternates( self, alternates_group_id_a, alternates_group_id_b ):
+        
+        if alternates_group_id_a == alternates_group_id_b:
+            
+            return
+            
+        
+        if self._DuplicatesAlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b ):
+            
+            return
+            
+        
+        # let's clear out any outstanding potentials between these merging groups
+        
+        self._DuplicatesSplitPotentialGroups( alternates_group_id_a, alternates_group_id_b )
+        
+        # now update all B to A
+        
+        self._c.execute( 'UPDATE alternate_file_group_members SET alternates_group_id = ? WHERE alternates_group_id = ?;', ( alternates_group_id_a, alternates_group_id_b ) )
+        
+        # move false positive records for B to A
+        
+        false_positive_pairs = self._c.execute( 'SELECT smaller_alternates_group_id, larger_alternates_group_id FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id_b, alternates_group_id_b ) )
+        
+        self._c.execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id_b, alternates_group_id_b ) )
+        
+        for ( smaller_false_positive_alternates_group_id, larger_false_positive_alternates_group_id ) in false_positive_pairs:
+            
+            if smaller_false_positive_alternates_group_id == alternates_group_id_b:
+                
+                self._DuplicatesSetFalsePositive( alternates_group_id_a, larger_false_positive_alternates_group_id )
+                
+            else:
+                
+                self._DuplicatesSetFalsePositive( smaller_false_positive_alternates_group_id, alternates_group_id_a )
+                
+            
+        
+        # remove master record
+        
+        self._c.execute( 'DELETE FROM alternate_file_groups WHERE alternates_group_id = ?;', ( alternates_group_id_b, ) )
+        
+        # pubsub to refresh alternates info for alternates_group_id_a and _b goes here
         
     
     def _DuplicatesSetDuplicatePairStatus( self, pair_info ):
@@ -2547,19 +3065,6 @@ class DB( HydrusDB.HydrusDB ):
             if len( service_keys_to_content_updates ) > 0:
                 
                 self._ProcessContentUpdates( service_keys_to_content_updates )
-                
-            
-            if duplicate_type is None:
-                
-                hash_id_a = self._GetHashId( hash_a )
-                hash_id_b = self._GetHashId( hash_b )
-                
-                smaller_hash_id = min( hash_id_a, hash_id_b )
-                larger_hash_id = max( hash_id_a, hash_id_b )
-                
-                self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ?;', ( smaller_hash_id, larger_hash_id ) )
-                
-                continue
                 
             
             if duplicate_type == HC.DUPLICATE_WORSE:
@@ -2572,48 +3077,68 @@ class DB( HydrusDB.HydrusDB ):
             hash_id_a = self._GetHashId( hash_a )
             hash_id_b = self._GetHashId( hash_b )
             
-            self._DuplicatesSetDuplicatePairStatusSingleRow( duplicate_type, hash_id_a, hash_id_b )
-            
-            if duplicate_type == HC.DUPLICATE_BETTER:
+            if duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
                 
-                # anything better than A is now better than B
-                # i.e. for all X for which X > A, set X > B
-                # anything worse than B is now worse than A
-                # i.e. for all X for which B > X, set A > X
+                media_id_a = self._DuplicatesGetMediaId( hash_id_a )
+                media_id_b = self._DuplicatesGetMediaId( hash_id_b )
                 
-                better_than_a = set()
+                alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
+                alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
                 
-                better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
-                better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
-                
-                for better_than_a_hash_id in better_than_a:
+                if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
                     
-                    self._DuplicatesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
+                    self._DuplicatesSetFalsePositive( alternates_group_id_a, alternates_group_id_b )
+                    
+                elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+                    
+                    self._DuplicatesSetAlternates( alternates_group_id_a, alternates_group_id_b )
                     
                 
-                worse_than_b = set()
+                smaller_hash_id = min( hash_id_a, hash_id_b )
+                larger_hash_id = max( hash_id_a, hash_id_b )
                 
-                worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
-                worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
+                # this isn't strictly needed in the new system, but it catches extras from the old system and catches unforeseen problems
+                self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_POTENTIAL, smaller_hash_id, larger_hash_id ) )
                 
-                for worse_than_b_hash_id in worse_than_b:
+            else:
+                
+                self._DuplicatesSetDuplicatePairStatusSingleRow( duplicate_type, hash_id_a, hash_id_b )
+                
+                if duplicate_type == HC.DUPLICATE_BETTER:
                     
-                    self._DuplicatesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
+                    # anything better than A is now better than B
+                    # i.e. for all X for which X > A, set X > B
+                    # anything worse than B is now worse than A
+                    # i.e. for all X for which B > X, set A > X
                     
-                
-            
-            if duplicate_type != HC.DUPLICATE_UNKNOWN:
+                    better_than_a = set()
+                    
+                    better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
+                    better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
+                    
+                    for better_than_a_hash_id in better_than_a:
+                        
+                        self._DuplicatesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
+                        
+                    
+                    worse_than_b = set()
+                    
+                    worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
+                    worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
+                    
+                    for worse_than_b_hash_id in worse_than_b:
+                        
+                        self._DuplicatesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
+                        
+                    
                 
                 self._DuplicatesSyncSameQualityDuplicates( hash_id_a )
                 self._DuplicatesSyncSameQualityDuplicates( hash_id_b )
                 
-                self._DuplicatesSyncBetterWorseDuplicates( hash_id_a )
-                self._DuplicatesSyncBetterWorseDuplicates( hash_id_b )
-                
             
         
     
-    def _DuplicatesSetDuplicatePairStatusSingleRow( self, duplicate_type, hash_id_a, hash_id_b, only_update_given_previous_status = None ):
+    def _DuplicatesSetDuplicatePairStatusSingleRow( self, duplicate_type, hash_id_a, hash_id_b ):
         
         smaller_hash_id = min( hash_id_a, hash_id_b )
         larger_hash_id = max( hash_id_a, hash_id_b )
@@ -2641,54 +3166,73 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if only_update_given_previous_status is None:
+        result = self._c.execute( 'SELECT 1 FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( smaller_hash_id, larger_hash_id, duplicate_type ) ).fetchone()
+        
+        if result is None: # i.e. we are not needlessly overwriting
             
-            result = self._c.execute( 'SELECT 1 FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( smaller_hash_id, larger_hash_id, duplicate_type ) ).fetchone()
-            
-            if result is None: # i.e. we are not needlessly overwriting
-                
-                self._c.execute( 'REPLACE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( smaller_hash_id, larger_hash_id, duplicate_type ) )
-                
-            
-        else:
-            
-            self._c.execute( 'UPDATE duplicate_pairs SET duplicate_type = ? WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( duplicate_type, smaller_hash_id, larger_hash_id, only_update_given_previous_status ) )
+            self._c.execute( 'REPLACE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( smaller_hash_id, larger_hash_id, duplicate_type ) )
             
         
     
-    def _DuplicatesSyncBetterWorseDuplicates( self, hash_id ):
+    def _DuplicatesSetFalsePositive( self, alternates_group_id_a, alternates_group_id_b ):
         
-        # better/worse files are inherantly 'the same' in some very close way, so 'not dupe' and 'alternate' relationships should apply to them all the same
-        # so, replicate all of our file's 'not dupe' and 'alternate' relationships to all of its 'better/worse' siblings
-        
-        applicable_relationships = set()
-        
-        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
+        if alternates_group_id_a == alternates_group_id_b:
             
-            applicable_relationships.add( ( smaller_hash_id, duplicate_type ) )
+            return
             
         
-        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
+        self._DuplicatesSplitPotentialGroups( alternates_group_id_a, alternates_group_id_b )
+        
+        smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
+        larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
+        
+        self._c.execute( 'INSERT OR IGNORE INTO duplicate_false_positives ( smaller_alternates_group_id, larger_alternates_group_id ) VALUES ( ?, ? );', ( smaller_alternates_group_id, larger_alternates_group_id ) )
+        
+    
+    def _DuplicatesSplitPotentialGroups( self, alternates_group_id_a, alternates_group_id_b ):
+        
+        # these groups are being set as false positive or merging. therefore, any potential between them no longer applies
+        
+        media_ids = set()
+        
+        media_ids.update( self._DuplicatesGetAlternateMediaIds( alternates_group_id_a ) )
+        media_ids.update( self._DuplicatesGetAlternateMediaIds( alternates_group_id_b ) )
+        
+        # update this to say that potential groups containing more than one of the above should be split based on that difference, auto-clearing groups with only one remaining
+        # get all potential groups for our media_ids
+        # for every group:
+          # if group contains multiple of our media_ids:
+            # delete group
+            # if group contained other members:
+              # create new groups with ( media_id, other_members ) for all shared media_ids in this group
+        
+        # for now, we'll just delete specific shared pairs:
+        
+        all_hash_ids = set()
+        
+        for media_id in media_ids:
             
-            applicable_relationships.add( ( larger_hash_id, duplicate_type ) )
+            all_hash_ids.update( self._DuplicatesGetDuplicateHashIds( media_id ) )
             
         
-        all_better_worse_siblings = set()
+        potential_duplicate_pairs = set()
         
-        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
-        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
+        potential_duplicate_pairs.update( self._SelectFromList( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ' + str( HC.DUPLICATE_POTENTIAL ) + ' AND smaller_hash_id IN {};', all_hash_ids ) )
+        potential_duplicate_pairs.update( self._SelectFromList( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ' + str( HC.DUPLICATE_POTENTIAL ) + ' AND larger_hash_id IN {};', all_hash_ids ) )
         
-        for sibling_hash_id in all_better_worse_siblings:
+        deletees = []
+        
+        for ( smaller_hash_id, larger_hash_id ) in potential_duplicate_pairs:
             
-            for ( other_hash_id, duplicate_type ) in applicable_relationships:
+            if smaller_hash_id in all_hash_ids and larger_hash_id in all_hash_ids:
                 
-                if other_hash_id == sibling_hash_id:
-                    
-                    continue
-                    
+                deletees.append( ( smaller_hash_id, larger_hash_id ) )
                 
-                self._DuplicatesSetDuplicatePairStatusSingleRow( duplicate_type, sibling_hash_id, other_hash_id )
-                
+            
+        
+        if len( deletees ) > 0:
+            
+            self._c.executemany( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? and duplicate_type = ?;', ( ( smaller_hash_id, larger_hash_id, HC.DUPLICATE_POTENTIAL ) for ( smaller_hash_id, larger_hash_id ) in deletees ) )
             
         
     
@@ -2699,7 +3243,7 @@ class DB( HydrusDB.HydrusDB ):
         
         all_relationships = set()
         
-        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND larger_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
+        for ( smaller_hash_id, duplicate_type ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND larger_hash_id = ?;', ( HC.DUPLICATE_POTENTIAL, hash_id ) ):
             
             if duplicate_type == HC.DUPLICATE_SMALLER_BETTER:
                 
@@ -2713,7 +3257,7 @@ class DB( HydrusDB.HydrusDB ):
             all_relationships.add( ( smaller_hash_id, duplicate_type ) )
             
         
-        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
+        for ( larger_hash_id, duplicate_type ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_POTENTIAL, hash_id ) ):
             
             if duplicate_type == HC.DUPLICATE_SMALLER_BETTER:
                 
@@ -6075,7 +6619,7 @@ class DB( HydrusDB.HydrusDB ):
         stop_time_for_finding_files = HydrusData.GetNowPrecise() + ( max_time_to_take / 2 )
         stop_time_for_finding_tags = HydrusData.GetNowPrecise() + ( max_time_to_take / 2 )
         
-        search_tags = siblings_manager.CollapseTags( service_key, search_tags )
+        search_tags = siblings_manager.CollapseTags( service_key, search_tags, service_strict = True )
         
         service_id = self._GetServiceId( service_key )
         
@@ -7247,7 +7791,7 @@ class DB( HydrusDB.HydrusDB ):
             
             approx_disk_cache_size = psutil.virtual_memory().available * 4 / 5
             
-            disk_cache_limit = approx_disk_cache_size * 2 / 3
+            disk_cache_limit = approx_disk_cache_size / 3
             
         except psutil.Error:
             
@@ -9112,13 +9656,6 @@ class DB( HydrusDB.HydrusDB ):
         
         for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewFiles(), FILES_CHUNK_SIZE ):
             
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
             precise_timestamp = HydrusData.GetNowPrecise()
             
             files_info_rows = []
@@ -9144,17 +9681,17 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new files' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        for chunk in HydrusData.SplitListIntoChunks( content_update.GetDeletedFiles(), FILES_CHUNK_SIZE ):
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        for chunk in HydrusData.SplitListIntoChunks( content_update.GetDeletedFiles(), FILES_CHUNK_SIZE ):
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9171,17 +9708,17 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted files' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetNewMappings(), MAPPINGS_CHUNK_SIZE ):
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetNewMappings(), MAPPINGS_CHUNK_SIZE ):
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9206,17 +9743,17 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new mappings' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetDeletedMappings(), MAPPINGS_CHUNK_SIZE ):
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetDeletedMappings(), MAPPINGS_CHUNK_SIZE ):
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9241,17 +9778,17 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted mappings' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewTagParents(), NEW_TAG_PARENTS_CHUNK_SIZE ):
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewTagParents(), NEW_TAG_PARENTS_CHUNK_SIZE ):
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9274,19 +9811,19 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new tag parents' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        deleted_parents = content_update.GetDeletedTagParents()
-        
-        if len( deleted_parents ) > 0:
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        deleted_parents = content_update.GetDeletedTagParents()
+        
+        if len( deleted_parents ) > 0:
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9309,19 +9846,19 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted tag parents' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        new_siblings = content_update.GetNewTagSiblings()
-        
-        if len( new_siblings ) > 0:
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        new_siblings = content_update.GetNewTagSiblings()
+        
+        if len( new_siblings ) > 0:
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9344,19 +9881,19 @@ class DB( HydrusDB.HydrusDB ):
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new tag siblings' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
-        
-        #
-        
-        deleted_siblings = content_update.GetDeletedTagSiblings()
-        
-        if len( deleted_siblings ) > 0:
-            
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
             if should_quit:
                 
                 return False
                 
+            
+        
+        #
+        
+        deleted_siblings = content_update.GetDeletedTagSiblings()
+        
+        if len( deleted_siblings ) > 0:
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -9378,6 +9915,13 @@ class DB( HydrusDB.HydrusDB ):
             
             report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted tag siblings' )
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
             
         
         return True
@@ -9405,6 +9949,11 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _ProcessRepositoryUpdates( self, service_key, only_when_idle = False, stop_time = None ):
+        
+        if stop_time is None:
+            
+            stop_time = HydrusData.GetNow() + 3600
+            
         
         db_path = os.path.join( self._db_dir, 'client.mappings.db' )
         
@@ -9487,7 +10036,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._controller.pub( 'splash_set_status_text', status, print_to_log = False )
                 job_key.SetVariable( 'popup_text_1', status )
                 
-                stop_time = HydrusData.GetNow() + min( 15 + ( num_updates_to_do * 30 ), 300 )
+                stop_time = HydrusData.GetNow() + min( 5 + num_updates_to_do, 20 )
                 
                 self._LoadIntoDiskCache( stop_time = stop_time, for_processing = True )
                 
@@ -9509,13 +10058,6 @@ class DB( HydrusDB.HydrusDB ):
                     try:
                         
                         for hash_id in definition_hash_ids:
-                            
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit:
-                                
-                                return ( True, False )
-                                
                             
                             status = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
                             
@@ -9547,6 +10089,13 @@ class DB( HydrusDB.HydrusDB ):
                             
                             total_definitions_rows += num_rows
                             transaction_rows += num_rows
+                            
+                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                            
+                            if should_quit:
+                                
+                                return ( True, False )
+                                
                             
                             been_a_minute = HydrusData.TimeHasPassed( self._transaction_started + 60 )
                             been_a_hundred_k = transaction_rows > 100000
@@ -9597,13 +10146,6 @@ class DB( HydrusDB.HydrusDB ):
                         
                         for hash_id in content_hash_ids:
                             
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit:
-                                
-                                return ( True, False )
-                                
-                            
                             status = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
                             
                             job_key.SetVariable( 'popup_text_1', status )
@@ -9637,6 +10179,13 @@ class DB( HydrusDB.HydrusDB ):
                             
                             total_content_rows += num_rows
                             transaction_rows += num_rows
+                            
+                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                            
+                            if should_quit:
+                                
+                                return ( True, False )
+                                
                             
                             been_a_minute = HydrusData.TimeHasPassed( self._transaction_started + 60 )
                             been_a_million = transaction_rows > 1000000
@@ -9710,7 +10259,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetDuplicatePairsForFiltering( *args, **kwargs )
-        elif action == 'file_duplicate_hashes': result = self._DuplicatesGetFileDuplicateHashes( *args, **kwargs )
+        elif action == 'file_duplicate_hashes': result = self._DuplicatesGetFileHashesByDuplicateType( *args, **kwargs )
         elif action == 'file_duplicate_types_to_counts': result = self._DuplicatesGetFileDuplicateCounts( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
         elif action == 'file_maintenance_get_job': result = self._FileMaintenanceGetJob( *args, **kwargs )
@@ -9741,7 +10290,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'trash_hashes': result = self._GetTrashHashes( *args, **kwargs )
         elif action == 'options': result = self._GetOptions( *args, **kwargs )
         elif action == 'pending': result = self._GetPending( *args, **kwargs )
-        elif action == 'random_unknown_duplicate_hashes': result = self._DuplicatesGetRandomUnknownDuplicateHashes( *args, **kwargs )
+        elif action == 'random_potential_duplicate_hashes': result = self._DuplicatesGetRandomPotentialDuplicateHashes( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'repository_progress': result = self._GetRepositoryProgress( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
@@ -9759,7 +10308,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
-        elif action == 'unknown_duplicates_count': result = self._DuplicatesGetUnknownDuplicatesCount( *args, **kwargs )
+        elif action == 'potential_duplicates_count': result = self._DuplicatesGetPotentialDuplicatesCount( *args, **kwargs )
         elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
@@ -12317,6 +12866,52 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.file_maintenance_jobs ( hash_id INTEGER, job_type INTEGER, time_can_start INTEGER, PRIMARY KEY ( hash_id, job_type ) );' )
             
         
+        if version == 353:
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_files ( media_id INTEGER PRIMARY KEY, king_hash_id INTEGER UNIQUE );' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_file_members ( media_id INTEGER, hash_id INTEGER UNIQUE, PRIMARY KEY ( media_id, hash_id ) );' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS duplicate_false_positives ( smaller_alternates_group_id INTEGER, larger_alternates_group_id INTEGER, PRIMARY KEY ( smaller_alternates_group_id, larger_alternates_group_id ) );' )
+            self._CreateIndex( 'duplicate_false_positives', [ 'larger_alternates_group_id', 'smaller_alternates_group_id' ], unique = True )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS alternate_file_groups ( alternates_group_id INTEGER PRIMARY KEY );' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS alternate_file_group_members ( alternates_group_id INTEGER, media_id INTEGER UNIQUE, PRIMARY KEY ( alternates_group_id, media_id ) );' )
+            
+            # now do it
+            
+            alternate_pairs = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_ALTERNATE, ) ).fetchall()
+            
+            for ( hash_id_a, hash_id_b ) in alternate_pairs:
+                
+                media_id_a = self._DuplicatesGetMediaId( hash_id_a )
+                media_id_b = self._DuplicatesGetMediaId( hash_id_b )
+                
+                alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
+                alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
+                
+                self._DuplicatesSetAlternates( alternates_group_id_a, alternates_group_id_b )
+                
+            
+            self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_ALTERNATE, ) )
+            
+            false_positive_pairs = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_FALSE_POSITIVE, ) ).fetchall()
+            
+            for ( hash_id_a, hash_id_b ) in false_positive_pairs:
+                
+                media_id_a = self._DuplicatesGetMediaId( hash_id_a )
+                media_id_b = self._DuplicatesGetMediaId( hash_id_b )
+                
+                alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
+                alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
+                
+                self._DuplicatesSetFalsePositive( alternates_group_id_a, alternates_group_id_b )
+                
+            
+            self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_FALSE_POSITIVE, ) )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -12879,7 +13474,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
         elif action == 'delete_serialisable_named': self._DeleteJSONDumpNamed( *args, **kwargs )
         elif action == 'delete_service_info': self._DeleteServiceInfo( *args, **kwargs )
-        elif action == 'delete_unknown_duplicate_pairs': self._DuplicatesDeleteUnknownDuplicatePairs( *args, **kwargs )
+        elif action == 'delete_potential_duplicate_pairs': self._DuplicatesDeletePotentialDuplicatePairs( *args, **kwargs )
         elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
         elif action == 'duplicate_pair_status': self._DuplicatesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'export_mappings': self._ExportToTagArchive( *args, **kwargs )

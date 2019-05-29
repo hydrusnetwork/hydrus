@@ -181,6 +181,8 @@ class Controller( HydrusController.HydrusController ):
                 
                 try:
                     
+                    time.sleep( 1 )
+                    
                     port = service.GetPort()
                     
                     if HydrusNetworking.LocalPortInUse( port ):

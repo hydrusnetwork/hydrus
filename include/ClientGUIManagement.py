@@ -1047,10 +1047,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_items.append( ( 'normal', 'edit duplicate action options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
         
-        self._edit_merge_options = ClientGUICommon.MenuButton( self._main_right_panel, 'edit default duplicate action options', menu_items )
+        self._edit_merge_options = ClientGUICommon.MenuButton( self._main_right_panel, 'edit default duplicate metadata merge options', menu_items )
         
         #
         
@@ -1066,7 +1066,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._both_files_match = wx.CheckBox( self._filtering_panel )
         
-        self._num_unknown_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
+        self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
         self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.GlobalBMPs.refresh, self._RefreshDuplicateCounts )
         
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
@@ -1075,7 +1075,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         random_filtering_panel = ClientGUICommon.StaticBox( self._main_right_panel, 'quick and dirty processing' )
         
-        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential pairs', self._ShowSomeDupes )
+        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential pairs', self._ShowRandomPotentialDupes )
         
         self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as duplicates of the same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
         self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all related alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
@@ -1155,7 +1155,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         text_and_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        text_and_button_hbox.Add( self._num_unknown_duplicates, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        text_and_button_hbox.Add( self._num_potential_duplicates, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         text_and_button_hbox.Add( self._refresh_dupe_counts_button, CC.FLAGS_VCENTER )
         
         rows = []
@@ -1258,7 +1258,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _RefreshDuplicateCounts( self ):
         
-        def wx_code( unknown_duplicates_count ):
+        def wx_code( potential_duplicates_count ):
             
             if not self:
                 
@@ -1269,14 +1269,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._refresh_dupe_counts_button.Enable()
             
-            self._UpdateUnknownDuplicatesCount( unknown_duplicates_count )
+            self._UpdatePotentialDuplicatesCount( potential_duplicates_count )
             
         
         def thread_do_it( file_search_context, both_files_match ):
             
-            unknown_duplicates_count = HG.client_controller.Read( 'unknown_duplicates_count', file_search_context, both_files_match )
+            potential_duplicates_count = HG.client_controller.Read( 'potential_duplicates_count', file_search_context, both_files_match )
             
-            wx.CallAfter( wx_code, unknown_duplicates_count )
+            wx.CallAfter( wx_code, potential_duplicates_count )
             
         
         if not self._currently_refreshing_dupe_count_numbers:
@@ -1285,7 +1285,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._refresh_dupe_counts_button.Disable()
             
-            self._num_unknown_duplicates.SetLabelText( 'updating\u2026' )
+            self._num_potential_duplicates.SetLabelText( 'updating\u2026' )
             
             ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
             
@@ -1355,7 +1355,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._controller.Write( 'delete_unknown_duplicate_pairs' )
+                self._controller.Write( 'delete_potential_duplicate_pairs' )
                 
                 self._RefreshMaintenanceStatus()
                 
@@ -1402,7 +1402,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._RefreshDuplicateCounts()
             
-            self._ShowSomeDupes()
+            self._ShowRandomPotentialDupes()
             
         
     
@@ -1413,11 +1413,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._UpdateMaintenanceStatus()
         
     
-    def _ShowSomeDupes( self ):
+    def _ShowRandomPotentialDupes( self ):
         
         ( file_search_context, both_files_match ) = self._GetFileSearchContextAndBothFilesMatch()
         
-        hashes = self._controller.Read( 'random_unknown_duplicate_hashes', file_search_context, both_files_match )
+        file_service_key = file_search_context.GetFileServiceKey()
+        
+        hashes = self._controller.Read( 'random_potential_duplicate_hashes', file_search_context, both_files_match )
         
         if len( hashes ) == 0:
             
@@ -1435,7 +1437,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             return
             
         
-        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, media_results )
+        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
         self._page.SwapMediaPanel( panel )
         
@@ -1552,11 +1554,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _UpdateUnknownDuplicatesCount( self, unknown_duplicates_count ):
+    def _UpdatePotentialDuplicatesCount( self, potential_duplicates_count ):
         
-        self._num_unknown_duplicates.SetLabelText( HydrusData.ToHumanInt( unknown_duplicates_count ) + ' potential pairs.' )
+        self._num_potential_duplicates.SetLabelText( HydrusData.ToHumanInt( potential_duplicates_count ) + ' potential pairs.' )
         
-        if unknown_duplicates_count > 0:
+        if potential_duplicates_count > 0:
             
             self._show_some_dupes.Enable()
             self._launch_filter.Enable()

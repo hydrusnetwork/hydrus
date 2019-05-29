@@ -683,6 +683,7 @@ class HydrusResource( Resource ):
             
             if self._service.SupportsCORS():
                 
+                request.setHeader( 'Access-Control-Allow-Headers', 'Hydrus-Client-API-Access-Key' )
                 request.setHeader( 'Access-Control-Allow-Origin', '*' )
                 request.setHeader( 'Access-Control-Allow-Methods', allowed_methods_string )
                 
@@ -700,7 +701,7 @@ class HydrusResource( Resource ):
             
         
         # 204 No Content
-        response_context = ResponseContext( 204 )
+        response_context = ResponseContext( 200, mime = HC.TEXT_PLAIN )
         
         return response_context
         

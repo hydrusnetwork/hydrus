@@ -798,6 +798,11 @@ class Frame( wx.Frame ):
         
         if menu is not None and menu in self._menu_stack:
             
+            if hasattr( menu, 'hydrus_menubar_name' ):
+                
+                HG.client_controller.MenubarMenuIsClosed()
+                
+            
             index = self._menu_stack.index( menu )
             
             del self._menu_stack[ index ]
@@ -848,6 +853,11 @@ class Frame( wx.Frame ):
         menu = event.GetMenu()
         
         if menu is not None:
+            
+            if hasattr( menu, 'hydrus_menubar_name' ):
+                
+                HG.client_controller.MenubarMenuIsOpen()
+                
             
             status_bar = HG.client_controller.GetGUI().GetStatusBar()
             

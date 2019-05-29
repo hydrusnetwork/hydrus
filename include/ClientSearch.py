@@ -107,7 +107,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
     
     re_predicate = compile_re( search_text )
     
-    sibling_manager = HG.client_controller.tag_siblings_manager
+    siblings_manager = HG.client_controller.tag_siblings_manager
     
     result = []
     
@@ -115,7 +115,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         
         if search_siblings:
             
-            possible_tags = sibling_manager.GetAllSiblings( service_key, tag )
+            possible_tags = siblings_manager.GetAllSiblings( service_key, tag )
             
         else:
             

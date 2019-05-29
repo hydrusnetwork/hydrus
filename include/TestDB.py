@@ -192,6 +192,252 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, [] )
         
     
+    def test_duplicates( self ):
+        
+        dupe_hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
+        similar_looking_alternate_hashes = [ HydrusData.GenerateKey() for i in range( 3 ) ]
+        similar_looking_false_positive_hashes = [ HydrusData.GenerateKey() for i in range( 3 ) ]
+        
+        all_hashes = set()
+        
+        all_hashes.update( dupe_hashes )
+        all_hashes.update( similar_looking_alternate_hashes )
+        all_hashes.update( similar_looking_false_positive_hashes )
+        
+        phash = os.urandom( 8 )
+        
+        # fake-import the files with the phash
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, None )
+        
+        for hash in all_hashes:
+            
+            fake_file_import_job = ClientImportFileSeeds.FileImportJob( 'fake path' )
+            
+            fake_file_import_job._hash = hash
+            fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, num_words )
+            fake_file_import_job._extra_hashes = ( b'abcd', b'abcd', b'abcd' )
+            fake_file_import_job._phashes = [ phash ]
+            fake_file_import_job._file_import_options = ClientImportOptions.FileImportOptions()
+            
+            self._write( 'import_file', fake_file_import_job )
+            
+        
+        # run search maintenance
+        
+        self._write( 'maintain_similar_files_tree' )
+        
+        self._write( 'maintain_similar_files_search_for_potential_duplicates', 0 )
+        
+        # get filter counts, random potential hashes, and dupe filter hashes
+        
+        size_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusData.ConvertUnitToInt( 'B' ) ) )
+        
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ size_pred ] )
+        
+        both_files_match = True
+        
+        num_potentials = self._read( 'potential_duplicates_count', file_search_context, both_files_match )
+        
+        n = len( all_hashes )
+        
+        # number pair combinations is (n(n-1))/2
+        expected_num_potentials = n * ( n - 1 ) / 2
+        
+        self.assertEqual( num_potentials, expected_num_potentials )
+        
+        result = self._read( 'random_potential_duplicate_hashes', file_search_context, both_files_match )
+        
+        self.assertEqual( len( result ), n )
+        
+        self.assertEqual( set( result ), all_hashes )
+        
+        filtering_pairs = self._read( 'duplicate_pairs_for_filtering', file_search_context, both_files_match )
+        
+        for ( a, b ) in filtering_pairs:
+            
+            self.assertIn( a, all_hashes )
+            self.assertIn( b, all_hashes )
+            
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, dupe_hashes[0] )
+        
+        self.assertEqual( len( result ), 1 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 10 )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, dupe_hashes[0], HC.DUPLICATE_POTENTIAL )
+        
+        self.assertEqual( result[0], dupe_hashes[0] )
+        
+        self.assertEqual( set( result ), all_hashes )
+        
+        # applying better/worse, test dup counts and hashes and king hash
+        
+        king_hash = dupe_hashes[0]
+        
+        row = ( HC.DUPLICATE_BETTER, dupe_hashes[0], dupe_hashes[1], {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        num_potentials = self._read( 'potential_duplicates_count', file_search_context, both_files_match )
+        
+        self.assertEqual( num_potentials, expected_num_potentials - 1 )
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, king_hash )
+        
+        self.assertEqual( len( result ), 2 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 9 )
+        self.assertEqual( result[ HC.DUPLICATE_BETTER ], 1 )
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, dupe_hashes[1] )
+        
+        self.assertEqual( len( result ), 2 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 9 )
+        self.assertEqual( result[ HC.DUPLICATE_WORSE ], 1 )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, king_hash, HC.DUPLICATE_BETTER )
+        
+        self.assertEqual( result, [ king_hash, dupe_hashes[1] ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, king_hash, HC.DUPLICATE_WORSE )
+        
+        self.assertEqual( result, [ king_hash ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, king_hash, HC.DUPLICATE_BETTER_OR_WORSE )
+        
+        self.assertEqual( result, [ king_hash, dupe_hashes[1] ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, dupe_hashes[1], HC.DUPLICATE_BETTER )
+        
+        self.assertEqual( result, [ dupe_hashes[1] ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, dupe_hashes[1], HC.DUPLICATE_WORSE )
+        
+        self.assertEqual( result, [ dupe_hashes[1], king_hash ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, dupe_hashes[1], HC.DUPLICATE_BETTER_OR_WORSE )
+        
+        self.assertEqual( result, [ dupe_hashes[1], king_hash ] )
+        
+        # applying better/worse for new king, test dup counts and hashes and king hash
+        
+        
+        
+        
+        # king_hash = dupe_hashes[2]
+        
+        # applying same quality, test dup counts and hashes and king hash
+        
+        # applying false positive, test dup counts and hashes and that potentials are cut/split as a result
+        
+        false_positive_king_hash = similar_looking_false_positive_hashes[0]
+        
+        row = ( HC.DUPLICATE_FALSE_POSITIVE, king_hash, false_positive_king_hash, {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        num_potentials = self._read( 'potential_duplicates_count', file_search_context, both_files_match )
+        
+        self.assertEqual( num_potentials, expected_num_potentials - 2 )
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, king_hash )
+        
+        self.assertEqual( len( result ), 3 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 8 )
+        self.assertEqual( result[ HC.DUPLICATE_BETTER ], 1 )
+        self.assertEqual( result[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, false_positive_king_hash )
+        
+        self.assertEqual( len( result ), 2 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 9 ) # if potentials are being reduced right in the new system, this will be less
+        self.assertEqual( result[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, king_hash, HC.DUPLICATE_FALSE_POSITIVE )
+        
+        self.assertEqual( result, [ king_hash, false_positive_king_hash ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, false_positive_king_hash, HC.DUPLICATE_FALSE_POSITIVE )
+        
+        self.assertEqual( result, [ false_positive_king_hash, king_hash ] )
+        
+        # applying alternate, test dup counts and hashes and that potentials are cut/split as a result
+        
+        alternate_king_hash = similar_looking_alternate_hashes[0]
+        
+        row = ( HC.DUPLICATE_ALTERNATE, king_hash, alternate_king_hash, {} )
+        
+        self._write( 'duplicate_pair_status', [ row ] )
+        
+        num_potentials = self._read( 'potential_duplicates_count', file_search_context, both_files_match )
+        
+        self.assertEqual( num_potentials, expected_num_potentials - 3 )
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, king_hash )
+        
+        self.assertEqual( len( result ), 4 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 7 )
+        self.assertEqual( result[ HC.DUPLICATE_BETTER ], 1 )
+        self.assertEqual( result[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        self.assertEqual( result[ HC.DUPLICATE_ALTERNATE ], 1 )
+        
+        result = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, alternate_king_hash )
+        
+        self.assertEqual( len( result ), 3 )
+        
+        self.assertEqual( result[ HC.DUPLICATE_POTENTIAL ], 9 ) # if potentials are being reduced right in the new system, this will be less
+        self.assertEqual( result[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        self.assertEqual( result[ HC.DUPLICATE_ALTERNATE ], 1 )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, king_hash, HC.DUPLICATE_ALTERNATE )
+        
+        self.assertEqual( result, [ king_hash, alternate_king_hash ] )
+        
+        result = self._read( 'file_duplicate_hashes', CC.LOCAL_FILE_SERVICE_KEY, alternate_king_hash, HC.DUPLICATE_ALTERNATE )
+        
+        self.assertEqual( result, [ alternate_king_hash, king_hash ] )
+        
+        # applying better/worse to false positive, test dup counts and hashes and that potentials are cut/split as a result
+        
+        # applying better/worse to alternate, test dup counts and hashes and that potentials are cut/split as a result
+        
+        # applying same quality to false positive, test dup counts and hashes and that potentials are cut/split as a result
+        
+        # applying same quality to alternate, test dup counts and hashes and that potentials are cut/split as a result
+        
+        # now we have some set up, try adding some impossible relationships and make sure they don't change anything
+        
+        king_hash_counts = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, king_hash )
+        false_positive_king_hash_counts = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, false_positive_king_hash )
+        alternate_king_hash_counts = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, alternate_king_hash )
+        
+        for duplicate_type in [ HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ]: # [ HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ]:
+            
+            for ( hash_a, hash_b ) in itertools.combinations( [ king_hash, false_positive_king_hash, alternate_king_hash ], 2 ):
+                
+                row = ( duplicate_type, king_hash, alternate_king_hash, {} )
+                
+                self._write( 'duplicate_pair_status', [ row ] )
+                
+            
+        
+        king_hash_counts_after = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, king_hash )
+        false_positive_king_hash_counts_after = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, false_positive_king_hash )
+        alternate_king_hash_counts_after = self._read( 'file_duplicate_types_to_counts', CC.LOCAL_FILE_SERVICE_KEY, alternate_king_hash )
+        
+        self.assertEqual( king_hash_counts, king_hash_counts_after )
+        self.assertEqual( false_positive_king_hash_counts, false_positive_king_hash_counts_after )
+        self.assertEqual( alternate_king_hash_counts, alternate_king_hash_counts_after )
+        
+        # test dissolve actions will reset counts to 0
+        
+    
     def test_export_folders( self ):
         
         file_search_context = ClientSearch.FileSearchContext(file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'test' ) ] )
@@ -788,16 +1034,16 @@ class TestClientDB( unittest.TestCase ):
         
         test_files = []
         
-        test_files.append( ( 'muh_swf.swf', 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf', 456774, HC.APPLICATION_FLASH, 400, 400, 33, 1, None ) )
-        test_files.append( ( 'muh_mp4.mp4', '2fa293907144a046d043d74e9570b1c792cbfd77ee3f5c93b2b1a1cb3e4c7383', 570534, HC.VIDEO_MP4, 480, 480, 'mp4_duration', 151, None ) )
-        test_files.append( ( 'muh_mpeg.mpeg', 'aebb10aaf3b27a5878fd2732ea28aaef7bbecef7449eaa759421c4ba4efff494', 772096, HC.VIDEO_MPEG, 720, 480, 3500, 105, None ) )
-        test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, 4010, 120, None ) )
-        test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, None, None, None ) )
-        test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49', 31452, HC.IMAGE_PNG, 191, 196, None, None, None ) )
-        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, 'apng_duration', 47, None ) )
-        test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, 600, 5, None ) )
+        test_files.append( ( 'muh_swf.swf', 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf', 456774, HC.APPLICATION_FLASH, 400, 400, { 33 }, { 1 }, None ) )
+        test_files.append( ( 'muh_mp4.mp4', '2fa293907144a046d043d74e9570b1c792cbfd77ee3f5c93b2b1a1cb3e4c7383', 570534, HC.VIDEO_MP4, 480, 480, { 6266, 6290 }, { 151 }, None ) )
+        test_files.append( ( 'muh_mpeg.mpeg', 'aebb10aaf3b27a5878fd2732ea28aaef7bbecef7449eaa759421c4ba4efff494', 772096, HC.VIDEO_MPEG, 720, 480, { 3500 }, { 105 }, None ) )
+        test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, { 4010 }, { 120 }, None ) )
+        test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, { None }, { None }, None ) )
+        test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49', 31452, HC.IMAGE_PNG, 191, 196, { None }, { None }, None ) )
+        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, { 3133, 1880, 1125, 1800 }, { 27, 47 }, None ) )
+        test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, { 600 }, { 5 }, None ) )
         
-        for ( filename, hex_hash, size, mime, width, height, duration, num_frames, num_words ) in test_files:
+        for ( filename, hex_hash, size, mime, width, height, durations, nums_frame, num_words ) in test_files:
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
@@ -846,21 +1092,8 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( mr_mime, mime )
             self.assertEqual( mr_width, width )
             self.assertEqual( mr_height, height )
-            
-            if duration == 'apng_duration': # diff ffmpeg versions report differently
-                
-                self.assertIn( mr_duration, ( 3133, 1880, 1125, 1800 ) )
-                
-            elif duration == 'mp4_duration':
-                
-                self.assertIn( mr_duration, ( 6266, 6290 ) )
-                
-            else:
-                
-                self.assertEqual( mr_duration, duration )
-                
-            
-            self.assertEqual( mr_num_frames, num_frames )
+            self.assertIn( mr_duration, durations )
+            self.assertIn( mr_num_frames, nums_frame )
             self.assertEqual( mr_num_words, num_words )
             
         

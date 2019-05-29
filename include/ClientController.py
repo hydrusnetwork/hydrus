@@ -992,6 +992,16 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def MenubarMenuIsOpen( self ):
+        
+        self._menu_open = True
+        
+    
+    def MenubarMenuIsClosed( self ):
+        
+        self._menu_open = False
+        
+    
     def MenuIsOpen( self ):
         
         return self._menu_open
@@ -1071,6 +1081,8 @@ class Controller( HydrusController.HydrusController ):
             def StartServer( *args, **kwargs ):
                 
                 try:
+                    
+                    time.sleep( 1 )
                     
                     if HydrusNetworking.LocalPortInUse( port ):
                     

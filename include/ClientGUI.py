@@ -72,20 +72,20 @@ MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'servi
 
 def THREADUploadPending( service_key ):
     
-    service = HG.client_controller.services_manager.GetService( service_key )
-    
-    service_name = service.GetName()
-    service_type = service.GetServiceType()
-    
-    nums_pending = HG.client_controller.Read( 'nums_pending' )
-    
-    info = nums_pending[ service_key ]
-    
-    initial_num_pending = sum( info.values() )
-    
-    result = HG.client_controller.Read( 'pending', service_key )
-    
     try:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        service_name = service.GetName()
+        service_type = service.GetServiceType()
+        
+        nums_pending = HG.client_controller.Read( 'nums_pending' )
+        
+        info = nums_pending[ service_key ]
+        
+        initial_num_pending = sum( info.values() )
+        
+        result = HG.client_controller.Read( 'pending', service_key )
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
         
@@ -204,6 +204,14 @@ def THREADUploadPending( service_key ):
             result = HG.client_controller.Read( 'pending', service_key )
             
         
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.SetVariable( 'popup_text_1', 'upload done!' )
+        
+        HydrusData.Print( job_key.ToString() )
+        
+        job_key.Finish()
+        job_key.Delete( 5 )
+        
     except Exception as e:
         
         r = re.search( '[a-fA-F0-9]{64}', str( e ) )
@@ -223,17 +231,12 @@ def THREADUploadPending( service_key ):
         
         raise
         
+    finally:
+        
+        HG.currently_uploading_pending = False
+        HG.client_controller.pub( 'notify_new_pending' )
+        
     
-    job_key.DeleteVariable( 'popup_gauge_1' )
-    job_key.SetVariable( 'popup_text_1', 'upload done!' )
-    
-    HydrusData.Print( job_key.ToString() )
-    
-    job_key.Finish()
-    
-    job_key.Delete( 5 )
-    
-
 class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def __init__( self, controller ):
@@ -1418,11 +1421,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _GenerateMenuInfo( self, name ):
         
-        menu = wx.Menu()
-        
-        menu.hydrus_menubar_name = name
-        
         def file():
+            
+            menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'import files', 'Add new files to the database.', self._ImportFiles )
             
@@ -1518,7 +1519,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'exit', 'Shut the client down.', self.Exit )
             
-            return ( menu, '&file', True )
+            return ( menu, '&file' )
             
         
         def undo():
@@ -1533,7 +1534,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if have_closed_pages or have_undo_stuff:
                 
-                show = True
+                menu = wx.Menu()
                 
                 if undo_string is not None:
                     
@@ -1576,13 +1577,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             else:
                 
-                show = False
+                menu = None
                 
             
-            return ( menu, '&undo', show )
+            return ( menu, '&undo' )
             
         
         def pages():
+            
+            menu = wx.Menu()
             
             if self._controller.new_options.GetBoolean( 'advanced_mode' ):
                 
@@ -1788,10 +1791,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
-            return ( menu, '&pages', True )
+            return ( menu, '&pages' )
             
         
         def database():
+            
+            menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
             
@@ -1860,7 +1865,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
-            return ( menu, '&database', True )
+            return ( menu, '&database' )
             
         
         def pending():
@@ -1869,7 +1874,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             total_num_pending = 0
             
-            for ( service_key, info ) in list(nums_pending.items()):
+            menu = None
+            
+            can_do_a_menu = not HG.currently_uploading_pending
+            
+            for ( service_key, info ) in nums_pending.items():
                 
                 service = self._controller.services_manager.GetService( service_key )
                 
@@ -1903,7 +1912,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
                     
                 
-                if num_pending + num_petitioned > 0:
+                if can_do_a_menu and num_pending + num_petitioned > 0:
+                    
+                    if menu is None:
+                        
+                        menu = wx.Menu()
+                        
                     
                     submenu = wx.Menu()
                     
@@ -1930,12 +1944,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 total_num_pending += num_pending + num_petitioned
                 
             
-            show = total_num_pending > 0
-            
-            return ( menu, '&pending (' + HydrusData.ToHumanInt( total_num_pending ) + ')', show )
+            return ( menu, '&pending (' + HydrusData.ToHumanInt( total_num_pending ) + ')' )
             
         
         def network():
+            
+            menu = wx.Menu()
             
             submenu = wx.Menu()
             
@@ -2036,10 +2050,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
-            return ( menu, '&network', True )
+            return ( menu, '&network' )
             
         
         def services():
+            
+            menu = wx.Menu()
             
             tag_services = self._controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
             file_services = self._controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) )
@@ -2157,10 +2173,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
             
-            return ( menu, '&services', True )
+            return ( menu, '&services' )
             
         
         def help():
+            
+            menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
             
@@ -2284,7 +2302,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', wx.MessageBox, CC.SHORTCUT_HELP )
             ClientGUIMenus.AppendMenuItem( self, menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )
             
-            return ( menu, '&help', True )
+            return ( menu, '&help' )
             
         
         if name == 'file': result = file()
@@ -2297,23 +2315,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         elif name == 'help': result = help()
         
         # hackery dackery doo
-        ( menu, label, show ) = result
+        ( menu_or_none, label ) = result
         
-        if show:
+        if menu_or_none is not None:
+            
+            menu = menu_or_none
+            
+            menu.hydrus_menubar_name = name
             
             if HC.PLATFORM_OSX:
                 
                 menu.SetTitle( label ) # causes bugs in os x if this is not here
                 
             
-        else:
-            
-            ClientGUIMenus.DestroyMenu( self, menu )
-            
-            menu = None
-            
         
-        return ( menu, label, show )
+        return ( menu_or_none, label )
         
     
     def _GenerateNewAccounts( self, service_key ):
@@ -2543,9 +2559,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         for name in MENU_ORDER:
             
-            ( menu_or_none, label, show ) = self._GenerateMenuInfo( name )
+            ( menu_or_none, label ) = self._GenerateMenuInfo( name )
             
-            if show:
+            if menu_or_none is not None:
                 
                 menu = menu_or_none
                 
@@ -4105,6 +4121,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
+        HG.currently_uploading_pending = True
+        
         self._controller.CallToThread( THREADUploadPending, service_key )
         
     
@@ -4515,9 +4533,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self.DeleteAllClosedPages() # wx crashes if any are left in here, wew
             
-            self._message_manager.CleanBeforeDestroy()
-            
-            self._message_manager.Hide()
+            if self._message_manager:
+                
+                self._message_manager.CleanBeforeDestroy()
+                
+                self._message_manager.Hide()
+                
             
             self._notebook.CleanBeforeDestroy()
             
@@ -4953,8 +4974,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         db_going_to_hang_if_we_hit_it = HG.client_controller.DBCurrentlyDoingJob()
+        menu_open = HG.client_controller.MenuIsOpen()
         
-        if db_going_to_hang_if_we_hit_it:
+        if db_going_to_hang_if_we_hit_it or menu_open:
             
             self._controller.CallLaterWXSafe( self, 0.5, self.RefreshMenu )
             
@@ -4965,13 +4987,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             name = self._dirty_menus.pop()
             
-            ( menu_or_none, label, show ) = self._GenerateMenuInfo( name )
+            ( menu_or_none, label ) = self._GenerateMenuInfo( name )
             
             old_menu_index = self._FindMenuBarIndex( name )
             
             if old_menu_index == wx.NOT_FOUND:
                 
-                if show:
+                if menu_or_none is not None:
                     
                     menu = menu_or_none
                     
@@ -4998,20 +5020,27 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             else:
                 
-                old_menu = self._menubar.GetMenu( old_menu_index )
-                
-                if show:
+                if name == 'pending' and HG.currently_uploading_pending:
                     
-                    menu = menu_or_none
-                    
-                    self._menubar.Replace( old_menu_index, menu, label )
+                    self._menubar.SetMenuLabel( old_menu_index, label )
                     
                 else:
                     
-                    self._menubar.Remove( old_menu_index )
+                    old_menu = self._menubar.GetMenu( old_menu_index )
                     
-                
-                ClientGUIMenus.DestroyMenu( self, old_menu )
+                    if menu_or_none is not None:
+                        
+                        menu = menu_or_none
+                        
+                        self._menubar.Replace( old_menu_index, menu, label )
+                        
+                    else:
+                        
+                        self._menubar.Remove( old_menu_index )
+                        
+                    
+                    ClientGUIMenus.DestroyMenu( self, old_menu )
+                    
                 
             
         
