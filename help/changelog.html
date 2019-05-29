@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 354</h3></li>
+				<ul>
+					<li>duplicates important:</li>
+					<li>duplicates 'false positive' and 'alternates' pairs are now stored in a new more efficient structure that is better suited for larger groups of files</li>
+					<li>alternate relationships are now implicitly transitive--if A is alternate B and A is alternate C, B is now alternate C</li>
+					<li>false positive relationships remain correctly non-transitive, but they are now implicitly shared amongst alternates--if A is alternate B and A is false positive with C, B is now false positive with C. and further, if C alt D, then A and B are implicitly fp D as well!</li>
+					<li>your existing false positive and alternates relationships will be migrated on update. alternates will apply first, so in the case of conflicts due to previous non-excellent filtering workflow, formerly invalid false positives (i.e. false positives between now-transitive alternates) will be discarded. invalid potentials will also be cleared out</li>
+					<li>attempting to set a 'false positives' or 'alternates' relationship to files that already have a conflicting relation (e.g. setting false positive to two files that already have alternates) now does nothing. in future, this will have graceful failure reporting</li>
+					<li>the false positive and alternate transitivity clears out potential dupes at a faster rate than previously, speeding up duplicate filter workflow and reducing redundancy on the human end</li>
+					<li>unfortunately, as potential and better/worse/same pairs have yet to be updated, the system may report that a file has the same alternate as same quality partner. this will be automatically corrected in the coming weeks</li>
+					<li>when selecting 'view this file's duplicates' from thumbnail right-click, the focus file will now be the first file displayed in the next page</li>
+					<li>.</li>
+					<li>duplicates boring details:</li>
+					<li>setting 'false positive' and 'alternates' status now accounts for the new data storage, and a variety of follow-on assumptions and transitive properties (such as implying other false positive relationships or clearing out potential dupes between two groups of merging alternates) are now dealt with more rigorously (and moreso when I move the true 'duplicate' file relationships over)</li>
+					<li>fetching file duplicate status counts, file duplicate status hashes, and searching for system:num_dupes now accounts for the new data storage r.e. false positives and alternates</li>
+					<li>new potential dupes are culled when they conflict with the new transitive alternate and false positive relationships</li>
+					<li>removed the code that fudges explicit transitive 'false positive' and 'alternate' relationships based on existing same/better/worse pairs when setting new dupe pairs. this temporary gap will be filled back in in the coming weeks (clearing out way more potentials too)</li>
+					<li>several specific advanced duplicate actions are now cleared out to make way for future streamlining of the filter workflow:</li>
+					<li>removed the 'duplicate_media_set_false_positive' shortcut, which is an action only appropriate when viewing confirmed potentials through the duplicate filter (or after the ' show random pairs' button)</li>
+					<li>removed the 'duplicate_media_remove_relationships' shortcut and menu action ('remove x pairs ... from the dupes system'), which will return as multiple more precise and reliable 'dissolve' actions in the coming weeks</li>
+					<li>removed the 'duplicate_media_reset_to_potential' shortcut and menu action ('send the x pairs ... to be compared in the duplicates filter') as it was always buggy and lead to bloating of the filter queue. it is likely to return as part of the 'dissolve'-style reset commands as above</li>
+					<li>fixed an issue where hitting 'duplicate_media_set_focused_better' shortcut with no focused thumb would throw an error</li>
+					<li>started proper unit tests for the duplicates system and filled in the phash search, basic current better/worse, and false positive and alternate components</li>
+					<li>various incidences of duplicate 'action options' and similar phrasing are now unified to 'metadata merge options'</li>
+					<li>cleaned up 'unknown/potential' phrasing in duplicate pair code and some related duplicate filter code</li>
+					<li>cleaned up wording and layout of the thumbnail duplicates menu</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>tag blacklists in downloaders' tag import options now apply to the parsed tags both before and after a tag sibling collapse. it uses the combined tag sibling rules, so feedback on how well this works irl would be appreciated</li>
+					<li>I believe I fixed the annoying issue where a handful of thumbnails would sometimes inexplicitly not fade in after during thumbgrid scrolling (and typically on first thumb load--this problem was aggravated by scroll/thumb-render speed ratio)</li>
+					<li>when to-be-regenerated thumbnails are taken off the thumbnail waterfall queue due to fast scrolling or page switching, they are now queued up in the new file maintenance system for idle-time work!</li>
+					<li>the main gui menus will now no longer try to update while they are open! uploading pending tags while lots of new tags are coming in is now much more reliable. let me know if you discover a way to get stuck in this frozen state!</li>
+					<li>cleaned up some main gui menu regeneration code, reducing the total number of stub objects created and deleted, particularly when the 'pending' menu refreshes its label frequently while uploading many pending tags. should be a bit more stable for some linux flavours</li>
+					<li>the 'fix siblings and parents' button on manage tags is now a menu button with two options--for fixing according to the 'all services combined' siblings and parents or just for the current panel's service. this overrides the 'apply sibs/parents across all services' options. this will be revisited in future when more complicated sibling application rules are added</li>
+					<li>the 'hide and anchor mouse' check under 'options->media' is no longer windows-only, if you want to test it, and the previous touchscreen-detecting override (which unhid and unanchored on vigorous movement) is now optional, defaulting to off</li>
+					<li>greatly reduced typical and max repository pre-processing disk cache time and reworked stop calculations to ensure some work always gets done</li>
+					<li>fixed an issue with 'show some random dupes' thumbnails not hiding on manual trashing, if that option is set. 'show some random dupes' thumbnail panels will now inherit their file service from the current duplicate search domain</li>
+					<li>repository processing will now never run for more than an hour at once. this mitigates some edge-case disastrous ui-hanging outcomes and generally gives a chance for hydrus-level jobs like subscriptions and even other programs like defraggers to run even when there is a gigantic backlog of processing to do</li>
+					<li>added yet another CORS header to improve Client API CORS compatibility, and fixed an overauthentication problem</li>
+					<li>setting a blank string on the new local booru external port override option will now forego the host:port colon in the resultant external url. a tooltip on the control repeats this</li>
+					<li>reworded and coloured the pause/play sync button in review services repository panel to be more clear about current paused status</li>
+					<li>fixed a problem when closing the gui when the popup message manager is already closed by clever OS-specific means</li>
+					<li>misc code cleanup</li>
+					<li>updated sqlite on windows to 3.28.0</li>
+					<li>updated upnpc exe on windows to 2.1</li>
+				</ul>
 				<li><h3>version 353</h3></li>
 				<ul>
 					<li>duplicate filter:</li>

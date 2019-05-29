@@ -6,7 +6,7 @@
 	</head>
 	<body>
 		<div class="content">
-			<p class="warning">This help is slightly out of date--you can now refine your current duplicate 'search domain' with regular file searches. I will update this help in the coming weeks to reflect final changes.</p>
+			<p class="warning"><b>This is currently out of date! The duplicates system is being reworked right now at the database level to better support large groups of duplicates. The UI and workflow are simultaneously being streamlined. The concepts behind this help remain valid, but it will be properly updated once the work is complete to reflect the changes.</b></p>
 			<h3>duplicates</h3>
 			<p>As files are shared on the internet, they are often resized, cropped, converted to a different format, subsequently altered by the original or a new artist, or turned into a template and reinterpreted over and over and over. Even if you have a very restrictive importing workflow, your client is almost certainly going to get some <i>duplicates</i>. Some will be interesting alternate versions that you want to keep, and others will be thumbnails and other low-quality garbage you accidentally imported and would rather delete. Along the way, it would be nice to harmonise your ratings and tags to the better files so you don't lose any work.</p>
 			<p>Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It is all on--</p>
@@ -26,7 +26,7 @@
 					<h3>discovery</h3>
 					<p>Once the database is ready to search, you actually have to do it! You can set a 'search distance', which represents how 'fuzzy' or imprecise a match the database will consider a duplicate. I recommend you start with 'exact match', which looks for files that are as similar as it can understand. The smaller the search distance, the faster and better and fewer the results will be. I do not recommend you go above 8--the 'speculative' option--as you will be inundated with false positives.</p>
 					<p>Like the preparation step, this is very CPU intensive and will lock your db. Either leave it alone while it works or let the client handle everything automatically during idle time.</p>
-					<p>If you are interested, the current version of this system uses a <i>phash</i> (a 64-bit binary string 'perceptual hash' based on whether the values of an 8x8 DCT of a 32x32 greyscale version of the image are above or below the average value) to represent the image shape and a VPTree to search different files' phashes' relative <a href="https://en.wikipedia.org/wiki/Hamming_distance">hamming distance</a>. I expect to extend it in future with multiple phash generation (flips, rotations, crops on interesting parts of the image) and most-common colour comparisons.</p>
+					<p>If you are interested, the current version of this system uses a <a href="https://jenssegers.com/61/perceptual-image-hashes">phash</a> to represent the image shape and a <a href="https://en.wikipedia.org/wiki/VP-tree">VPTree</a> to search different files' phashes' relative <a href="https://en.wikipedia.org/wiki/Hamming_distance">hamming distance</a>. I expect to extend it in future with multiple phash generation (flips, rotations, and 'interesting' image crops and video frames) and most-common colour comparisons.</p>
 				</li>
 				<li>
 					<h3>processing</h3>
@@ -110,7 +110,7 @@
 					<p><a href="dupe_alternates_progress.png"><img src="dupe_alternates_progress.png" /></a></p>
 					<p>And a costume change:</p>
 					<p><a href="dupe_alternates_costume.png"><img src="dupe_alternates_costume.png" /></a></p>
-					<p>None of these are exact duplicates, but they are obviously related. The duplicate search will notice they are similar, so we should let it know they are 'alternate'.</p>
+					<p>None of these are strictly duplicates, but they are obviously related. The duplicate search will notice they are similar, so we should let it know they are 'alternate'.</p>
 					<p>Here's a subtler case:</p>
 					<p><a href="dupe_alternate_boxer_a.jpg"><img src="dupe_alternate_boxer_a.jpg" /></a> <a href="dupe_alternate_boxer_b.jpg"><img src="dupe_alternate_boxer_b.jpg" /></a></p>
 					<p>These two files are very similar, but try opening both in separate tabs and then flicking back and forth: the second's glove-string is further into the mouth and has improved chin shading, a more refined eye shape, and shaved pubic hair. It is simple to spot these differences in the client's duplicate filter when you flick back and forth.</p>
@@ -123,13 +123,13 @@
 					<p><b>The default action here is to do nothing but record the alternate status. A future version of the client will support revisiting the large unsorted archive you build here and adding file relationship metadata, but creating that will be a complicated job that was not in the scope of this initial duplicate management system.</b></p>
 				</li>
 				<li>
-					<h3>not duplicates</h3>
-					<p>The duplicate finder sometimes has false positives, so this status is to tell the client that the potential pair are actually not duplicates of any kind. This usually happens when two images have a similar shape by accident.</p>
+					<h3>not related/false positive</h3>
+					<p>The duplicate finder sometimes has false positives, so this status is to tell the client that the potential pair are not related in any way. This usually happens when two images have a similar shape by accident.</p>
 					<p>Here are two such files:</p>
 					<p><a href="dupe_not_dupes_1.png"><img style="max-width: 100%;" src="dupe_not_dupes_1.png" /></a></p>
 					<p><a href="dupe_not_dupes_2.jpg"><img style="max-width: 100%;"  src="dupe_not_dupes_2.jpg" /></a></p>
 					<p>Despite their similarity, they are neither duplicates nor of even the same topic. The only commonality is the medium. I would not consider them close enough to be alternates--just adding something like 'screenshot' and 'imageboard' as tags to both is probably the closest connection they have.</p>
-					<p>The default action here is obviously to do nothing but record the status and move on.</p>
+					<p>The default action here is obviously to do nothing but record the status and move on. Recording the 'false positive' relationship is important to make sure the comparison does not come up again.</p>
 					<p>The incidence of false positives increases as you broaden the search distance--the less precise your search, the less likely it is to be correct. At distance 14, these files all match, but uselessly:</p>
 					<p><a href="dupe_garbage.png"><img style="max-width: 100%;"  src="dupe_garbage.png" /></a></p>
 				</li>
