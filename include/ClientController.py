@@ -19,6 +19,7 @@ from . import ClientDefaults
 from . import ClientFiles
 from . import ClientGUICommon
 from . import ClientGUIMenus
+from . import ClientGUIShortcuts
 from . import ClientNetworking
 from . import ClientNetworkingBandwidth
 from . import ClientNetworkingDomain
@@ -547,7 +548,7 @@ class Controller( HydrusController.HydrusController ):
     
     def GetCommandFromShortcut( self, shortcut_names, shortcut ):
         
-        return self._shortcuts_manager.GetCommand( shortcut_names, shortcut )
+        return self.shortcuts_manager.GetCommand( shortcut_names, shortcut )
         
     
     def GetGUI( self ):
@@ -731,7 +732,7 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
-        self._shortcuts_manager = ClientCaches.ShortcutsManager( self )
+        self.shortcuts_manager = ClientGUIShortcuts.ShortcutsManager( self )
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         

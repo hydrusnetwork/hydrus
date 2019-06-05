@@ -232,7 +232,7 @@ def GeneratePILImage( path ):
         
         fp.close()
         
-        raise HydrusExceptions.MimeException( 'Could not load the image!' + os.linesep + traceback.format_exc() )
+        raise HydrusExceptions.MimeException( 'Could not load the image--it was likely malformed!' )
         
     
     if pil_image.format == 'JPEG' and hasattr( pil_image, '_getexif' ):
@@ -526,7 +526,7 @@ def GetJPEGQuantizationQualityEstimate( path ):
             
         elif quality >= 1400:
             
-            label = 'medium-low'
+            label = 'medium low'
             
         elif quality >= 1000:
             
@@ -534,7 +534,7 @@ def GetJPEGQuantizationQualityEstimate( path ):
             
         elif quality >= 700:
             
-            label = 'medium-high'
+            label = 'medium high'
             
         elif quality >= 400:
             

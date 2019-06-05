@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 355</h3></li>
+				<ul>
+					<li>duplicates:</li>
+					<li>retuned the new alternate and false positive setting code to be less aggressive about removing potential pairs. users with alternate groups who updated to 354 may have lost some intra-alternate potential pairs, which I expect to fill back in once the potential pairs system is updated</li>
+					<li>the duplicate filter center-right hover window now has a trash button, which is moved to its own row with the cog icon where they will fit on thinner windows better</li>
+					<li>users who are in advanced mode now have access to duplicate merge options for 'alternates' again--but be careful with this, it is advanced. if you had merge options for alternates set up before, your old options _should_ return, but make sure to check it</li>
+					<li>if you are in advanced mode, the duplicate filter can now show an experimental jpeg quality comparison statement. if this works out, I will add custom scores and improve this otherwise based on feedback , so comments would be appreciated</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the client api has a new 'manage pages' permission!</li>
+					<li>/manage_pages/get_pages now fetches a structure of the current page session! there's some help for it</li>
+					<li>in future, I expect to add a 'select page' command and get/remove/highlight URL(s) for downloader pages, and reveal the unique page identifier for better targeting here and for add_url commands</li>
+					<li>client api is now version 7</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed a stupid issue related to drawing collection thumbnails that was causing a lot of errors. I apologise for the inconvenience and have added pre-build tests to catch these simple mistakes in future</li>
+					<li>added a clipboard url watcher! there are two options now under network->downloaders--one for watcher urls, and one for all other _recognised_ urls (i.e. post and gallery urls, and file urls that have matching url classes). it checks every second, sends urls to pages according to the same rules as a drag and drop event, and will handle newline-separated lists of urls</li>
+					<li>when the client is minimised and needs to create a new downloader page because of an 'add url' command through this new clipboard watcher or the client api, it will now queue up the url and its page creation for when the client is next restored (page creation while minimized causes layout bugs). it returns an appropriate result text to the client api in this case</li>
+					<li>added four 'show_and_focus_manage_tags_XXX' shortcuts to the 'main_gui' shortcut set that let you select and focus the four possible suggested tags panels on the manage tags dialog. these are slightly special focus events that do some 'first tag selection' work as well and should let you make the whole process keyboard-only</li>
+					<li>added a 'focus_media_viewer' shortcut to the 'main_gui' shortcut set that focuses the media viewer from a media viewer's manage tags window</li>
+					<li>file viewing statistics gets an update: it now has its own options page where you can set min/max for preview and media viewing times. the global turn on/off control is moved from database menu to this page, as is a new control for enabling it on the duplicate filter (where you will be flicking back and forth and perhaps do not want lots of views recorded). duplicate filter file stats now default to disabled</li>
+					<li>added a new command to database->file viewing statistics that will cull your current stats based on the new min/max values to compensate for previous accidental '3day 4hour' preview view that snuck in. a yes/no dialog explains how it works before it goes</li>
+					<li>wrote a 'mixin' class to let my buttons automatically note current shortcut mapping information to the bottom of button tooltips</li>
+					<li>the duplicate commands and a variety of other media viewer buttons that work in the new shortcut system now report their current shortcuts in their tooltips!</li>
+					<li>quick-entering 'namespace:' in a search page's tag autocomplete input will now automatically swap in the special 'namespace:*anything*' predicate</li>
+					<li>cleaned up code around setting a custom temp_dir through the "temp_dir" command, and made it test the given path is indeed a directory and writable-to. if not, the program dumps out with an error popup</li>
+					<li>the client and server now similarly test that the directory db is a dir and writable-to</li>
+					<li>rearranged some critical boot error handling code and made the client's boot error handling throw up some ui</li>
+					<li>fixed the client's repairdb function when needing to regen autocomplete caches</li>
+					<li>autocomplete regen now publishes status updates to the splash screen</li>
+					<li>fixed the client's repairdb to wait correctly for the ui in case the user wants to bail before repair</li>
+					<li>the client's repair db now repairs the new local_tags_cache table if missing</li>
+					<li>fixed an issue with showing the manage logins panel when the domain had some unusual cookie expiry numbers</li>
+					<li>to reduce initial load gui-event crunch (which affects some systems' layout reliability), initial session load now happens after a 0.5s delay</li>
+					<li>cleaned up some image load error handling</li>
+					<li>when FFMPEG version information cannot be understood in help->about, a popup note appears and debug information is printed to the log</li>
+					<li>the advanced content update panel now puts up a 'working...' dialog while it processed a job</li>
+					<li>in the client</li>
+					<li>all 4XX and 5XX network exceptions' error texts are now prepended with the actual status code</li>
+					<li>extended the hover window debug report mode</li>
+					<li>improved some misc temp and permission testing code</li>
+					<li>improved some misc testing code</li>
+				</ul>
 				<li><h3>version 354</h3></li>
 				<ul>
 					<li>duplicates important:</li>

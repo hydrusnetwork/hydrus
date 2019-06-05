@@ -1157,6 +1157,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return
             
         
+        if event.GetEventObject() != self._tag_repositories:
+            
+            return
+            
+        
         page = self._tag_repositories.GetCurrentPage()
         
         if page is not None:
@@ -1181,6 +1186,26 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             if action == 'manage_file_tags':
                 
                 self._OKParent()
+                
+            elif action == 'focus_media_viewer':
+                
+                tlps = ClientGUICommon.GetTLPParents( self )
+                
+                from . import ClientGUICanvas
+                
+                command_processed = False
+                
+                for tlp in tlps:
+                    
+                    if isinstance( tlp, ClientGUICanvas.CanvasFrame ):
+                        
+                        tlp.TakeFocusForUser()
+                        
+                        command_processed = True
+                        
+                        break
+                        
+                    
                 
             elif action == 'set_search_focus':
                 
@@ -1334,6 +1359,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
+            
+            self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
             
             self.SetSizer( hbox )
             
@@ -1967,6 +1994,38 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             # old call:
             # wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+            
+        
+        def ProcessApplicationCommand( self, command ):
+            
+            command_processed = True
+            
+            command_type = command.GetCommandType()
+            data = command.GetData()
+            
+            if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+                
+                action = data
+                
+                if action == 'set_search_focus':
+                    
+                    self.SetTagBoxFocus()
+                    
+                elif action in ( 'show_and_focus_manage_tags_favourite_tags', 'show_and_focus_manage_tags_related_tags', 'show_and_focus_manage_tags_file_lookup_script_tags', 'show_and_focus_manage_tags_recent_tags' ):
+                    
+                    self._suggested_tags.TakeFocusForUser( action )
+                    
+                else:
+                    
+                    command_processed = False
+                    
+                
+            else:
+                
+                command_processed = False
+                
+            
+            return command_processed
             
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):

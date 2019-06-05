@@ -414,7 +414,7 @@ class TestSerialisables( unittest.TestCase ):
             
         
     
-    def test_SERIALISABLE_TYPE_SHORTCUTS( self ):
+    def test_SERIALISABLE_TYPE_SHORTCUT_SET( self ):
         
         def test( obj, dupe_obj ):
             
@@ -444,24 +444,24 @@ class TestSerialisables( unittest.TestCase ):
         m_shortcut_2 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, [ CC.SHORTCUT_MODIFIER_CTRL ] )
         m_shortcut_3 = ClientGUIShortcuts.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_SHIFT ] )
         
-        shortcuts = ClientGUIShortcuts.Shortcuts( 'test' )
+        shortcut_set = ClientGUIShortcuts.ShortcutSet( 'test' )
         
-        shortcuts.SetCommand( k_shortcut_1, command_1 )
-        shortcuts.SetCommand( k_shortcut_2, command_2 )
-        shortcuts.SetCommand( k_shortcut_3, command_2 )
-        shortcuts.SetCommand( k_shortcut_4, command_3 )
+        shortcut_set.SetCommand( k_shortcut_1, command_1 )
+        shortcut_set.SetCommand( k_shortcut_2, command_2 )
+        shortcut_set.SetCommand( k_shortcut_3, command_2 )
+        shortcut_set.SetCommand( k_shortcut_4, command_3 )
         
-        shortcuts.SetCommand( m_shortcut_1, command_1 )
-        shortcuts.SetCommand( m_shortcut_2, command_2 )
-        shortcuts.SetCommand( m_shortcut_3, command_3 )
+        shortcut_set.SetCommand( m_shortcut_1, command_1 )
+        shortcut_set.SetCommand( m_shortcut_2, command_2 )
+        shortcut_set.SetCommand( m_shortcut_3, command_3 )
         
-        self._dump_and_load_and_test( shortcuts, test )
+        self._dump_and_load_and_test( shortcut_set, test )
         
-        self.assertEqual( shortcuts.GetCommand( k_shortcut_1 ).GetData(), command_1.GetData() )
+        self.assertEqual( shortcut_set.GetCommand( k_shortcut_1 ).GetData(), command_1.GetData() )
         
-        shortcuts.SetCommand( k_shortcut_1, command_3 )
+        shortcut_set.SetCommand( k_shortcut_1, command_3 )
         
-        self.assertEqual( shortcuts.GetCommand( k_shortcut_1 ).GetData(), command_3.GetData() )
+        self.assertEqual( shortcut_set.GetCommand( k_shortcut_1 ).GetData(), command_3.GetData() )
         
     
     def test_SERIALISABLE_TYPE_SUBSCRIPTION( self ):

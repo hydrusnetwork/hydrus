@@ -1452,7 +1452,7 @@ class TestClientDB( unittest.TestCase ):
         
         num_default = len( ClientDefaults.GetDefaultShortcuts() )
         
-        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
         
         self.assertEqual( len( result ), num_default )
         
@@ -1466,11 +1466,11 @@ class TestClientDB( unittest.TestCase ):
             
             self._write( 'serialisable', shortcuts )
             
-            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
             
             self.assertEqual( len( result ), num_default + 1 )
             
-            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, name )
             
             for ( shortcut, command ) in shortcuts:
                 
@@ -1479,9 +1479,9 @@ class TestClientDB( unittest.TestCase ):
             
             #
             
-            self._write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            self._write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, name )
             
-            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
             
             self.assertEqual( len( result ), num_default )
             

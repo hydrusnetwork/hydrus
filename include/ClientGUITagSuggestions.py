@@ -45,6 +45,16 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         self._activate_callable( self.GetTags(), only_add = True )
         
     
+    def TakeFocusForUser( self ):
+        
+        if len( self._selected_terms ) == 0 and len( self._terms ) > 0:
+            
+            self._Hit( False, False, 0 )
+            
+        
+        self.SetFocus()
+        
+    
 class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, activate_callable ):
@@ -85,6 +95,16 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
         
         self._DataHasChanged()
+        
+    
+    def TakeFocusForUser( self ):
+        
+        if len( self._selected_terms ) == 0 and len( self._terms ) > 0:
+            
+            self._Hit( False, False, 0 )
+            
+        
+        self.SetFocus()
         
     
 class RecentTagsPanel( wx.Panel ):
@@ -155,6 +175,11 @@ class RecentTagsPanel( wx.Panel ):
         self._RefreshRecentTags()
         
     
+    def TakeFocusForUser( self ):
+        
+        self._recent_tags.TakeFocusForUser()
+        
+    
 class RelatedTagsPanel( wx.Panel ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
@@ -165,24 +190,26 @@ class RelatedTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
+        self._have_fetched = False
+        
         self._new_options = HG.client_controller.new_options
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        button_2 = wx.Button( self, label = 'medium' )
-        button_2.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags2 )
-        button_2.SetMinSize( ( 30, -1 ) )
+        self._button_2 = wx.Button( self, label = 'medium' )
+        self._button_2.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags2 )
+        self._button_2.SetMinSize( ( 30, -1 ) )
         
-        button_3 = wx.Button( self, label = 'thorough' )
-        button_3.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags3 )
-        button_3.SetMinSize( ( 30, -1 ) )
+        self._button_3 = wx.Button( self, label = 'thorough' )
+        self._button_3.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags3 )
+        self._button_3.SetMinSize( ( 30, -1 ) )
         
         self._related_tags = ListBoxTagsSuggestionsRelated( self, activate_callable )
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.Add( button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        button_hbox.Add( button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        button_hbox.Add( self._button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        button_hbox.Add( self._button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         vbox.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -209,6 +236,8 @@ class RelatedTagsPanel( wx.Panel ):
                     
                 
                 self._related_tags.SetPredicates( predicates )
+                
+                self._have_fetched = True
                 
             
             predicates = HG.client_controller.Read( 'related_tags', service_key, hash, search_tags, max_results, max_time_to_take )
@@ -270,6 +299,11 @@ class RelatedTagsPanel( wx.Panel ):
         self._FetchRelatedTags( max_time_to_take )
         
     
+    def TakeFocusForUser( self ):
+        
+        self._related_tags.TakeFocusForUser()
+        
+    
 class FileLookupScriptTagsPanel( wx.Panel ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
@@ -283,6 +317,8 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         self._script_choice = ClientGUICommon.BetterChoice( self )
         
         self._script_choice.Disable()
+        
+        self._have_fetched = False
         
         self._fetch_button = ClientGUICommon.BetterButton( self, 'fetch tags', self.FetchTags )
         
@@ -418,6 +454,18 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier )
         
     
+    def TakeFocusForUser( self ):
+        
+        if self._have_fetched:
+            
+            self._tags.TakeFocusForUser()
+            
+        else:
+            
+            self._fetch_button.SetFocus()
+            
+        
+    
     def THREADFetchTags( self, script, job_key, file_identifier ):
         
         def wx_code( tags ):
@@ -428,6 +476,8 @@ class FileLookupScriptTagsPanel( wx.Panel ):
                 
             
             self._SetTags( tags )
+            
+            self._have_fetched = True
             
         
         parse_results = script.DoQuery( job_key, file_identifier )
@@ -451,11 +501,13 @@ class SuggestedTagsPanel( wx.Panel ):
         
         layout_mode = self._new_options.GetNoneableString( 'suggested_tags_layout' )
         
+        self._notebook = None
+        
         if layout_mode == 'notebook':
             
-            notebook = wx.Notebook( self )
+            self._notebook = ClientGUICommon.BetterNotebook( self )
             
-            panel_parent = notebook
+            panel_parent = self._notebook
             
         else:
             
@@ -466,34 +518,42 @@ class SuggestedTagsPanel( wx.Panel ):
         
         favourites = self._new_options.GetSuggestedTagsFavourites( service_key )
         
+        self._favourite_tags = None
+        
         if len( favourites ) > 0:
             
-            favourite_tags = ListBoxTagsSuggestionsFavourites( panel_parent, activate_callable )
+            self._favourite_tags = ListBoxTagsSuggestionsFavourites( panel_parent, activate_callable )
             
-            favourite_tags.SetTags( favourites )
+            self._favourite_tags.SetTags( favourites )
             
-            panels.append( ( 'favourites', favourite_tags ) )
+            panels.append( ( 'favourites', self._favourite_tags ) )
             
+        
+        self._related_tags = None
         
         if self._new_options.GetBoolean( 'show_related_tags' ) and len( media ) == 1:
             
-            related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
+            self._related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
             
-            panels.append( ( 'related', related_tags ) )
+            panels.append( ( 'related', self._related_tags ) )
             
+        
+        self._file_lookup_script_tags = None
         
         if self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) and len( media ) == 1:
             
-            file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
+            self._file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable, canvas_key = self._canvas_key )
             
-            panels.append( ( 'file lookup scripts', file_lookup_script_tags ) )
+            panels.append( ( 'file lookup scripts', self._file_lookup_script_tags ) )
             
+        
+        self._recent_tags = None
         
         if self._new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
             
-            recent_tags = RecentTagsPanel( panel_parent, service_key, activate_callable, canvas_key = self._canvas_key )
+            self._recent_tags = RecentTagsPanel( panel_parent, service_key, activate_callable, canvas_key = self._canvas_key )
             
-            panels.append( ( 'recent', recent_tags ) )
+            panels.append( ( 'recent', self._recent_tags ) )
             
         
         if layout_mode == 'notebook':
@@ -502,10 +562,10 @@ class SuggestedTagsPanel( wx.Panel ):
             
             for ( name, panel ) in panels:
                 
-                notebook.AddPage( panel, name )
+                self._notebook.AddPage( panel, name )
                 
             
-            hbox.Add( notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
@@ -524,6 +584,36 @@ class SuggestedTagsPanel( wx.Panel ):
         if len( panels ) == 0:
             
             self.Hide()
+            
+        
+    
+    def TakeFocusForUser( self, command ):
+        
+        if command == 'show_and_focus_manage_tags_favourite_tags':
+            
+            panel = self._favourite_tags
+            
+        elif command == 'show_and_focus_manage_tags_related_tags':
+            
+            panel = self._related_tags
+            
+        elif command == 'show_and_focus_manage_tags_file_lookup_script_tags':
+            
+            panel = self._file_lookup_script_tags
+            
+        elif command == 'show_and_focus_manage_tags_recent_tags':
+            
+            panel = self._recent_tags
+            
+        
+        if panel is not None:
+            
+            if self._notebook is not None:
+                
+                self._notebook.SelectPage( panel )
+                
+            
+            panel.TakeFocusForUser()
             
         
     

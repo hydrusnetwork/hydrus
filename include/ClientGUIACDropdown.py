@@ -1349,13 +1349,22 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
-        try:
+        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+        
+        if namespace != '' and subtag in ( '', '*' ):
             
-            HydrusTags.CheckTagNotEmpty( search_text )
+            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
             
-        except HydrusExceptions.SizeException:
+        else:
             
-            return
+            try:
+                
+                HydrusTags.CheckTagNotEmpty( search_text )
+                
+            except HydrusExceptions.SizeException:
+                
+                return
+                
             
         
         self._BroadcastChoices( { entry_predicate }, shift_down )

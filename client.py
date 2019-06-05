@@ -74,7 +74,17 @@ try:
         
     except:
         
-        raise Exception( 'Could not ensure db path ' + db_dir + ' exists! Check the location is correct and that you have permission to write to it!' )
+        raise Exception( 'Could not ensure db path "{}" exists! Check the location is correct and that you have permission to write to it!'.format( db_dir ) )
+        
+    
+    if not os.path.isdir( db_dir ):
+        
+        raise Exception( 'The given db path "{}" is not a directory!'.format( db_dir ) )
+        
+    
+    if not HydrusPaths.DirectoryIsWritable( db_dir ):
+        
+        raise Exception( 'The given db path "{}" is not a writable-to!'.format( db_dir ) )
         
     
     HG.no_daemons = result.no_daemons
@@ -83,70 +93,7 @@ try:
     
     if result.temp_dir is not None:
         
-        if not os.path.exists( result.temp_dir ):
-            
-            raise Exception( 'The given temp directory, "{}", does not exist!'.format( result.temp_dir ) )
-            
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            os.environ[ 'TEMP' ] = result.temp_dir
-            os.environ[ 'TMP' ] = result.temp_dir
-            
-        else:
-            
-            os.environ[ 'TMPDIR' ] = result.temp_dir
-            
-        
-    
-    #
-    
-    with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
-        
-        try:
-            
-            HydrusData.Print( 'hydrus client started' )
-            
-            if not HG.twisted_is_broke:
-                
-                threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
-                
-            
-            controller = ClientController.Controller( db_dir )
-            
-            controller.Run()
-            
-        except:
-            
-            HydrusData.Print( 'hydrus client failed' )
-            
-            HydrusData.Print( traceback.format_exc() )
-            
-        finally:
-            
-            HG.view_shutdown = True
-            HG.model_shutdown = True
-            
-            try:
-                
-                controller.pubimmediate( 'wake_daemons' )
-                
-            except:
-                
-                HydrusData.Print( traceback.format_exc() )
-                
-            
-            reactor.callFromThread( reactor.stop )
-            
-            HydrusData.Print( 'hydrus client shut down' )
-            
-        
-    
-    HG.shutdown_complete = True
-    
-    if HG.restart:
-        
-        HydrusData.RestartProcess()
+        HydrusPaths.SetEnvTempDir( result.temp_dir )
         
     
 except Exception as e:
@@ -154,7 +101,11 @@ except Exception as e:
     import traceback
     import os
     
-    print( traceback.format_exc() )
+    error_trace = traceback.format_exc()
+    
+    print( error_trace )
+    
+    wx.SafeShowMessage( 'critical boot error!', 'Critical boot error occurred! Details written to crash.log!' + os.linesep * 2 + str( e ) )
     
     if 'db_dir' in locals() and os.path.exists( db_dir ):
         
@@ -162,9 +113,74 @@ except Exception as e:
         
         with open( dest_path, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( traceback.format_exc() )
+            f.write( error_trace )
             
         
-        print( 'Critical error occurred! Details written to crash.log!' )
+        print( 'Critical boot error occurred! Details written to crash.log!' )
         
     
+    sys.exit( 1 )
+    
+with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
+    
+    try:
+        
+        HydrusData.Print( 'hydrus client started' )
+        
+        if not HG.twisted_is_broke:
+            
+            threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
+            
+        
+        controller = ClientController.Controller( db_dir )
+        
+        controller.Run()
+        
+    except:
+        
+        HydrusData.Print( 'hydrus client failed' )
+        
+        HydrusData.Print( traceback.format_exc() )
+        
+        try:
+            
+            message = 'The client failed to start. The error follows (it has also been written to the log in the db directory). If it is not obvious, please inform hydrus dev.'
+            
+            message += os.linesep * 2
+            
+            message += traceback.format_exc()
+            
+            wx.SafeShowMessage( 'hydrus client failed', message )
+            
+        except:
+            
+            pass
+            
+        
+    finally:
+        
+        HG.view_shutdown = True
+        HG.model_shutdown = True
+        
+        try:
+            
+            controller.pubimmediate( 'wake_daemons' )
+            
+        except:
+            
+            HydrusData.Print( traceback.format_exc() )
+            
+        
+        reactor.callFromThread( reactor.stop )
+        
+        HydrusData.Print( 'hydrus client shut down' )
+        
+    
+
+HG.shutdown_complete = True
+
+if HG.restart:
+    
+    HydrusData.RestartProcess()
+    
+

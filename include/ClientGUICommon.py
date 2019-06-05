@@ -528,15 +528,87 @@ def WrapInText( control, parent, text, colour = None ):
     
     return hbox
     
-class BetterBitmapButton( wx.BitmapButton ):
+class ShortcutAwareToolTipMixin( object ):
+    
+    def __init__( self, tt_callable ):
+        
+        self._tt_callable = tt_callable
+        
+        self._tt = ''
+        self._simple_shortcut_command = None
+        
+        HG.client_controller.sub( self, 'NotifyNewShortcuts', 'notify_new_shortcuts_gui' )
+        
+    
+    def _RefreshToolTip( self ):
+        
+        tt = self._tt
+        
+        if self._simple_shortcut_command is not None:
+            
+            tt += os.linesep * 2
+            tt += '----------'
+            
+            names_to_shortcuts = HG.client_controller.shortcuts_manager.GetNamesToShortcuts( self._simple_shortcut_command )
+            
+            if len( names_to_shortcuts ) > 0:
+                
+                names = list( names_to_shortcuts.keys() )
+                
+                names.sort()
+                
+                for name in names:
+                    
+                    shortcuts = names_to_shortcuts[ name ]
+                    
+                    shortcut_strings = [ shortcut.ToString() for shortcut in shortcuts ]
+                    
+                    shortcut_strings.sort()
+                    
+                    tt += os.linesep * 2
+                    
+                    tt += ', '.join( shortcut_strings )
+                    tt += os.linesep
+                    tt += '({}->{})'.format( name, self._simple_shortcut_command )
+                    
+                
+            else:
+                
+                tt += os.linesep * 2
+                
+                tt += 'no shortcuts set'
+                tt += os.linesep
+                tt += '({})'.format( self._simple_shortcut_command )
+                
+            
+        
+        self._tt_callable( tt )
+        
+    
+    def NotifyNewShortcuts( self ):
+        
+        self._RefreshToolTip()
+        
+    
+    def SetToolTipWithShortcuts( self, tt, simple_shortcut_command ):
+        
+        self._tt = tt
+        self._simple_shortcut_command = simple_shortcut_command
+        
+        self._RefreshToolTip()
+        
+    
+class BetterBitmapButton( wx.BitmapButton, ShortcutAwareToolTipMixin ):
     
     def __init__( self, parent, bitmap, func, *args, **kwargs ):
         
         wx.BitmapButton.__init__( self, parent, bitmap = bitmap )
+        ShortcutAwareToolTipMixin.__init__( self, self.SetToolTip )
         
         self._func = func
         self._args = args
         self._kwargs = kwargs
+        
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         
     
@@ -689,11 +761,12 @@ class BetterBoxSizer( wx.BoxSizer ):
             
         
     
-class BetterButton( wx.Button ):
+class BetterButton( wx.Button, ShortcutAwareToolTipMixin ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
         
         wx.Button.__init__( self, parent, style = wx.BU_EXACTFIT )
+        ShortcutAwareToolTipMixin.__init__( self, self.SetToolTip )
         
         self.SetLabelText( label )
         

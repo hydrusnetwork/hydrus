@@ -659,7 +659,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheLocalTagIdsGenerate( self ):
         
-        self._c.execute( 'DELETE FROM local_tags_cache;' )
+        self._c.execute( 'DROP TABLE IF EXISTS local_tags_cache;' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
         
         tag_ids = set()
         
@@ -1738,6 +1740,44 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.local_tags_cache ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
         
     
+    def _CullFileViewingStatistics( self ):
+        
+        media_min = self._controller.new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
+        media_max = self._controller.new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
+        preview_min = self._controller.new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
+        preview_max = self._controller.new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
+        
+        if media_min is not None and media_max is not None and media_min > media_max:
+            
+            raise Exception( 'Media min was greater than media max! Abandoning cull now!' )
+            
+        
+        if preview_min is not None and preview_max is not None and preview_min > preview_max:
+            
+            raise Exception( 'Preview min was greater than preview max! Abandoning cull now!' )
+            
+        
+        if media_min is not None:
+            
+            self._c.execute( 'UPDATE file_viewing_stats SET media_views = CAST( media_viewtime / ? AS INTEGER ) WHERE media_views * ? > media_viewtime;', ( media_min, media_min ) )
+            
+        
+        if media_max is not None:
+            
+            self._c.execute( 'UPDATE file_viewing_stats SET media_viewtime = media_views * ? WHERE media_viewtime > media_views * ?;', ( media_max, media_max ) )
+            
+        
+        if preview_min is not None:
+            
+            self._c.execute( 'UPDATE file_viewing_stats SET preview_views = CAST( preview_viewtime / ? AS INTEGER ) WHERE preview_views * ? > preview_viewtime;', ( preview_min, preview_min ) )
+            
+        
+        if preview_max is not None:
+            
+            self._c.execute( 'UPDATE file_viewing_stats SET preview_viewtime = preview_views * ? WHERE preview_viewtime > preview_views * ?;', ( preview_max, preview_max ) )
+            
+        
+    
     def _DeleteFiles( self, service_id, hash_ids ):
         
         # the gui sometimes gets out of sync and sends a DELETE FROM TRASH call before the SEND TO TRASH call
@@ -2100,10 +2140,7 @@ class DB( HydrusDB.HydrusDB ):
                 continue
                 
             
-            if self._DuplicatesMediasAreAlternates( media_id, potential_media_id ):
-                
-                continue
-                
+            # if they are alternates with different alt label and index, do not add
             
             smaller_hash_id = min( hash_id, potential_duplicate_hash_id )
             larger_hash_id = max( hash_id, potential_duplicate_hash_id )
@@ -2132,6 +2169,67 @@ class DB( HydrusDB.HydrusDB ):
         false_positive_pair_found = result is not None
         
         return false_positive_pair_found
+        
+    
+    def _DuplicatesClearPotentialsBetweenMedias( self, media_ids_a, media_ids_b ):
+        
+        # these two groups of medias now have a false positive or alternates relationship set between them
+        # therefore, potentials between them are no longer needed
+        
+        # update this to say that potential groups containing more than one of the above should be split based on that difference, auto-clearing groups with only one remaining
+        # get all potential groups for our media_ids
+        # for every group:
+          # if group contains both a and b media_ids:
+            # delete group
+            # if group contained other members:
+              # create new groups with ( media_id_a_members, other_members ) and ( media_id_b_members, other_members )
+        
+        # for now, we'll just delete specific shared pairs:
+        
+        hash_ids_a = set()
+        hash_ids_b = set()
+        
+        for media_id_a in media_ids_a:
+            
+            hash_ids_a.update( self._DuplicatesGetDuplicateHashIds( media_id_a ) )
+            
+        
+        for media_id_b in media_ids_b:
+            
+            hash_ids_b.update( self._DuplicatesGetDuplicateHashIds( media_id_b ) )
+            
+        
+        all_hash_ids = hash_ids_a.union( hash_ids_b )
+        
+        potential_duplicate_pairs = set()
+        
+        potential_duplicate_pairs.update( self._SelectFromList( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ' + str( HC.DUPLICATE_POTENTIAL ) + ' AND smaller_hash_id IN {};', all_hash_ids ) )
+        potential_duplicate_pairs.update( self._SelectFromList( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ' + str( HC.DUPLICATE_POTENTIAL ) + ' AND larger_hash_id IN {};', all_hash_ids ) )
+        
+        deletees = []
+        
+        for ( smaller_hash_id, larger_hash_id ) in potential_duplicate_pairs:
+            
+            if ( smaller_hash_id in hash_ids_a and larger_hash_id in hash_ids_b ) or ( smaller_hash_id in hash_ids_b and larger_hash_id in hash_ids_a ):
+                
+                deletees.append( ( smaller_hash_id, larger_hash_id ) )
+                
+            
+        
+        if len( deletees ) > 0:
+            
+            self._c.executemany( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? and duplicate_type = ?;', ( ( smaller_hash_id, larger_hash_id, HC.DUPLICATE_POTENTIAL ) for ( smaller_hash_id, larger_hash_id ) in deletees ) )
+            
+        
+    
+    def _DuplicatesClearPotentialsBetweenAlternatesGroups( self, alternates_group_id_a, alternates_group_id_b ):
+        
+        # these groups are being set as false positive. therefore, any potential between them no longer applies
+        
+        media_ids_a = self._DuplicatesGetAlternateMediaIds( alternates_group_id_a )
+        media_ids_b = self._DuplicatesGetAlternateMediaIds( alternates_group_id_b )
+        
+        self._DuplicatesClearPotentialsBetweenMedias( media_ids_a, media_ids_b )
         
     
     def _DuplicatesDeletePotentialDuplicatePairs( self ):
@@ -3013,7 +3111,18 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? OR larger_hash_id = ? AND duplicate_type = ?;', ( ( hash_id, hash_id, HC.DUPLICATE_POTENTIAL ) for hash_id in hash_ids ) )
         
     
-    def _DuplicatesSetAlternates( self, alternates_group_id_a, alternates_group_id_b ):
+    def _DuplicatesSetAlternates( self, media_id_a, media_id_b ):
+        
+        # let's clear out any outstanding potentials. whether this is a valid or not connection, we don't want to see it again
+        
+        # in future, I can tune this to consider alternate labels and indices. alternates with different labels and indices are not appropriate for potentials
+        
+        self._DuplicatesClearPotentialsBetweenMedias( ( media_id_a, ), ( media_id_b, ) )
+        
+        # now check if we should be making a new relationship
+        
+        alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
+        alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
         
         if alternates_group_id_a == alternates_group_id_b:
             
@@ -3024,10 +3133,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return
             
-        
-        # let's clear out any outstanding potentials between these merging groups
-        
-        self._DuplicatesSplitPotentialGroups( alternates_group_id_a, alternates_group_id_b )
         
         # now update all B to A
         
@@ -3082,16 +3187,16 @@ class DB( HydrusDB.HydrusDB ):
                 media_id_a = self._DuplicatesGetMediaId( hash_id_a )
                 media_id_b = self._DuplicatesGetMediaId( hash_id_b )
                 
-                alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
-                alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
-                
                 if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                    
+                    alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
+                    alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
                     
                     self._DuplicatesSetFalsePositive( alternates_group_id_a, alternates_group_id_b )
                     
                 elif duplicate_type == HC.DUPLICATE_ALTERNATE:
                     
-                    self._DuplicatesSetAlternates( alternates_group_id_a, alternates_group_id_b )
+                    self._DuplicatesSetAlternates( media_id_a, media_id_b )
                     
                 
                 smaller_hash_id = min( hash_id_a, hash_id_b )
@@ -3181,59 +3286,12 @@ class DB( HydrusDB.HydrusDB ):
             return
             
         
-        self._DuplicatesSplitPotentialGroups( alternates_group_id_a, alternates_group_id_b )
+        self._DuplicatesClearPotentialsBetweenAlternatesGroups( alternates_group_id_a, alternates_group_id_b )
         
         smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
         larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
         
         self._c.execute( 'INSERT OR IGNORE INTO duplicate_false_positives ( smaller_alternates_group_id, larger_alternates_group_id ) VALUES ( ?, ? );', ( smaller_alternates_group_id, larger_alternates_group_id ) )
-        
-    
-    def _DuplicatesSplitPotentialGroups( self, alternates_group_id_a, alternates_group_id_b ):
-        
-        # these groups are being set as false positive or merging. therefore, any potential between them no longer applies
-        
-        media_ids = set()
-        
-        media_ids.update( self._DuplicatesGetAlternateMediaIds( alternates_group_id_a ) )
-        media_ids.update( self._DuplicatesGetAlternateMediaIds( alternates_group_id_b ) )
-        
-        # update this to say that potential groups containing more than one of the above should be split based on that difference, auto-clearing groups with only one remaining
-        # get all potential groups for our media_ids
-        # for every group:
-          # if group contains multiple of our media_ids:
-            # delete group
-            # if group contained other members:
-              # create new groups with ( media_id, other_members ) for all shared media_ids in this group
-        
-        # for now, we'll just delete specific shared pairs:
-        
-        all_hash_ids = set()
-        
-        for media_id in media_ids:
-            
-            all_hash_ids.update( self._DuplicatesGetDuplicateHashIds( media_id ) )
-            
-        
-        potential_duplicate_pairs = set()
-        
-        potential_duplicate_pairs.update( self._SelectFromList( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ' + str( HC.DUPLICATE_POTENTIAL ) + ' AND smaller_hash_id IN {};', all_hash_ids ) )
-        potential_duplicate_pairs.update( self._SelectFromList( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ' + str( HC.DUPLICATE_POTENTIAL ) + ' AND larger_hash_id IN {};', all_hash_ids ) )
-        
-        deletees = []
-        
-        for ( smaller_hash_id, larger_hash_id ) in potential_duplicate_pairs:
-            
-            if smaller_hash_id in all_hash_ids and larger_hash_id in all_hash_ids:
-                
-                deletees.append( ( smaller_hash_id, larger_hash_id ) )
-                
-            
-        
-        if len( deletees ) > 0:
-            
-            self._c.executemany( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? and duplicate_type = ?;', ( ( smaller_hash_id, larger_hash_id, HC.DUPLICATE_POTENTIAL ) for ( smaller_hash_id, larger_hash_id ) in deletees ) )
-            
         
     
     def _DuplicatesSyncSameQualityDuplicates( self, hash_id ):
@@ -10328,6 +10386,15 @@ class DB( HydrusDB.HydrusDB ):
             tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
             
+            message = 'generating local tag cache'
+            
+            job_key.SetVariable( 'popup_text_1', message )
+            self._controller.pub( 'splash_set_status_subtext', message )
+            
+            time.sleep( 0.01 )
+            
+            self._CacheLocalTagIdsGenerate()
+            
             for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
                 
                 if job_key.IsCancelled():
@@ -10335,7 +10402,12 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'generating specific ac_cache ' + str( file_service_id ) + '_' + str( tag_service_id ) )
+                message = 'generating specific ac_cache {}_{}'.format( file_service_id, tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.pub( 'splash_set_status_subtext', message )
+                
+                time.sleep( 0.01 )
                 
                 self._CacheSpecificMappingsDrop( file_service_id, tag_service_id )
                 
@@ -10349,16 +10421,17 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'generating combined files ac_cache ' + str( tag_service_id ) )
+                message = 'generating combined files ac_cache {}'.format( tag_service_id )
+                
+                job_key.SetVariable( 'popup_text_1', message )
+                self._controller.pub( 'splash_set_status_subtext', message )
+                
+                time.sleep( 0.01 )
                 
                 self._CacheCombinedFilesMappingsDrop( tag_service_id )
                 
                 self._CacheCombinedFilesMappingsGenerate( tag_service_id )
                 
-            
-            job_key.SetVariable( 'popup_text_1', 'generating local tag cache' )
-            
-            self._CacheLocalTagIdsGenerate()
             
         finally:
             
@@ -10417,6 +10490,23 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.HydrusDB._RepairDB( self )
         
+        self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
+        self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
+        self._local_update_service_id = self._GetServiceId( CC.LOCAL_UPDATE_SERVICE_KEY )
+        self._combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        self._local_tag_service_id = self._GetServiceId( CC.LOCAL_TAG_SERVICE_KEY )
+        self._combined_file_service_id = self._GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
+        self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
+        
+        self._subscriptions_cache = {}
+        self._service_cache = {}
+        
+        self._weakref_media_result_cache = ClientCaches.MediaResultCache()
+        self._hash_ids_to_hashes_cache = {}
+        self._tag_ids_to_tags_cache = {}
+        
+        ( self._null_namespace_id, ) = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) ).fetchone()
+        
         tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
         file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
         
@@ -10444,7 +10534,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'The boot will fail once you click ok. If you do not know what happened and how to fix this, please take a screenshot and contact hydrus dev.'
             
-            wx.CallAfter( wx.MessageBox, message )
+            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
             
             raise Exception( 'Master database was invalid!' )
             
@@ -10457,7 +10547,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            wx.CallAfter( wx.MessageBox, message )
+            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
             
             self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
             self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
@@ -10484,7 +10574,7 @@ class DB( HydrusDB.HydrusDB ):
             
             missing_main_tables.sort()
             
-            message = 'On boot, some important mappings tables were missing! This could be due to the entire \'mappings\' database file being missing or due to some other problem. The tags in these tables are lost. The exact missing tables were:'
+            message = 'On boot, some important mappings tables were missing! This could be due to the entire \'mappings\' database file being missing or some other problem. The tags in these tables are lost. The exact missing tables were:'
             message += os.linesep * 2
             message += os.linesep.join( missing_main_tables )
             message += os.linesep * 2
@@ -10492,7 +10582,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            wx.CallAfter( wx.MessageBox, message )
+            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
             
             for service_id in tag_service_ids:
                 
@@ -10523,7 +10613,7 @@ class DB( HydrusDB.HydrusDB ):
             
             missing_main_tables.sort()
             
-            message = 'On boot, some important caches tables were missing! This could be due to the entire \'caches\' database file being missing or due to some other problem. Data related to duplicate file search may have been lost. The exact missing tables were:'
+            message = 'On boot, some important caches tables were missing! This could be due to the entire \'caches\' database file being missing or some other problem. Data related to duplicate file search may have been lost. The exact missing tables were:'
             message += os.linesep * 2
             message += os.linesep.join( missing_main_tables )
             message += os.linesep * 2
@@ -10531,7 +10621,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            wx.CallAfter( wx.MessageBox, message )
+            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
             
             self._CreateDBCaches()
             
@@ -10547,6 +10637,8 @@ class DB( HydrusDB.HydrusDB ):
             
             mappings_cache_tables.add( GenerateCombinedFilesMappingsCacheTableName( tag_service_id ).split( '.' )[1] )
             
+        
+        mappings_cache_tables.add( 'local_tags_cache' )
         
         missing_main_tables = mappings_cache_tables.difference( existing_cache_tables )
         
@@ -10564,7 +10656,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            wx.CallAfter( wx.MessageBox, message )
+            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
             
             self._RegenerateACCache()
             
@@ -12888,10 +12980,7 @@ class DB( HydrusDB.HydrusDB ):
                 media_id_a = self._DuplicatesGetMediaId( hash_id_a )
                 media_id_b = self._DuplicatesGetMediaId( hash_id_b )
                 
-                alternates_group_id_a = self._DuplicatesGetAlternatesGroupId( media_id_a )
-                alternates_group_id_b = self._DuplicatesGetAlternatesGroupId( media_id_b )
-                
-                self._DuplicatesSetAlternates( alternates_group_id_a, alternates_group_id_b )
+                self._DuplicatesSetAlternates( media_id_a, media_id_b )
                 
             
             self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type = ?;', ( HC.DUPLICATE_ALTERNATE, ) )
@@ -13468,6 +13557,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'clear_orphan_file_records': self._ClearOrphanFileRecords( *args, **kwargs )
         elif action == 'clear_orphan_tables': self._ClearOrphanTables( *args, **kwargs )
         elif action == 'content_updates': self._ProcessContentUpdates( *args, **kwargs )
+        elif action == 'cull_file_viewing_statistics': self._CullFileViewingStatistics( *args, **kwargs )
         elif action == 'db_integrity': self._CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_imageboard': self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'delete_local_booru_share': self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )

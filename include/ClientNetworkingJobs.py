@@ -87,7 +87,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         error_text += smaller_chunk
         
     
-    e = eclass( error_text )
+    e = eclass( '{}: {}'.format( status_code, error_text ) )
     
     return ( e, error_text )
     

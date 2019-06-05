@@ -55,6 +55,7 @@ MANAGEMENT_TYPE_QUERY = 6
 MANAGEMENT_TYPE_IMPORT_URLS = 7
 MANAGEMENT_TYPE_DUPLICATE_FILTER = 8
 MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER = 9
+MANAGEMENT_TYPE_PAGE_OF_PAGES = 10
 
 management_panel_types_to_classes = {}
 
@@ -979,6 +980,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._job_key = None
         self._in_break = False
         
+        new_options = self._controller.new_options
+        
         self._currently_refreshing_maintenance_numbers = False
         self._currently_refreshing_dupe_count_numbers = False
         
@@ -1050,6 +1053,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
         menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
         
+        if new_options.GetBoolean( 'advanced_mode' ):
+            
+            menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+            
+        
         self._edit_merge_options = ClientGUICommon.MenuButton( self._main_right_panel, 'edit default duplicate metadata merge options', menu_items )
         
         #
@@ -1087,8 +1095,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._main_notebook.AddPage( self._main_right_panel, 'filtering', select = True )
         
         #
-        
-        new_options = self._controller.new_options
         
         self._search_distance_spinctrl.SetValue( new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' ) )
         

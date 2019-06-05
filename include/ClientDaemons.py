@@ -193,7 +193,7 @@ def DAEMONDownloadFiles( controller ):
                         multihash = multihashes[0]
                         
                         # this actually calls to a thread that can launch gui 'select from tree' stuff, so let's just break at this point
-                        service.ImportFile( multihash )
+                        wx.CallAfter( service.ImportFile, multihash )
                         
                         break
                         

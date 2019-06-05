@@ -122,6 +122,7 @@ class TestClientAPI( unittest.TestCase ):
         permissions_to_set_up.append( ( 'add_files', [ ClientAPI.CLIENT_API_PERMISSION_ADD_FILES ] ) )
         permissions_to_set_up.append( ( 'add_tags', [ ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS ] ) )
         permissions_to_set_up.append( ( 'add_urls', [ ClientAPI.CLIENT_API_PERMISSION_ADD_URLS ] ) )
+        permissions_to_set_up.append( ( 'manage_pages', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES ] ) )
         permissions_to_set_up.append( ( 'search_all_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         permissions_to_set_up.append( ( 'search_green_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         
@@ -1028,6 +1029,36 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+    def _test_manage_pages( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'manage_pages' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/manage_pages/get_pages'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        pages = d[ 'pages' ]
+        
+        self.assertEqual( pages[ 'name' ], 'top pages notebook' )
+        
+        
+    
     def _test_search_files( self, connection, set_up_permissions ):
         
         hash_ids = [ 1, 2, 3, 4, 5, 10 ]
@@ -1601,6 +1632,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_files( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
+        self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
         self._test_permission_failures( connection, set_up_permissions )
         self._test_cors_fails( connection )

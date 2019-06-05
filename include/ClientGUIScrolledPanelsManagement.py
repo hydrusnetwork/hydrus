@@ -1417,6 +1417,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'external programs', 'external programs', self._ExternalProgramsPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
+        self._listbook.AddPage( 'file viewing statistics', 'file viewing statistics', self._FileViewingStatisticsPanel( self._listbook ) )
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
@@ -2302,6 +2303,74 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _FileViewingStatisticsPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = HG.client_controller.new_options
+            
+            self._file_viewing_statistics_active = wx.CheckBox( self )
+            self._file_viewing_statistics_active_on_dupe_filter = wx.CheckBox( self )
+            self._file_viewing_statistics_media_min_time = ClientGUICommon.NoneableSpinCtrl( self )
+            self._file_viewing_statistics_media_max_time = ClientGUICommon.NoneableSpinCtrl( self )
+            self._file_viewing_statistics_preview_min_time = ClientGUICommon.NoneableSpinCtrl( self )
+            self._file_viewing_statistics_preview_max_time = ClientGUICommon.NoneableSpinCtrl( self )
+            
+            self._file_viewing_stats_menu_display = ClientGUICommon.BetterChoice( self )
+            
+            self._file_viewing_stats_menu_display.Append( 'do not show', CC.FILE_VIEWING_STATS_MENU_DISPLAY_NONE )
+            self._file_viewing_stats_menu_display.Append( 'show media', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY )
+            self._file_viewing_stats_menu_display.Append( 'show media, and put preview in a submenu', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU )
+            self._file_viewing_stats_menu_display.Append( 'show media and preview in two lines', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_STACKED )
+            self._file_viewing_stats_menu_display.Append( 'show media and preview combined', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED )
+            
+            #
+            
+            self._file_viewing_statistics_active.SetValue( self._new_options.GetBoolean( 'file_viewing_statistics_active' ) )
+            self._file_viewing_statistics_active_on_dupe_filter.SetValue( self._new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ) )
+            self._file_viewing_statistics_media_min_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' ) )
+            self._file_viewing_statistics_media_max_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' ) )
+            self._file_viewing_statistics_preview_min_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' ) )
+            self._file_viewing_statistics_preview_max_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' ) )
+            
+            self._file_viewing_stats_menu_display.SelectClientData( self._new_options.GetInteger( 'file_viewing_stats_menu_display' ) )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            rows = []
+            
+            rows.append( ( 'Enable file viewing statistics tracking?:', self._file_viewing_statistics_active ) )
+            rows.append( ( 'Enable file viewing statistics tracking on the duplicate filter?:', self._file_viewing_statistics_active_on_dupe_filter ) )
+            rows.append( ( 'Min time to view on media viewer to count as a view (seconds):', self._file_viewing_statistics_media_min_time ) )
+            rows.append( ( 'Cap any view on the media viewer to this maximum time (seconds):', self._file_viewing_statistics_media_max_time ) )
+            rows.append( ( 'Min time to view on preview viewer to count as a view (seconds):', self._file_viewing_statistics_preview_min_time ) )
+            rows.append( ( 'Cap any view on the preview viewer to this maximum time (seconds):', self._file_viewing_statistics_preview_max_time ) )
+            rows.append( ( 'Show media/preview viewing stats on media right-click menus?:', self._file_viewing_stats_menu_display ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'file_viewing_statistics_active', self._file_viewing_statistics_active.GetValue() )
+            self._new_options.SetBoolean( 'file_viewing_statistics_active_on_dupe_filter', self._file_viewing_statistics_active_on_dupe_filter.GetValue() )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_min_time', self._file_viewing_statistics_media_min_time.GetValue() )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_media_max_time', self._file_viewing_statistics_media_max_time.GetValue() )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_min_time', self._file_viewing_statistics_preview_min_time.GetValue() )
+            self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time', self._file_viewing_statistics_preview_max_time.GetValue() )
+            
+            self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetChoice() )
+            
+        
+    
     class _GUIPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -2986,14 +3055,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg = wx.CheckBox( self )
             self._use_system_ffmpeg.SetToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
-            self._file_viewing_stats_menu_display = ClientGUICommon.BetterChoice( self )
-            
-            self._file_viewing_stats_menu_display.Append( 'do not show', CC.FILE_VIEWING_STATS_MENU_DISPLAY_NONE )
-            self._file_viewing_stats_menu_display.Append( 'show media', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_ONLY )
-            self._file_viewing_stats_menu_display.Append( 'show media, and put preview in a submenu', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU )
-            self._file_viewing_stats_menu_display.Append( 'show media and preview in two lines', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_STACKED )
-            self._file_viewing_stats_menu_display.Append( 'show media and preview combined', CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED )
-            
             self._anchor_and_hide_canvas_drags = wx.CheckBox( self )
             self._touchscreen_canvas_drags_unanchor = wx.CheckBox( self )
             
@@ -3013,7 +3074,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
-            self._file_viewing_stats_menu_display.SelectClientData( self._new_options.GetInteger( 'file_viewing_stats_menu_display' ) )
             self._anchor_and_hide_canvas_drags.SetValue( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.SetValue( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
             
@@ -3045,7 +3105,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
-            rows.append( ( 'Show media/preview viewing stats or media right-click menus?:', self._file_viewing_stats_menu_display ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
             rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
@@ -3141,8 +3200,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'animation_start_position' ] = self._animation_start_position.GetValue() / 100.0
-            
-            self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetChoice() )
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
@@ -4613,7 +4670,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
         
         reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in CC.SHORTCUTS_RESERVED_NAMES ]
         custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in CC.SHORTCUTS_RESERVED_NAMES ]
@@ -4671,11 +4728,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Add( self ):
         
-        shortcuts = ClientGUIShortcuts.Shortcuts( 'new shortcuts' )
+        shortcut_set = ClientGUIShortcuts.ShortcutSet( 'new shortcuts' )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
             
-            panel = self._EditPanel( dlg, shortcuts )
+            panel = self._EditPanel( dlg, shortcut_set )
             
             dlg.SetPanel( panel )
             
@@ -4811,10 +4868,10 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for name in deletees:
             
-            HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, name )
             
         
-        HG.client_controller.pub( 'new_shortcuts' )
+        HG.client_controller.pub( 'notify_new_shortcuts_data' )
         
     
     class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -4965,14 +5022,14 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 raise HydrusExceptions.VetoException( 'That name is reserved--please pick another!' )
                 
             
-            shortcuts = ClientGUIShortcuts.Shortcuts( name )
+            shortcut_set = ClientGUIShortcuts.ShortcutSet( name )
             
             for ( shortcut, command ) in self._shortcuts.GetClientData():
                 
-                shortcuts.SetCommand( shortcut, command )
+                shortcut_set.SetCommand( shortcut, command )
                 
             
-            return shortcuts
+            return shortcut_set
             
         
         def RemoveShortcuts( self ):

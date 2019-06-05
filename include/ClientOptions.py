@@ -124,10 +124,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'delete_files_after_export' ] = False
         
         self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active' ] = True
+        self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active_on_dupe_filter' ] = False
         
         self._dictionary[ 'booleans' ][ 'file_system_waits_on_wakeup' ] = False
         
         self._dictionary[ 'booleans' ][ 'always_show_system_everything' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'watch_clipboard_for_watcher_urls' ] = False
+        self._dictionary[ 'booleans' ][ 'watch_clipboard_for_other_recognised_urls' ] = False
         
         #
         
@@ -173,6 +177,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], sync_archive = True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = ClientDuplicates.DuplicateActionOptions()
         
         #
         
@@ -267,6 +272,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity' ] = 3
         
         self._dictionary[ 'noneable_integers' ][ 'last_review_bandwidth_search_distance' ] = 7 * 86400
+        
+        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_media_min_time' ] = 2
+        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_media_max_time' ] = 600
+        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_min_time' ] = 5
+        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_max_time' ] = 60
         
         #
         

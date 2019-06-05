@@ -66,14 +66,23 @@ try:
     
     db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
     
-    
     try:
         
         HydrusPaths.MakeSureDirectoryExists( db_dir )
         
     except:
         
-        raise Exception( 'Could not ensure db path ' + db_dir + ' exists! Check the location is correct and that you have permission to write to it!' )
+        raise Exception( 'Could not ensure db path "{}" exists! Check the location is correct and that you have permission to write to it!'.format( db_dir ) )
+        
+    
+    if not os.path.isdir( db_dir ):
+        
+        raise Exception( 'The given db path "{}" is not a directory!'.format( db_dir ) )
+        
+    
+    if not HydrusPaths.DirectoryIsWritable( db_dir ):
+        
+        raise Exception( 'The given db path "{}" is not a writable-to!'.format( db_dir ) )
         
     
     HG.no_daemons = result.no_daemons
@@ -82,75 +91,12 @@ try:
     
     if result.temp_dir is not None:
         
-        if not os.path.exists( result.temp_dir ):
-            
-            raise Exception( 'The given temp directory, "{}", does not exist!'.format( result.temp_dir ) )
-            
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            os.environ[ 'TEMP' ] = result.temp_dir
-            os.environ[ 'TMP' ] = result.temp_dir
-            
-        else:
-            
-            os.environ[ 'TMPDIR' ] = result.temp_dir
-            
+        HydrusPaths.SetEnvTempDir( result.temp_dir )
         
     
     #
     
     action = ServerController.ProcessStartingAction( db_dir, action )
-    
-    with HydrusLogger.HydrusLogger( db_dir, 'server' ) as logger:
-        
-        try:
-            
-            if action in ( 'stop', 'restart' ):
-                
-                ServerController.ShutdownSiblingInstance( db_dir )
-                
-            
-            if action in ( 'start', 'restart' ):
-                
-                HydrusData.Print( 'Initialising controller\u2026' )
-                
-                threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
-                
-                controller = ServerController.Controller( db_dir )
-                
-                controller.Run()
-                
-            
-        except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
-            
-            error = str( e )
-            
-            HydrusData.Print( error )
-            
-        except:
-            
-            error = traceback.format_exc()
-            
-            HydrusData.Print( 'Hydrus server failed' )
-            
-            HydrusData.Print( traceback.format_exc() )
-            
-        finally:
-            
-            HG.view_shutdown = True
-            HG.model_shutdown = True
-            
-            try: controller.pubimmediate( 'wake_daemons' )
-            except: pass
-            
-            reactor.callFromThread( reactor.stop )
-            
-        
-    
-except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
-    
-    HydrusData.Print( e )
     
 except Exception as e:
     
@@ -168,6 +114,51 @@ except Exception as e:
             f.write( traceback.format_exc() )
             
         
-        print( 'Critical error occurred! Details written to crash.log!' )
+        print( 'Critical boot error occurred! Details written to crash.log!' )
+        
+    
+with HydrusLogger.HydrusLogger( db_dir, 'server' ) as logger:
+    
+    try:
+        
+        if action in ( 'stop', 'restart' ):
+            
+            ServerController.ShutdownSiblingInstance( db_dir )
+            
+        
+        if action in ( 'start', 'restart' ):
+            
+            HydrusData.Print( 'Initialising controller\u2026' )
+            
+            threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
+            
+            controller = ServerController.Controller( db_dir )
+            
+            controller.Run()
+            
+        
+    except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
+        
+        error = str( e )
+        
+        HydrusData.Print( error )
+        
+    except:
+        
+        error = traceback.format_exc()
+        
+        HydrusData.Print( 'Hydrus server failed' )
+        
+        HydrusData.Print( traceback.format_exc() )
+        
+    finally:
+        
+        HG.view_shutdown = True
+        HG.model_shutdown = True
+        
+        try: controller.pubimmediate( 'wake_daemons' )
+        except: pass
+        
+        reactor.callFromThread( reactor.stop )
         
     

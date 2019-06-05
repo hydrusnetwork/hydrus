@@ -48,6 +48,7 @@ from . import HydrusNetwork
 from . import HydrusNetworking
 from . import HydrusSerialisable
 from . import HydrusTagArchive
+from . import HydrusText
 from . import HydrusVideoHandling
 import os
 import PIL
@@ -273,6 +274,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
+        self._last_clipboard_watched_text = ''
+        self._clipboard_watcher_destination_page_watcher = None
+        self._clipboard_watcher_destination_page_urls = None
+        
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped, self._notebook.PageDragAndDropDropped ) )
         
         wx.GetApp().SetTopWindow( self )
@@ -325,11 +330,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._RefreshStatusBar()
         
-        wx.CallAfter( self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
-        
         self._bandwidth_repeating_job = self._controller.CallRepeatingWXSafe( self, 1.0, 1.0, self.REPEATINGBandwidth )
         
         self._page_update_repeating_job = self._controller.CallRepeatingWXSafe( self, 0.25, 0.25, self.REPEATINGPageUpdate )
+        
+        self._clipboard_watcher_repeating_job = None
         
         self._ui_update_repeating_job = None
         
@@ -341,7 +346,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
         
-        wx.CallAfter( self.Layout ) # some i3 thing--doesn't layout main gui on init for some reason
+        self._controller.CallLaterWXSafe( self, 0.5, self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
     
     def _AboutWindow( self ):
@@ -996,6 +1001,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _CullFileViewingStats( self ):
+        
+        text = 'If your file viewing statistics have some erroneous values due to many short views or accidental long views, this routine will cull your current numbers to compensate. For instance:'
+        text += os.linesep * 2
+        text += 'If you have a file with 100 views over 100 seconds and a minimum view time of 2 seconds, this will cull the views to 50.'
+        text += os.linesep * 2
+        text += 'If you have a file with 10 views over 100000 seconds and a maximum view time of 60 seconds, this will cull the total viewtime to 600 seconds.'
+        text += os.linesep * 2
+        text += 'It will work for both preview and media views based on their separate rules.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.WriteSynchronous( 'cull_file_viewing_statistics' )
+                
+                wx.MessageBox( 'Cull done! Please restart the client to see the changes in the UI.')
+                
+            
+        
+    
     def _DebugFetchAURL( self ):
         
         def wx_code( network_job ):
@@ -1373,6 +1399,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         return wx.NOT_FOUND
+        
+    
+    def _FlipClipboardWatcher( self, option_name ):
+        
+        self._controller.new_options.FlipBoolean( option_name )
+        
+        self._last_clipboard_watched_text = ''
+        
+        if self._clipboard_watcher_repeating_job is None:
+            
+            self._clipboard_watcher_repeating_job = self._controller.CallRepeatingWXSafe( self, 1.0, 1.0, self.REPEATINGClipboardWatcher )
+            
         
     
     def _ForceFitAllNonGUITLWs( self ):
@@ -1830,8 +1868,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'track file viewing', 'If activated, the client will record how frequently files are viewed in the preview and media viewers, and for how long.', self._controller.new_options.GetBoolean( 'file_viewing_statistics_active' ), self._controller.new_options.FlipBoolean, 'file_viewing_statistics_active' )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
             
@@ -2005,8 +2043,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            # this will be the easy-mode 'export ability to download from blahbooru' that'll bundle it all into a nice package with a neat png.
-            # need a name for this that isn't 'downloader', or maybe it should be, and I should rename downloaders below to 'gallery query generator' or whatever.
+            clipboard_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, clipboard_menu, 'watcher urls', 'Automatically import watcher URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_watcher_urls' )
+            ClientGUIMenus.AppendMenuCheckItem( self, clipboard_menu, 'other recognised urls', 'Automatically import recognised URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_other_recognised_urls' )
+            
+            ClientGUIMenus.AppendMenu( submenu, clipboard_menu, 'watch clipboard for urls' )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
             
@@ -2488,7 +2532,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None, show_destination_page = True ):
+    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None, show_destination_page = True, allow_watchers = True, allow_other_recognised_urls = True, allow_unrecognised_urls = True ):
         
         if service_keys_to_tags is None:
             
@@ -2508,7 +2552,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             raise HydrusExceptions.URLClassException( message )
             
         
-        if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
+        if ( url_type == HC.URL_TYPE_UNKNOWN and allow_unrecognised_urls ) or ( url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ) and allow_other_recognised_urls ):
+            
+            if not self._notebook.HasURLImportPage() and self.IsIconized():
+                
+                self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
+                
+                return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized. It is queued to be added once the client is restored.' )
+                
             
             page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, select_page = show_destination_page )
             
@@ -2526,7 +2577,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 return ( url, '"{}" URL added successfully.'.format( match_name ) )
                 
             
-        elif url_type == HC.URL_TYPE_WATCHABLE:
+        elif url_type == HC.URL_TYPE_WATCHABLE and allow_watchers:
+            
+            if not self._notebook.HasMultipleWatcherPage() and self.IsIconized():
+                
+                self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
+                
+                return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized. It is queued to be added once the client is restored.' )
+                
             
             page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name, select_page = show_destination_page )
             
@@ -2611,7 +2669,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
         
+        self._controller.CallLaterWXSafe( self, 1.0, self.Layout ) # some i3 thing--doesn't layout main gui on init for some reason
+        
         self._controller.CallLaterWXSafe( self, last_session_save_period_minutes * 60, self.SaveLastSession )
+        
+        self._clipboard_watcher_repeating_job = self._controller.CallRepeatingWXSafe( self, 1.0, 1.0, self.REPEATINGClipboardWatcher )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -4641,6 +4703,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return self._notebook.GetCurrentMediaPage()
         
     
+    def GetCurrentSessionPageInfoDict( self ):
+        
+        return self._notebook.GetPageInfoDict( is_selected = True )
+        
+    
     def GetTotalPageCounts( self ):
         
         total_active_page_count = self._notebook.GetNumPages()
@@ -4747,6 +4814,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NotifyClosedPage( self, page ):
         
+        if self._clipboard_watcher_destination_page_urls == page:
+            
+            self._clipboard_watcher_destination_page_urls = None
+            
+        
+        if self._clipboard_watcher_destination_page_watcher == page:
+            
+            self._clipboard_watcher_destination_page_watcher = None
+            
+        
         close_time = HydrusData.GetNow()
         
         self._closed_pages.append( ( close_time, page ) )
@@ -4849,14 +4926,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         tlp = ClientGUICommon.GetTLP( self )
         
-        if tlp.IsIconized(): # initial layout is bugged if the new page is added during minimised, so let's delay it here
+        if tlp.IsIconized() and not self._notebook.HasMediaPageName( page_name ):
             
-            if not self._notebook.HasMediaPageName( page_name ):
-                
-                self._controller.CallLaterWXSafe( self, 5.0, self.PresentImportedFilesToPage, hashes, page_name )
-                
-                return
-                
+            self._controller.CallLaterWXSafe( self, 10.0, self.PresentImportedFilesToPage, hashes, page_name )
+            
+            return
             
         
         dest_page = self._notebook.PresentImportedFilesToPage( hashes, page_name )
@@ -5095,6 +5169,64 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._statusbar.SetStatusText( bandwidth_status, 1 )
+        
+    
+    def REPEATINGClipboardWatcher( self ):
+        
+        allow_watchers = self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' )
+        allow_other_recognised_urls = self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' )
+        
+        if not ( allow_watchers or allow_other_recognised_urls ):
+            
+            self._clipboard_watcher_repeating_job.Cancel()
+            
+            self._clipboard_watcher_repeating_job = None
+            
+            return
+            
+        
+        try:
+            
+            text = HG.client_controller.GetClipboardText()
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'Could not access the clipboard: {}'.format( e ) )
+            
+            self._clipboard_watcher_repeating_job.Cancel()
+            
+            self._clipboard_watcher_repeating_job = None
+            
+            return
+            
+        
+        if text != self._last_clipboard_watched_text:
+            
+            self._last_clipboard_watched_text = text
+            
+            for possible_url in HydrusText.DeserialiseNewlinedTexts( text ):
+                
+                if not possible_url.startswith( 'http' ):
+                    
+                    continue
+                    
+                
+                try:
+                    
+                    self._ImportURL( possible_url, show_destination_page = False, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = False )
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    pass
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    HydrusData.ShowText( 'Could not find a new page to place the clipboard URL. Perhaps the client is at its page limit.' )
+                    
+                    break
+                    
+                
+            
         
     
     def REPEATINGPageUpdate( self ):

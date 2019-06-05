@@ -1273,7 +1273,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        if session_cookies:
+        if session_cookies or len( expiry_timestamps ) == 0:
             
             return None
             

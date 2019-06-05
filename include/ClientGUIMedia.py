@@ -1854,17 +1854,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
             yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ]
             
-            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
+            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ] or ( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and duplicate_type == HC.DUPLICATE_ALTERNATE ):
                 
                 yes_no_text += ' (with default duplicate metadata merge options)'
                 
                 new_options = HG.client_controller.new_options
                 
                 duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
-                
-            else:
-                
-                duplicate_action_options = None
                 
             
         else:
@@ -1976,6 +1972,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     def _SetDuplicatesCustom( self ):
         
         duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            duplicate_types.append( HC.DUPLICATE_ALTERNATE )
+            
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
@@ -4192,6 +4193,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
                         
                         ClientGUIMenus.AppendMenuItem( self, duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[ duplicate_type ], 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, duplicate_type )
+                        
+                    
+                    if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[ HC.DUPLICATE_ALTERNATE ] + ' (advanced!)', 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, HC.DUPLICATE_ALTERNATE )
                         
                     
                     ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )

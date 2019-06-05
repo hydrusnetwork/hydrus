@@ -1171,9 +1171,12 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
                 
             
         
-        gui = HG.client_controller.gui
+        def do_it():
+            
+            return HG.client_controller.gui.ImportURLFromAPI( url, service_keys_to_tags, destination_page_name, show_destination_page )
+            
         
-        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( gui, gui.ImportURLFromAPI, url, service_keys_to_tags, destination_page_name, show_destination_page )
+        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
         
         time.sleep( 0.05 ) # yield and give the ui time to catch up with new URL pubsubs in case this is being spammed
         
@@ -1432,6 +1435,33 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
             
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedManagePages( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES )
+        
+    
+class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        def do_it():
+            
+            return HG.client_controller.gui.GetCurrentSessionPageInfoDict()
+            
+        
+        page_info_dict = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
+        
+        body_dict = { 'pages' : page_info_dict }
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
         
         return response_context
         

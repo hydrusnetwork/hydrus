@@ -75,6 +75,12 @@ class HydrusServiceClientAPI( HydrusClientService ):
         get_files.putChild( b'file', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetFile( self._service, self._client_requests_domain ) )
         get_files.putChild( b'thumbnail', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( self._service, self._client_requests_domain ) )
         
+        manage_pages = NoResource()
+        
+        root.putChild( b'manage_pages', manage_pages )
+        
+        manage_pages.putChild( b'get_pages', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesGetPages( self._service, self._client_requests_domain ) )
+        
         return root
         
     

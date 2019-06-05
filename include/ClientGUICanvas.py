@@ -1157,6 +1157,11 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_CLOSE, self._canvas_window.EventClose )
         
     
+    def TakeFocusForUser( self ):
+        
+        self._canvas_window.SetFocus()
+        
+    
 class Canvas( wx.Window ):
     
     BORDER = wx.SIMPLE_BORDER
@@ -1846,7 +1851,7 @@ class Canvas( wx.Window ):
         self._last_drag_coordinates = None
         
     
-    def _SaveCurrentMediaViewTime( self, views_delta = 0 ):
+    def _SaveCurrentMediaViewTime( self ):
         
         now = HydrusData.GetNow()
         
@@ -1865,12 +1870,19 @@ class Canvas( wx.Window ):
             
         else:
             
-            viewtype = 'media'
+            if isinstance( self, CanvasFilterDuplicates ):
+                
+                viewtype = 'media_duplicates_filter'
+                
+            else:
+                
+                viewtype = 'media'
+                
             
         
         hash = self._current_media.GetHash()
         
-        HG.client_controller.file_viewing_stats_manager.Update( viewtype, hash, views_delta, viewtime_delta )
+        HG.client_controller.file_viewing_stats_manager.FinishViewing( viewtype, hash, viewtime_delta )
         
     
     def _SetDirty( self ):
@@ -2106,8 +2118,6 @@ class Canvas( wx.Window ):
         
     
     def CleanBeforeDestroy( self ):
-        
-        self._SaveCurrentMediaViewTime()
         
         self.SetMedia( None )
         
@@ -2423,8 +2433,6 @@ class Canvas( wx.Window ):
             previous_media = self._current_media
             
             self._current_media = media
-            
-            self._SaveCurrentMediaViewTime( views_delta = 1 )
             
             if not self._maintain_pan_and_zoom:
                 
@@ -3276,7 +3284,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         new_options = HG.client_controller.new_options
         
-        if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
+        if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ] or ( new_options.GetBoolean( 'advanced_mode' ) and duplicate_type == HC.DUPLICATE_ALTERNATE ):
             
             duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
             
@@ -3477,7 +3485,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if duplicate_action_options is None:
             
-            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]:
+            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ] or ( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and duplicate_type == HC.DUPLICATE_ALTERNATE ):
                 
                 new_options = HG.client_controller.new_options
                 
@@ -3485,7 +3493,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                duplicate_action_options = ClientDuplicates.DuplicateActionOptions( [], [] )
+                duplicate_action_options = ClientDuplicates.DuplicateActionOptions()
                 
             
         

@@ -16,8 +16,11 @@ from . import HydrusData
 from . import HydrusFileHandling
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
+from . import HydrusImageHandling
 from . import HydrusSerialisable
 import itertools
+
+hashes_to_jpeg_quality = {}
 
 def FlattenMedia( media_list ):
     
@@ -215,6 +218,66 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statement = '{} {} {}'.format( HydrusData.TimestampToPrettyTimeDelta( s_ts ), operator, HydrusData.TimestampToPrettyTimeDelta( c_ts ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
+        
+    
+    if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        
+        s_mime = shown_media.GetMime()
+        c_mime = comparison_media.GetMime()
+        
+        if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
+            
+            s_hash = shown_media.GetHash()
+            c_hash = comparison_media.GetHash()
+            
+            global hashes_to_jpeg_quality
+            
+            if s_hash not in hashes_to_jpeg_quality:
+                
+                path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+                
+                hashes_to_jpeg_quality[ s_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+                
+            
+            if c_hash not in hashes_to_jpeg_quality:
+                
+                path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+                
+                hashes_to_jpeg_quality[ c_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+                
+            
+            ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
+            ( c_label, c_jpeg_quality ) = hashes_to_jpeg_quality[ c_hash ]
+            
+            # other way around, low score is good here
+            quality_ratio = c_jpeg_quality / s_jpeg_quality
+            
+            score = 0
+            
+            if s_label != c_label:
+                
+                if quality_ratio > 2.0:
+                    
+                    score = 20
+                    
+                elif quality_ratio > 1.0:
+                    
+                    score = 10
+                    
+                elif quality_ratio < 0.5:
+                    
+                    score = -20
+                    
+                else:
+                    
+                    score = -10
+                    
+                
+                statement = '{} vs {} jpeg quality'.format( s_label, c_label )
+                
+                statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
+                
+            
         
     
     return statements_and_scores

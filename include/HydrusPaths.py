@@ -331,6 +331,33 @@ def GetTempDir( dir = None ):
     
     return tempfile.mkdtemp( prefix = 'hydrus', dir = dir )
     
+def SetEnvTempDir( path ):
+    
+    if not os.path.exists( path ):
+        
+        raise Exception( 'The given temp directory, "{}", does not exist!'.format( path ) )
+        
+    
+    if not os.path.isdir( path ):
+        
+        raise Exception( 'The given temp directory, "{}", does not seem to be a directory!'.format( path ) )
+        
+    
+    if not DirectoryIsWritable( path ):
+        
+        raise Exception( 'The given temp directory, "{}", does not seem to be writable-to!'.format( path ) )
+        
+    
+    for tmp_name in ( 'TMPDIR', 'TEMP', 'TMP' ):
+        
+        if tmp_name in os.environ:
+            
+            os.environ[ tmp_name ] = path
+            
+        
+    
+    tempfile.tempdir = path
+    
 def GetTempPath( suffix = '', dir = None ):
     
     return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus', dir = dir )
@@ -512,7 +539,7 @@ def MakeSureDirectoryExists( path ):
     
     os.makedirs( path, exist_ok = True )
     
-def MakeFileWritable( path, recursive = True ):
+def MakeFileWritable( path ):
     
     if not os.path.exists( path ):
         
@@ -538,26 +565,6 @@ def MakeFileWritable( path, recursive = True ):
         if not desired_bit & current_bits:
             
             os.chmod( path, current_bits | desired_bit )
-            
-        
-        if os.path.isdir( path ) and recursive:
-            
-            for ( root, dirnames, filenames ) in os.walk( path ):
-                
-                for dirname in dirnames:
-                    
-                    sub_path = os.path.join( root, dirname )
-                    
-                    MakeFileWritable( sub_path, recursive = False )
-                    
-                
-                for filename in filenames:
-                    
-                    sub_path = os.path.join( root, filename )
-                    
-                    MakeFileWritable( sub_path )
-                    
-                
             
         
     except Exception as e:

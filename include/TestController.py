@@ -474,6 +474,44 @@ class Controller( object ):
         return False
         
     
+    def GetCurrentSessionPageInfoDict( self ):
+        
+        return {
+            "name" : "top pages notebook",
+            "page_type" : 10,
+            "selected" : True,
+            "pages" : [
+                    {
+                            "name" : "files",
+                            "page_type" : 6,
+                            "selected" : False
+                    },
+                    {
+                            "name" : "thread watcher",
+                            "page_type" : 9,
+                            "selected" : False
+                    },
+                    {
+                            "name" : "pages",
+                            "page_type" : 10,
+                            "selected" : True,
+                            "pages" : [
+                                    {
+                                            "name" : "urls",
+                                            "page_type" : 7,
+                                            "selected" : True
+                                    },
+                                    {
+                                            "name" : "files",
+                                            "page_type" : 6,
+                                            "selected" : False
+                                    }
+                            ]
+                    }	
+            ]
+        }
+        
+    
     def GetFilesDir( self ):
         
         return self._server_files_dir

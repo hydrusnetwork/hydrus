@@ -154,11 +154,6 @@ def GetUPnPMappings():
                 
                 # 0 UDP 65533->192.168.0.197:65533 'Skype UDP at 192.168.0.197:65533 (2665)' '' 0
                 
-                if line.count( ':' ) != 1:
-                    
-                    continue
-                    
-                
                 while '  ' in line:
                     
                     line = line.replace( '  ', ' ' )

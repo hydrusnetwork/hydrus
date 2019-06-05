@@ -532,6 +532,17 @@ class Page( wx.SplitterWindow ):
         return { self._page_key }
         
     
+    def GetPageInfoDict( self, is_selected = False ):
+        
+        root = {}
+        
+        root[ 'name' ] = self.GetName()
+        root[ 'page_type' ] = self._management_controller.GetType()
+        root[ 'focused' ] = is_selected
+        
+        return root
+        
+    
     def GetPrettyStatus( self ):
         
         return self._pretty_status
@@ -1958,6 +1969,31 @@ class PagesNotebook( wx.Notebook ):
         return page_keys
         
     
+    def GetPageInfoDict( self, is_selected = True ):
+        
+        current_page = self.GetCurrentPage()
+        
+        my_pages_list = []
+        
+        for page in self._GetPages():
+            
+            page_is_focused = is_selected and page == current_page
+            
+            page_info_dict = page.GetPageInfoDict( is_selected = is_selected )
+            
+            my_pages_list.append( page_info_dict )
+            
+        
+        root = {}
+        
+        root[ 'name' ] = self.GetName()
+        root[ 'page_type' ] = ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES
+        root[ 'selected' ] = is_selected
+        root[ 'pages' ] = my_pages_list
+        
+        return root
+        
+    
     def GetPages( self ):
         
         return self._GetPages()
@@ -2237,6 +2273,11 @@ class PagesNotebook( wx.Notebook ):
     
     def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
         
+        if self.GetTopLevelParent().IsIconized():
+            
+            return None
+            
+        
         current_page = self.GetCurrentPage()
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
@@ -2270,7 +2311,7 @@ class PagesNotebook( wx.Notebook ):
                         
                     else:
                         
-                        return
+                        return None
                         
                     
                 

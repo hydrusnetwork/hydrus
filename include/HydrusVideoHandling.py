@@ -90,6 +90,19 @@ def GetFFMPEGVersion():
             
         
     
+    message = 'FFMPEG was recently contacted to fetch version information. While FFMPEG could be found, the response could not be understood. Significant debug information has been printed to the log, which hydrus_dev would be interested in.'
+    
+    HydrusData.ShowText( message )
+    
+    message += os.linesep * 2
+    message += str( sbp_kwargs )
+    message += os.linesep * 2
+    message += str( os.environ )
+    message += os.linesep * 2
+    message += 'Response: {}'.format( infos )
+    
+    HydrusData.Print( message )
+    
     return 'unknown'
     
 FFMPEG_MISSING_ERROR_PUBBED = False

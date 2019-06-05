@@ -102,6 +102,17 @@ class TestServer( unittest.TestCase ):
         time.sleep( 1 )
         
     
+    @classmethod
+    def tearDownClass( cls ):
+        
+        for path in ( cls._ssl_cert_path, cls._ssl_key_path ):
+            
+            HydrusPaths.MakeFileWritable( path )
+            
+            os.unlink( path )
+            
+        
+    
     def _test_basics( self, host, port, https = True ):
         
         if https:

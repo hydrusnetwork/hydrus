@@ -590,6 +590,75 @@ class FileViewingStatsManager( object ):
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         
     
+    def _GenerateViewsRow( self, viewtype, viewtime_delta ):
+        
+        new_options = HG.client_controller.new_options
+        
+        preview_views_delta = 0
+        preview_viewtime_delta = 0
+        media_views_delta = 0
+        media_viewtime_delta = 0
+        
+        if viewtype == 'preview':
+            
+            preview_min = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
+            preview_max = new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
+            
+            if preview_max is not None:
+                
+                viewtime_delta = min( viewtime_delta, preview_max )
+                
+            
+            if preview_min is None or viewtime_delta >= preview_min:
+                
+                preview_views_delta = 1
+                preview_viewtime_delta = viewtime_delta
+                
+            
+        elif viewtype in ( 'media', 'media_duplicates_filter' ):
+            
+            do_it = True
+            
+            if viewtime_delta == 'media_duplicates_filter' and not new_options.GetBoolean( 'file_viewing_statistics_active_on_dupe_filter' ):
+                
+                do_it = False
+                
+            
+            if do_it:
+                
+                media_min = new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
+                media_max = new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
+                
+                if media_max is not None:
+                    
+                    viewtime_delta = min( viewtime_delta, media_max )
+                    
+                
+                if media_min is None or viewtime_delta >= media_min:
+                    
+                    media_views_delta = 1
+                    media_viewtime_delta = min( viewtime_delta, media_max )
+                    
+                
+            
+        
+        return ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+        
+    
+    def _PubSubRow( self, hash, row ):
+        
+        ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
+        
+        pubsub_row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, pubsub_row )
+        
+        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        
+        HG.client_controller.pub( 'content_updates_data', service_keys_to_content_updates )
+        HG.client_controller.pub( 'content_updates_gui', service_keys_to_content_updates )
+        
+    
     def REPEATINGFlush( self ):
         
         self.Flush()
@@ -622,7 +691,7 @@ class FileViewingStatsManager( object ):
             
         
     
-    def Update( self, viewtype, hash, views_delta, viewtime_delta ):
+    def FinishViewing( self, viewtype, hash, viewtime_delta ):
         
         if not HG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
             
@@ -631,27 +700,15 @@ class FileViewingStatsManager( object ):
         
         with self._lock:
             
-            preview_views_delta = 0
-            preview_viewtime_delta = 0
-            media_views_delta = 0
-            media_viewtime_delta = 0
-            
-            if viewtype == 'preview':
-                
-                preview_views_delta = views_delta
-                preview_viewtime_delta = viewtime_delta
-                
-            elif viewtype == 'media':
-                
-                media_views_delta = views_delta
-                media_viewtime_delta = viewtime_delta
-                
+            row = self._GenerateViewsRow( viewtype, viewtime_delta )
             
             if hash not in self._pending_updates:
                 
-                self._pending_updates[ hash ] = ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
+                self._pending_updates[ hash ] = row
                 
             else:
+                
+                ( preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta ) = row
                 
                 ( existing_preview_views_delta, existing_preview_viewtime_delta, existing_media_views_delta, existing_media_viewtime_delta ) = self._pending_updates[ hash ]
                 
@@ -659,14 +716,7 @@ class FileViewingStatsManager( object ):
                 
             
         
-        row = ( hash, preview_views_delta, preview_viewtime_delta, media_views_delta, media_viewtime_delta )
-        
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, row )
-        
-        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
-        
-        HG.client_controller.pub( 'content_updates_data', service_keys_to_content_updates )
-        HG.client_controller.pub( 'content_updates_gui', service_keys_to_content_updates )
+        self._PubSubRow( hash, row )
         
 
 class LocalBooruCache( object ):
@@ -1384,54 +1434,6 @@ class ServicesManager( object ):
         with self._lock:
             
             return service_key in self._keys_to_services
-            
-        
-    
-class ShortcutsManager( object ):
-    
-    def __init__( self, controller ):
-        
-        self._controller = controller
-        
-        self._shortcuts = {}
-        
-        self.RefreshShortcuts()
-        
-        self._controller.sub( self, 'RefreshShortcuts', 'new_shortcuts' )
-        
-    
-    def GetCommand( self, shortcuts_names, shortcut ):
-        
-        for name in shortcuts_names:
-            
-            if name in self._shortcuts:
-                
-                command = self._shortcuts[ name ].GetCommand( shortcut )
-                
-                if command is not None:
-                    
-                    if HG.gui_report_mode:
-                        
-                        HydrusData.ShowText( 'command matched: ' + repr( command ) )
-                        
-                    
-                    return command
-                    
-                
-            
-        
-        return None
-        
-    
-    def RefreshShortcuts( self ):
-        
-        self._shortcuts = {}
-        
-        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
-        
-        for shortcuts in all_shortcuts:
-            
-            self._shortcuts[ shortcuts.GetName() ] = shortcuts
             
         
     
@@ -2415,7 +2417,7 @@ class ThumbnailCache( object ):
             
             self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
             
-            cancelled_media_results = { media.GetMediaResult() for media in medias }
+            cancelled_media_results = { media.GetDisplayMedia().GetMediaResult() for media in medias }
             
             outstanding_delayed_hashes = { media_result.GetHash() for media_result in cancelled_media_results if media_result in self._delayed_regeneration_queue_quick }
             

@@ -47,6 +47,10 @@
 						<li><a href="#add_urls_add_url">POST /add_urls/add_url</a></li>
 						<li><a href="#add_urls_associate_url">POST /add_urls/associate_url</a></li>
 					</ul>
+					<h4>Managing Pages</h4>
+					<ul>
+						<li><a href="#manage_pages_get_pages">GET /manage_pages/get_pages</a></li>
+					</ul>
 					<h4>Searching and Fetching Files</h4>
 					<ul>
 						<li><a href="#get_files_search_files">GET /get_files/search_files</a></li>
@@ -89,7 +93,8 @@
 							<li>0 - Import URLs</li>
 							<li>1 - Import Files</li>
 							<li>2 - Add Tags</li>
-							<li>3 - Search for files</li>
+							<li>3 - Search for Files</li>
+							<li>4 - Manage Pages</li>
 						</ul>
 					</li>
 					<li>
@@ -498,6 +503,86 @@
 					<li><p>Response description: 200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.</p></li>
 				</ul>
 			</div>
+			
+			
+			
+			<h3>Managing Pages</h3>
+			<p>This refers to the pages of the main client UI.</p>
+			<div class="apiborder" id="manage_pages_get_pages">
+				<h3><b>GET /manage_pages/get_pages</b></h3>
+				<p><i>Get the page structure of the current UI session.</i></p>
+				<ul>
+					<li>
+						<p>Headers:</p>
+						<ul>
+							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments: n/a</p>
+					</li>
+					<p>Response description: A JSON Object of the top-level page 'notebook' (page of pages) detailing its basic information and current sub-pages. Page of pages beneath it will list their own sub-page lists.</p>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{
+	"pages" : {
+		"name" : "top pages notebook",
+		"page_type" : 10,
+		"selected" : true,
+		"pages" : [
+			{
+				"name" : "files",
+				"page_type" : 6,
+				"selected" : false
+			},
+			{
+				"name" : "thread watcher",
+				"page_type" : 9,
+				"selected" : false
+			},
+			{
+				"name" : "pages",
+				"page_type" : 10,
+				"selected" : true,
+				"pages" : [
+					{
+						"name" : "urls",
+						"page_type" : 7,
+						"selected" : true
+					},
+					{
+						"name" : "files",
+						"page_type" : 6,
+						"selected" : false
+					}
+				]
+			}	
+		]
+	}
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<p>The page types are as follows:</p>
+					<ul>
+						<li>1 - Gallery downloader</li>
+						<li>2 - Simple downloader</li>
+						<li>3 - Hard drive import</li>
+						<li>5 - Petitions (used by repository janitors)</li>
+						<li>6 - File search</li>
+						<li>7 - URL downloader</li>
+						<li>8 - Duplicates</li>
+						<li>9 - Thread watcher</li>
+						<li>10 - Page of pages</li>
+					</ul>
+					<p>The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.</p>
+				</ul>
+			</div>
+			
+			
+			
 			<h3>Searching Files</h3>
 			<p>File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.</p>
 			<div class="apiborder" id="get_files_search_files">

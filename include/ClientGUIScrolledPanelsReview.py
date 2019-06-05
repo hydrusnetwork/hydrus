@@ -299,7 +299,32 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         service_keys_to_content_updates = { self._service_key : [ content_update ] }
         
-        HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+        def do_it( job_key ):
+            
+            try:
+                
+                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
+            finally:
+                
+                job_key.Finish()
+                
+            
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_title', 'Processing advanced content update' )
+        
+        HG.client_controller.CallToThread( do_it, job_key )
+        
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'Working\u2026' ) as dlg:
+            
+            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def ImportFromHTA( self ):
