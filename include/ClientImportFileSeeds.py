@@ -582,7 +582,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if override_bandwidth:
                 
-                network_job.OverrideBandwidth( 30 )
+                network_job.OverrideBandwidth( 3 )
                 
             
             network_job.SetFileImportOptions( file_import_options )

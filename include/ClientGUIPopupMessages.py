@@ -867,7 +867,9 @@ class PopupMessageManager( wx.Frame ):
         
         main_gui = self.GetParent()
         
-        not_on_hidden_or_virtual_display = ClientGUITopLevelWindows.MouseIsOnMyDisplay( main_gui )
+        # test both because when user uses a shortcut to send gui to a diff monitor, we can't chase it
+        # this may need a better test for virtual display dismissal
+        not_on_hidden_or_virtual_display = ClientGUITopLevelWindows.MouseIsOnMyDisplay( main_gui ) or ClientGUITopLevelWindows.MouseIsOnMyDisplay( self )
         
         main_gui_up = not main_gui.IsIconized()
         

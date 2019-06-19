@@ -3514,7 +3514,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 self._hashes_due_to_be_deleted_in_this_batch.update( second_media.GetHashes() )
                 
             
-            if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_BETTER_OR_WORSE ):
+            if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE ):
                 
                 file_deletion_reason = 'better/worse'
                 

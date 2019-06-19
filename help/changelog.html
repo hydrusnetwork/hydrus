@@ -8,6 +8,57 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 356</h3></li>
+				<ul>
+					<li>duplicates:</li>
+					<li>moved better/worse/same quality duplicates relationships to the new 'king' group-based model. rather than tracking every relationship, duplicates are now stored in groups with a single 'best' file</li>
+					<li>as a result, duplicate relationships are now transitive! saying that one king is duplicate to another will merge groups. the 'better' king is the new king, and 'same quality' kings choose one of the kings pseudorandomly. advanced exceptions: saying that a king is better than a basic member of another group or saying that two members are same quality is still valid but will simply 'poach' the non-king member from the other group in order to ensure the wrong king doesn't end up on top in the eventual merge. saying KingA is same quality as MemberB will merge the groups with KingB as the new king (since it is presumably same/better quality to all members of A)</li>
+					<li>the thumbnail right-click 'duplicates' entry is now renamed to 'file relationships' and is no longer advanced mode only. the 'find similar files' entry is folded into this</li>
+					<li>the thumbnail 'file relationships' menu now shows a simple 'duplicates' count rather than the old messy better/worse/equal. it will show all the members of a duplicates group when clicked. the menu also notes if the focused file is the best file of its group. if it is not, you will get the option to show the best file or make the focused file the best</li>
+					<li>as a result, it is now much simpler to view a group of duplicates and overrule a 'best quality' member as needed</li>
+					<li>added the 'media' shortcut 'duplicate_media_set_focused_king' to shortcut setting a 'best quality' file</li>
+					<li>the system:num duplicate relationships now has the simpler 'duplicates' entry, to search on size of the entire group. searching for kings/not kings will come soon</li>
+					<li>due to the new duplicate transitivity rules, potential pairs are now eliminated at a much faster rate!</li>
+					<li>setting duplicate relationships will overrule false positive or alternate relationships already in place</li>
+					<li>manually setting alternate relationships to more than two thumbnails at once will now set each file as alternate to every other file in the selection, completely eliminating potential pairs within the group. if you try to do this to large groups of files you will get a longer yes/no confirmation message just to make sure you aren't overwriting some potential dupes by accident</li>
+					<li>all existing better/worse/same relationships will be converted to the new group storage in this update, with appropriate kings determined. potential pair queue counts will be reduce accordingly, and the temporary alternate/duplicate confusion from the alternates update will be auto-resolved by merging truly duplicate 'alternates' together</li>
+					<li>fleshed out the duplicate test code significantly to handle the new dupe groups and their interactions with the recent false positive and alternates changes</li>
+					<li>refactored some db test code into separate client/server/duplicates files and cleaned up dupe tests readability</li>
+					<li>potential pairs are now the only component of the new system still on the old pairs system. the duplicate filter will still serve up some inefficient (i.e. non-king) comparisons</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed the issue where many clipboard-watcher-caught URLs that did not match were producing false-positive 'could not generate new page for that URL' error popups</li>
+					<li>the clipboard text-fetcher now tests against incompatible clipboard types (like a screenshot) better, and all instances of text fetching now report errors more gracefully and with more information</li>
+					<li>fixed the unusual OS X issue where many shortcuts were not being processed after client boot until the top menubar was opened and closed. a variety of other blocking-while-menubar-is-open issues that were false-positive misfiring are now fixed as well, please let me know if you still have trouble here</li>
+					<li>the file menu now has an 'exit and force shutdown maintenance' option to force-run outstanding maintenance jobs</li>
+					<li>when shutdown maintenance work is going on, the shutdown splash screen now has a 'stop shutdown maintenance' button!</li>
+					<li>cleaned up some file maintenance manager maintenance locking and shutdown cancel logic</li>
+					<li>moved all the idle-mode maintenance checks to a new system that explicitly defines idle/shutdown/forced maintenance work and tests those states in a unified manner, checking idle mode and the new splash cancel button status and so on more reliably. a lot of maintenance should cancel out quicker when appropriate</li>
+					<li>misc shutdown logic cleanup</li>
+					<li>added a 'file maintenance' option to the database->maintenance menu that forces the new file maintenance manager to run its queue. it'll make a little popup as it works, or a note that no work is due</li>
+					<li>the 'regenerate' thumbnail menu is also available to all users</li>
+					<li>jpeg quality estimates are now available for all users in the duplicate filter. they only display when the two jpegs' quality have different labels</li>
+					<li>the jpeg quality estimator now handles some unusual jpegs that load with empty quantization table arrays</li>
+					<li>the duplicate filter now handles bad jpeg quality estimations gracefully</li>
+					<li>cleaned up some ffmpeg communication code</li>
+					<li>the ffmpeg debug text that spawns on a help->about call that fails to discover ffmpeg version information now prints stderr output as well. if you have been hit by this, please give it another go and let me know what you get</li>
+					<li>the same ffmpeg 'no response' error on file parse now popups and prints some debug info and returns a better error</li>
+					<li>dialogs and windows on the new panel system now support a new pre-close tidying system</li>
+					<li>the manage tags dialog and window will now cancel any pending large tag autocomplete queries on close</li>
+					<li>regular gui pages now support a new pre-close tidying system</li>
+					<li>search pages will now cancel any pending search results loading or tag autocomplete queries on close</li>
+					<li>improved reliability of the popup message manager chasing the main gui when it is sent to another screen by a keyboard shortcut (such as shift+win+arrow on Windows). it should work now if the mouse cursor is in either window. please let me know if this causes trouble for virtual display navigation</li>
+					<li>the network engine now waits significantly longer--60s--on connection errors before trying again, and with every failed attempt will wait n times longer again. when in this waiting state, a manual user cancel command cancels it out faster</li>
+					<li>I believe I have fixed/improved a situation where media viewer hover windows would sometimes disappear immediately after appearing on some Linux window managers</li>
+					<li>improved hover window report mode to state more focus info in case the above is insufficient</li>
+					<li>to better link the two requests and consume bandwidth under strict rules more precisely, the override bandwidth rule that kicks in when a file page has a single file is now 3 seconds instead of 30</li>
+					<li>updated options->connection page to specify that 'socks4a'/'socks5h' is needed to force remote dns resolution</li>
+					<li>sped up tag parents initialisation</li>
+					<li>repositories now group tag sibling and parent petitions by the parent/better tag's namespace</li>
+					<li>removed some old network 'death time' code that is no longer useful and was interfering with heavy petition processing</li>
+					<li>the log now flushes itself to disk every 60s rather than 300s</li>
+					<li>misc fixes and cleanup</li>
+				</ul>
 				<li><h3>version 355</h3></li>
 				<ul>
 					<li>duplicates:</li>

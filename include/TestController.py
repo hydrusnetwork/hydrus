@@ -32,6 +32,8 @@ from . import TestClientAPI
 from . import TestClientConstants
 from . import TestClientDaemons
 from . import TestClientData
+from . import TestClientDB
+from . import TestClientDBDuplicates
 from . import TestClientImageHandling
 from . import TestClientImportOptions
 from . import TestClientImportSubscriptions
@@ -39,7 +41,6 @@ from . import TestClientListBoxes
 from . import TestClientNetworking
 from . import TestClientThreading
 from . import TestDialogs
-from . import TestDB
 from . import TestFunctions
 from . import TestHydrusNATPunch
 from . import TestHydrusNetworking
@@ -47,6 +48,7 @@ from . import TestHydrusSerialisable
 from . import TestHydrusServer
 from . import TestHydrusSessions
 from . import TestHydrusTags
+from . import TestServerDB
 from twisted.internet import reactor
 from . import ClientCaches
 from . import ClientData
@@ -658,7 +660,12 @@ class Controller( object ):
             
         if run_all or self.only_run == 'db':
             
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDB ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestServerDB ) )
+            
+        if run_all or self.only_run in ( 'db', 'db_duplicates' ):
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDBDuplicates ) )
             
         if run_all or self.only_run == 'networking':
             
@@ -675,7 +682,8 @@ class Controller( object ):
             
         if run_all or self.only_run == 'nat':
             
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
+            pass
+            #suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
             
         if run_all or self.only_run == 'server':
             
@@ -718,6 +726,11 @@ class Controller( object ):
     def SetWebCookies( self, name, value ):
         
         self._cookies[ name ] = value
+        
+    
+    def ShouldStopThisWork( self, maintenance_mode, stop_time = None ):
+        
+        return False
         
     
     def TidyUp( self ):

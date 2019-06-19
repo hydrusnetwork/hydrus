@@ -364,6 +364,8 @@ class NewDialog( wx.Dialog ):
             self._SaveOKPosition()
             
         
+        self.CleanBeforeDestroy()
+        
         try:
             
             self.EndModal( value )
@@ -396,6 +398,11 @@ class NewDialog( wx.Dialog ):
                 HydrusData.ShowText( 'The dialog would not destroy on command.' )
                 
             
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        pass
         
     
     def DoOK( self ):
@@ -584,6 +591,16 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
     def _InitialiseButtons( self ):
         
         raise NotImplementedError()
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        DialogThatResizes.CleanBeforeDestroy( self )
+        
+        if hasattr( self._panel, 'CleanBeforeDestroy' ):
+            
+            self._panel.CleanBeforeDestroy()
+            
         
     
     def EventChildSizeChanged( self, event ):
@@ -782,6 +799,7 @@ class Frame( wx.Frame ):
         
         self.SetIcon( HG.client_controller.frame_icon )
         
+        self.Bind( wx.EVT_CLOSE, self.EventAboutToClose )
         self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
         self.Bind( wx.EVT_MENU_HIGHLIGHT_ALL, self.EventMenuHighlight )
         self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
@@ -790,6 +808,18 @@ class Frame( wx.Frame ):
         self._menu_text_stack = []
         
         HG.client_controller.ResetIdleTimer()
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        pass
+        
+    
+    def EventAboutToClose( self, event ):
+        
+        self.CleanBeforeDestroy()
+        
+        event.Skip()
         
     
     def EventMenuClose( self, event ):
@@ -905,6 +935,16 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
         
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        FrameThatResizes.CleanBeforeDestroy( self )
+        
+        if hasattr( self._panel, 'CleanBeforeDestroy' ):
+            
+            self._panel.CleanBeforeDestroy()
+            
         
     
     def EventCharHook( self, event ):

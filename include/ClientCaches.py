@@ -28,36 +28,40 @@ from . import HydrusTags
 import traceback
 import weakref
 
-# important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
+# now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
     
-    def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
+    # important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving in list order
+    def AddParentsAndGrandparents( simple_children_to_parents, this_childs_parents, parents ):
         
         for parent in parents:
             
-            if parent not in children_to_parents[ child ]:
+            if parent not in this_childs_parents:
                 
-                children_to_parents[ child ].append( parent )
+                this_childs_parents.append( parent )
                 
             
+            # this parent has its own parents, so the child should get those as well
             if parent in simple_children_to_parents:
                 
                 grandparents = simple_children_to_parents[ parent ]
                 
-                AddParents( simple_children_to_parents, children_to_parents, child, grandparents )
+                AddParentsAndGrandparents( simple_children_to_parents, this_childs_parents, grandparents )
                 
             
         
     
     service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
     
-    for ( service_key, simple_children_to_parents ) in list(service_keys_to_simple_children_to_parents.items()):
+    for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
         
         children_to_parents = service_keys_to_children_to_parents[ service_key ]
         
         for ( child, parents ) in list(simple_children_to_parents.items()):
             
-            AddParents( simple_children_to_parents, children_to_parents, child, parents )
+            this_childs_parents = children_to_parents[ child ]
+            
+            AddParentsAndGrandparents( simple_children_to_parents, this_childs_parents, parents )
             
         
     
@@ -67,13 +71,15 @@ def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
     
     service_keys_to_simple_children_to_parents = collections.defaultdict( HydrusData.default_dict_set )
     
-    for ( service_key, pairs ) in list(service_keys_to_pairs_flat.items()):
+    for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
         
         service_keys_to_simple_children_to_parents[ service_key ] = BuildSimpleChildrenToParents( pairs )
         
     
     return service_keys_to_simple_children_to_parents
     
+# take pairs, make dict of child -> parents while excluding loops
+# no grandparents here
 def BuildSimpleChildrenToParents( pairs ):
     
     simple_children_to_parents = HydrusData.default_dict_set()
@@ -1631,7 +1637,7 @@ class TagParentsManager( object ):
         
         combined_pairs_flat = set()
         
-        for pairs_flat in list(service_keys_to_pairs_flat.values()):
+        for pairs_flat in service_keys_to_pairs_flat.values():
             
             combined_pairs_flat.update( pairs_flat )
             

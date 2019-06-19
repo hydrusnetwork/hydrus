@@ -220,41 +220,45 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
     
-    if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+    s_mime = shown_media.GetMime()
+    c_mime = comparison_media.GetMime()
+    
+    if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
         
-        s_mime = shown_media.GetMime()
-        c_mime = comparison_media.GetMime()
+        s_hash = shown_media.GetHash()
+        c_hash = comparison_media.GetHash()
         
-        if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
+        global hashes_to_jpeg_quality
+        
+        if s_hash not in hashes_to_jpeg_quality:
             
-            s_hash = shown_media.GetHash()
-            c_hash = comparison_media.GetHash()
+            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
             
-            global hashes_to_jpeg_quality
+            hashes_to_jpeg_quality[ s_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
             
-            if s_hash not in hashes_to_jpeg_quality:
+        
+        if c_hash not in hashes_to_jpeg_quality:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+            
+            hashes_to_jpeg_quality[ c_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+            
+        
+        ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
+        ( c_label, c_jpeg_quality ) = hashes_to_jpeg_quality[ c_hash ]
+        
+        score = 0
+        
+        if s_label != c_label:
+            
+            if c_jpeg_quality is None or s_jpeg_quality is None:
                 
-                path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+                score = 0
                 
-                hashes_to_jpeg_quality[ s_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+            else:
                 
-            
-            if c_hash not in hashes_to_jpeg_quality:
-                
-                path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
-                
-                hashes_to_jpeg_quality[ c_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
-                
-            
-            ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
-            ( c_label, c_jpeg_quality ) = hashes_to_jpeg_quality[ c_hash ]
-            
-            # other way around, low score is good here
-            quality_ratio = c_jpeg_quality / s_jpeg_quality
-            
-            score = 0
-            
-            if s_label != c_label:
+                # other way around, low score is good here
+                quality_ratio = c_jpeg_quality / s_jpeg_quality
                 
                 if quality_ratio > 2.0:
                     
@@ -273,10 +277,10 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                     score = -10
                     
                 
-                statement = '{} vs {} jpeg quality'.format( s_label, c_label )
-                
-                statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
-                
+            
+            statement = '{} vs {} jpeg quality'.format( s_label, c_label )
+            
+            statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
             
         
     

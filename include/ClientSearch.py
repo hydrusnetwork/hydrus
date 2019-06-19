@@ -379,7 +379,7 @@ class FileSystemPredicates( object ):
         
         self._ratings_predicates = []
         
-        self._duplicate_predicates = []
+        self._duplicate_count_predicates = []
         
         self._file_viewing_stats_predicates = []
         
@@ -675,11 +675,11 @@ class FileSystemPredicates( object ):
                 self._similar_to = ( hash, max_hamming )
                 
             
-            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT:
                 
                 ( operator, num_relationships, dupe_type ) = value
                 
-                self._duplicate_predicates.append( ( operator, num_relationships, dupe_type ) )
+                self._duplicate_count_predicates.append( ( operator, num_relationships, dupe_type ) )
                 
             
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
@@ -691,9 +691,9 @@ class FileSystemPredicates( object ):
             
         
     
-    def GetDuplicateRelationshipsPredicates( self ):
+    def GetDuplicateRelationshipCountPredicates( self ):
         
-        return self._duplicate_predicates
+        return self._duplicate_count_predicates
         
     
     def GetFileServiceInfo( self ):
@@ -1448,7 +1448,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base = n_text + o_text + HydrusData.ToHumanInt( num )
                     
                 
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT:
                 
                 base = 'num duplicate relationships'
                 

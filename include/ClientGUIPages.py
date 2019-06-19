@@ -440,6 +440,13 @@ class Page( wx.SplitterWindow ):
         self._management_panel.CheckAbleToClose()
         
     
+    def CleanBeforeClose( self ):
+        
+        self._management_panel.CleanBeforeClose()
+        
+        self._controller.pub( 'set_focus', self._page_key, None )
+        
+    
     def CleanBeforeDestroy( self ):
         
         self._management_panel.CleanBeforeDestroy()
@@ -604,11 +611,6 @@ class Page( wx.SplitterWindow ):
         
         self._management_panel.PageShown()
         self._media_panel.PageShown()
-        
-    
-    def PrepareToHide( self ):
-        
-        self._controller.pub( 'set_focus', self._page_key, None )
         
     
     def RefreshQuery( self ):
@@ -918,7 +920,7 @@ class PagesNotebook( wx.Notebook ):
                 
             
         
-        page.PrepareToHide()
+        page.CleanBeforeClose()
         
         page_key = page.GetPageKey()
         
@@ -1615,6 +1617,14 @@ class PagesNotebook( wx.Notebook ):
         else:
             
             self._ChooseNewPage()
+            
+        
+    
+    def CleanBeforeClose( self ):
+        
+        for page in self._GetPages():
+            
+            page.CleanBeforeClose()
             
         
     
@@ -2669,14 +2679,6 @@ class PagesNotebook( wx.Notebook ):
         if dest_notebook != self:
             
             dest_notebook.Refresh()
-            
-        
-    
-    def PrepareToHide( self ):
-        
-        for page in self._GetPages():
-            
-            page.PrepareToHide()
             
         
     

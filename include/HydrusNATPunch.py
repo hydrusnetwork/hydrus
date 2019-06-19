@@ -39,17 +39,17 @@ def GetExternalIP():
         
         HydrusData.WaitForProcessToFinish( p, 30 )
         
-        ( output, error ) = p.communicate()
+        ( stdout, stderr ) = p.communicate()
         
-        if error is not None and len( error ) > 0:
+        if stderr is not None and len( stderr ) > 0:
             
-            raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + str( error ) )
+            raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + str( stderr ) )
             
         else:
             
             try:
                 
-                lines = HydrusText.DeserialiseNewlinedTexts( output )
+                lines = HydrusText.DeserialiseNewlinedTexts( stdout )
                 
                 i = lines.index( 'i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
                 
@@ -87,28 +87,28 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
-    ( output, error ) = p.communicate()
+    ( stdout, stderr ) = p.communicate()
     
-    if 'x.x.x.x:' + str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in output:
+    if 'x.x.x.x:' + str( external_port ) + ' TCP is redirected to internal ' + internal_client + ':' + str( internal_port ) in stdout:
         
         raise HydrusExceptions.FirewallException( 'The UPnP mapping of ' + internal_client + ':' + internal_port + '->external:' + external_port + ' already exists as a port forward. If this UPnP mapping is automatic, please disable it.' )
         
     
-    if output is not None and 'failed with code' in output:
+    if stdout is not None and 'failed with code' in stdout:
         
-        if 'UnknownError' in output:
+        if 'UnknownError' in stdout:
             
-            raise HydrusExceptions.FirewallException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + output )
+            raise HydrusExceptions.FirewallException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
             
         else:
             
-            raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + output )
+            raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
             
         
     
-    if error is not None and len( error ) > 0:
+    if stderr is not None and len( stderr ) > 0:
         
-        raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + error )
+        raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stderr )
         
     
 def GetUPnPMappings():
@@ -121,17 +121,17 @@ def GetUPnPMappings():
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
-    ( output, error ) = p.communicate()
+    ( stdout, stderr ) = p.communicate()
     
-    if error is not None and len( error ) > 0:
+    if stderr is not None and len( stderr ) > 0:
         
-        raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + error )
+        raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + stderr )
         
     else:
         
         try:
             
-            lines = HydrusText.DeserialiseNewlinedTexts( output )
+            lines = HydrusText.DeserialiseNewlinedTexts( stdout )
             
             i = lines.index( 'i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
             
@@ -201,7 +201,7 @@ def GetUPnPMappings():
             HydrusData.Print( 'UPnP problem:' )
             HydrusData.Print( traceback.format_exc() )
             HydrusData.Print( 'Full response follows:' )
-            HydrusData.Print( output )
+            HydrusData.Print( stdout )
             
             raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + str( e ) )
             
@@ -217,9 +217,9 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     HydrusData.WaitForProcessToFinish( p, 30 )
     
-    ( output, error ) = p.communicate()
+    ( stdout, stderr ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + error )
+    if stderr is not None and len( stderr ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + stderr )
     
 
 class ServicesUPnPManager( object ):

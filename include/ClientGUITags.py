@@ -1110,6 +1110,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         return True
         
     
+    def CleanBeforeDestroy( self ):
+        
+        ClientGUIScrolledPanels.ManagePanel.CleanBeforeDestroy( self )
+        
+        for page in self._tag_repositories.GetPages():
+            
+            page.CleanBeforeDestroy()
+            
+        
+    
     def CommitChanges( self ):
         
         groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
@@ -1912,7 +1922,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _Paste( self ):
             
-            text = HG.client_controller.GetClipboardText()
+            try:
+                
+                text = HG.client_controller.GetClipboardText()
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                wx.MessageBox( str( e ) )
+                
+                return
+                
             
             try:
                 
@@ -1967,6 +1986,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self.EnterTags( tags, only_add = only_add )
                 
+            
+        
+        def CleanBeforeDestroy( self ):
+            
+            self._add_tag_box.CancelCurrentResultsFetchJob()
             
         
         def EnterTags( self, tags, only_add = False ):
@@ -2803,7 +2827,16 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ImportFromClipboard( self, add_only = False ):
             
-            import_string = HG.client_controller.GetClipboardText()
+            try:
+                
+                import_string = HG.client_controller.GetClipboardText()
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                wx.MessageBox( str( e ) )
+                
+                return
+                
             
             pairs = self._DeserialiseImportString( import_string )
             
@@ -3671,7 +3704,16 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ImportFromClipboard( self, add_only = False ):
             
-            import_string = HG.client_controller.GetClipboardText()
+            try:
+                
+                import_string = HG.client_controller.GetClipboardText()
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                wx.MessageBox( str( e ) )
+                
+                return
+                
             
             pairs = self._DeserialiseImportString( import_string )
             

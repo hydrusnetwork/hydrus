@@ -348,6 +348,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.CallLaterWXSafe( self, 0.5, self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
+        self._controller.CallLaterWXSafe( self, 2.0, self._controller.MenubarMenuIsClosed ) # sometimes this gets stuck on open on init
+        
     
     def _AboutWindow( self ):
         
@@ -442,11 +444,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 stop_time = HydrusData.GetNow() + 120
                 
-                self._controller.Write( 'analyze', stop_time = stop_time )
+                self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = stop_time )
                 
             elif result == wx.ID_NO:
                 
-                self._controller.Write( 'analyze', force_reanalyze = True )
+                self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, force_reanalyze = True )
                 
             
         
@@ -1345,6 +1347,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _DoFileMaintenance( self ):
+        
+        self._controller.CallToThread( self._controller.files_maintenance_manager.DoMaintenance, maintenance_mode = HC.MAINTENANCE_FORCED )
+        
+    
     def _ExportDownloader( self ):
         
         with ClientGUITopLevelWindows.DialogNullipotent( self, 'export downloaders' ) as dlg:
@@ -1554,6 +1561,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'restart', 'Shut the client down and then start it up again.', self.Exit, restart = True )
                 
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.Exit, force_shutdown_maintenance = True )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'exit', 'Shut the client down.', self.Exit )
             
@@ -1877,6 +1886,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'file maintenance', 'Run any outstanding file maintenance.', self._DoFileMaintenance )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
             
@@ -2552,13 +2562,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             raise HydrusExceptions.URLClassException( message )
             
         
+        url_caught = False
+        
         if ( url_type == HC.URL_TYPE_UNKNOWN and allow_unrecognised_urls ) or ( url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ) and allow_other_recognised_urls ):
+            
+            url_caught = True
             
             if not self._notebook.HasURLImportPage() and self.IsIconized():
                 
                 self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
                 
-                return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized. It is queued to be added once the client is restored.' )
+                return ( url, '"{}" URL was accepted, but it needed a new page and the client is currently minimized. It is queued to be added once the client is restored.' )
                 
             
             page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, select_page = show_destination_page )
@@ -2578,6 +2592,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             
         elif url_type == HC.URL_TYPE_WATCHABLE and allow_watchers:
+            
+            url_caught = True
             
             if not self._notebook.HasMultipleWatcherPage() and self.IsIconized():
                 
@@ -2603,7 +2619,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             
         
-        raise HydrusExceptions.DataMissing( '"{}" URL was not added successfully--could not find/generate a new downloader page for it.'.format( match_name ) )
+        if url_caught:
+            
+            raise HydrusExceptions.DataMissing( '"{}" URL was accepted but not added successfully--could not find/generate a new downloader page for it.'.format( match_name ) )
+            
         
     
     def _InitialiseMenubar( self ):
@@ -4202,11 +4221,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if result == wx.ID_YES:
                 
-                self._controller.Write( 'vacuum' )
+                self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED )
                 
             elif result == wx.ID_NO:
                 
-                self._controller.Write( 'vacuum', force_vacuum = True )
+                self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED, force_vacuum = True )
                 
             
         
@@ -4455,11 +4474,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventFrameNewPage( self, event ):
         
-        if self._controller.MenuIsOpen():
-            
-            return
-            
-        
         screen_position = wx.GetMousePosition()
         
         self._notebook.EventNewPageFromScreenPosition( screen_position )
@@ -4537,7 +4551,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def Exit( self, restart = False ):
+    def Exit( self, restart = False, force_shutdown_maintenance = False ):
         
         # the return value here is 'exit allowed'
         
@@ -4584,6 +4598,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if restart:
             
             HG.restart = True
+            
+        
+        if force_shutdown_maintenance:
+            
+            HG.do_idle_shutdown_work = True
             
         
         try:
@@ -4671,7 +4690,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'input predicate', hide_buttons = True ) as dlg:
                     
@@ -5189,6 +5208,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             text = HG.client_controller.GetClipboardText()
             
+        except HydrusExceptions.DataMissing:
+            
+            text = ''
+            
         except Exception as e:
             
             HydrusData.ShowText( 'Could not access the clipboard: {}'.format( e ) )
@@ -5336,6 +5359,153 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ui_update_windows.discard( window )
         
     
+class FrameSplashPanel( wx.Panel ):
+    
+    WIDTH = 480
+    HEIGHT = 280
+    
+    def __init__( self, parent, controller ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._controller = controller
+        
+        self._dirty = True
+        
+        self._my_status = FrameSplashStatus( self._controller, self )
+        
+        self._bmp = wx.Bitmap( self.WIDTH, self.HEIGHT, 24 )
+        
+        self.SetClientSize( ( self.WIDTH, self.HEIGHT ) )
+        self.SetMinClientSize( ( self.WIDTH, self.HEIGHT ) )
+        
+        self._drag_init_click_coordinates = None
+        self._drag_init_position = None
+        self._initial_position = self.GetParent().GetPosition()
+        
+        # this is 124 x 166
+        self._hydrus = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'hydrus_splash.png' ) )
+        
+        self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_MOTION, self.EventDrag )
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
+        self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        
+    
+    def _Redraw( self, dc ):
+        
+        ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
+        
+        dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) ) )
+        
+        dc.Clear()
+        
+        #
+        
+        x = ( self.WIDTH - 124 ) // 2
+        y = 15
+        
+        dc.DrawBitmap( self._hydrus, x, y )
+        
+        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        
+        y += 166 + 15
+        
+        #
+        
+        ( width, height ) = dc.GetTextExtent( title_text )
+        
+        text_gap = ( self.HEIGHT - y - height * 3 ) // 4
+        
+        x = ( self.WIDTH - width ) // 2
+        y += text_gap
+        
+        dc.DrawText( title_text, x, y )
+        
+        #
+        
+        y += height + text_gap
+        
+        ( width, height ) = dc.GetTextExtent( status_text )
+        
+        x = ( self.WIDTH - width ) // 2
+        
+        dc.DrawText( status_text, x, y )
+        
+        #
+        
+        y += height + text_gap
+        
+        ( width, height ) = dc.GetTextExtent( status_subtext )
+        
+        x = ( self.WIDTH - width ) // 2
+        
+        dc.DrawText( status_subtext, x, y )
+        
+    
+    def EventDrag( self, event ):
+        
+        if event.Dragging() and self._drag_init_click_coordinates is not None:
+            
+            ( init_x, init_y ) = self._drag_init_click_coordinates
+            
+            ( x, y ) = wx.GetMousePosition()
+            
+            total_drag_delta = ( x - init_x, y - init_y )
+            
+            #
+            
+            ( init_x, init_y ) = self._drag_init_position
+            
+            ( total_delta_x, total_delta_y ) = total_drag_delta
+            
+            self.GetParent().SetPosition( ( init_x + total_delta_x, init_y + total_delta_y ) )
+            
+        
+    
+    def EventDragBegin( self, event ):
+        
+        self._drag_init_click_coordinates = wx.GetMousePosition()
+        self._drag_init_position = self.GetParent().GetPosition()
+        
+        event.Skip()
+        
+    
+    def EventDragEnd( self, event ):
+        
+        self._drag_init_click_coordinates = None
+        
+        event.Skip()
+        
+    
+    def EventEraseBackground( self, event ):
+        
+        pass
+        
+    
+    def EventPaint( self, event ):
+        
+        dc = wx.BufferedPaintDC( self, self._bmp )
+        
+        if self._dirty:
+            
+            self._Redraw( dc )
+            
+        
+    
+    def SetDirty( self ):
+        
+        if not self:
+            
+            return
+            
+        
+        self._dirty = True
+        
+        self.Refresh()
+        
+    
 # We have this to be an off-wx-thread-happy container for this info, as the framesplash has to deal with messages in the fuzzy time of shutdown
 # all of a sudden, pubsubs are processed in non wx-thread time, so this handles that safely and lets the gui know if the wx controller is still running
 class FrameSplashStatus( object ):
@@ -5424,9 +5594,6 @@ class FrameSplashStatus( object ):
     
 class FrameSplash( wx.Frame ):
     
-    WIDTH = 480
-    HEIGHT = 280
-    
     def __init__( self, controller ):
         
         self._controller = controller
@@ -5435,144 +5602,39 @@ class FrameSplash( wx.Frame ):
         
         wx.Frame.__init__( self, None, style = style, title = 'hydrus client' )
         
-        self._dirty = True
+        self.SetBackgroundColour( wx.WHITE )
         
-        self._my_status = FrameSplashStatus( self._controller, self )
+        self._my_panel = FrameSplashPanel( self, self._controller )
         
-        self._bmp = wx.Bitmap( self.WIDTH, self.HEIGHT, 24 )
+        self._vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self.SetClientSize( ( self.WIDTH, self.HEIGHT ) )
+        self._vbox.Add( self._my_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( self._vbox )
+        
+        self.Fit()
         
         self.Center()
-        
-        self._drag_init_click_coordinates = None
-        self._drag_init_position = None
-        self._initial_position = self.GetPosition()
-        
-        # this is 124 x 166
-        self._hydrus = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'hydrus_splash.png' ) )
-        
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_MOTION, self.EventDrag )
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
-        self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.Show( True )
         
         self.Raise()
         
     
-    def _Redraw( self, dc ):
+    def CancelShutdownMaintenance( self ):
         
-        ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
+        self._cancel_shutdown_maintenance.SetLabelText( 'stopping\u2026' )
+        self._cancel_shutdown_maintenance.Disable()
         
-        dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) ) )
-        
-        dc.Clear()
-        
-        #
-        
-        x = ( self.WIDTH - 124 ) // 2
-        y = 15
-        
-        dc.DrawBitmap( self._hydrus, x, y )
-        
-        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-        
-        y += 166 + 15
-        
-        #
-        
-        ( width, height ) = dc.GetTextExtent( title_text )
-        
-        text_gap = ( self.HEIGHT - y - height * 3 ) // 4
-        
-        x = ( self.WIDTH - width ) // 2
-        y += text_gap
-        
-        dc.DrawText( title_text, x, y )
-        
-        #
-        
-        y += height + text_gap
-        
-        ( width, height ) = dc.GetTextExtent( status_text )
-        
-        x = ( self.WIDTH - width ) // 2
-        
-        dc.DrawText( status_text, x, y )
-        
-        #
-        
-        y += height + text_gap
-        
-        ( width, height ) = dc.GetTextExtent( status_subtext )
-        
-        x = ( self.WIDTH - width ) // 2
-        
-        dc.DrawText( status_subtext, x, y )
+        HG.do_idle_shutdown_work = False
         
     
-    def EventDrag( self, event ):
+    def MakeCancelShutdownButton( self ):
         
-        if event.Dragging() and self._drag_init_click_coordinates is not None:
-            
-            ( init_x, init_y ) = self._drag_init_click_coordinates
-            
-            ( x, y ) = wx.GetMousePosition()
-            
-            total_drag_delta = ( x - init_x, y - init_y )
-            
-            #
-            
-            ( init_x, init_y ) = self._drag_init_position
-            
-            ( total_delta_x, total_delta_y ) = total_drag_delta
-            
-            self.SetPosition( ( init_x + total_delta_x, init_y + total_delta_y ) )
-            
+        self._cancel_shutdown_maintenance = ClientGUICommon.BetterButton( self, 'stop shutdown maintenance', self.CancelShutdownMaintenance )
         
-    
-    def EventDragBegin( self, event ):
+        self._vbox.Insert( 0, self._cancel_shutdown_maintenance, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._drag_init_click_coordinates = wx.GetMousePosition()
-        self._drag_init_position = self.GetPosition()
-        
-        event.Skip()
-        
-    
-    def EventDragEnd( self, event ):
-        
-        self._drag_init_click_coordinates = None
-        
-        event.Skip()
-        
-    
-    def EventEraseBackground( self, event ):
-        
-        pass
-        
-    
-    def EventPaint( self, event ):
-        
-        dc = wx.BufferedPaintDC( self, self._bmp )
-        
-        if self._dirty:
-            
-            self._Redraw( dc )
-            
-        
-    
-    def SetDirty( self ):
-        
-        if not self:
-            
-            return
-            
-        
-        self._dirty = True
-        
-        self.Refresh()
+        self.Fit()
         
     

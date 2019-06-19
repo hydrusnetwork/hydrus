@@ -488,6 +488,14 @@ class AutoCompleteDropdown( wx.Panel ):
         self._BroadcastChoices( { text }, shift_down )
         
     
+    def _CancelCurrentResultsFetchJob( self ):
+        
+        if self._current_fetch_job_key is not None:
+            
+            self._current_fetch_job_key.Cancel()
+            
+        
+    
     def _CancelScheduledListRefresh( self ):
         
         if self._refresh_list_job is not None:
@@ -743,10 +751,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._refresh_list_job = None
         
-        if self._current_fetch_job_key is not None:
-            
-            self._current_fetch_job_key.Cancel()
-            
+        self._CancelCurrentResultsFetchJob()
         
         self._current_fetch_job_key = ClientThreading.JobKey( cancellable = True )
         
@@ -756,6 +761,11 @@ class AutoCompleteDropdown( wx.Panel ):
     def BroadcastChoices( self, predicates, shift_down = False ):
         
         self._BroadcastChoices( predicates, shift_down )
+        
+    
+    def CancelCurrentResultsFetchJob( self ):
+        
+        self._CancelCurrentResultsFetchJob()
         
     
     def DoDropdownHideShow( self ):

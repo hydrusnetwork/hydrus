@@ -1618,6 +1618,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             if ClientNetworkingSessions.SOCKS_PROXY_OK:
                 
                 text += 'It looks like you have socks support! You should also be able to enter (socks4 or) "socks5://ip:port".'
+                text += os.linesep
+                text += 'Use socks4a or socks5h to force remote DNS resolution, on the proxy server.'
                 
             else:
                 
@@ -5656,7 +5658,16 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Paste( self ):
         
-        raw_text = HG.client_controller.GetClipboardText()
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            wx.MessageBox( str( e ) )
+            
+            return
+            
         
         try:
             

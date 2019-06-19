@@ -137,11 +137,6 @@ def IShouldCatchCharHook( evt_handler ):
             
         
     
-    if HG.client_controller.MenuIsOpen():
-        
-        return False
-        
-    
     if not ClientGUICommon.WindowOrSameTLPChildHasFocus( evt_handler ):
         
         return False

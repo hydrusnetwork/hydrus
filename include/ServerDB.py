@@ -215,7 +215,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expires ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expires ) )
         
     
-    def _Analyze( self, stop_time ):
+    def _Analyze( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None ):
         
         stale_time_delta = 30 * 86400
         
@@ -258,7 +258,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
                 
             
-            if HydrusData.TimeHasPassed( stop_time ):
+            if HG.server_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
                 
                 break
                 
@@ -2325,10 +2325,25 @@ class DB( HydrusDB.HydrusDB ):
         
         contents = []
         
+        chosen_parent_namespace = None
+        
         for ( child_master_tag_id, parent_master_tag_id ) in pairs:
             
-            child_tag = self._GetTag( child_master_tag_id )
             parent_tag = self._GetTag( parent_master_tag_id )
+            
+            ( parent_namespace, parent_subtag ) = HydrusTags.SplitTag( parent_tag )
+            
+            if chosen_parent_namespace is None:
+                
+                chosen_parent_namespace = parent_namespace
+                
+            
+            if parent_namespace != chosen_parent_namespace:
+                
+                continue
+                
+            
+            child_tag = self._GetTag( child_master_tag_id )
             
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag, parent_tag ) )
             
@@ -2361,13 +2376,28 @@ class DB( HydrusDB.HydrusDB ):
         
         contents = []
         
+        chosen_parent_namespace = None
+        
         for ( child_service_tag_id, parent_service_tag_id ) in pairs:
             
             child_master_tag_id = self._RepositoryGetMasterTagId( service_id, child_service_tag_id )
             parent_master_tag_id = self._RepositoryGetMasterTagId( service_id, parent_service_tag_id )
             
-            child_tag = self._GetTag( child_master_tag_id )
             parent_tag = self._GetTag( parent_master_tag_id )
+            
+            ( parent_namespace, parent_subtag ) = HydrusTags.SplitTag( parent_tag )
+            
+            if chosen_parent_namespace is None:
+                
+                chosen_parent_namespace = parent_namespace
+                
+            
+            if parent_namespace != chosen_parent_namespace:
+                
+                continue
+                
+            
+            child_tag = self._GetTag( child_master_tag_id )
             
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_PARENTS, ( child_tag, parent_tag ) )
             
@@ -2400,10 +2430,25 @@ class DB( HydrusDB.HydrusDB ):
         
         contents = []
         
+        chosen_good_namespace = None
+        
         for ( bad_master_tag_id, good_master_tag_id ) in pairs:
             
-            bad_tag = self._GetTag( bad_master_tag_id )
             good_tag = self._GetTag( good_master_tag_id )
+            
+            ( good_namespace, good_subtag ) = HydrusTags.SplitTag( good_tag )
+            
+            if chosen_good_namespace is None:
+                
+                chosen_good_namespace = good_namespace
+                
+            
+            if good_namespace != chosen_good_namespace:
+                
+                continue
+                
+            
+            bad_tag = self._GetTag( bad_master_tag_id )
             
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag, good_tag ) )
             
@@ -2436,13 +2481,28 @@ class DB( HydrusDB.HydrusDB ):
         
         contents = []
         
+        chosen_good_namespace = None
+        
         for ( bad_service_tag_id, good_service_tag_id ) in pairs:
             
             bad_master_tag_id = self._RepositoryGetMasterTagId( service_id, bad_service_tag_id )
             good_master_tag_id = self._RepositoryGetMasterTagId( service_id, good_service_tag_id )
             
-            bad_tag = self._GetTag( bad_master_tag_id )
             good_tag = self._GetTag( good_master_tag_id )
+            
+            ( good_namespace, good_subtag ) = HydrusTags.SplitTag( good_tag )
+            
+            if chosen_good_namespace is None:
+                
+                chosen_good_namespace = good_namespace
+                
+            
+            if good_namespace != chosen_good_namespace:
+                
+                continue
+                
+            
+            bad_tag = self._GetTag( bad_master_tag_id )
             
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_TAG_SIBLINGS, ( bad_tag, good_tag ) )
             

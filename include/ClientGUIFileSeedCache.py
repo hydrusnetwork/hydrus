@@ -411,7 +411,16 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def _ImportFromClipboard( self ):
         
-        raw_text = HG.client_controller.GetClipboardText()
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            wx.MessageBox( str( e ) )
+            
+            return
+            
         
         sources = self._GetSourcesFromSourcesString( raw_text )
         

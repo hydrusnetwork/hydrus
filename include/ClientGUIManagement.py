@@ -921,6 +921,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
+    def CleanBeforeClose( self ):
+        
+        pass
+        
+    
     def CleanBeforeDestroy( self ):
         
         pass
@@ -4146,7 +4151,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     job_key = ClientThreading.JobKey( cancellable = True )
                     
-                    job_key.SetVariable( 'popup_title', 'comitting petitions' )
+                    job_key.SetVariable( 'popup_title', 'committing petitions' )
                     
                     HG.client_controller.pub( 'message', job_key )
                     
@@ -4452,9 +4457,26 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
+    def CleanBeforeClose( self ):
+        
+        ManagementPanel.CleanBeforeClose( self )
+        
+        if self._search_enabled:
+            
+            self._searchbox.CancelCurrentResultsFetchJob()
+            
+        
+        self._query_job_key.Cancel()
+        
+    
     def CleanBeforeDestroy( self ):
         
         ManagementPanel.CleanBeforeDestroy( self )
+        
+        if self._search_enabled:
+            
+            self._searchbox.CancelCurrentResultsFetchJob()
+            
         
         self._query_job_key.Cancel()
         

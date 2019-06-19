@@ -626,7 +626,16 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         def _GetTagsFromClipboard( self ):
             
-            text = HG.client_controller.GetClipboardText()
+            try:
+                
+                text = HG.client_controller.GetClipboardText()
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                wx.MessageBox( str( e ) )
+                
+                return
+                
             
             try:
                 
@@ -2139,7 +2148,16 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _Paste( self ):
         
-        raw_text = HG.client_controller.GetClipboardText()
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            wx.MessageBox( str( e ) )
+            
+            return
+            
         
         try:
             

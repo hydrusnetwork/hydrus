@@ -1373,7 +1373,7 @@ class FilesMaintenanceManager( object ):
         self._work_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, file_maintenance_throttle_time_delta, file_maintenance_throttle_files )
         
     
-    def _RunJob( self, media_results, job_type, job_key, doing_maintenance = False ):
+    def _RunJob( self, media_results, job_type, job_key, doing_background_maintenance = False ):
         
         num_thumb_refits = 0
         
@@ -1392,7 +1392,7 @@ class FilesMaintenanceManager( object ):
                     return
                     
                 
-                if doing_maintenance and not self._AbleToDoMaintenance():
+                if doing_background_maintenance and not self._AbleToDoMaintenance():
                     
                     return
                     
@@ -1481,30 +1481,32 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def DoMaintenance( self, mandated_job_type = None, only_when_idle = True, stop_time = None ):
+    def DoMaintenance( self, mandated_job_type = None, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
-        if only_when_idle:
+        if maintenance_mode == HC.MAINTENANCE_IDLE:
             
             if not self._controller.new_options.GetBoolean( 'file_maintenance_during_idle' ):
                 
                 return
                 
             
-            if not self._controller.GoodTimeToDoBackgroundWork():
+            if not self._controller.GoodTimeToStartBackgroundWork():
                 
                 return
                 
             
+        
+        doing_background_maintenance = maintenance_mode != HC.MAINTENANCE_FORCED
         
         with self._lock:
             
-            if not self._AbleToDoMaintenance():
+            if doing_background_maintenance and not self._AbleToDoMaintenance():
                 
                 return
                 
             
         
-        job_key = ClientThreading.JobKey( cancellable = True, only_when_idle = only_when_idle, stop_time = stop_time )
+        job_key = ClientThreading.JobKey( cancellable = True, maintenance_mode = maintenance_mode, stop_time = stop_time )
         
         job_key.SetVariable( 'popup_title', 'regenerating file data' )
         
@@ -1514,39 +1516,46 @@ class FilesMaintenanceManager( object ):
             
             while True:
                 
-                with self._lock:
+                job = self._controller.Read( 'file_maintenance_get_job', mandated_job_type )
+                
+                if job is None:
                     
-                    job = self._controller.Read( 'file_maintenance_get_job', mandated_job_type )
-                    
-                    if job is None:
-                        
-                        break
-                        
-                    
-                    if not message_pubbed:
-                        
-                        self._controller.pub( 'message', job_key )
-                        
-                        message_pubbed = True
-                        
-                    
-                    ( hashes, job_type ) = job
-                    
-                    media_results = self._controller.Read( 'media_results', hashes )
-                    
-                    hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-                    
-                    missing_hashes = [ hash for hash in hashes if hash not in hashes_to_media_results ]
-                    
-                    self._RunJob( media_results, job_type, job_key, doing_maintenance = True )
+                    break
                     
                 
-                self._ClearJobs( missing_hashes, job_type )
+                if not message_pubbed:
+                    
+                    self._controller.pub( 'message', job_key )
+                    
+                    message_pubbed = True
+                    
                 
-                if not self._AbleToDoMaintenance():
+                if job_key.IsCancelled():
                     
                     return
                     
+                
+                ( hashes, job_type ) = job
+                
+                media_results = self._controller.Read( 'media_results', hashes )
+                
+                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+                
+                missing_hashes = [ hash for hash in hashes if hash not in hashes_to_media_results ]
+                
+                with self._lock:
+                    
+                    self._RunJob( media_results, job_type, job_key, doing_background_maintenance = doing_background_maintenance )
+                    
+                    self._ClearJobs( missing_hashes, job_type )
+                    
+                    if doing_background_maintenance and not self._AbleToDoMaintenance():
+                        
+                        return
+                        
+                    
+                
+                time.sleep( 0.0001 )
                 
             
         finally:
@@ -1558,6 +1567,11 @@ class FilesMaintenanceManager( object ):
             job_key.Finish()
             
             job_key.Delete( 5 )
+            
+            if not message_pubbed and maintenance_mode == HC.MAINTENANCE_FORCED:
+                
+                HydrusData.ShowText( 'No file maintenance due!' )
+                
             
         
     
@@ -1611,7 +1625,7 @@ class FilesMaintenanceManager( object ):
             
             try:
                 
-                self._RunJob( media_results, job_type, job_key, doing_maintenance = False )
+                self._RunJob( media_results, job_type, job_key, doing_background_maintenance = False )
                 
             finally:
                 

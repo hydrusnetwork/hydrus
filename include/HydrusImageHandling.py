@@ -512,6 +512,11 @@ def GetJPEGQuantizationQualityEstimate( path ):
         
         table_arrays = list( pil_image.quantization.values() )
         
+        if len( table_arrays ) == 0:
+            
+            return ( 'unknown', None )
+            
+        
         quality = sum( ( sum( table_array ) for table_array in table_arrays ) )
         
         quality /= len( table_arrays )

@@ -295,7 +295,7 @@ def DAEMONSynchroniseRepositories( controller ):
                 return
                 
             
-            service.Sync( only_process_when_idle = True )
+            service.Sync( maintenance_mode = HC.MAINTENANCE_IDLE )
             
             if HydrusThreading.IsThreadShuttingDown():
                 

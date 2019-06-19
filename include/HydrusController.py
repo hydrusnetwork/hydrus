@@ -452,12 +452,12 @@ class HydrusController( object ):
         return threads
         
     
-    def GoodTimeToDoBackgroundWork( self ):
+    def GoodTimeToStartBackgroundWork( self ):
         
         return self.CurrentlyIdle() and not ( self.JustWokeFromSleep() or self.SystemBusy() )
         
     
-    def GoodTimeToDoForegroundWork( self ):
+    def GoodTimeToStartForegroundWork( self ):
         
         return not self.JustWokeFromSleep()
         
@@ -491,7 +491,7 @@ class HydrusController( object ):
     
     def InitView( self ):
         
-        job = self.CallRepeating( 60.0, 300.0, self.MaintainDB )
+        job = self.CallRepeating( 60.0, 300.0, self.MaintainDB, maintenance_mode = HC.MAINTENANCE_IDLE )
         
         job.WakeOnPubSub( 'wake_idle_workers' )
         job.ShouldDelayOnWakeup( True )
@@ -531,12 +531,15 @@ class HydrusController( object ):
             
         
     
-    def MaintainDB( self, stop_time = None ):
+    def MaintainDB( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
         pass
         
     
     def MaintainMemoryFast( self ):
+        
+        sys.stdout.flush()
+        sys.stderr.flush()
         
         self.pub( 'memory_maintenance_pulse' )
         
@@ -545,9 +548,6 @@ class HydrusController( object ):
         
     
     def MaintainMemorySlow( self ):
-        
-        sys.stdout.flush()
-        sys.stderr.flush()
         
         gc.collect()
         
@@ -622,6 +622,34 @@ class HydrusController( object ):
     def ResetIdleTimer( self ):
         
         self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
+        
+    
+    def ShouldStopThisWork( self, maintenance_mode, stop_time = None ):
+        
+        if maintenance_mode == HC.MAINTENANCE_IDLE:
+            
+            if not self.CurrentlyIdle():
+                
+                return True
+                
+            
+        elif maintenance_mode == HC.MAINTENANCE_SHUTDOWN:
+            
+            if not HG.do_idle_shutdown_work:
+                
+                return True
+                
+            
+        
+        if stop_time is not None:
+            
+            if HydrusData.TimeHasPassed( stop_time ):
+                
+                return True
+                
+            
+        
+        return False
         
     
     def ShutdownModel( self ):

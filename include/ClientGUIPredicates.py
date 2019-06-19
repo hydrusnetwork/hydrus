@@ -98,7 +98,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             pred_classes.append( PanelPredicateSystemTagAsNumber )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT:
             
             pred_classes.append( PanelPredicateSystemDuplicateRelationships )
             
@@ -307,7 +307,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
     
 class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT
     
     def __init__( self, parent ):
         
@@ -319,7 +319,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         self._num = wx.SpinCtrl( self, min = 0, max = 65535 )
         
-        choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
+        choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
         
         self._dupe_type = ClientGUICommon.BetterRadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
         

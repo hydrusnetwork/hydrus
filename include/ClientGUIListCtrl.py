@@ -1267,7 +1267,16 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _ImportFromClipboard( self ):
         
-        raw_text = HG.client_controller.GetClipboardText()
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            wx.MessageBox( str( e ) )
+            
+            return
+            
         
         try:
             

@@ -219,6 +219,8 @@ class FullscreenHoverFrame( wx.Frame ):
                 tuples.append( ( 'mouse over interactable media: ', mouse_is_over_interactable_media ) )
                 tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
                 tuples.append( ( 'focus is good: ', focus_is_good ) )
+                tuples.append( ( 'focus is on descendant: ', focus_is_on_descendant ) )
+                tuples.append( ( 'current focus tlp: ', current_focus_tlp ) )
                 
                 message = os.linesep * 2 + os.linesep.join( ( a + str( b ) for ( a, b ) in tuples ) )
                 
@@ -237,6 +239,20 @@ class FullscreenHoverFrame( wx.Frame ):
                         
                     
                     self.Show()
+                    
+                    # in case focus jumps around from the show, let's test it and raise as needed
+                    
+                    current_focus_tlp = ClientGUICommon.GetFocusTLP()
+                    
+                    focus_is_on_descendant = ClientGUICommon.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
+                    focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
+                    
+                    focus_is_good = focus_is_on_descendant and focus_has_right_window_type
+                    
+                    if not focus_is_good:
+                        
+                        self.Raise()
+                        
                     
                 
             elif ready_to_hide:

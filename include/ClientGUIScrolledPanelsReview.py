@@ -326,6 +326,8 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
             dlg.ShowModal()
             
         
+        job_key.Delete()
+        
     
     def ImportFromHTA( self ):
         

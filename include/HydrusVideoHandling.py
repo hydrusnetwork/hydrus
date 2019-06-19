@@ -14,6 +14,9 @@ import traceback
 import threading
 import time
 
+FFMPEG_MISSING_ERROR_PUBBED = False
+FFMPEG_NO_CONTENT_ERROR_PUBBED = False
+
 if HC.PLATFORM_LINUX or HC.PLATFORM_OSX:
     
     FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
@@ -51,7 +54,7 @@ def GetFFMPEGVersion():
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
         
-        proc = subprocess.Popen( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
+        process = subprocess.Popen( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
         
     except FileNotFoundError:
         
@@ -64,13 +67,11 @@ def GetFFMPEGVersion():
         return 'unable to execute ffmpeg'
         
     
-    infos = proc.stdout.read()
+    ( stdout, stderr ) = process.communicate()
     
-    proc.terminate()
+    del process
     
-    del proc
-    
-    lines = infos.splitlines()
+    lines = stdout.splitlines()
     
     if len( lines ) > 0:
         
@@ -99,14 +100,18 @@ def GetFFMPEGVersion():
     message += os.linesep * 2
     message += str( os.environ )
     message += os.linesep * 2
-    message += 'Response: {}'.format( infos )
+    message += 'STDOUT Response: {}'.format( stdout )
+    message += os.linesep * 2
+    message += 'STDERR Response: {}'.format( stderr )
     
     HydrusData.Print( message )
     
+    global FFMPEG_NO_CONTENT_ERROR_PUBBED
+    
+    FFMPEG_NO_CONTENT_ERROR_PUBBED = True
+    
     return 'unknown'
     
-FFMPEG_MISSING_ERROR_PUBBED = False
-
 # bits of this were originally cribbed from moviepy
 def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second = False ):
     
@@ -138,7 +143,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
     try:
         
-        proc = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        process = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
     except FileNotFoundError as e:
         
@@ -169,11 +174,40 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
         raise FileNotFoundError( 'Cannot interact with video because FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
         
     
-    data_bytes = proc.stderr.read()
+    ( stdout, stderr ) = process.communicate()
     
-    proc.communicate()
+    data_bytes = stderr
     
-    del proc
+    if len( data_bytes ) == 0:
+        
+        global FFMPEG_NO_CONTENT_ERROR_PUBBED
+        
+        if not FFMPEG_NO_CONTENT_ERROR_PUBBED:
+            
+            message = 'FFMPEG, which hydrus uses to parse and render video, did not return any data on a recent file metadata check! More debug info has been written to the log.'
+            message += os.linesep * 2
+            message += 'You can check this info again through help->about.'
+            
+            HydrusData.ShowText( message )
+            
+            message += os.linesep * 2
+            message += str( sbp_kwargs )
+            message += os.linesep * 2
+            message += str( os.environ )
+            message += os.linesep * 2
+            message += 'STDOUT Response: {}'.format( stdout )
+            message += os.linesep * 2
+            message += 'STDERR Response: {}'.format( stderr )
+            
+            HydrusData.DebugPrint( message )
+            
+            FFMPEG_NO_CONTENT_ERROR_PUBBED = True
+            
+        
+        raise HydrusExceptions.DataMissing( 'Cannot interact with video because FFMPEG did not return any content.' )
+        
+    
+    del process
     
     ( text, encoding ) = HydrusText.NonFailingUnicodeDecode( data_bytes, 'utf-8' )
     

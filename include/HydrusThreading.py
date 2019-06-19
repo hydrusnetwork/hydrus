@@ -271,7 +271,7 @@ class DAEMONBackgroundWorker( DAEMONWorker ):
     
     def _ControllerIsOKWithIt( self ):
         
-        return self._controller.GoodTimeToDoBackgroundWork()
+        return self._controller.GoodTimeToStartBackgroundWork()
         
     
 # Big stuff that we want to run when the user sees, but not at the expense of something else, like laggy session load
@@ -279,7 +279,7 @@ class DAEMONForegroundWorker( DAEMONWorker ):
     
     def _ControllerIsOKWithIt( self ):
         
-        return self._controller.GoodTimeToDoForegroundWork()
+        return self._controller.GoodTimeToStartForegroundWork()
         
     
 class THREADCallToThread( DAEMON ):

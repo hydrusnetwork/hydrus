@@ -950,8 +950,6 @@ class ServiceRestricted( ServiceRemote ):
                 network_job.AddAdditionalHeader( 'Content-Type', HC.mime_string_lookup[ content_type ] )
                 
             
-            network_job.SetDeathTime( HydrusData.GetNow() + 30 ) # we don't want to wait on logins during shutdown and so on
-            
             HG.client_controller.network_engine.AddJob( network_job )
             
             network_job.WaitUntilDone()
@@ -1290,7 +1288,7 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def Sync( self, only_process_when_idle = False, stop_time = None ):
+    def Sync( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
         with self._sync_lock: # to stop sync_now button clicks from stomping over the regular daemon and vice versa
             
@@ -1300,7 +1298,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 self.SyncDownloadUpdates( stop_time )
                 
-                self.SyncProcessUpdates( only_process_when_idle, stop_time )
+                self.SyncProcessUpdates( maintenance_mode, stop_time )
                 
                 self.SyncThumbnails( stop_time )
                 
@@ -1545,7 +1543,7 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def SyncProcessUpdates( self, only_when_idle = False, stop_time = None ):
+    def SyncProcessUpdates( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
         with self._lock:
             
@@ -1555,14 +1553,14 @@ class ServiceRepository( ServiceRestricted ):
                 
             
         
-        if only_when_idle and not HG.client_controller.CurrentlyIdle():
+        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
             
             return
             
         
         try:
             
-            ( did_some_work, did_everything ) = HG.client_controller.WriteSynchronous( 'process_repository', self._service_key, only_when_idle, stop_time )
+            ( did_some_work, did_everything ) = HG.client_controller.WriteSynchronous( 'process_repository', self._service_key, maintenance_mode = maintenance_mode, stop_time = stop_time )
             
             if did_some_work:
                 
