@@ -305,14 +305,14 @@ class TestNetworkingEngine( unittest.TestCase ):
                 
                 engine.AddJob( job )
                 
-                time.sleep( 0.1 )
+                time.sleep( 0.25 )
                 
                 self.assertTrue( job.IsDone() )
                 self.assertFalse( job.HasError() )
                 
                 engine._new_work_to_do.set()
                 
-                time.sleep( 0.1 )
+                time.sleep( 0.25 )
                 
                 self.assertEqual( len( engine._jobs_awaiting_validity ), 0 )
                 self.assertEqual( len( engine._jobs_awaiting_bandwidth ), 0 )

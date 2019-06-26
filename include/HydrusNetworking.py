@@ -80,7 +80,7 @@ def LocalPortInUse( port ):
         return result == CONNECTION_SUCCESS
         
     
-def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_params, json_params ):
+def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_params, json_params, json_byte_list_params ):
     
     args = ParsedRequestArguments()
     
@@ -127,7 +127,7 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
                 
             except:
                 
-                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a hex-encoded bytestring, but it failed.' )
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a hex string, but it failed.' )
                 
             
         elif name in string_params:
@@ -150,6 +150,19 @@ def ParseTwistedRequestGETArgs( requests_args, int_params, byte_params, string_p
             except:
                 
                 raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a json-encoded string, but it failed.' )
+                
+            
+        elif name in json_byte_list_params:
+            
+            try:
+                
+                list_of_hex_strings = json.loads( urllib.parse.unquote( value ) )
+                
+                args[ name ] = [ bytes.fromhex( hex_string ) for hex_string in list_of_hex_strings ]
+                
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + name + '\' as a json-encoded hex strings, but it failed.' )
                 
             
         

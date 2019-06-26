@@ -221,12 +221,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
         
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_filesize' ] = 20
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_filesize' ] = 10
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_jpeg_quality' ] = 10
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_jpeg_quality' ] = 20
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_filesize' ] = 10
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_filesize' ] = 20
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_resolution' ] = 20
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_resolution' ] = 5
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_resolution' ] = 50
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_more_tags' ] = 8
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 5
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 4
         
         self._dictionary[ 'integers' ][ 'thumbnail_cache_timeout' ] = 86400
         self._dictionary[ 'integers' ][ 'image_cache_timeout' ] = 600

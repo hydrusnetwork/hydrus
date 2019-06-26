@@ -10,6 +10,7 @@ from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
+from . import ClientGUIFunctions
 from . import ClientGUIHoverFrames
 from . import ClientGUIMedia
 from . import ClientGUIMenus
@@ -448,7 +449,7 @@ class Animation( wx.Window ):
                 
             
         
-        screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
+        screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
         ( x, y ) = self.GetParent().ScreenToClient( screen_position )
         
         event.SetX( x )
@@ -1258,21 +1259,6 @@ class Canvas( wx.Window ):
         return True
         
     
-    def _CanProcessInput( self ):
-        
-        if HG.client_controller.MenuIsOpen():
-            
-            return False
-            
-        
-        if self._MouseIsOverFlash():
-            
-            return False
-            
-        
-        return True
-        
-    
     def _CopyBMPToClipboard( self ):
         
         if self._current_media is not None:
@@ -1436,21 +1422,6 @@ class Canvas( wx.Window ):
             
         
     
-    def _FocusIsElsewhere( self ):
-        
-        i_have_focus = ClientGUICommon.WindowOrSameTLPChildHasFocus( self )
-        my_hover_window_has_focus = ClientGUICommon.WindowOrAnyTLPChildHasFocus( self ) and isinstance( ClientGUICommon.GetFocusTLP(), ClientGUIHoverFrames.FullscreenHoverFrame )
-        
-        focus_is_elsewhere = not ( i_have_focus or my_hover_window_has_focus )
-        
-        if focus_is_elsewhere:
-            
-            return True
-            
-        
-        return False
-        
-    
     def _GenerateOrderedShortcutNames( self ):
         
         # do custom first, then let the more specialised take priority
@@ -1535,6 +1506,11 @@ class Canvas( wx.Window ):
         return self._GetShowAction( self._current_media ) not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
     
+    def _IShouldCatchShortcutEvent( self ):
+        
+        return ClientGUIShortcuts.IShouldCatchShortcutEvent( self, child_tlp_classes_who_can_pass_up = ( ClientGUIHoverFrames.FullscreenHoverFrame, ) )
+        
+    
     def _MaintainZoom( self, previous_media ):
         
         if previous_media is None:
@@ -1594,7 +1570,7 @@ class Canvas( wx.Window ):
                 
                 control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
                 
-                size = ClientGUICommon.ConvertTextToPixels( control, ( 80, 14 ) )
+                size = ClientGUIFunctions.ConvertTextToPixels( control, ( 80, 14 ) )
                 
                 control.SetInitialSize( size )
                 
@@ -2124,7 +2100,7 @@ class Canvas( wx.Window ):
     
     def EventCharHook( self, event ):
         
-        if self._CanProcessInput() and not self._FocusIsElsewhere(): # focus is likely on a tag manager frame in this case
+        if self._IShouldCatchShortcutEvent():
             
             shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
             
@@ -2397,7 +2373,7 @@ class Canvas( wx.Window ):
                 return
                 
             
-            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
+            command_processed = ClientGUIFunctions.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
             
         else:
             
@@ -3173,6 +3149,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
+        ClientMedia.hashes_to_jpeg_quality = {} # clear the cache
+        
         HG.client_controller.pub( 'refresh_dupe_page_numbers' )
         
         CanvasWithHovers._Close( self )
@@ -3744,7 +3722,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventCharHook( self, event ):
         
-        if self._CanProcessInput() and not self._FocusIsElsewhere():
+        if self._IShouldCatchShortcutEvent():
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
@@ -3783,7 +3761,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventMouse( self, event ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             if event.ShiftDown():
                 
@@ -4259,7 +4237,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _Back( self ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             if self._current_media == self._GetFirst():
                 
@@ -4277,7 +4255,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _Close( self ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             if len( self._kept ) > 0 or len( self._deleted ) > 0:
                 
@@ -4420,7 +4398,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventCharHook( self, event ):
         
-        if self._CanProcessInput() and not self._FocusIsElsewhere():
+        if self._IShouldCatchShortcutEvent():
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
@@ -4438,7 +4416,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventDelete( self, event ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             self._Delete()
             
@@ -4450,7 +4428,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventMouse( self, event ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             if event.ShiftDown():
                 
@@ -4502,7 +4480,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventUndelete( self, event ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             self._Undelete()
             
@@ -4858,7 +4836,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventCharHook( self, event ):
         
-        if self._CanProcessInput() and not self._FocusIsElsewhere():
+        if self._IShouldCatchShortcutEvent():
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
@@ -4879,7 +4857,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventMouseWheel( self, event ):
         
-        if self._CanProcessInput():
+        if self._IShouldCatchShortcutEvent():
             
             if event.CmdDown():
                 
@@ -5297,7 +5275,7 @@ class MediaContainer( wx.Window ):
             
             if mime in HC.IMAGES or mime in HC.VIDEO:
                 
-                screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
+                screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
                 ( x, y ) = self.GetParent().ScreenToClient( screen_position )
                 
                 event.SetX( x )
@@ -5794,7 +5772,7 @@ class StaticImage( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
+        screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
         ( x, y ) = self.GetParent().ScreenToClient( screen_position )
         
         event.SetX( x )

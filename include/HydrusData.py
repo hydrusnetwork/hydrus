@@ -197,7 +197,7 @@ def ConvertStatusToPrefix( status ):
     elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
     elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
     
-def TimeDeltaToPrettyTimeDelta( seconds ):
+def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True ):
     
     if seconds is None:
         
@@ -231,7 +231,11 @@ def TimeDeltaToPrettyTimeDelta( seconds ):
         lines.append( ( 'day', DAY ) )
         lines.append( ( 'hour', HOUR ) )
         lines.append( ( 'minute', MINUTE ) )
-        lines.append( ( 'second', 1 ) )
+        
+        if show_seconds:
+            
+            lines.append( ( 'second', 1 ) )
+            
         
         result_components = []
         
@@ -367,7 +371,7 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
         return 'unparseable time {}'.format( timestamp )
         
     
-def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3 ):
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, show_seconds = True ):
     
     if timestamp is None:
         
@@ -379,6 +383,11 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
         return ConvertTimestampToPrettyTime( timestamp )
         
     
+    if not show_seconds:
+        
+        just_now_threshold = max( just_now_threshold, 60 )
+        
+    
     try:
         
         time_delta = abs( timestamp - GetNow() )
@@ -388,7 +397,7 @@ def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_thr
             return just_now_string
             
         
-        time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta )
+        time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta, show_seconds = show_seconds )
         
         if TimeHasPassed( timestamp ):
             
@@ -653,6 +662,12 @@ def GetSubprocessEnv():
         if lp_orig_key in env:
             
             env[ lp_key ] = env[ lp_orig_key ]
+            
+            changes_made = True
+            
+        elif lp_key in env:
+            
+            del env[ lp_key ]
             
             changes_made = True
             

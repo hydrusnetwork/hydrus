@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUISerialisable
@@ -535,7 +536,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
-        tlp = ClientGUICommon.GetTLP( self )
+        tlp = ClientGUIFunctions.GetTLP( self )
         
         if isinstance( tlp, wx.Dialog ):
             

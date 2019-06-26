@@ -1,4 +1,4 @@
-from . import ClientGUICommon
+from . import ClientGUIFunctions
 from . import HydrusGlobals as HG
 from . import HydrusPaths
 import json
@@ -217,10 +217,10 @@ class FileDropTarget( wx.DropTarget ):
     
     def OnDrop( self, x, y ):
         
-        screen_position = ClientGUICommon.ClientToScreen( self._parent, ( x, y ) )
+        screen_position = ClientGUIFunctions.ClientToScreen( self._parent, ( x, y ) )
         
-        drop_tlp = ClientGUICommon.GetXYTopTLP( screen_position )
-        my_tlp = ClientGUICommon.GetTLP( self._parent )
+        drop_tlp = ClientGUIFunctions.GetXYTopTLP( screen_position )
+        my_tlp = ClientGUIFunctions.GetTLP( self._parent )
         
         if drop_tlp == my_tlp:
             

@@ -8,6 +8,7 @@ from . import ClientGUICanvas
 from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
@@ -1709,11 +1710,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         if paused:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
             
         
         if paused:
@@ -2008,7 +2009,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         added = gallery_import.GetCreationTime()
         
-        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
+        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
         sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress, added )
@@ -2689,7 +2690,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         added = watcher.GetCreationTime()
         
-        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
+        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
@@ -3459,20 +3460,20 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         if queue_paused:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalBMPs.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalBMPs.play )
             
         else:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalBMPs.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalBMPs.pause )
             
         
         if files_paused:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.play )
             
         else:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.pause )
             
         
         ( file_network_job, page_network_job ) = self._simple_downloader_import.GetNetworkJobs()
@@ -3659,11 +3660,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         if paused:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
             
         
         ( file_network_job, gallery_network_job ) = self._urls_import.GetNetworkJobs()
@@ -4109,21 +4110,25 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             chunks_of_approved_contents = []
             chunk_of_approved_contents = []
+            
             weight = 0
             
             for content in approved_contents:
                 
-                chunk_of_approved_contents.append( content )
-                
-                weight += content.GetVirtualWeight()
-                
-                if weight > 50:
+                for content_chunk in content.IterateUploadableChunks(): # break 20K-strong mappings petitions into smaller bits to POST back
                     
-                    chunks_of_approved_contents.append( chunk_of_approved_contents )
+                    chunk_of_approved_contents.append( content_chunk )
                     
-                    chunk_of_approved_contents = []
+                    weight += content.GetVirtualWeight()
                     
-                    weight = 0
+                    if weight > 50:
+                        
+                        chunks_of_approved_contents.append( chunk_of_approved_contents )
+                        
+                        chunk_of_approved_contents = []
+                        
+                        weight = 0
+                        
                     
                 
             
@@ -4162,6 +4167,8 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
                 chunks_of_approved_contents = break_approved_contents_into_chunks( approved_contents )
                 
+                num_approved_to_do = len( chunks_of_approved_contents )
+                
                 for chunk_of_approved_contents in chunks_of_approved_contents:
                     
                     if job_key is not None:
@@ -4173,7 +4180,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                             return
                             
                         
-                        job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                        job_key.SetVariable( 'popup_gauge_1', ( num_done, num_approved_to_do ) )
                         
                     
                     ( update, content_updates ) = petition.GetApproval( chunk_of_approved_contents )

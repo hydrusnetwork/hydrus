@@ -17,7 +17,6 @@ from . import ClientData
 from . import ClientDaemons
 from . import ClientDefaults
 from . import ClientFiles
-from . import ClientGUICommon
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
 from . import ClientNetworking
@@ -541,16 +540,21 @@ class Controller( HydrusController.HydrusController ):
         
         if wx.TheClipboard.Open():
             
-            if not wx.TheClipboard.IsSupported( wx.DataFormat( wx.DF_TEXT ) ):
+            try:
                 
-                raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
+                if not wx.TheClipboard.IsSupported( wx.DataFormat( wx.DF_TEXT ) ):
+                    
+                    raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
+                    
                 
-            
-            data = wx.TextDataObject()
-            
-            success = wx.TheClipboard.GetData( data )
-            
-            wx.TheClipboard.Close()
+                data = wx.TextDataObject()
+                
+                success = wx.TheClipboard.GetData( data )
+                
+            finally:
+                
+                wx.TheClipboard.Close()
+                
             
             if not success:
                 
@@ -1509,20 +1513,25 @@ class Controller( HydrusController.HydrusController ):
             
             if wx.TheClipboard.Open():
                 
-                data = wx.DataObjectComposite()
-                
-                file_data = wx.FileDataObject()
-                
-                for path in paths: file_data.AddFile( path )
-                
-                text_data = wx.TextDataObject( os.linesep.join( paths ) )
-                
-                data.Add( file_data, True )
-                data.Add( text_data, False )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
+                try:
+                    
+                    data = wx.DataObjectComposite()
+                    
+                    file_data = wx.FileDataObject()
+                    
+                    for path in paths: file_data.AddFile( path )
+                    
+                    text_data = wx.TextDataObject( os.linesep.join( paths ) )
+                    
+                    data.Add( file_data, True )
+                    data.Add( text_data, False )
+                    
+                    wx.TheClipboard.SetData( data )
+                    
+                finally:
+                    
+                    wx.TheClipboard.Close()
+                    
                 
             else:
                 
@@ -1535,11 +1544,16 @@ class Controller( HydrusController.HydrusController ):
             
             if wx.TheClipboard.Open():
                 
-                data = wx.TextDataObject( text )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
+                try:
+                    
+                    data = wx.TextDataObject( text )
+                    
+                    wx.TheClipboard.SetData( data )
+                    
+                finally:
+                    
+                    wx.TheClipboard.Close()
+                    
                 
             else:
                 
@@ -1556,13 +1570,18 @@ class Controller( HydrusController.HydrusController ):
                 
                 if wx.TheClipboard.Open():
                     
-                    wx_bmp = image_renderer.GetWXBitmap()
-                    
-                    data = wx.BitmapDataObject( wx_bmp )
-                    
-                    wx.TheClipboard.SetData( data )
-                    
-                    wx.TheClipboard.Close()
+                    try:
+                        
+                        wx_bmp = image_renderer.GetWXBitmap()
+                        
+                        data = wx.BitmapDataObject( wx_bmp )
+                        
+                        wx.TheClipboard.SetData( data )
+                        
+                    finally:
+                        
+                        wx.TheClipboard.Close()
+                        
                     
                 else:
                     

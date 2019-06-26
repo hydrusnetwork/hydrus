@@ -11,6 +11,7 @@ from . import ClientGUIACDropdown
 from . import ClientGUIFrames
 from . import ClientGUICommon
 from . import ClientGUIDialogsQuick
+from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
@@ -1160,11 +1161,11 @@ class FrameInputLocalFiles( wx.Frame ):
         
         if paused:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.play )
             
         else:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.pause )
             
         
     
@@ -1277,7 +1278,7 @@ class DialogInputTags( Dialog ):
         
         expand_parents = True
         
-        self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK )
+        self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
         
         self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )

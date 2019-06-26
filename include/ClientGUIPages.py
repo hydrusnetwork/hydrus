@@ -1,8 +1,8 @@
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import ClientData
-from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientGUIManagement
 from . import ClientGUIMedia
 from . import ClientGUIMenus
@@ -544,6 +544,7 @@ class Page( wx.SplitterWindow ):
         root = {}
         
         root[ 'name' ] = self.GetName()
+        root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_type' ] = self._management_controller.GetType()
         root[ 'focused' ] = is_selected
         
@@ -784,7 +785,7 @@ class Page( wx.SplitterWindow ):
         
         hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }
         
-        sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in initial_hashes ]
+        sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in initial_hashes if hash in hashes_to_media_results ]
         
         wx.CallAfter( wx_code_publish, sorted_initial_media_results )
         
@@ -1053,7 +1054,7 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( self, screen_position )
+            ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
             
             if tab_index != wx.NOT_FOUND:
                 
@@ -1353,7 +1354,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _ShowMenu( self, screen_position ):
         
-        ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( self, screen_position )
+        ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
         
         num_pages = self.GetPageCount()
         
@@ -1729,7 +1730,7 @@ class PagesNotebook( wx.Notebook ):
             
             if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
                 
-                screen_position = ClientGUICommon.ClientToScreen( self, position )
+                screen_position = ClientGUIFunctions.ClientToScreen( self, position )
                 
                 notebook = self._GetNotebookFromScreenPosition( screen_position )
                 
@@ -1755,7 +1756,7 @@ class PagesNotebook( wx.Notebook ):
     
     def EventMenu( self, event ):
         
-        screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
+        screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
         
         self._ShowMenu( screen_position )
         
@@ -1782,7 +1783,7 @@ class PagesNotebook( wx.Notebook ):
             
             if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
                 
-                screen_position = ClientGUICommon.ClientToScreen( self, position )
+                screen_position = ClientGUIFunctions.ClientToScreen( self, position )
                 
                 notebook = self._GetNotebookFromScreenPosition( screen_position )
                 
@@ -1902,11 +1903,15 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def GetOrMakeMultipleWatcherPage( self, desired_page_name = None, select_page = True ):
+    def GetOrMakeMultipleWatcherPage( self, desired_page_name = None, desired_page_key = None, select_page = True ):
         
         potential_watcher_pages = [ page for page in self._GetMediaPages( False ) if page.IsMultipleWatcherPage() ]
         
-        if desired_page_name is not None:
+        if desired_page_key is not None and desired_page_key in ( page.GetPageKey() for page in potential_watcher_pages ):
+            
+            potential_watcher_pages = [ page for page in potential_watcher_pages if page.GetPageKey() == desired_page_key ]
+            
+        elif desired_page_name is not None:
             
             potential_watcher_pages = [ page for page in potential_watcher_pages if page.GetName() == desired_page_name ]
             
@@ -1932,11 +1937,15 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def GetOrMakeURLImportPage( self, desired_page_name = None, select_page =  True ):
+    def GetOrMakeURLImportPage( self, desired_page_name = None, desired_page_key = None, select_page =  True ):
         
         potential_url_import_pages = [ page for page in self._GetMediaPages( False ) if page.IsURLImportPage() ]
         
-        if desired_page_name is not None:
+        if desired_page_key is not None and desired_page_key in ( page.GetPageKey() for page in potential_url_import_pages ):
+            
+            potential_url_import_pages = [ page for page in potential_url_import_pages if page.GetPageKey() == desired_page_key ]
+            
+        elif desired_page_name is not None:
             
             potential_url_import_pages = [ page for page in potential_url_import_pages if page.GetName() == desired_page_name ]
             
@@ -1997,6 +2006,7 @@ class PagesNotebook( wx.Notebook ):
         root = {}
         
         root[ 'name' ] = self.GetName()
+        root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_type' ] = ClientGUIManagement.MANAGEMENT_TYPE_PAGE_OF_PAGES
         root[ 'selected' ] = is_selected
         root[ 'pages' ] = my_pages_list
@@ -2215,7 +2225,7 @@ class PagesNotebook( wx.Notebook ):
         
         ( x, y ) = screen_position
         
-        ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
+        ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
         
         do_add = True
         # do chase - if we need to chase to an existing dest page on which we dropped files
@@ -2574,7 +2584,7 @@ class PagesNotebook( wx.Notebook ):
         
         ( x, y ) = screen_position
         
-        ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
+        ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
         
         if flags & wx.NB_HITTEST_ONPAGE:
             
@@ -2601,8 +2611,8 @@ class PagesNotebook( wx.Notebook ):
             
             EDGE_PADDING = 10
             
-            ( left_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x - EDGE_PADDING, y ) )
-            ( right_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook,  ( x + EDGE_PADDING, y ) )
+            ( left_tab_index, gumpf ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, ( x - EDGE_PADDING, y ) )
+            ( right_tab_index, gumpf ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook,  ( x + EDGE_PADDING, y ) )
             
             landed_near_left_edge = left_tab_index != tab_index
             landed_near_right_edge = right_tab_index != tab_index
@@ -2653,7 +2663,7 @@ class PagesNotebook( wx.Notebook ):
                 
             
         
-        if dest_notebook == page or ClientGUICommon.IsWXAncestor( dest_notebook, page ):
+        if dest_notebook == page or ClientGUIFunctions.IsWXAncestor( dest_notebook, page ):
             
             # can't drop a notebook beneath itself!
             return

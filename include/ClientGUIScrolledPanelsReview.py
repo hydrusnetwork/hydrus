@@ -8,6 +8,7 @@ from . import ClientGUIControls
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFrames
+from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanels
@@ -446,7 +447,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self.SetSizer( vbox )
         
-        min_width = ClientGUICommon.ConvertTextToPixelWidth( self, 100 )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 100 )
         
         self.SetMinSize( ( min_width, -1 ) )
         
@@ -1191,7 +1192,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = wx.CheckBox( self, label = 'show all' )
         self._history_time_delta_none.Bind( wx.EVT_CHECKBOX, self.EventTimeDeltaChanged )
         
-        columns = [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 15 ), ( 'search distance', 17 ), ( 'this month', 12 ), ( 'has specific rules', 18 ), ( 'blocked?', 10 ) ]
+        columns = [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 15 ), ( 'search distance', 17 ), ( 'this month', 12 ), ( 'uses non-default rules', 24 ), ( 'blocked?', 10 ) ]
         
         self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, columns, self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
         
@@ -1309,11 +1310,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_has_rules = ''
             
         
-        blocked = not self._controller.network_engine.bandwidth_manager.CanDoWork( [ network_context ] )
+        ( waiting_estimate, network_context_gumpf ) = self._controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( [ network_context ] )
         
-        if blocked:
+        if waiting_estimate > 0:
             
-            pretty_blocked = 'yes'
+            pretty_blocked = HydrusData.TimeDeltaToPrettyTimeDelta( waiting_estimate )
             
         else:
             
@@ -1321,7 +1322,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_search_usage, pretty_month_usage, pretty_has_rules, pretty_blocked )
-        sort_tuple = ( sortable_network_context, sortable_context_type, current_usage, day_usage, search_usage, month_usage, has_rules, blocked )
+        sort_tuple = ( sortable_network_context, sortable_context_type, current_usage, day_usage, search_usage, month_usage, has_rules, waiting_estimate )
         
         return ( display_tuple, sort_tuple )
         

@@ -6,6 +6,7 @@ from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIMenus
 from . import ClientGUIControls
+from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUIParsing
@@ -268,26 +269,26 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_to_login_after_ok = []
         
-        domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
         columns = [ ( 'domain', 20 ), ( 'login script', -1 ), ( 'access given', 36 ), ( 'active?', 8 ), ( 'logged in now?', 28 ), ( 'validity', 28 ), ( 'recent error/delay?', 21 ) ]
         
-        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( domains_and_login_info_panel, 'domains_to_login_info', 8, 36, columns, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, 'domains_to_login_info', 8, 36, columns, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
         
-        domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
+        self._domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
         
-        domains_and_login_info_panel.AddButton( 'add', self._Add )
-        domains_and_login_info_panel.AddDeleteButton()
-        domains_and_login_info_panel.AddSeparator()
-        domains_and_login_info_panel.AddButton( 'edit credentials', self._EditCredentials, enabled_check_func = self._CanEditCreds )
-        domains_and_login_info_panel.AddButton( 'change login script', self._EditLoginScript, enabled_only_on_selection = True )
-        domains_and_login_info_panel.AddButton( 'flip active', self._FlipActive, enabled_only_on_selection = True )
-        domains_and_login_info_panel.AddSeparator()
-        domains_and_login_info_panel.AddButton( 'scrub invalidity', self._ScrubInvalidity, enabled_check_func = self._CanScrubInvalidity )
-        domains_and_login_info_panel.AddButton( 'scrub delays', self._ScrubDelays, enabled_check_func = self._CanScrubDelays )
-        domains_and_login_info_panel.NewButtonRow()
-        domains_and_login_info_panel.AddButton( 'do login now', self._DoLogin, enabled_check_func = self._CanDoLogin )
-        domains_and_login_info_panel.AddButton( 'reset login (delete cookies)', self._ClearSessions, enabled_only_on_selection = True )
+        self._domains_and_login_info_panel.AddButton( 'add', self._Add )
+        self._domains_and_login_info_panel.AddDeleteButton()
+        self._domains_and_login_info_panel.AddSeparator()
+        self._domains_and_login_info_panel.AddButton( 'edit credentials', self._EditCredentials, enabled_check_func = self._CanEditCreds )
+        self._domains_and_login_info_panel.AddButton( 'change login script', self._EditLoginScript, enabled_only_on_selection = True )
+        self._domains_and_login_info_panel.AddButton( 'flip active', self._FlipActive, enabled_only_on_selection = True )
+        self._domains_and_login_info_panel.AddSeparator()
+        self._domains_and_login_info_panel.AddButton( 'scrub invalidity', self._ScrubInvalidity, enabled_check_func = self._CanScrubInvalidity )
+        self._domains_and_login_info_panel.AddButton( 'scrub delays', self._ScrubDelays, enabled_check_func = self._CanScrubDelays )
+        self._domains_and_login_info_panel.NewButtonRow()
+        self._domains_and_login_info_panel.AddButton( 'do login now', self._DoLogin, enabled_check_func = self._CanDoLogin )
+        self._domains_and_login_info_panel.AddButton( 'reset login (delete cookies)', self._ClearSessions, enabled_only_on_selection = True )
         
         #
         
@@ -317,7 +318,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         warning_st.SetForegroundColour( ( 128, 0, 0 ) )
         
         vbox.Add( warning_st, CC.FLAGS_CENTER )
-        vbox.Add( domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -626,6 +627,8 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
             self._domains_and_login_info.UpdateDatas()
+            
+            self._domains_and_login_info_panel.UpdateButtons()
             
         
     
@@ -1185,14 +1188,14 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._body = wx.TextCtrl( self, style = wx.TE_MULTILINE )
         self._body.SetEditable( False )
         
-        min_size = ClientGUICommon.ConvertTextToPixels( self._body, ( 64, 3 ) )
+        min_size = ClientGUIFunctions.ConvertTextToPixels( self._body, ( 64, 3 ) )
         
         self._body.SetMinClientSize( min_size )
         
         self._data_preview = wx.TextCtrl( self, style = wx.TE_MULTILINE )
         self._data_preview.SetEditable( False )
         
-        min_size = ClientGUICommon.ConvertTextToPixels( self._data_preview, ( 64, 8 ) )
+        min_size = ClientGUIFunctions.ConvertTextToPixels( self._data_preview, ( 64, 8 ) )
         
         self._data_preview.SetMinClientSize( min_size )
         
@@ -1202,14 +1205,14 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._temp_variables = wx.TextCtrl( self, style = wx.TE_MULTILINE )
         self._temp_variables.SetEditable( False )
         
-        min_size = ClientGUICommon.ConvertTextToPixels( self._temp_variables, ( 64, 6 ) )
+        min_size = ClientGUIFunctions.ConvertTextToPixels( self._temp_variables, ( 64, 6 ) )
         
         self._temp_variables.SetMinClientSize( min_size )
         
         self._cookies = wx.TextCtrl( self, style = wx.TE_MULTILINE )
         self._cookies.SetEditable( False )
         
-        min_size = ClientGUICommon.ConvertTextToPixels( self._cookies, ( 64, 6 ) )
+        min_size = ClientGUIFunctions.ConvertTextToPixels( self._cookies, ( 64, 6 ) )
         
         self._cookies.SetMinClientSize( min_size )
         

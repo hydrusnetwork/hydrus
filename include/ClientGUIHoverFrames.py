@@ -4,6 +4,7 @@ from . import ClientDragDrop
 from . import ClientGUICanvas
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIMenus
 from . import ClientGUITopLevelWindows
@@ -44,6 +45,8 @@ class FullscreenHoverFrame( wx.Frame ):
         self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
         
         self._hide_until =  None
+        
+        self._SizeAndPosition()
         
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
@@ -89,9 +92,9 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def TIMERUIUpdate( self ):
         
-        current_focus_tlp = ClientGUICommon.GetFocusTLP()
+        current_focus_tlp = ClientGUIFunctions.GetFocusTLP()
         
-        focus_is_on_descendant = ClientGUICommon.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
+        focus_is_on_descendant = ClientGUIFunctions.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
         focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
         
         focus_is_good = focus_is_on_descendant and focus_has_right_window_type
@@ -175,7 +178,7 @@ class FullscreenHoverFrame( wx.Frame ):
             in_actual_y = my_y <= mouse_y and mouse_y <= my_y + my_height
             
             # we test both ideal and actual here because setposition is not always honoured by the OS
-            # for instance, in Linux on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
+            # for instance, in some Linux window managers on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
             # the reappearance shuffles the screen coordinates down a bit so the hover sits +20px y despite wanting to be lined up with the underlying fullscreen viewer
             # wew lad
             
@@ -203,8 +206,10 @@ class FullscreenHoverFrame( wx.Frame ):
             
             mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
             
+            hide_focus_is_good = focus_is_good or current_focus_tlp is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
+            
             ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
-            ready_to_hide = not menu_open and ( not in_position or dialog_open or not focus_is_good )
+            ready_to_hide = not menu_open and ( not in_position or dialog_open or not hide_focus_is_good )
             
             def get_logic_report_string():
                 
@@ -212,7 +217,9 @@ class FullscreenHoverFrame( wx.Frame ):
                 
                 tuples.append( ( 'mouse: ', ( mouse_x, mouse_y ) ) )
                 tuples.append( ( 'winpos: ', ( my_x, my_y ) ) )
+                tuples.append( ( 'ideal winpos: ', ( my_ideal_x, my_ideal_y ) ) )
                 tuples.append( ( 'winsize: ', ( my_width, my_height ) ) )
+                tuples.append( ( 'ideal winsize: ', ( my_ideal_width, my_ideal_height ) ) )
                 tuples.append( ( 'in position: ', in_position ) )
                 tuples.append( ( 'menu open: ', menu_open ) )
                 tuples.append( ( 'dialog open: ', dialog_open ) )
@@ -242,9 +249,9 @@ class FullscreenHoverFrame( wx.Frame ):
                     
                     # in case focus jumps around from the show, let's test it and raise as needed
                     
-                    current_focus_tlp = ClientGUICommon.GetFocusTLP()
+                    current_focus_tlp = ClientGUIFunctions.GetFocusTLP()
                     
-                    focus_is_on_descendant = ClientGUICommon.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
+                    focus_is_on_descendant = ClientGUIFunctions.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
                     focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
                     
                     focus_is_good = focus_is_on_descendant and focus_has_right_window_type
@@ -466,7 +473,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width
         
         ideal_size = ( my_ideal_width, -1 )
-        ideal_position = ClientGUICommon.ClientToScreen( parent, ( int( parent_width * 0.8 ), int( parent_height * 0.3 ) ) )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( int( parent_width * 0.8 ), int( parent_height * 0.3 ) ) )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -622,7 +629,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width
         
         ideal_size = ( my_ideal_width, -1 )
-        ideal_position = ClientGUICommon.ClientToScreen( parent, ( int( parent_width * 0.2 ), 0 ) )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( int( parent_width * 0.2 ), 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -709,12 +716,12 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         if self._current_media.HasInbox():
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
             self._archive_button.SetToolTip( 'archive' )
             
         else:
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.to_inbox )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.to_inbox )
             self._archive_button.SetToolTip( 'return to inbox' )
             
         
@@ -957,7 +964,7 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
     
     def _ResetArchiveButton( self ):
         
-        ClientGUICommon.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
+        ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
         self._archive_button.SetToolTip( 'archive' )
         
     
@@ -1108,7 +1115,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width
         
         ideal_size = ( my_ideal_width, -1 )
-        ideal_position = ClientGUICommon.ClientToScreen( parent, ( int( parent_width * 0.8 ), 0 ) )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( int( parent_width * 0.8 ), 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -1263,7 +1270,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUICommon.ClientToScreen( parent, ( 0, 0 ) )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( 0, 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
         

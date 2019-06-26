@@ -6,6 +6,7 @@ from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
+from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUITopLevelWindows
@@ -1199,7 +1200,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             elif action == 'focus_media_viewer':
                 
-                tlps = ClientGUICommon.GetTLPParents( self )
+                tlps = ClientGUIFunctions.GetTLPParents( self )
                 
                 from . import ClientGUICanvas
                 
@@ -1587,7 +1588,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     # if this above sub-dialog occurs, the 'default focus' reverts to the main gui when the manage tags frame closes, wew lad
                     
-                    ClientGUICommon.GetTLP( self ).GetParent().SetFocus()
+                    ClientGUIFunctions.GetTLP( self ).GetParent().SetFocus()
                     self.SetFocus()
                     
                 else:
@@ -2127,7 +2128,7 @@ class ManageTagCensorshipPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._tag_services = ClientGUICommon.BetterNotebook( self )
         
-        min_width = ClientGUICommon.ConvertTextToPixelWidth( self._tag_services, 100 )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
         
         self._tag_services.SetMinSize( ( min_width, -1 ) )
         
@@ -2412,17 +2413,17 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             
-            ( gumpf, preview_height ) = ClientGUICommon.ConvertTextToPixels( self._children, ( 12, 6 ) )
+            ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
             self._children.SetInitialSize( ( -1, preview_height ) )
             self._parents.SetInitialSize( ( -1, preview_height ) )
             
             expand_parents = True
             
-            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             self._child_input.Disable()
             
-            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             self._parent_input.Disable()
             
             self._add = wx.Button( self, label = 'add' )
@@ -3253,13 +3254,13 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
-            ( gumpf, preview_height ) = ClientGUICommon.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
+            ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
             
             self._old_siblings.SetInitialSize( ( -1, preview_height ) )
             
             expand_parents = False
             
-            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
             self._old_input.Disable()
             
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )

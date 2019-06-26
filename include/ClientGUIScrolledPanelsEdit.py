@@ -7,6 +7,7 @@ from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
+from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
@@ -194,7 +195,26 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         self._checkboxes.SetMinSize( ( 320, 420 ) )
         
-        choice_tuples.sort()
+        try:
+            
+            choice_tuples.sort()
+            
+        except TypeError:
+            
+            def sort_key( tup ):
+                
+                return tup[0]
+                
+            
+            try:
+                
+                choice_tuples.sort( key = sort_key )
+                
+            except TypeError:
+                
+                pass # fugg
+                
+            
         
         for ( index, ( label, data, selected ) ) in enumerate( choice_tuples ):
             
@@ -1899,7 +1919,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_template = wx.TextCtrl( self )
         
-        min_width = ClientGUICommon.ConvertTextToPixelWidth( self._url_template, 74 )
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._url_template, 74 )
         
         self._url_template.SetMinClientSize( ( min_width, -1 ) )
         
@@ -3006,7 +3026,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._reason = wx.TextCtrl( self )
             
-            width = ClientGUICommon.ConvertTextToPixelWidth( self._reason, 60 )
+            width = ClientGUIFunctions.ConvertTextToPixelWidth( self._reason, 60 )
             self._reason.SetMinSize( ( width, -1 ) )
             
             #
@@ -4133,7 +4153,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._status_st = ClientGUICommon.BetterStaticText( self )
         
-        st_width = ClientGUICommon.ConvertTextToPixelWidth( self._status_st, 50 )
+        st_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._status_st, 50 )
         
         self._status_st.SetMinSize( ( st_width, -1 ) )
         
@@ -5386,7 +5406,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         width_chars = min( 36, max_width )
         height_chars = max( 6, len( choice_tuples ) )
         
-        l_size = ClientGUICommon.ConvertTextToPixels( self._list, ( width_chars, height_chars ) )
+        l_size = ClientGUIFunctions.ConvertTextToPixels( self._list, ( width_chars, height_chars ) )
         
         self._list.SetMinClientSize( l_size )
         
@@ -5396,7 +5416,26 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if sort_tuples:
             
-            choice_tuples.sort()
+            try:
+                
+                choice_tuples.sort()
+                
+            except TypeError:
+                
+                def sort_key( tup ):
+                    
+                    return tup[0]
+                    
+                
+                try:
+                    
+                    choice_tuples.sort( key = sort_key )
+                    
+                except TypeError:
+                    
+                    pass # fugg
+                    
+                
             
         
         for ( i, ( label, value ) ) in enumerate( choice_tuples ):
@@ -6037,7 +6076,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url.SetValue( example_url )
         
-        example_url_width = ClientGUICommon.ConvertTextToPixelWidth( self._example_url, 75 )
+        example_url_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._example_url, 75 )
         
         self._example_url.SetMinSize( ( example_url_width, -1 ) )
         

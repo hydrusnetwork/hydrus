@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
+from . import ClientGUIFunctions
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -125,7 +126,7 @@ def ConvertMouseEventToShortcut( event ):
     
     return None
     
-def IShouldCatchCharHook( evt_handler ):
+def IShouldCatchShortcutEvent( evt_handler, child_tlp_classes_who_can_pass_up = None ):
     
     if HC.PLATFORM_WINDOWS and FLASHWIN_OK:
         
@@ -137,9 +138,21 @@ def IShouldCatchCharHook( evt_handler ):
             
         
     
-    if not ClientGUICommon.WindowOrSameTLPChildHasFocus( evt_handler ):
+    if not ClientGUIFunctions.WindowOrSameTLPChildHasFocus( evt_handler ):
         
-        return False
+        if child_tlp_classes_who_can_pass_up is not None:
+            
+            child_tlp_has_focus = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( evt_handler ) and isinstance( ClientGUIFunctions.GetFocusTLP(), child_tlp_classes_who_can_pass_up )
+            
+            if not child_tlp_has_focus:
+                
+                return False
+                
+            
+        else:
+            
+            return False
+            
         
     
     return True
@@ -625,7 +638,7 @@ class ShortcutsHandler( object ):
                 
                 message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
                 
-                if IShouldCatchCharHook( self._parent ):
+                if IShouldCatchShortcutEvent( self._parent ):
                     
                     message += ' I am in a state to catch it.'
                     
@@ -637,7 +650,7 @@ class ShortcutsHandler( object ):
                 HydrusData.ShowText( message )
                 
             
-            if IShouldCatchCharHook( self._parent ):
+            if IShouldCatchShortcutEvent( self._parent ):
                 
                 shortcut_processed = self._ProcessShortcut( shortcut )
                 

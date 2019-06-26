@@ -8,6 +8,7 @@ from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
+from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
@@ -1863,6 +1864,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             weights_panel = ClientGUICommon.StaticBox( self, 'duplicate filter comparison score weights' )
             
+            self._duplicate_comparison_score_higher_jpeg_quality = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            self._duplicate_comparison_score_much_higher_jpeg_quality = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
             self._duplicate_comparison_score_higher_filesize = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
             self._duplicate_comparison_score_much_higher_filesize = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
             self._duplicate_comparison_score_higher_resolution = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
@@ -1871,6 +1874,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_older = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
             
             #
+            
+            self._duplicate_comparison_score_higher_jpeg_quality.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' ) )
+            self._duplicate_comparison_score_much_higher_jpeg_quality.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality' ) )
             self._duplicate_comparison_score_higher_filesize.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_filesize' ) )
             self._duplicate_comparison_score_much_higher_filesize.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_filesize' ) )
             self._duplicate_comparison_score_higher_resolution.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_resolution' ) )
@@ -1882,10 +1888,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Score for jpeg with non-trivially higher jpeg quality:', self._duplicate_comparison_score_higher_jpeg_quality ) )
+            rows.append( ( 'Score for jpeg with significantly higher jpeg quality:', self._duplicate_comparison_score_much_higher_jpeg_quality ) )
             rows.append( ( 'Score for file with non-trivially higher filesize:', self._duplicate_comparison_score_higher_filesize ) )
-            rows.append( ( 'Score for file with more than double the filesize:', self._duplicate_comparison_score_much_higher_filesize ) )
+            rows.append( ( 'Score for file with significantly higher filesize:', self._duplicate_comparison_score_much_higher_filesize ) )
             rows.append( ( 'Score for file with higher resolution (as num pixels):', self._duplicate_comparison_score_higher_resolution ) )
-            rows.append( ( 'Score for file with more than double the resolution (as num pixels):', self._duplicate_comparison_score_much_higher_resolution ) )
+            rows.append( ( 'Score for file with significantly higher resolution (as num pixels):', self._duplicate_comparison_score_much_higher_resolution ) )
             rows.append( ( 'Score for file with more tags:', self._duplicate_comparison_score_more_tags ) )
             rows.append( ( 'Score for file with non-trivially earlier import time:', self._duplicate_comparison_score_older ) )
             
@@ -1911,6 +1919,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
+            self._new_options.SetInteger( 'duplicate_comparison_score_higher_jpeg_quality', self._duplicate_comparison_score_higher_jpeg_quality.GetValue() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality', self._duplicate_comparison_score_much_higher_jpeg_quality.GetValue() )
             self._new_options.SetInteger( 'duplicate_comparison_score_higher_filesize', self._duplicate_comparison_score_higher_filesize.GetValue() )
             self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_filesize', self._duplicate_comparison_score_much_higher_filesize.GetValue() )
             self._new_options.SetInteger( 'duplicate_comparison_score_higher_resolution', self._duplicate_comparison_score_higher_resolution.GetValue() )
@@ -3800,7 +3810,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             expand_parents = False
             
             self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel )
-            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._favourites.SetTagServiceKey )
+            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._favourites.SetTagServiceKey, show_paste_button = True )
             
             #
             
@@ -4090,7 +4100,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = False
             
-            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._suggested_favourites.SetTagServiceKey )
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._suggested_favourites.SetTagServiceKey, show_paste_button = True )
             
             #
             
@@ -4670,6 +4680,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
         self._delete_button = ClientGUICommon.BetterButton( custom_panel, 'delete', self._Delete )
         
+        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            custom_panel.Hide()
+            
+        
         #
         
         all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
@@ -4708,6 +4723,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         button_hbox.Add( self._edit_custom_button, CC.FLAGS_VCENTER )
         button_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
+        custom_panel_message = 'Custom shortcuts are advanced. They apply to the media viewer and must be turned on to take effect.'
+        
+        custom_panel.Add( ClientGUICommon.BetterStaticText( custom_panel, custom_panel_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
         custom_panel.Add( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         custom_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
@@ -4717,12 +4735,6 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
         vbox.Add( reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            vbox.Add( ClientGUICommon.BetterStaticText( self, 'Careful--custom sets are advanced!' ), CC.FLAGS_CENTER )
-            
-        
         vbox.Add( custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
@@ -5568,7 +5580,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._urls_listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventListDoubleClick )
         self._urls_listbox.Bind( wx.EVT_KEY_DOWN, self.EventListKeyDown )
         
-        ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
         
         self._urls_listbox.SetInitialSize( ( width, height ) )
         

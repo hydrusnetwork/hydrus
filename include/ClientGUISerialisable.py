@@ -1,5 +1,6 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
+from . import ClientGUIFunctions
 from . import ClientGUIScrolledPanels
 from . import ClientParsing
 from . import ClientSerialisable
@@ -22,7 +23,7 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._filepicker = wx.FilePickerCtrl( self, style = wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, wildcard = 'PNG (*.png)|*.png' )
         
-        flp_width = ClientGUICommon.ConvertTextToPixelWidth( self._filepicker, 64 )
+        flp_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._filepicker, 64 )
         
         self._filepicker.SetMinSize( ( flp_width, -1 ) )
         
@@ -184,7 +185,7 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._directory_picker = wx.DirPickerCtrl( self )
         
-        dp_width = ClientGUICommon.ConvertTextToPixelWidth( self._directory_picker, 52 )
+        dp_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._directory_picker, 52 )
         
         self._directory_picker.SetMinSize( ( dp_width, -1 ) )
         

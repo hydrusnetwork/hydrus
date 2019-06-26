@@ -1021,7 +1021,7 @@ class ClientFilesManager( object ):
                     
                 except HydrusExceptions.FileMissingException:
                     
-                    raise HydrusExceptions.FileMissingException( 'No file found at path + ' + path + '!' )
+                    raise HydrusExceptions.FileMissingException( 'No file found at path {}!'.format( path ) )
                     
                 
                 self._ChangeFileExt( hash, old_mime, mime )

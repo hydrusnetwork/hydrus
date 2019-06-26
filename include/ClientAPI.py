@@ -24,6 +24,8 @@ basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_PAGES ] = 'manage p
 
 SEARCH_RESULTS_CACHE_TIMEOUT = 4 * 3600
 
+SESSION_EXPIRY = 86400
+
 api_request_dialog_open = False
 last_api_permissions_request = None
 
@@ -40,6 +42,8 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = False
         
         self._access_keys_to_permissions = {}
+        
+        self._session_keys_to_access_keys_and_expirys = {}
         
         self._lock = threading.Lock()
         
@@ -93,23 +97,57 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetPermissions( self, access_key = None ):
+    def GenerateSessionKey( self, access_key ):
+        
+        session_key = HydrusData.GenerateKey()
         
         with self._lock:
             
-            if access_key is None:
+            self._session_keys_to_access_keys_and_expirys[ session_key ] = ( access_key, HydrusData.GetNow() + SESSION_EXPIRY )
+            
+        
+        return session_key
+        
+    
+    def GetAccessKey( self, session_key ):
+        
+        with self._lock:
+            
+            if session_key not in self._session_keys_to_access_keys_and_expirys:
                 
-                return list( self._access_keys_to_permissions.values() )
+                raise HydrusExceptions.DataMissing( 'Did not find an entry for that session key!' )
                 
-            else:
+            
+            ( access_key, session_expiry ) = self._session_keys_to_access_keys_and_expirys[ session_key ]
+            
+            if HydrusData.TimeHasPassed( session_expiry ):
                 
-                if access_key not in self._access_keys_to_permissions:
-                    
-                    raise HydrusExceptions.DataMissing( 'Did not find an entry for that access key!' )
-                    
+                del self._session_keys_to_access_keys_and_expirys[ session_expiry ]
                 
-                return self._access_keys_to_permissions[ access_key ]
+                raise HydrusExceptions.SessionException( 'That session key has expired!' )
                 
+            
+            self._session_keys_to_access_keys_and_expirys[ session_key ] = ( access_key, HydrusData.GetNow() + SESSION_EXPIRY )
+            
+        
+        return access_key
+        
+    
+    def GetAllPermissions( self ):
+        
+        return list( self._access_keys_to_permissions.values() )
+        
+    
+    def GetPermissions( self, access_key ):
+        
+        with self._lock:
+            
+            if access_key not in self._access_keys_to_permissions:
+                
+                raise HydrusExceptions.DataMissing( 'Did not find an entry for that access key!' )
+                
+            
+            return self._access_keys_to_permissions[ access_key ]
             
         
     

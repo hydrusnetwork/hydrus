@@ -25,25 +25,27 @@ LOCAL_BOORU_INT_PARAMS = set()
 LOCAL_BOORU_BYTE_PARAMS = { 'share_key', 'hash' }
 LOCAL_BOORU_STRING_PARAMS = set()
 LOCAL_BOORU_JSON_PARAMS = set()
+LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id' }
-CLIENT_API_BYTE_PARAMS = { 'hash' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'hashes', 'only_return_identifiers' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers' }
+CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
 def ParseLocalBooruGETArgs( requests_args ):
     
-    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, LOCAL_BOORU_INT_PARAMS, LOCAL_BOORU_BYTE_PARAMS, LOCAL_BOORU_STRING_PARAMS, LOCAL_BOORU_JSON_PARAMS )
+    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, LOCAL_BOORU_INT_PARAMS, LOCAL_BOORU_BYTE_PARAMS, LOCAL_BOORU_STRING_PARAMS, LOCAL_BOORU_JSON_PARAMS, LOCAL_BOORU_JSON_BYTE_LIST_PARAMS )
     
     return args
     
 def ParseClientAPIGETArgs( requests_args ):
     
-    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, CLIENT_API_INT_PARAMS, CLIENT_API_BYTE_PARAMS, CLIENT_API_STRING_PARAMS, CLIENT_API_JSON_PARAMS )
+    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, CLIENT_API_INT_PARAMS, CLIENT_API_BYTE_PARAMS, CLIENT_API_STRING_PARAMS, CLIENT_API_JSON_PARAMS, CLIENT_API_JSON_BYTE_LIST_PARAMS )
     
     return args
     
-def ParseClientAPIPOSTHashesArgs( args ):
+def ParseClientAPIPOSTByteArgs( args ):
     
     if not isinstance( args, dict ):
         
@@ -52,47 +54,53 @@ def ParseClientAPIPOSTHashesArgs( args ):
     
     parsed_request_args = HydrusNetworking.ParsedRequestArguments( args )
     
-    if 'hash' in parsed_request_args:
+    for var_name in CLIENT_API_BYTE_PARAMS:
         
-        try:
+        if var_name in parsed_request_args:
             
-            hash = bytes.fromhex( parsed_request_args[ 'hash' ] )
-            
-            if len( hash ) == 0:
+            try:
                 
-                del parsed_request_args[ 'hash' ]
+                v = bytes.fromhex( parsed_request_args[ var_name ] )
                 
-            else:
+                if len( v ) == 0:
+                    
+                    del parsed_request_args[ var_name ]
+                    
+                else:
+                    
+                    parsed_request_args[ var_name ] = v
+                    
                 
-                parsed_request_args[ 'hash' ] = hash
+            except:
                 
-            
-        except:
-            
-            raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + 'hash' + '\' as a hex-encoded bytestring, but it failed.' )
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a hex string, but it failed.'.format( var_name ) )
+                
             
         
     
-    if 'hashes' in parsed_request_args:
+    for var_name in CLIENT_API_JSON_BYTE_LIST_PARAMS:
         
-        try:
+        if var_name in parsed_request_args:
             
-            hashes = [ bytes.fromhex( hash_hex ) for hash_hex in parsed_request_args[ 'hashes' ] ]
-            
-            hashes = [ hash for hash in hashes if len( hash ) > 0 ]
-            
-            if len( hashes ) == 0:
+            try:
                 
-                del parsed_request_args[ 'hashes' ]
+                v_list = [ bytes.fromhex( hash_hex ) for hash_hex in parsed_request_args[ var_name ] ]
                 
-            else:
+                v_list = [ v for v in v_list if len( v ) > 0 ]
                 
-                parsed_request_args[ 'hashes' ] = hashes
+                if len( v_list ) == 0:
+                    
+                    del parsed_request_args[ var_name ]
+                    
+                else:
+                    
+                    parsed_request_args[ var_name ] = v_list
+                    
                 
-            
-        except:
-            
-            raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'' + 'hashes' + '\' as a list of hex-encoded bytestrings, but it failed.' )
+            except:
+                
+                raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a list of hex strings, but it failed.'.format( var_name ) )
+                
             
         
     
@@ -135,7 +143,7 @@ def ParseClientAPIPOSTArgs( request ):
             
             args = json.loads( json_string )
             
-            parsed_request_args = ParseClientAPIPOSTHashesArgs( args )
+            parsed_request_args = ParseClientAPIPOSTByteArgs( args )
             
         else:
             
@@ -510,24 +518,56 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         return request
         
     
+    def _ParseClientAPIKey( self, request, name_of_key ):
+        
+        if request.requestHeaders.hasHeader( name_of_key ):
+            
+            key_texts = request.requestHeaders.getRawHeaders( name_of_key )
+            
+            key_text = key_texts[0]
+            
+            try:
+                
+                key = bytes.fromhex( key_text )
+                
+            except:
+                
+                raise Exception( 'Problem parsing {}!'.format( name_of_key ) )
+                
+            
+        elif name_of_key in request.parsed_request_args:
+            
+            key = request.parsed_request_args[ name_of_key ]
+            
+        else:
+            
+            return None
+            
+        
+        return key
+        
+    
     def _ParseClientAPIAccessKey( self, request ):
         
-        if not request.requestHeaders.hasHeader( 'Hydrus-Client-API-Access-Key' ):
-            
-            raise HydrusExceptions.MissingCredentialsException( 'No Hydrus-Client-API-Access-Key header!' )
-            
+        access_key = self._ParseClientAPIKey( request, 'Hydrus-Client-API-Access-Key' )
         
-        access_key_texts = request.requestHeaders.getRawHeaders( 'Hydrus-Client-API-Access-Key' )
-        
-        access_key_text = access_key_texts[0]
-        
-        try:
+        if access_key is None:
             
-            access_key = bytes.fromhex( access_key_text )
+            session_key = self._ParseClientAPIKey( request, 'Hydrus-Client-API-Session-Key' )
             
-        except:
+            if session_key is None:
+                
+                raise HydrusExceptions.MissingCredentialsException( 'No access key or session key provided!' )
+                
             
-            raise Exception( 'Problem parsing api access key!' )
+            try:
+                
+                access_key = HG.client_controller.client_api_manager.GetAccessKey( session_key )
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                raise HydrusExceptions.SessionException( str( e ) )
+                
             
         
         return access_key
@@ -584,38 +624,6 @@ class HydrusResourceClientAPIPermissionsRequest( HydrusResourceClientAPI ):
         return response_context
         
     
-class HydrusResourceClientAPIVerify( HydrusResourceClientAPI ):
-    
-    def _threadDoGETJob( self, request ):
-        
-        access_key = self._ParseClientAPIAccessKey( request )
-        
-        client_api_manager = HG.client_controller.client_api_manager
-        
-        try:
-            
-            api_permissions = client_api_manager.GetPermissions( access_key )
-            
-            basic_permissions = api_permissions.GetBasicPermissions()
-            human_description = api_permissions.ToHumanString()
-            
-            body_dict = {}
-            
-            body_dict[ 'basic_permissions' ] = list( basic_permissions ) # set->list for json
-            body_dict[ 'human_description' ] = human_description
-            
-            body = json.dumps( body_dict )
-            
-            response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
-            
-        except HydrusExceptions.DataMissing:
-            
-            raise HydrusExceptions.InsufficientCredentialsException( 'Could not find that access key!' )
-            
-        
-        return response_context
-        
-    
 class HydrusResourceClientAPIVersion( HydrusResourceClientAPI ):
     
     def _threadDoGETJob( self, request ):
@@ -633,16 +641,13 @@ class HydrusResourceClientAPIVersion( HydrusResourceClientAPI ):
     
 class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
     
-    def _callbackCheckRestrictions( self, request ):
+    def _callbackCheckAccountRestrictions( self, request ):
         
-        HydrusResourceClientAPI._callbackCheckRestrictions( self, request )
+        HydrusResourceClientAPI._callbackCheckAccountRestrictions( self, request )
         
-        if request.method != b'OPTIONS':
-            
-            self._EstablishAPIPermissions( request )
-            
-            self._CheckAPIPermissions( request )
-            
+        self._EstablishAPIPermissions( request )
+        
+        self._CheckAPIPermissions( request )
         
         return request
         
@@ -654,18 +659,65 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
     
     def _EstablishAPIPermissions( self, request ):
         
+        client_api_manager = HG.client_controller.client_api_manager
+        
         access_key = self._ParseClientAPIAccessKey( request )
         
         try:
             
-            api_permissions = HG.client_controller.client_api_manager.GetPermissions( access_key )
+            api_permissions = client_api_manager.GetPermissions( access_key )
             
-        except HydrusExceptions.DataMissing:
+        except HydrusExceptions.DataMissing as e:
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'Could not find that access key in the list of permissions!' )
+            raise HydrusExceptions.InsufficientCredentialsException( str( e ) )
             
         
         request.client_api_permissions = api_permissions
+        
+    
+class HydrusResourceClientAPIRestrictedAccount( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request ):
+        
+        pass
+        
+    
+class HydrusResourceClientAPIRestrictedAccountSessionKey( HydrusResourceClientAPIRestrictedAccount ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        new_session_key = HG.client_controller.client_api_manager.GenerateSessionKey( request.client_api_permissions.GetAccessKey() )
+        
+        body_dict = {}
+        
+        body_dict[ 'session_key' ] = new_session_key.hex()
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAccountVerify( HydrusResourceClientAPIRestrictedAccount ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        api_permissions = request.client_api_permissions
+        
+        basic_permissions = api_permissions.GetBasicPermissions()
+        human_description = api_permissions.ToHumanString()
+        
+        body_dict = {}
+        
+        body_dict[ 'basic_permissions' ] = list( basic_permissions ) # set->list for json
+        body_dict[ 'human_description' ] = human_description
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
         
     
 class HydrusResourceClientAPIRestrictedAddFile( HydrusResourceClientAPIRestricted ):
@@ -1159,6 +1211,18 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
                 
             
         
+        destination_page_key = None
+        
+        if 'destination_page_key' in request.parsed_request_args:
+            
+            destination_page_key = request.parsed_request_args[ 'destination_page_key' ]
+            
+            if not isinstance( destination_page_key, bytes ):
+                
+                raise HydrusExceptions.BadRequestException( '"destination_page_key" did not seem to be a hex string!' )
+                
+            
+        
         show_destination_page = False
         
         if 'show_destination_page' in request.parsed_request_args:
@@ -1173,7 +1237,7 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         def do_it():
             
-            return HG.client_controller.gui.ImportURLFromAPI( url, service_keys_to_tags, destination_page_name, show_destination_page )
+            return HG.client_controller.gui.ImportURLFromAPI( url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page )
             
         
         ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
@@ -1298,9 +1362,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 request.client_api_permissions.CheckCanSeeAllFiles()
                 
-                hashes_hex = request.parsed_request_args[ 'hashes' ]
-                
-                hashes = [ bytes.fromhex( hash ) for hash in hashes_hex ]
+                hashes = request.parsed_request_args[ 'hashes' ]
                 
                 if only_return_identifiers:
                     

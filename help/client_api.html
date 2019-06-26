@@ -20,7 +20,20 @@
 				<li><a href="https://gitlab.com/cryzed/hydrus-api">https://gitlab.com/cryzed/hydrus-api</a> - A python module that talks to the API.</li>
 			</ul>
 			<h3>API</h3>
-			<p>If the API returns anything on 200, it should always return JSON. Otherwise, assume it will return plain text, sometimes a raw traceback. You'll typically get 400 for a missing parameter, 401 or 403 for missing/insufficient access, and 500 for a real deal serverside error.</p>
+			<p>If the API returns anything but actual files on 200, it should always return JSON. On 4XX and 5XX, assume it will return plain text, sometimes a raw traceback. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.</p>
+			<h3>Access and permissions</h3>
+			<p>The client gives access to its API through different 'access keys', which are the typical 64-character hex used in many other places across hydrus. Each guarantees different permissions such as handling files or tags. Most of the time, a user will provide full access, but do not assume this. If the access header or parameter is not provided, you will get 401, and all insufficient permission problems will return 403 with appropriate error text.</p>
+			<p>Access is required for every request. You can provide this as an http header, like so:</p>
+			<ul>
+				<li><p>Hydrus-Client-API-Access-Key : 0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae</p></li>
+			</ul>
+			<p>Or you can include it as a GET or POST parameter on any request (except <i>POST /add_files/add_file</i>, which uses the entire POST body for the file's bytes). Use the same name for your GET or POST argument, such as:</p>
+			<ul>
+				<li><p>/get_files/thumbnail?file_id=452158&Hydrus-Client-API-Access-Key=0150d9c4f6a6d2082534a997f4588dcf0c56dffe1d03ffbf98472236112236ae</p></li>
+			</ul>
+			<p>There is now a simple 'session' system, where you can get a temporary key that gives the same access without having to include the permanent access key in every request. You can fetch a session key with the <a href="#session_key">/session_key</a> command and thereafter use it just as you would an access key, just with <i>Hydrus-Client-API-Session-Key</i> instead.</p>
+			<p>Session keys will expire if they are not used within 24 hours, or if the client is restarted, or if the underlying access key is deleted. An invalid/expired session key will give a <b>419</b> result with an appropriate error text.</p>
+			<p>Bear in mind the Client API is still under construction and is http-only for the moment--be careful about transmitting sensitive content outside of localhost. The access key will be unencrypted across any connection, and if it is included as a GET parameter, as simple and convenient as that is, it could be cached in all sorts of places.</p>
 			<h3>Contents</h3>
 			<ul>
 				<li>
@@ -28,6 +41,7 @@
 					<ul>
 						<li><a href="#api_version">GET /api_version</a></li>
 						<li><a href="#request_new_permissions">GET /request_new_permissions</a></li>
+						<li><a href="#session_key">GET /session_key</a></li>
 						<li><a href="#verify_access_key">GET /verify_access_key</a></li>
 					</ul>
 					<h4>Adding Files</h4>
@@ -64,7 +78,8 @@
 				<h3><b>GET /api_version</b></h3>
 				<p><i>Gets the current API version. I will increment this every time I alter the API.</i></p>
 				<ul>
-					<li><p>Headers: n/a</p></li>
+					<li><p>Restricted access: NO.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments: n/a</p></li>
 					<li><p>Response description: Some simple JSON describing the current version.</p></li>
 					<li>
@@ -79,7 +94,8 @@
 				<h3><b>GET /request_new_permissions</b></h3>
 				<p><i>Register a new external program with the client. This requires the 'add from api request' mini-dialog under </i>services->review services<i> to be open, otherwise it will 403.</i></p>
 				<ul>
-					<li><p>Headers: n/a</p></li>
+					<li><p>Restricted access: NO.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments:</p>
 						<ul>
@@ -112,18 +128,36 @@
 					</li>
 				</ul>
 			</div>
+			<div class="apiborder" id="session_key">
+				<h3><b>GET /session_key</b></h3>
+				<p><i>Get a new session key.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. No permissions required.</p></li>
+					<li><p>Required Headers: n/a</p></li>
+					<li><p>Arguments: n/a</p></li>
+					<li><p>Response description: Some JSON with a new session key in hex.</p></li>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{"session_key": "f6e651e7467255ade6f7c66050f3d595ff06d6f3d3693a3a6fb1a9c2b278f800"}</pre>
+							</li>
+						</ul>
+					</li>
+					<li>
+						<p>Note that the access you provide to get a new session key <b>can</b> be a session key, if that happens to be useful. As long as you have some kind of access, you can generate a new session key.</p>
+						<p>A session key expires after 24 hours of inactivity, whenever the client restarts, or if the underlying access key is deleted. A request on an expired session key returns 419.</p>
+					</li>
+				</ul>
+			</div>
 			<div class="apiborder" id="verify_access_key">
 				<h3><b>GET /verify_access_key</b></h3>
 				<p><i>Check your access key is valid.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. No permissions required.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments: n/a</p></li>
-					<li><p>Response description: 403 and some error text if the access key is invalid, otherwise some JSON with basic permission info.</p></li>
+					<li><p>Response description: 401/403/419 and some error text if the provided access/session key is invalid, otherwise some JSON with basic permission info.</p></li>
 					<li>
 						<p>Example response:</p>
 						<ul>
@@ -142,10 +176,10 @@
 				<h3><b>POST /add_files/add_file</b></h3>
 				<p><i>Tell the client to import a file.</i></p>
 				<ul>
+					<li><p>Restricted access: YES. Import Files permission needed.</p></li>
 					<li>
-						<p>Headers:</p>
+						<p>Required Headers:</p>
 						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
 							<li>Content-Type : application/json (if sending path), application/octet-stream (if sending file)</li>
 						</ul>
 					</li>
@@ -182,12 +216,8 @@
 				<h3><b>GET /add_tags/clean_tags</b></h3>
 				<p><i>Ask the client about how it will see certain tags.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments (in percent-encoded JSON):</p></li>
 					<ul>
 						<li>tags : (a list of the tags you want cleaned)</li>
@@ -219,12 +249,8 @@
 				<h3><b>GET /add_tags/get_tag_services</b></h3>
 				<p><i>Ask the client about its tag services.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments: n/a</p></li>
 					<li>
 						<p>Response description: Some JSON listing the client's 'local tags' and tag repository services by name.</p>
@@ -247,12 +273,8 @@
 				<h3><b>POST /add_tags/add_tags</b></h3>
 				<p><i>Make changes to the tags that files have.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Add Tags permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li><p>Arguments (in JSON):</p></li>
 					<ul>
 						<li>hash : (an SHA256 hash for a file in 64 characters of hexadecimal)</li>
@@ -317,12 +339,8 @@
 				<h3><b>GET /add_urls/get_url_files</b></h3>
 				<p><i>Ask the client about an URL's files.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Import URLs permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments:</p>
 						<ul>
@@ -369,12 +387,8 @@
 				<h3><b>GET /add_urls/get_url_info</b></h3>
 				<p><i>Ask the client for information about a URL.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Import URLs permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments:</p>
 						<ul>
@@ -419,10 +433,10 @@
 				<h3><b>POST /add_urls/add_url</b></h3>
 				<p><i>Tell the client to 'import' a URL. This triggers the exact same routine as drag-and-dropping a text URL onto the main client window.</i></p>
 				<ul>
+					<li><p>Restricted access: YES. Import URLs permission needed. Add Tags needed to include tags.</p></li>
 					<li>
-						<p>Headers:</p>
+						<p>Required Headers:</p>
 						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
 							<li>Content-Type : application/json</li>
 						</ul>
 					</li>
@@ -430,12 +444,14 @@
 						<p>Arguments (in JSON):</p>
 						<ul>
 							<li>url : (the url you want to add)</li>
+							<li>destination_page_key : (optional page identifier for the page to receive the url)</li>
 							<li>destination_page_name : (optional page name to receive the url)</li>
 							<li>show_destination_page : (optional, defaulting to false, controls whether the UI will change pages on add)</li>
 							<li>service_names_to_tags : (optional tags to give to any files imported from this url)</li>
 						</ul>
 					</li>
 					<p>If you specify a destination_page_name and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.</p>
+					<p>Alternately, destination_page_key defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the <a href="#manage_pages_get_pages">/manage_pages/get_pages</a> call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.</p> 
 					<p>show_destination_page defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.</p>
 					<p>The service_names_to_tags uses the same system as for /add_tags/add_tags. You will need 'add tags' permission, or this will 403.</p>
 					<li>
@@ -470,10 +486,10 @@
 				<h3><b>POST /add_urls/associate_url</b></h3>
 				<p><i>Manage which URLs the client considers to be associated with which files.</i></p>
 				<ul>
+					<li><p>Restricted access: YES. Import URLs permission needed.</p></li>
 					<li>
-						<p>Headers:</p>
+						<p>Required Headers:</p>
 						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
 							<li>Content-Type : application/json</li>
 						</ul>
 					</li>
@@ -503,21 +519,14 @@
 					<li><p>Response description: 200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.</p></li>
 				</ul>
 			</div>
-			
-			
-			
 			<h3>Managing Pages</h3>
 			<p>This refers to the pages of the main client UI.</p>
 			<div class="apiborder" id="manage_pages_get_pages">
 				<h3><b>GET /manage_pages/get_pages</b></h3>
 				<p><i>Get the page structure of the current UI session.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Manage Pages permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments: n/a</p>
 					</li>
@@ -529,31 +538,37 @@
 <pre>{
 	"pages" : {
 		"name" : "top pages notebook",
+		"page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
 		"page_type" : 10,
 		"selected" : true,
 		"pages" : [
 			{
 				"name" : "files",
+				"page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
 				"page_type" : 6,
 				"selected" : false
 			},
 			{
 				"name" : "thread watcher",
+				"page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
 				"page_type" : 9,
 				"selected" : false
 			},
 			{
 				"name" : "pages",
+				"page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
 				"page_type" : 10,
 				"selected" : true,
 				"pages" : [
 					{
 						"name" : "urls",
+						"page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
 						"page_type" : 7,
 						"selected" : true
 					},
 					{
 						"name" : "files",
+						"page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
 						"page_type" : 6,
 						"selected" : false
 					}
@@ -578,23 +593,17 @@
 						<li>10 - Page of pages</li>
 					</ul>
 					<p>The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.</p>
+					<p>The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.</p>
 				</ul>
 			</div>
-			
-			
-			
 			<h3>Searching Files</h3>
 			<p>File search in hydrus is not paginated like a booru--all searches return all results in one go. In order to keep this fast, search is split into two steps--fetching file identifiers with a search, and then fetching file metadata in batches. You may have noticed that the client itself performs searches like this--thinking a bit about a search and then bundling results in batches of 256 files before eventually throwing all the thumbnails on screen.</p>
 			<div class="apiborder" id="get_files_search_files">
 				<h3><b>GET /get_files/search_files</b></h3>
 				<p><i>Search for the client's files.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments (in percent-encoded JSON):</p>
 						<ul>
@@ -630,12 +639,8 @@
 				<h3><b>GET /get_files/file_metadata</b></h3>
 				<p><i>Get metadata about files in the client.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments (in percent-encoded JSON):</p>
 						<ul>
@@ -741,12 +746,8 @@
 				<h3><b>GET /get_files/file</b></h3>
 				<p><i>Get a file.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments :</p>
 						<ul>
@@ -769,12 +770,8 @@
 				<h3><b>GET /get_files/thumbnail</b></h3>
 				<p><i>Get a file's thumbnail.</i></p>
 				<ul>
-					<li>
-						<p>Headers:</p>
-						<ul>
-							<li>Hydrus-Client-API-Access-Key : (Your hexadecimal access key)</li>
-						</ul>
-					</li>
+					<li><p>Restricted access: YES. Search for Files permission needed. Additional search permission limits may apply.</p></li>
+					<li><p>Required Headers: n/a</p></li>
 					<li>
 						<p>Arguments :</p>
 						<ul>

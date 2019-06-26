@@ -12,6 +12,7 @@ INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
 BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'update_hash' }
 STRING_PARAMS = { 'subject_tag' }
 JSON_PARAMS = set()
+JSON_BYTE_LIST_PARAMS = set()
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -292,7 +293,7 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes ):
     
 def ParseHydrusNetworkGETArgs( requests_args ):
     
-    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, INT_PARAMS, BYTE_PARAMS, STRING_PARAMS, JSON_PARAMS )
+    args = HydrusNetworking.ParseTwistedRequestGETArgs( requests_args, INT_PARAMS, BYTE_PARAMS, STRING_PARAMS, JSON_PARAMS, JSON_BYTE_LIST_PARAMS )
     
     if 'subject_account_key' in args:
         
@@ -1155,6 +1156,36 @@ class Content( HydrusSerialisable.SerialisableBase ):
     def HasHashes( self ):
         
         return self._content_type in ( HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPING, HC.CONTENT_TYPE_MAPPINGS )
+        
+    
+    def IterateUploadableChunks( self ):
+        
+        if self._content_type == HC.CONTENT_TYPE_FILES:
+            
+            hashes = self._content_data
+            
+            for chunk_of_hashes in HydrusData.SplitListIntoChunks( hashes, 100 ):
+                
+                content = Content( content_type = self._content_type, content_data = chunk_of_hashes )
+                
+                yield content
+                
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            ( tag, hashes ) = self._content_data
+            
+            for chunk_of_hashes in HydrusData.SplitListIntoChunks( hashes, 100 ):
+                
+                content = Content( content_type = self._content_type, content_data = ( tag, chunk_of_hashes ) )
+                
+                yield content
+                
+            
+        else:
+            
+            yield self
+            
         
     
     def ToString( self ):

@@ -5,11 +5,11 @@ from . import ClientData
 from . import ClientDragDrop
 from . import ClientFiles
 from . import ClientGUICanvas
-from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
 from . import ClientGUIExport
+from . import ClientGUIFunctions
 from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
@@ -1315,7 +1315,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
                 
-                size = ClientGUICommon.ConvertTextToPixels( control, ( 80, 14 ) )
+                size = ClientGUIFunctions.ConvertTextToPixels( control, ( 80, 14 ) )
                 
                 control.SetInitialSize( size )
                 
@@ -2409,7 +2409,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
             
-            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
+            command_processed = ClientGUIFunctions.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
             
         else:
             
@@ -4883,7 +4883,7 @@ class Thumbnail( Selectable ):
             icons_to_draw.append( CC.GlobalBMPs.downloading )
             
         
-        if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+        if CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() or CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted():
             
             icons_to_draw.append( CC.GlobalBMPs.trash )
             

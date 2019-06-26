@@ -5,6 +5,7 @@ from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
+from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanels
 from . import ClientGUITags
@@ -76,7 +77,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._access_key = wx.TextCtrl( self, style = wx.TE_READONLY )
         
-        width = ClientGUICommon.ConvertTextToPixelWidth( self._access_key, 66 )
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._access_key, 66 )
         
         self._access_key.SetMinClientSize( ( width, -1 ) )
         

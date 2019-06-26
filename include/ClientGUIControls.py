@@ -3,6 +3,7 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
@@ -236,7 +237,7 @@ class BytesControl( wx.Panel ):
         
         self._spin = wx.SpinCtrl( self, min = 0, max = 1048576 )
         
-        width = ClientGUICommon.ConvertTextToPixelWidth( self._spin, 12 )
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._spin, 12 )
         
         self._spin.SetSize( ( width, -1 ) )
         
@@ -1277,7 +1278,7 @@ class NetworkJobControl( wx.Panel ):
             
             self._right_text.SetLabelText( speed_text )
             
-            right_width = ClientGUICommon.ConvertTextToPixelWidth( self._right_text, len( speed_text ) )
+            right_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._right_text, len( speed_text ) )
             
             right_min_size = ( right_width, -1 )
             

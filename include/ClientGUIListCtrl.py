@@ -2,6 +2,7 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientDragDrop
 from . import ClientGUICommon
+from . import ClientGUIFunctions
 from . import ClientSerialisable
 from . import ClientGUIShortcuts
 from . import HydrusData
@@ -533,7 +534,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        total_width = ClientGUICommon.ConvertTextToPixelWidth( self, sizing_column_initial_width_num_chars )
+        total_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, sizing_column_initial_width_num_chars )
         
         resize_column = 1
         
@@ -547,7 +548,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
             else:
                 
-                width = ClientGUICommon.ConvertTextToPixelWidth( self, width_num_chars )
+                width = ClientGUIFunctions.ConvertTextToPixelWidth( self, width_num_chars )
                 
                 total_width += width
                 
@@ -901,7 +902,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         existing_min_width = self.GetMinClientSize()[0]
         
-        ( width_gumpf, ideal_client_height ) = ClientGUICommon.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
+        ( width_gumpf, ideal_client_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
         
         self.SetMinClientSize( ( existing_min_width, ideal_client_height ) )
         
@@ -1033,7 +1034,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             # keep it sorted here, which is sometimes useful
             
-            indices_and_datas = [ ( index, data ) for ( data, index ) in list(self._data_to_indices.items()) ]
+            indices_and_datas = [ ( index, data ) for ( data, index ) in self._data_to_indices.items() ]
             
             indices_and_datas.sort()
             
@@ -1063,7 +1064,6 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                         sort_data_has_changed = True
                         
                     
-                
                 
                 self._indices_to_data_info[ index ] = data_info
                 

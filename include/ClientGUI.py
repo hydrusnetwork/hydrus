@@ -10,6 +10,7 @@ from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
 from . import ClientGUIExport
 from . import ClientGUIFrames
+from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUILogin
 from . import ClientGUIManagement
@@ -253,11 +254,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui', float_on_parent = False )
         
-        bandwidth_width = ClientGUICommon.ConvertTextToPixelWidth( self, 17 )
-        idle_width = ClientGUICommon.ConvertTextToPixelWidth( self, 6 )
-        hydrus_busy_width = ClientGUICommon.ConvertTextToPixelWidth( self, 11 )
-        system_busy_width = ClientGUICommon.ConvertTextToPixelWidth( self, 13 )
-        db_width = ClientGUICommon.ConvertTextToPixelWidth( self, 14 )
+        bandwidth_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 17 )
+        idle_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 6 )
+        hydrus_busy_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 11 )
+        system_busy_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 13 )
+        db_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, 14 )
         
         stb_style = wx.STB_SIZEGRIP | wx.STB_ELLIPSIZE_END | wx.FULL_REPAINT_ON_RESIZE
         
@@ -328,6 +329,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._InitialiseMenubar()
         
+        self._menubar_open_menu_stack = []
+        
+        # tfw in OSX wxCocoa every time you open a new unrelated menu the next button press causes every menu and submenu in the menubar to send a 'window open' event
+        # https://trac.wxwidgets.org/ticket/14333
+        
+        # In Linux behaviour is unreliable, receiving closes but not opens etc...
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
+            self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
+            
+        
         self._RefreshStatusBar()
         
         self._bandwidth_repeating_job = self._controller.CallRepeatingWXSafe( self, 1.0, 1.0, self.REPEATINGBandwidth )
@@ -347,8 +361,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
         
         self._controller.CallLaterWXSafe( self, 0.5, self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
-        
-        self._controller.CallLaterWXSafe( self, 2.0, self._controller.MenubarMenuIsClosed ) # sometimes this gets stuck on open on init
         
     
     def _AboutWindow( self ):
@@ -2542,7 +2554,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None, show_destination_page = True, allow_watchers = True, allow_other_recognised_urls = True, allow_unrecognised_urls = True ):
+    def _ImportURL( self, url, service_keys_to_tags = None, destination_page_name = None, destination_page_key = None, show_destination_page = True, allow_watchers = True, allow_other_recognised_urls = True, allow_unrecognised_urls = True ):
         
         if service_keys_to_tags is None:
             
@@ -2570,12 +2582,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if not self._notebook.HasURLImportPage() and self.IsIconized():
                 
-                self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
+                self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
                 
                 return ( url, '"{}" URL was accepted, but it needed a new page and the client is currently minimized. It is queued to be added once the client is restored.' )
                 
             
-            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, select_page = show_destination_page )
+            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
             
             if page is not None:
                 
@@ -2597,12 +2609,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if not self._notebook.HasMultipleWatcherPage() and self.IsIconized():
                 
-                self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
+                self._controller.CallLaterWXSafe( self, 10, self._ImportURL, url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, allow_watchers = allow_watchers, allow_other_recognised_urls = allow_other_recognised_urls, allow_unrecognised_urls = allow_unrecognised_urls )
                 
                 return ( url, '"{}" URL was accepted, but it needed a new page and the client is current minimized. It is queued to be added once the client is restored.' )
                 
             
-            page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name, select_page = show_destination_page )
+            page = self._notebook.GetOrMakeMultipleWatcherPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
             
             if page is not None:
                 
@@ -4486,6 +4498,48 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.EventMenuFromScreenPosition( screen_position )
         
     
+    def EventMenuClose( self, event ):
+        
+        menu = event.GetMenu()
+        
+        if menu is not None and hasattr( menu, 'hydrus_menubar_name' ):
+            
+            if menu in self._menubar_open_menu_stack:
+                
+                index = self._menubar_open_menu_stack.index( menu )
+                
+                del self._menubar_open_menu_stack[ index ]
+                
+            
+            if len( self._menubar_open_menu_stack ) == 0:
+                
+                HG.client_controller.MenubarMenuIsClosed()
+                
+            
+        
+        event.Skip()
+        
+    
+    def EventMenuOpen( self, event ):
+        
+        menu = event.GetMenu()
+        
+        if menu is not None and hasattr( menu, 'hydrus_menubar_name' ):
+            
+            if len( self._menubar_open_menu_stack ) == 0:
+                
+                HG.client_controller.MenubarMenuIsOpen()
+                
+            
+            if menu not in self._menubar_open_menu_stack:
+                
+                self._menubar_open_menu_stack.append( menu )
+                
+            
+        
+        event.Skip()
+        
+    
     def EventMove( self, event ):
         
         if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
@@ -4742,7 +4796,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if current_page is not None:
             
-            in_current_page = ClientGUICommon.IsWXAncestor( window, current_page )
+            in_current_page = ClientGUIFunctions.IsWXAncestor( window, current_page )
             
             if in_current_page:
                 
@@ -4750,7 +4804,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        in_other_window = ClientGUICommon.GetTLP( window ) != self
+        in_other_window = ClientGUIFunctions.GetTLP( window ) != self
         
         return in_other_window
         
@@ -4767,11 +4821,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ImportFiles( paths )
         
     
-    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, show_destination_page ):
+    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page ):
         
         try:
             
-            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, show_destination_page = show_destination_page )
+            ( normalised_url, result_text ) = self._ImportURL( url, service_keys_to_tags = service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page )
             
             return ( normalised_url, result_text )
             
@@ -4943,7 +4997,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
-        tlp = ClientGUICommon.GetTLP( self )
+        tlp = ClientGUIFunctions.GetTLP( self )
         
         if tlp.IsIconized() and not self._notebook.HasMediaPageName( page_name ):
             

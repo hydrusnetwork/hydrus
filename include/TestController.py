@@ -480,36 +480,42 @@ class Controller( object ):
         
         return {
             "name" : "top pages notebook",
+            "page_key" : "3b28d8a59ec61834325eb6275d9df012860a1ecfd9e1246423059bc47fb6d5bd",
             "page_type" : 10,
             "selected" : True,
             "pages" : [
-                    {
+                {
+                    "name" : "files",
+                    "page_key" : "d436ff5109215199913705eb9a7669d8a6b67c52e41c3b42904db083255ca84d",
+                    "page_type" : 6,
+                    "selected" : False
+                },
+                {
+                    "name" : "thread watcher",
+                    "page_key" : "40887fa327edca01e1d69b533dddba4681b2c43e0b4ebee0576177852e8c32e7",
+                    "page_type" : 9,
+                    "selected" : False
+                },
+                {
+                    "name" : "pages",
+                    "page_key" : "2ee7fa4058e1e23f2bd9e915cdf9347ae90902a8622d6559ba019a83a785c4dc",
+                    "page_type" : 10,
+                    "selected" : True,
+                    "pages" : [
+                        {
+                            "name" : "urls",
+                            "page_key" : "9fe22cb760d9ee6de32575ed9f27b76b4c215179cf843d3f9044efeeca98411f",
+                            "page_type" : 7,
+                            "selected" : True
+                        },
+                        {
                             "name" : "files",
+                            "page_key" : "2977d57fc9c588be783727bcd54225d577b44e8aa2f91e365a3eb3c3f580dc4e",
                             "page_type" : 6,
                             "selected" : False
-                    },
-                    {
-                            "name" : "thread watcher",
-                            "page_type" : 9,
-                            "selected" : False
-                    },
-                    {
-                            "name" : "pages",
-                            "page_type" : 10,
-                            "selected" : True,
-                            "pages" : [
-                                    {
-                                            "name" : "urls",
-                                            "page_type" : 7,
-                                            "selected" : True
-                                    },
-                                    {
-                                            "name" : "files",
-                                            "page_type" : 6,
-                                            "selected" : False
-                                    }
-                            ]
-                    }	
+                        }
+                    ]
+                }	
             ]
         }
         
@@ -538,13 +544,13 @@ class Controller( object ):
         return write
         
     
-    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, show_destination_page ):
+    def ImportURLFromAPI( self, url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page ):
         
         normalised_url = self.network_engine.domain_manager.NormaliseURL( url )
         
         human_result_text = '"{}" URL added successfully.'.format( normalised_url )
         
-        self.Write( 'import_url_test', url, service_keys_to_tags, destination_page_name, show_destination_page )
+        self.Write( 'import_url_test', url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page )
         
         return ( normalised_url, human_result_text )
         

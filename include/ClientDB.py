@@ -13042,6 +13042,33 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DELETE FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? );', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_QUALITY ) )
             
         
+        if version == 356:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetInteger( 'duplicate_comparison_score_higher_jpeg_quality', 10 )
+                new_options.SetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality', 20 )
+                new_options.SetInteger( 'duplicate_comparison_score_higher_filesize', 10 )
+                new_options.SetInteger( 'duplicate_comparison_score_much_higher_filesize', 20 )
+                new_options.SetInteger( 'duplicate_comparison_score_higher_resolution', 20 )
+                new_options.SetInteger( 'duplicate_comparison_score_much_higher_resolution', 50 )
+                new_options.SetInteger( 'duplicate_comparison_score_more_tags', 8 )
+                new_options.SetInteger( 'duplicate_comparison_score_older', 4 )
+                
+                self._SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to set new simple downloader parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

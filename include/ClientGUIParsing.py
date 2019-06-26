@@ -7,6 +7,7 @@ from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIMenus
 from . import ClientGUIControls
+from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanels
@@ -841,7 +842,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( my_panel )
         
-        ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._formula_description, ( 90, 8 ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._formula_description, ( 90, 8 ) )
         
         self._formula_description.SetInitialSize( ( width, height ) )
         
@@ -2889,6 +2890,14 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        if test_context is None:
+            
+            example_parsing_context = parser.GetExampleParsingContext()
+            example_data = ''
+            
+            test_context = ( example_parsing_context, example_data )
+            
+        
         #
         
         menu_items = []
@@ -2933,7 +2942,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         formula_panel = wx.Panel( edit_notebook )
         
-        self._formula = EditFormulaPanel( formula_panel, formula, self.GetTestContext )
+        formula_test_callable = lambda: test_context
+        
+        self._formula = EditFormulaPanel( formula_panel, formula, formula_test_callable )
         
         #
         
@@ -2980,14 +2991,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._test_referral_url = wx.TextCtrl( test_url_fetch_panel )
         self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
         self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_url_fetch_panel )
-        
-        if test_context is None:
-            
-            example_parsing_context = parser.GetExampleParsingContext()
-            example_data = ''
-            
-            test_context = ( example_parsing_context, example_data )
-            
         
         if formula is None:
             
@@ -3242,6 +3245,12 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     return
                     
+                
+                example_parsing_context = self._test_panel.GetExampleParsingContext()
+                
+                example_parsing_context[ 'url' ] = url
+                
+                self._test_panel.SetExampleParsingContext( example_parsing_context )
                 
                 self._test_panel.SetExampleData( example_data )
                 
@@ -4312,7 +4321,7 @@ class TestPanel( wx.Panel ):
         
         self._example_data_raw_preview = ClientGUICommon.SaneMultilineTextCtrl( raw_data_panel, style = wx.TE_READONLY )
         
-        size = ClientGUICommon.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
+        size = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
         
         self._example_data_raw_preview.SetInitialSize( size )
         
@@ -4320,7 +4329,7 @@ class TestPanel( wx.Panel ):
         
         self._results = ClientGUICommon.SaneMultilineTextCtrl( self )
         
-        size = ClientGUICommon.ConvertTextToPixels( self._example_data_raw_preview, ( 80, 12 ) )
+        size = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 80, 12 ) )
         
         self._results.SetInitialSize( size )
         
@@ -4379,6 +4388,12 @@ class TestPanel( wx.Panel ):
                 
                 return
                 
+            
+            example_parsing_context = self._example_parsing_context.GetValue()
+            
+            example_parsing_context[ 'url' ] = url
+            
+            self._example_parsing_context.SetValue( example_parsing_context )
             
             self._SetExampleData( example_data )
             
@@ -4497,6 +4512,16 @@ class TestPanel( wx.Panel ):
         return ( example_parsing_context, self._example_data_raw )
         
     
+    def SetExampleData( self, example_data ):
+        
+        self._SetExampleData( example_data )
+        
+    
+    def SetExampleParsingContext( self, example_parsing_context ):
+        
+        self._example_parsing_context.SetValue( example_parsing_context )
+        
+    
     def TestParse( self ):
         
         obj = self._object_callable()
@@ -4521,11 +4546,6 @@ class TestPanel( wx.Panel ):
             
             self._results.SetValue( message )
             
-        
-    
-    def SetExampleData( self, example_data ):
-        
-        self._SetExampleData( example_data )
         
     
 class TestPanelPageParser( TestPanel ):

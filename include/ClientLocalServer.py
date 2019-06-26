@@ -41,7 +41,8 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         root.putChild( b'api_version', ClientLocalServerResources.HydrusResourceClientAPIVersion( self._service, self._client_requests_domain ) )
         root.putChild( b'request_new_permissions', ClientLocalServerResources.HydrusResourceClientAPIPermissionsRequest( self._service, self._client_requests_domain ) )
-        root.putChild( b'verify_access_key', ClientLocalServerResources.HydrusResourceClientAPIVerify( self._service, self._client_requests_domain ) )
+        root.putChild( b'session_key', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAccountSessionKey( self._service, self._client_requests_domain ) )
+        root.putChild( b'verify_access_key', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAccountVerify( self._service, self._client_requests_domain ) )
         
         add_files = NoResource()
         

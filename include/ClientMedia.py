@@ -52,6 +52,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     new_options = HG.client_controller.new_options
     
+    duplicate_comparison_score_higher_jpeg_quality = new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' )
+    duplicate_comparison_score_much_higher_jpeg_quality = new_options.GetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality' )
     duplicate_comparison_score_higher_filesize = new_options.GetInteger( 'duplicate_comparison_score_higher_filesize' )
     duplicate_comparison_score_much_higher_filesize = new_options.GetInteger( 'duplicate_comparison_score_much_higher_filesize' )
     duplicate_comparison_score_higher_resolution = new_options.GetInteger( 'duplicate_comparison_score_higher_resolution' )
@@ -262,19 +264,19 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
                 if quality_ratio > 2.0:
                     
-                    score = 20
+                    score = duplicate_comparison_score_much_higher_jpeg_quality
                     
                 elif quality_ratio > 1.0:
                     
-                    score = 10
+                    score = duplicate_comparison_score_higher_jpeg_quality
                     
                 elif quality_ratio < 0.5:
                     
-                    score = -20
+                    score = -duplicate_comparison_score_much_higher_jpeg_quality
                     
                 else:
                     
-                    score = -10
+                    score = -duplicate_comparison_score_higher_jpeg_quality
                     
                 
             
@@ -1757,6 +1759,7 @@ class MediaSingleton( Media ):
         locations_manager = self._media_result.GetLocationsManager()
         
         current_service_keys = locations_manager.GetCurrent()
+        deleted_service_keys = locations_manager.GetDeleted()
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
             
@@ -1770,6 +1773,11 @@ class MediaSingleton( Media ):
             timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
             
             lines.append( 'trashed ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
+            
+        
+        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
+            
+            lines.append( 'was once previously in this client' )
             
         
         for service_key in current_service_keys:

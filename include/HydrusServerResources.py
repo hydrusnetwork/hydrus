@@ -306,7 +306,12 @@ class HydrusResource( Resource ):
         self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
     
-    def _callbackCheckRestrictions( self, request ):
+    def _callbackCheckAccountRestrictions( self, request ):
+        
+        return request
+        
+    
+    def _callbackCheckServiceRestrictions( self, request ):
         
         self._domain.CheckValid( request.getClientIP() )
         
@@ -729,9 +734,11 @@ class HydrusResource( Resource ):
         
         d = defer.Deferred()
         
-        d.addCallback( self._callbackCheckRestrictions )
+        d.addCallback( self._callbackCheckServiceRestrictions )
         
         d.addCallback( self._callbackParseGETArgs )
+        
+        d.addCallback( self._callbackCheckAccountRestrictions )
         
         d.addCallback( self._callbackDoGETJob )
         
@@ -754,7 +761,7 @@ class HydrusResource( Resource ):
         
         d = defer.Deferred()
         
-        d.addCallback( self._callbackCheckRestrictions )
+        d.addCallback( self._callbackCheckServiceRestrictions )
         
         d.addCallback( self._callbackDoOPTIONSJob )
         
@@ -777,9 +784,11 @@ class HydrusResource( Resource ):
         
         d = defer.Deferred()
         
-        d.addCallback( self._callbackCheckRestrictions )
+        d.addCallback( self._callbackCheckServiceRestrictions )
         
         d.addCallback( self._callbackParsePOSTArgs )
+        
+        d.addCallback( self._callbackCheckAccountRestrictions )
         
         d.addCallback( self._callbackDoPOSTJob )
         

@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
 from . import ClientGUISerialisable
@@ -480,7 +481,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
-        tlp = ClientGUICommon.GetTLP( self )
+        tlp = ClientGUIFunctions.GetTLP( self )
         
         if isinstance( tlp, wx.Dialog ):
             

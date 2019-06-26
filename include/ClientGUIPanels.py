@@ -482,7 +482,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._service_status.SetLabelText( status )
             
-            api_permissions_objects = HG.client_controller.client_api_manager.GetPermissions()
+            api_permissions_objects = HG.client_controller.client_api_manager.GetAllPermissions()
             
             self._permissions_list.SetData( api_permissions_objects )
             

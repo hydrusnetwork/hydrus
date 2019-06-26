@@ -1,5 +1,6 @@
 from . import ClientCaches
 from . import ClientConstants as CC
+from . import ClientGUIFunctions
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
 from . import HydrusConstants as HC
@@ -296,18 +297,13 @@ class NewDialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style )
         
+        self._consumed_esc_to_cancel = False
+        
         self._new_options = HG.client_controller.new_options
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         self.SetIcon( HG.client_controller.frame_icon )
-        
-        self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
-        self.Bind( wx.EVT_MENU_HIGHLIGHT_ALL, self.EventMenuHighlight )
-        self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
-        
-        self._menu_stack = []
-        self._menu_text_stack = []
         
         HG.client_controller.ResetIdleTimer()
         
@@ -414,7 +410,13 @@ class NewDialog( wx.Dialog ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key == wx.WXK_ESCAPE:
+        obj = event.GetEventObject()
+        
+        event_from_us = obj is not None and ClientGUIFunctions.IsWXAncestor( self, obj )
+        
+        if event_from_us and key == wx.WXK_ESCAPE and not self._consumed_esc_to_cancel:
+            
+            self._consumed_esc_to_cancel = True
             
             self._TryEndModal( wx.ID_CANCEL )
             
@@ -465,73 +467,6 @@ class NewDialog( wx.Dialog ):
             
         
         self._TryEndModal( event_id )
-        
-    
-    def EventMenuClose( self, event ):
-        
-        menu = event.GetMenu()
-        
-        if menu is not None and menu in self._menu_stack:
-            
-            index = self._menu_stack.index( menu )
-            
-            del self._menu_stack[ index ]
-            
-            previous_text = self._menu_text_stack.pop()
-            
-            status_bar = HG.client_controller.GetGUI().GetStatusBar()
-            
-            status_bar.SetStatusText( previous_text )
-            
-        
-    
-    def EventMenuHighlight( self, event ):
-        
-        if len( self._menu_stack ) > 0:
-            
-            text = ''
-            
-            menu = self._menu_stack[-1]
-            
-            while ClientGUIMenus.MenuIsDead( menu ):
-                
-                if len( self._menu_stack ) == 0:
-                    
-                    return
-                    
-                
-                del self._menu_stack[-1]
-                
-                menu = self._menu_stack[-1]
-                
-            
-            menu_item = menu.FindItemById( event.GetMenuId() )
-            
-            if menu_item is not None:
-                
-                text = menu_item.GetHelp()
-                
-            
-            status_bar = HG.client_controller.GetGUI().GetStatusBar()
-            
-            status_bar.SetStatusText( text )
-            
-        
-    
-    def EventMenuOpen( self, event ):
-        
-        menu = event.GetMenu()
-        
-        if menu is not None:
-            
-            status_bar = HG.client_controller.GetGUI().GetStatusBar()
-            
-            previous_text = status_bar.GetStatusText()
-            
-            self._menu_stack.append( menu )
-            
-            self._menu_text_stack.append( previous_text )
-            
         
     
     def EventOK( self, event ):
@@ -800,12 +735,6 @@ class Frame( wx.Frame ):
         self.SetIcon( HG.client_controller.frame_icon )
         
         self.Bind( wx.EVT_CLOSE, self.EventAboutToClose )
-        self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
-        self.Bind( wx.EVT_MENU_HIGHLIGHT_ALL, self.EventMenuHighlight )
-        self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
-        
-        self._menu_stack = []
-        self._menu_text_stack = []
         
         HG.client_controller.ResetIdleTimer()
         
@@ -820,83 +749,6 @@ class Frame( wx.Frame ):
         self.CleanBeforeDestroy()
         
         event.Skip()
-        
-    
-    def EventMenuClose( self, event ):
-        
-        menu = event.GetMenu()
-        
-        if menu is not None and menu in self._menu_stack:
-            
-            if hasattr( menu, 'hydrus_menubar_name' ):
-                
-                HG.client_controller.MenubarMenuIsClosed()
-                
-            
-            index = self._menu_stack.index( menu )
-            
-            del self._menu_stack[ index ]
-            
-            previous_text = self._menu_text_stack.pop()
-            
-            status_bar = HG.client_controller.GetGUI().GetStatusBar()
-            
-            status_bar.SetStatusText( previous_text )
-            
-        
-    
-    def EventMenuHighlight( self, event ):
-        
-        if len( self._menu_stack ) > 0:
-            
-            text = ''
-            
-            menu = self._menu_stack[-1]
-            
-            while ClientGUIMenus.MenuIsDead( menu ):
-                
-                del self._menu_stack[-1]
-                
-                if len( self._menu_stack ) == 0:
-                    
-                    return
-                    
-                
-                menu = self._menu_stack[-1]
-                
-            
-            menu_item = menu.FindItemById( event.GetMenuId() )
-            
-            if menu_item is not None:
-                
-                text = menu_item.GetHelp()
-                
-            
-            status_bar = HG.client_controller.GetGUI().GetStatusBar()
-            
-            status_bar.SetStatusText( text )
-            
-        
-    
-    def EventMenuOpen( self, event ):
-        
-        menu = event.GetMenu()
-        
-        if menu is not None:
-            
-            if hasattr( menu, 'hydrus_menubar_name' ):
-                
-                HG.client_controller.MenubarMenuIsOpen()
-                
-            
-            status_bar = HG.client_controller.GetGUI().GetStatusBar()
-            
-            previous_text = status_bar.GetStatusText()
-            
-            self._menu_stack.append( menu )
-            
-            self._menu_text_stack.append( previous_text )
-            
         
     
 class FrameThatResizes( Frame ):
