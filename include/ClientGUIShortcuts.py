@@ -126,7 +126,7 @@ def ConvertMouseEventToShortcut( event ):
     
     return None
     
-def IShouldCatchShortcutEvent( evt_handler, child_tlp_classes_who_can_pass_up = None ):
+def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlp_classes_who_can_pass_up = None ):
     
     if HC.PLATFORM_WINDOWS and FLASHWIN_OK:
         
@@ -138,20 +138,33 @@ def IShouldCatchShortcutEvent( evt_handler, child_tlp_classes_who_can_pass_up = 
             
         
     
-    if not ClientGUIFunctions.WindowOrSameTLPChildHasFocus( evt_handler ):
+    do_focus_test = True
+    
+    if event is not None and isinstance( event, wx.MouseEvent ):
         
-        if child_tlp_classes_who_can_pass_up is not None:
+        if event.GetEventType() == wx.wxEVT_MOUSEWHEEL:
             
-            child_tlp_has_focus = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( evt_handler ) and isinstance( ClientGUIFunctions.GetFocusTLP(), child_tlp_classes_who_can_pass_up )
+            do_focus_test = False
             
-            if not child_tlp_has_focus:
+        
+    
+    if do_focus_test:
+        
+        if not ClientGUIFunctions.WindowOrSameTLPChildHasFocus( evt_handler ):
+            
+            if child_tlp_classes_who_can_pass_up is not None:
+                
+                child_tlp_has_focus = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( evt_handler ) and isinstance( ClientGUIFunctions.GetFocusTLP(), child_tlp_classes_who_can_pass_up )
+                
+                if not child_tlp_has_focus:
+                    
+                    return False
+                    
+                
+            else:
                 
                 return False
                 
-            
-        else:
-            
-            return False
             
         
     
@@ -638,7 +651,7 @@ class ShortcutsHandler( object ):
                 
                 message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
                 
-                if IShouldCatchShortcutEvent( self._parent ):
+                if IShouldCatchShortcutEvent( self._parent, event = event ):
                     
                     message += ' I am in a state to catch it.'
                     
@@ -650,7 +663,7 @@ class ShortcutsHandler( object ):
                 HydrusData.ShowText( message )
                 
             
-            if IShouldCatchShortcutEvent( self._parent ):
+            if IShouldCatchShortcutEvent( self._parent, event = event ):
                 
                 shortcut_processed = self._ProcessShortcut( shortcut )
                 

@@ -220,17 +220,11 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
 def GeneratePILImage( path ):
     
-    fp = open( path, 'rb' )
-    
     try:
         
-        pil_image = PILImage.open( fp )
+        pil_image = PILImage.open( path )
         
     except Exception as e:
-        
-        # pil doesn't clean up its open file on exception, jej
-        
-        fp.close()
         
         raise HydrusExceptions.MimeException( 'Could not load the image--it was likely malformed!' )
         

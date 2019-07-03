@@ -191,6 +191,10 @@ def CollapseTagSiblingPairs( groups_of_pairs ):
     
     return siblings
     
+def DeLoopTagSiblingPairs( groups_of_pairs ):
+    
+    pass
+    
 def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     potential_loop_paths = { parent }

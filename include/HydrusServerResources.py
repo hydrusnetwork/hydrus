@@ -2,7 +2,6 @@ from . import HydrusConstants as HC
 from . import HydrusExceptions
 from . import HydrusFileHandling
 from . import HydrusImageHandling
-from . import HydrusNetwork
 from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusSerialisable
@@ -318,6 +317,16 @@ class HydrusResource( Resource ):
         self._checkService( request )
         
         self._checkUserAgent( request )
+        
+        return request
+        
+    
+    def _callbackEstablishAccountFromHeader( self, request ):
+        
+        return request
+        
+    
+    def _callbackEstablishAccountFromArgs( self, request ):
         
         return request
         
@@ -670,12 +679,12 @@ class HydrusResource( Resource ):
         
         allowed_methods = []
         
-        if self._threadDoGETJob.__func__ != HydrusResource._threadDoGETJob:
+        if self._threadDoGETJob.__func__ is not HydrusResource._threadDoGETJob:
             
             allowed_methods.append( 'GET' )
             
         
-        if self._threadDoPOSTJob.__func__ != HydrusResource._threadDoPOSTJob:
+        if self._threadDoPOSTJob.__func__ is not HydrusResource._threadDoPOSTJob:
             
             allowed_methods.append( 'POST' )
             
@@ -736,7 +745,11 @@ class HydrusResource( Resource ):
         
         d.addCallback( self._callbackCheckServiceRestrictions )
         
+        d.addCallback( self._callbackEstablishAccountFromHeader )
+        
         d.addCallback( self._callbackParseGETArgs )
+        
+        d.addCallback( self._callbackEstablishAccountFromArgs )
         
         d.addCallback( self._callbackCheckAccountRestrictions )
         
@@ -786,7 +799,11 @@ class HydrusResource( Resource ):
         
         d.addCallback( self._callbackCheckServiceRestrictions )
         
+        d.addCallback( self._callbackEstablishAccountFromHeader )
+        
         d.addCallback( self._callbackParsePOSTArgs )
+        
+        d.addCallback( self._callbackEstablishAccountFromArgs )
         
         d.addCallback( self._callbackCheckAccountRestrictions )
         

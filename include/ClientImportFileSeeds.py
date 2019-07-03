@@ -1152,6 +1152,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             file_seed._fixed_service_keys_to_tags = self._fixed_service_keys_to_tags.Duplicate()
                             
+                            file_seed._urls.update( self._urls )
+                            file_seed._tags.update( self._tags )
+                            
                         
                         try:
                             

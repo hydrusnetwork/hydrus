@@ -1,7 +1,6 @@
 import collections
 from . import ClientAPI
 from . import ClientConstants as CC
-from . import ClientFiles
 from . import ClientImportFileSeeds
 from . import ClientSearch
 from . import ClientTags
@@ -518,61 +517,6 @@ class HydrusResourceClientAPI( HydrusServerResources.HydrusResource ):
         return request
         
     
-    def _ParseClientAPIKey( self, request, name_of_key ):
-        
-        if request.requestHeaders.hasHeader( name_of_key ):
-            
-            key_texts = request.requestHeaders.getRawHeaders( name_of_key )
-            
-            key_text = key_texts[0]
-            
-            try:
-                
-                key = bytes.fromhex( key_text )
-                
-            except:
-                
-                raise Exception( 'Problem parsing {}!'.format( name_of_key ) )
-                
-            
-        elif name_of_key in request.parsed_request_args:
-            
-            key = request.parsed_request_args[ name_of_key ]
-            
-        else:
-            
-            return None
-            
-        
-        return key
-        
-    
-    def _ParseClientAPIAccessKey( self, request ):
-        
-        access_key = self._ParseClientAPIKey( request, 'Hydrus-Client-API-Access-Key' )
-        
-        if access_key is None:
-            
-            session_key = self._ParseClientAPIKey( request, 'Hydrus-Client-API-Session-Key' )
-            
-            if session_key is None:
-                
-                raise HydrusExceptions.MissingCredentialsException( 'No access key or session key provided!' )
-                
-            
-            try:
-                
-                access_key = HG.client_controller.client_api_manager.GetAccessKey( session_key )
-                
-            except HydrusExceptions.DataMissing as e:
-                
-                raise HydrusExceptions.SessionException( str( e ) )
-                
-            
-        
-        return access_key
-        
-    
     def _reportDataUsed( self, request, num_bytes ):
         
         self._service.ReportDataUsed( num_bytes )
@@ -645,9 +589,39 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         
         HydrusResourceClientAPI._callbackCheckAccountRestrictions( self, request )
         
-        self._EstablishAPIPermissions( request )
-        
         self._CheckAPIPermissions( request )
+        
+        return request
+        
+    
+    def _callbackEstablishAccountFromHeader( self, request ):
+        
+        access_key = self._ParseClientAPIAccessKey( request, 'header' )
+        
+        if access_key is not None:
+            
+            self._EstablishAPIPermissions( request, access_key )
+            
+        
+        return request
+        
+    
+    def _callbackEstablishAccountFromArgs( self, request ):
+        
+        if request.client_api_permissions is None:
+            
+            access_key = self._ParseClientAPIAccessKey( request, 'args' )
+            
+            if access_key is not None:
+                
+                self._EstablishAPIPermissions( request, access_key )
+                
+            
+        
+        if request.client_api_permissions is None:
+            
+            raise HydrusExceptions.MissingCredentialsException( 'No access key or session key provided!' )
+            
         
         return request
         
@@ -657,15 +631,11 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
         raise NotImplementedError()
         
     
-    def _EstablishAPIPermissions( self, request ):
-        
-        client_api_manager = HG.client_controller.client_api_manager
-        
-        access_key = self._ParseClientAPIAccessKey( request )
+    def _EstablishAPIPermissions( self, request, access_key ):
         
         try:
             
-            api_permissions = client_api_manager.GetPermissions( access_key )
+            api_permissions = HG.client_controller.client_api_manager.GetPermissions( access_key )
             
         except HydrusExceptions.DataMissing as e:
             
@@ -673,6 +643,65 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
             
         
         request.client_api_permissions = api_permissions
+        
+    
+    def _ParseClientAPIKey( self, request, source, name_of_key ):
+        
+        key = None
+        
+        if source == 'header':
+            
+            if request.requestHeaders.hasHeader( name_of_key ):
+                
+                key_texts = request.requestHeaders.getRawHeaders( name_of_key )
+                
+                key_text = key_texts[0]
+                
+                try:
+                    
+                    key = bytes.fromhex( key_text )
+                    
+                except:
+                    
+                    raise Exception( 'Problem parsing {}!'.format( name_of_key ) )
+                    
+                
+            
+        elif source == 'args':
+            
+            if name_of_key in request.parsed_request_args:
+                
+                key = request.parsed_request_args[ name_of_key ]
+                
+            
+        
+        return key
+        
+    
+    def _ParseClientAPIAccessKey( self, request, source ):
+        
+        access_key = self._ParseClientAPIKey( request, source, 'Hydrus-Client-API-Access-Key' )
+        
+        if access_key is None:
+            
+            session_key = self._ParseClientAPIKey( request, source, 'Hydrus-Client-API-Session-Key' )
+            
+            if session_key is None:
+                
+                return None
+                
+            
+            try:
+                
+                access_key = HG.client_controller.client_api_manager.GetAccessKey( session_key )
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                raise HydrusExceptions.SessionException( str( e ) )
+                
+            
+        
+        return access_key
         
     
 class HydrusResourceClientAPIRestrictedAccount( HydrusResourceClientAPIRestricted ):
@@ -1116,7 +1145,19 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         
         url = request.parsed_request_args[ 'url' ]
         
-        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        if url == '':
+            
+            raise HydrusExceptions.BadRequestException( 'Given URL was empty!' )
+            
+        
+        try:
+            
+            normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            
+        except HydrusExceptions.URLClassException as e:
+            
+            raise HydrusExceptions.BadRequestException( e )
+            
         
         url_statuses = HG.client_controller.Read( 'url_statuses', normalised_url )
         
@@ -1148,7 +1189,19 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
         
         url = request.parsed_request_args[ 'url' ]
         
-        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        if url == '':
+            
+            raise HydrusExceptions.BadRequestException( 'Given URL was empty!' )
+            
+        
+        try:
+            
+            normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            
+        except HydrusExceptions.URLClassException as e:
+            
+            raise HydrusExceptions.BadRequestException( e )
+            
         
         ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( normalised_url )
         
@@ -1166,6 +1219,11 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
     def _threadDoPOSTJob( self, request ):
         
         url = request.parsed_request_args[ 'url' ]
+        
+        if url == '':
+            
+            raise HydrusExceptions.BadRequestException( 'Given URL was empty!' )
+            
         
         service_keys_to_tags = None
         
@@ -1240,7 +1298,14 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
             return HG.client_controller.gui.ImportURLFromAPI( url, service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page )
             
         
-        ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
+        try:
+            
+            ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
+            
+        except HydrusExceptions.URLClassException as e:
+            
+            raise HydrusExceptions.BadRequestException( e )
+            
         
         time.sleep( 0.05 ) # yield and give the ui time to catch up with new URL pubsubs in case this is being spammed
         

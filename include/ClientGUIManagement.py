@@ -986,6 +986,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._job_key = None
         self._in_break = False
         
+        self._similar_files_maintenance_status = None
+        
         new_options = self._controller.new_options
         
         self._currently_refreshing_maintenance_numbers = False
@@ -1458,6 +1460,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         work_can_be_done = False
         
+        if self._similar_files_maintenance_status is None:
+            
+            return
+            
+        
         ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count ) = self._similar_files_maintenance_status
         
         self._cog_button.Enable()
@@ -1516,7 +1523,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._search_distance_button.SetLabelText( button_label )
         
-        num_searched = sum( ( count for ( value, count ) in list(searched_distances_to_count.items()) if value is not None and value >= search_distance ) )
+        num_searched = sum( ( count for ( value, count ) in searched_distances_to_count.items() if value is not None and value >= search_distance ) )
         
         if num_searched == total_num_files:
             

@@ -1192,8 +1192,6 @@ class Canvas( wx.Window ):
         self._dirty = True
         self._closing = False
         
-        self._manage_tags_panel = None
-        
         self._service_keys_to_services = {}
         
         self._current_media = None
@@ -1506,9 +1504,9 @@ class Canvas( wx.Window ):
         return self._GetShowAction( self._current_media ) not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
     
-    def _IShouldCatchShortcutEvent( self ):
+    def _IShouldCatchShortcutEvent( self, event = None ):
         
-        return ClientGUIShortcuts.IShouldCatchShortcutEvent( self, child_tlp_classes_who_can_pass_up = ( ClientGUIHoverFrames.FullscreenHoverFrame, ) )
+        return ClientGUIShortcuts.IShouldCatchShortcutEvent( self, event = event, child_tlp_classes_who_can_pass_up = ( ClientGUIHoverFrames.FullscreenHoverFrame, ) )
         
     
     def _MaintainZoom( self, previous_media ):
@@ -1638,26 +1636,32 @@ class Canvas( wx.Window ):
             return
             
         
-        if self._manage_tags_panel:
+        for child in self.GetChildren():
             
-            self._manage_tags_panel.SetFocus()
+            if isinstance( child, ClientGUITopLevelWindows.FrameThatTakesScrollablePanel ):
+                
+                panel = child.GetPanel()
+                
+                if isinstance( panel, ClientGUITags.ManageTagsPanel ):
+                    
+                    panel.SetFocus()
+                    
+                    return
+                    
+                
             
-        else:
-            
-            # take any focus away from hover window, which will mess up window order when it hides due to the new frame
-            self.SetFocus()
-            
-            title = 'manage tags'
-            frame_key = 'manage_tags_frame'
-            
-            manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-            
-            panel = ClientGUITags.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
-            
-            manage_tags.SetPanel( panel )
-            
-            self._manage_tags_panel = panel
-            
+        
+        # take any focus away from hover window, which will mess up window order when it hides due to the new frame
+        self.SetFocus()
+        
+        title = 'manage tags'
+        frame_key = 'manage_tags_frame'
+        
+        manage_tags = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUITags.ManageTagsPanel( manage_tags, self._file_service_key, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+        
+        manage_tags.SetPanel( panel )
         
     
     def _ManageURLs( self ):
@@ -2100,7 +2104,7 @@ class Canvas( wx.Window ):
     
     def EventCharHook( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
             
@@ -3722,7 +3726,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventCharHook( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
@@ -3761,7 +3765,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventMouse( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             if event.ShiftDown():
                 
@@ -4398,7 +4402,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventCharHook( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
@@ -4416,7 +4420,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventDelete( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             self._Delete()
             
@@ -4428,7 +4432,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventMouse( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             if event.ShiftDown():
                 
@@ -4480,7 +4484,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventUndelete( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             self._Undelete()
             
@@ -4836,7 +4840,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventCharHook( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
@@ -4857,12 +4861,18 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventMouseWheel( self, event ):
         
-        if self._IShouldCatchShortcutEvent():
+        if self._IShouldCatchShortcutEvent( event = event ):
             
             if event.CmdDown():
                 
-                if event.GetWheelRotation() > 0: self._ZoomIn()
-                else: self._ZoomOut()
+                if event.GetWheelRotation() > 0:
+                    
+                    self._ZoomIn()
+                    
+                else:
+                    
+                    self._ZoomOut()
+                    
                 
             else:
                 

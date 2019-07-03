@@ -19,6 +19,7 @@ class HydrusRequest( Request ):
         self.parsed_request_args = None
         self.hydrus_response_context = None
         self.hydrus_account = None
+        self.client_api_permissions = None
         
     
 class HydrusRequestLogging( HydrusRequest ):

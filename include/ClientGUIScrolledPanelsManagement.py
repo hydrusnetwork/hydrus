@@ -696,6 +696,46 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def _TestAddress( self ):
                 
+                def wx_done( message ):
+                    
+                    if not self:
+                        
+                        return
+                        
+                    
+                    wx.MessageBox( message )
+                    
+                    self._test_address_button.Enable()
+                    self._test_address_button.SetLabel( 'test address' )
+                    
+                
+                def do_it():
+                    
+                    ( host, port ) = credentials.GetAddress()
+                    
+                    url = scheme + host + ':' + str( port ) + '/' + request
+                    
+                    network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
+                    
+                    network_job.OnlyTryConnectionOnce()
+                    network_job.OverrideBandwidth()
+                    
+                    network_job.SetForLogin( True )
+                    
+                    HG.client_controller.network_engine.AddJob( network_job )
+                    
+                    try:
+                        
+                        network_job.WaitUntilDone()
+                        
+                        wx.CallAfter( wx_done, 'Looks good!' )
+                        
+                    except HydrusExceptions.NetworkException as e:
+                        
+                        wx.CallAfter( wx_done, 'Problem with that address: ' + str( e ) )
+                        
+                    
+                
                 try:
                     
                     credentials = self.GetCredentials()
@@ -712,8 +752,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     return
                     
                 
-                ( host, port ) = credentials.GetAddress()
-                
                 if self._service_type == HC.IPFS:
                     
                     scheme = 'http://'
@@ -725,26 +763,10 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     request = ''
                     
                 
-                url = scheme + host + ':' + str( port ) + '/' + request
+                self._test_address_button.Disable()
+                self._test_address_button.SetLabel( 'testing\u2026' )
                 
-                network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
-                
-                network_job.OverrideBandwidth()
-                
-                network_job.SetForLogin( True )
-                
-                HG.client_controller.network_engine.AddJob( network_job )
-                
-                try:
-                    
-                    network_job.WaitUntilDone()
-                    
-                    wx.MessageBox( 'Got an ok response!' )
-                    
-                except HydrusExceptions.NetworkException as e:
-                    
-                    wx.MessageBox( 'Problem with that address: ' + str( e ) )
-                    
+                HG.client_controller.CallToThread( do_it )
                 
             
             def GetCredentials( self ):
@@ -832,6 +854,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     self._access_key.SetValue( access_key_encoded )
                     
+                    wx.MessageBox( 'Looks good!' )
+                    
                 
                 def do_it( credentials, registration_key ):
                     
@@ -843,6 +867,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
                         
+                        network_job.OnlyTryConnectionOnce()
                         network_job.OverrideBandwidth()
                         
                         network_job.SetForLogin( True )
@@ -860,8 +885,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             access_key_encoded = parsed_request_args[ 'access_key' ].hex()
                             
                             wx.CallAfter( wx_setkey, access_key_encoded )
-                            
-                            wx.CallAfter( wx.MessageBox, 'Looks good!' )
                             
                         except Exception as e:
                             
@@ -935,44 +958,54 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def _TestCredentials( self ):
                 
-                def do_it( credentials ):
+                def wx_done( message ):
                     
-                    service = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, self._service_type, 'test service' )
+                    if not self:
+                        
+                        return
+                        
+                    
+                    wx.MessageBox( message )
+                    
+                    self._test_credentials_button.Enable()
+                    self._test_credentials_button.SetLabel( 'test access key' )
+                    
+                    
+                
+                def do_it( credentials, service_type ):
+                    
+                    service = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, service_type, 'test service' )
                     
                     service.SetCredentials( credentials )
                     
                     try:
                         
-                        if self._service_type in HC.RESTRICTED_SERVICES:
+                        response = service.Request( HC.GET, 'access_key_verification' )
+                        
+                        if not response[ 'verified' ]:
                             
-                            response = service.Request( HC.GET, 'access_key_verification' )
+                            message = 'That access key was not recognised!'
                             
-                            if not response[ 'verified' ]:
-                                
-                                wx.CallAfter( wx.MessageBox, 'That access key was not recognised!' )
-                                
-                            else:
-                                
-                                wx.CallAfter( wx.MessageBox, 'Everything looks ok!' )
-                                
+                        else:
+                            
+                            message = 'Everything looks ok!'
                             
                         
                     except HydrusExceptions.WrongServiceTypeException:
                         
-                        wx.CallAfter( wx.MessageBox, 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
-                        
-                        return
+                        message = 'Connection was made, but the service was not a {}.'.format( HC.service_string_lookup[ service_type ] )
                         
                     except HydrusExceptions.NetworkException as e:
                         
-                        wx.CallAfter( wx.MessageBox, 'Network problem: ' + str( e ) )
+                        message = 'Network problem: {}'.format( e )
                         
-                        return
+                    except Exception as e:
+                        
+                        message = 'Unexpected error: {}'.format( e )
                         
                     finally:
                         
-                        self._test_credentials_button.Enable()
-                        self._test_credentials_button.SetLabel( 'test access key' )
+                        wx.CallAfter( wx_done, message )
                         
                     
                 
@@ -995,7 +1028,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._test_credentials_button.Disable()
                 self._test_credentials_button.SetLabel( 'fetching\u2026' )
                 
-                HG.client_controller.CallToThread( do_it, credentials )
+                HG.client_controller.CallToThread( do_it, credentials, self._service_type )
                 
             
             def GetCredentials( self ):

@@ -4217,9 +4217,12 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                             count = file_duplicate_types_to_counts[ duplicate_type ]
                             
-                            label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
-                            
-                            ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
+                            if count > 0:
+                                
+                                label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
+                                
+                                ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
+                                
                             
                         
                     

@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 357
+SOFTWARE_VERSION = 358
 CLIENT_API_VERSION = 8
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -205,6 +205,7 @@ DUPLICATE_LARGER_BETTER = 6
 DUPLICATE_WORSE = 7
 DUPLICATE_MEMBER = 8
 DUPLICATE_KING = 9
+DUPLICATE_CONFIRMED_ALTERNATE = 10
 
 duplicate_type_string_lookup = {}
 
@@ -218,6 +219,7 @@ duplicate_type_string_lookup[ DUPLICATE_LARGER_BETTER ] = 'larger hash_id is bet
 duplicate_type_string_lookup[ DUPLICATE_WORSE ] = 'this is worse'
 duplicate_type_string_lookup[ DUPLICATE_MEMBER ] = 'duplicates'
 duplicate_type_string_lookup[ DUPLICATE_KING ] = 'the best quality duplicate'
+duplicate_type_string_lookup[ DUPLICATE_CONFIRMED_ALTERNATE ] = 'confirmed alternates'
 
 ENCODING_RAW = 0
 ENCODING_HEX = 1

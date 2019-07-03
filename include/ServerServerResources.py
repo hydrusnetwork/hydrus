@@ -174,38 +174,16 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
         
         HydrusResourceHydrusNetwork._callbackCheckAccountRestrictions( self, request )
         
-        self._checkSession( request )
-        
         self._checkAccount( request )
         
         return request
         
     
-    def _checkAccount( self, request ):
-        
-        request.hydrus_account.CheckFunctional()
-        
-        return request
-        
-    
-    def _checkBandwidth( self, request ):
-        
-        if not self._service.BandwidthOK():
-            
-            raise HydrusExceptions.BandwidthException( 'This service has run out of bandwidth. Please try again later.' )
-            
-        
-        if not HG.server_controller.ServerBandwidthOK():
-            
-            raise HydrusExceptions.BandwidthException( 'This server has run out of bandwidth. Please try again later.' )
-            
-        
-    
-    def _checkSession( self, request ):
+    def _callbackEstablishAccountFromHeader( self, request ):
         
         if not request.requestHeaders.hasHeader( 'Cookie' ):
             
-            raise HydrusExceptions.MissingCredentialsException( 'No cookies found!' )
+            raise HydrusExceptions.MissingCredentialsException( 'No Session Cookie found!' )
             
         
         cookie_texts = request.requestHeaders.getRawHeaders( 'Cookie' )
@@ -232,7 +210,7 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
             
         except:
             
-            raise Exception( 'Problem parsing cookies!' )
+            raise Exception( 'Problem parsing cookies for Session Cookie!' )
             
         
         account = HG.server_controller.server_session_manager.GetAccount( self._service_key, session_key )
@@ -240,6 +218,26 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
         request.hydrus_account = account
         
         return request
+        
+    
+    def _checkAccount( self, request ):
+        
+        request.hydrus_account.CheckFunctional()
+        
+        return request
+        
+    
+    def _checkBandwidth( self, request ):
+        
+        if not self._service.BandwidthOK():
+            
+            raise HydrusExceptions.BandwidthException( 'This service has run out of bandwidth. Please try again later.' )
+            
+        
+        if not HG.server_controller.ServerBandwidthOK():
+            
+            raise HydrusExceptions.BandwidthException( 'This server has run out of bandwidth. Please try again later.' )
+            
         
     
     def _reportDataUsed( self, request, num_bytes ):
@@ -448,7 +446,14 @@ class HydrusResourceRestrictedRepositoryFile( HydrusResourceRestricted ):
     
     def _DecompressionBombsOK( self, request ):
         
-        return request.hydrus_account.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+        if request.hydrus_account is None:
+            
+            return False
+            
+        else:
+            
+            return request.hydrus_account.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+            
         
     
     def _threadDoGETJob( self, request ):

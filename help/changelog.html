@@ -8,56 +8,86 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
-				<li><h3>version 357</h3></li>
+				<li><h3>version 358</h3></li>
 				<ul>
 					<li>duplicates:</li>
-					<li>moved better/worse/same quality duplicates relationships to the new 'king' group-based model. rather than tracking every relationship, duplicates are now stored in groups with a single 'best' file</li>
-					<li>as a result, duplicate relationships are now transitive! saying that one king is duplicate to another will merge groups. the 'better' king is the new king, and 'same quality' kings choose one of the kings pseudorandomly. advanced exceptions: saying that a king is better than a basic member of another group or saying that two members are same quality is still valid but will simply 'poach' the non-king member from the other group in order to ensure the wrong king doesn't end up on top in the eventual merge. saying KingA is same quality as MemberB will merge the groups with KingB as the new king (since it is presumably same/better quality to all members of A)</li>
-					<li>the thumbnail right-click 'duplicates' entry is now renamed to 'file relationships' and is no longer advanced mode only. the 'find similar files' entry is folded into this</li>
-					<li>the thumbnail 'file relationships' menu now shows a simple 'duplicates' count rather than the old messy better/worse/equal. it will show all the members of a duplicates group when clicked. the menu also notes if the focused file is the best file of its group. if it is not, you will get the option to show the best file or make the focused file the best</li>
-					<li>as a result, it is now much simpler to view a group of duplicates and overrule a 'best quality' member as needed</li>
-					<li>added the 'media' shortcut 'duplicate_media_set_focused_king' to shortcut setting a 'best quality' file</li>
-					<li>the system:num duplicate relationships now has the simpler 'duplicates' entry, to search on size of the entire group. searching for kings/not kings will come soon</li>
-					<li>due to the new duplicate transitivity rules, potential pairs are now eliminated at a much faster rate!</li>
-					<li>setting duplicate relationships will overrule false positive or alternate relationships already in place</li>
-					<li>manually setting alternate relationships to more than two thumbnails at once will now set each file as alternate to every other file in the selection, completely eliminating potential pairs within the group. if you try to do this to large groups of files you will get a longer yes/no confirmation message just to make sure you aren't overwriting some potential dupes by accident</li>
-					<li>all existing better/worse/same relationships will be converted to the new group storage in this update, with appropriate kings determined. potential pair queue counts will be reduce accordingly, and the temporary alternate/duplicate confusion from the alternates update will be auto-resolved by merging truly duplicate 'alternates' together</li>
-					<li>fleshed out the duplicate test code significantly to handle the new dupe groups and their interactions with the recent false positive and alternates changes</li>
-					<li>refactored some db test code into separate client/server/duplicates files and cleaned up dupe tests readability</li>
-					<li>potential pairs are now the only component of the new system still on the old pairs system. the duplicate filter will still serve up some inefficient (i.e. non-king) comparisons</li>
+					<li>the final large data storage overhaul work of the duplicates work big job is done--potential duplicate information is now stored more sensibly and efficiently. potential pair information is now stored between duplicate file groups, rather than files themselves. when duplicate file groups are merged, or alternate or false positive relationships set, potentials are merged and culled appropriately</li>
+					<li>your existing potential data will be updated. the current potential pairs queue size will shrink as duplicate potential relationships are merged</li>
+					<li>the duplicate filter now presents file kings as comparison files when possible, increasing pair difference and decision value</li>
+					<li>potential pair information is now stored with the 'distance' between the two files as found by the similar-files search system. the duplicate filter will serve files with closer distance first, which increases decision value by front-loading likely duplicates instead of alts. distance values for existing potential pair info is estimated on update, so if you have done search distance 2 or greater and would like to fill in this data accurately to get closer potentials first, you might like to reset your potential duplicates under the cog icon (bear in mind this reset will schedule a decent whack of CPU for your idle maintenance time)</li>
+					<li>setting alternate relationship on a pair is now fixed more concretely, ensuring that in various search expansions or resets that the same pair will not come up again. this solves some related problems users have had trying to 'fix' larger alternate groups in place--you may see your alternates compared one last time, but that should be the final go. these fixed relationships are merged as intra-alternate group members merge due to duplicate-setting events</li>
+					<li>a variety of potential duplicates code has been streamlined based on the new duplicate group relationship</li>
+					<li>improved how a second-best king representative of a group is selected in various file relationship fetching jobs when the true king is not permitted by search domain</li>
+					<li>one critical part of the new potential duplicates system is more complicated. if you experience much slower searches or count retrievals IRL, please let me know your details</li>
+					<li>expanded duplicates unit tests to test potential counts for all tested situations</li>
+					<li>fixed a bug where alternate group merging would not cull now-invalid false-positive potential pairs</li>
+					<li>the rest:</li>
+					<li>updated the default pixiv parser to work with their new format--thank you to a user for providing this fix</li>
+					<li>fixed the issue where mouse scroll events were not being processed by the main viewer canvas when it did not have focus</li>
+					<li>file page parsers that produce multiple urls through subsidiary page parsers now correctly pass down associated urls and tags to their child file import items</li>
+					<li>updated to wx 4.0.6 on all built platforms--looks like a bunch of bug fixes, so fingers-crossed this improves some stability and jank</li>
+					<li>updated the recent server access-key-arg-parsing routine to check access from the header before parsing args, which fixes an issue with testing decompression bomb permission on file POST requests on the file repository. generally improved code here to deal more gracefully with failures</li>
+					<li>the repositories now max out at 1000 count when fetching pending petition counts (speeding up access when there are large queues)</li>
+					<li>the repositories now fetch petitions much faster when there are large queues</li>
+					<li>frames and dialogs will be slightly more aggressive about ensuring their parents now get focus back when they are closed (rather than the top level main gui, which sometimes happens due to window manager weirdness)</li>
+					<li>rewrote a bad old legacy method of refocusing the manage tags panel that kicks in when the 'open manage tags' action is processed by the media viewer canvas but the panel is already open</li>
+					<li>hitting 'refresh account' on a paused service now gives a better immediate message rather than failing after delay on a confusing 'bad login' error</li>
+					<li>improved login errors' text to specify the exact problem raised by the login manager</li>
+					<li>fixed a problem in the duplicates page when a status update is called before the initial db status fetch is complete</li>
+					<li>the manage tag siblings panel now detects if the pair you wish to add connects to a loop already in the database (which is a rare but possible case). previously it would hang indefinitely! it now cancels the add, communicates the tags in the loop, and recommends you break it manually</li>
+					<li>added a link to https://github.com/cravxx/hydrus.js , a node.js module that plugs into the client api, to the help</li>
+					<li>a variety of user-started network jobs such as refreshing account and testing a server connection under manage services now only attempt connection once (to fail faster as the user waits)</li>
+					<li>the 'test address' job under manage services is now asynchronous and will not hang the ui while it waits for a response</li>
+					<li>fixed some unstable thread-to-wx code under the 'test access key' job under manage services</li>
+					<li>improved some file handling to ensure open files are closed more promptly in certain circumstances</li>
+					<li>fixed some unstable thread-to-wx communication in the ipfs review services panel</li>
+					<li>improved the accuracy of the network engine's 'incomplete download' test and bandwidth reporting to work with exact byte counts when available, regardless of content encoding. downloads that provide too few bytes in ways that were previously not caught will be reattempted according to the normal connection reattempt rules. these network fixes may solve some broken jpegs and json some users have seen from unreliable servers</li>
+					<li>fixed watcher entries in the watcher page list not reporting their file and check download status as they work (as the gallery downloader does)</li>
+					<li>the client api will now deliver cleaner 400 errors when a given url argument is empty or otherwise fails to normalise (previously it was giving 500s)</li>
+					<li>misc cleanup</li>
+				</ul>
+				<li><h3>version 357</h3></li>
+				<ul>
+					<li>client api:</li>
+					<li>the client api can now receive the access key through a GET or POST parameter rather than the header</li>
+					<li>the client api now supports GET /session_key, which provides a temporary key that gives the same access as its permanent access key with the Hydrus-Client-API-Session-Key name through header or GET/POST param. it expires after 24 hours of inactivity or if the client is restarted</li>
+					<li>the GET /manage_pages/get_pages call now returns the unique 'page_key' identifier that will be useful in future page management when multiple pages share a name</li>
+					<li>the POST /add_urls/add_url command now takes 'destination_page_key' to exactly specify which page you would like a URL to end up on. if the page is not found, or it is the incorrect type, the standard page selection/creation rules will apply</li>
+					<li>cleaned up some serverside request processing code</li>
+					<li>cleaned up some misc client api permission checking code</li>
+					<li>updated client unit tests to check the new changes</li>
+					<li>updated client api help to reflect the new changes</li>
+					<li>cleaned up some GET and POST parameter parsing</li>
+					<li>client api version is now 8</li>
+					<li>.</li>
+					<li>shortcut and hover window fixes:</li>
+					<li>moved the canvas shortcut processing code more towards the new shortcut system</li>
+					<li>the OS X shortcut-in-media-viewer issue, which was being boshed in a similar way to the main gui last week, should now be fixed</li>
+					<li>when the hover windows have focus, they now pass shortcuts up to the canvas parent more reliably</li>
+					<li>removed a legacy menu highlight-tracking system that was malfunctioning and generally throwing a slow-memory-leaking wrench in several places, particularly some non-Windows situations</li>
+					<li>the 'menubar is open' test code is now only active for Windows. the other platforms have mixed reliability with menubar open/close events</li>
+					<li>some related OS X hover-window flickering and hiding-under the main page problems (having problems due to thinking menus were open) are also fixed</li>
+					<li>some hover window flicker on certain focus changes due to clicking focus windows should be fixed</li>
+					<li>hover windows now try to size themselves a little better on init, which reduces some initial flicker or false-positive single-frame display on some systems</li>
+					<li>extended the hover report mode to report some 'ideal' pos/size info as well</li>
+					<li>under file->shortcuts, custom shortcuts are now hidden for non-advanced-mode users</li>
 					<li>.</li>
 					<li>the rest:</li>
-					<li>fixed the issue where many clipboard-watcher-caught URLs that did not match were producing false-positive 'could not generate new page for that URL' error popups</li>
-					<li>the clipboard text-fetcher now tests against incompatible clipboard types (like a screenshot) better, and all instances of text fetching now report errors more gracefully and with more information</li>
-					<li>fixed the unusual OS X issue where many shortcuts were not being processed after client boot until the top menubar was opened and closed. a variety of other blocking-while-menubar-is-open issues that were false-positive misfiring are now fixed as well, please let me know if you still have trouble here</li>
-					<li>the file menu now has an 'exit and force shutdown maintenance' option to force-run outstanding maintenance jobs</li>
-					<li>when shutdown maintenance work is going on, the shutdown splash screen now has a 'stop shutdown maintenance' button!</li>
-					<li>cleaned up some file maintenance manager maintenance locking and shutdown cancel logic</li>
-					<li>moved all the idle-mode maintenance checks to a new system that explicitly defines idle/shutdown/forced maintenance work and tests those states in a unified manner, checking idle mode and the new splash cancel button status and so on more reliably. a lot of maintenance should cancel out quicker when appropriate</li>
-					<li>misc shutdown logic cleanup</li>
-					<li>added a 'file maintenance' option to the database->maintenance menu that forces the new file maintenance manager to run its queue. it'll make a little popup as it works, or a note that no work is due</li>
-					<li>the 'regenerate' thumbnail menu is also available to all users</li>
-					<li>jpeg quality estimates are now available for all users in the duplicate filter. they only display when the two jpegs' quality have different labels</li>
-					<li>the jpeg quality estimator now handles some unusual jpegs that load with empty quantization table arrays</li>
-					<li>the duplicate filter now handles bad jpeg quality estimations gracefully</li>
-					<li>cleaned up some ffmpeg communication code</li>
-					<li>the ffmpeg debug text that spawns on a help->about call that fails to discover ffmpeg version information now prints stderr output as well. if you have been hit by this, please give it another go and let me know what you get</li>
-					<li>the same ffmpeg 'no response' error on file parse now popups and prints some debug info and returns a better error</li>
-					<li>dialogs and windows on the new panel system now support a new pre-close tidying system</li>
-					<li>the manage tags dialog and window will now cancel any pending large tag autocomplete queries on close</li>
-					<li>regular gui pages now support a new pre-close tidying system</li>
-					<li>search pages will now cancel any pending search results loading or tag autocomplete queries on close</li>
-					<li>improved reliability of the popup message manager chasing the main gui when it is sent to another screen by a keyboard shortcut (such as shift+win+arrow on Windows). it should work now if the mouse cursor is in either window. please let me know if this causes trouble for virtual display navigation</li>
-					<li>the network engine now waits significantly longer--60s--on connection errors before trying again, and with every failed attempt will wait n times longer again. when in this waiting state, a manual user cancel command cancels it out faster</li>
-					<li>I believe I have fixed/improved a situation where media viewer hover windows would sometimes disappear immediately after appearing on some Linux window managers</li>
-					<li>improved hover window report mode to state more focus info in case the above is insufficient</li>
-					<li>to better link the two requests and consume bandwidth under strict rules more precisely, the override bandwidth rule that kicks in when a file page has a single file is now 3 seconds instead of 30</li>
-					<li>updated options->connection page to specify that 'socks4a'/'socks5h' is needed to force remote dns resolution</li>
-					<li>sped up tag parents initialisation</li>
-					<li>repositories now group tag sibling and parent petitions by the parent/better tag's namespace</li>
-					<li>removed some old network 'death time' code that is no longer useful and was interfering with heavy petition processing</li>
-					<li>the log now flushes itself to disk every 60s rather than 300s</li>
-					<li>misc fixes and cleanup</li>
+					<li>the popup message toaster now always shows its 'dismiss all' summary bar whenever any messages are being displayed. the summary bar now also has a ▼/▲ button to collapse/expand its messages!</li>
+					<li>added duplicate comparison score options (under options->duplicates) for the new jpeg quality estimator</li>
+					<li>fixed the default duplicate comparison score values, which appeared to be reversed for higher vs much higher--they will be reset to these new defaults on update, so recheck them if you prefer different</li>
+					<li>in manage tag siblings and parents, the filename tagging dialog, and some misc options panels, tag autocomplete input controls now have 'paste' buttons to make entering many results much easier</li>
+					<li>to reduce update flicker, the downloader and watcher pages do not list seconds in their 'added' column ('12 minutes 24 seconds ago' is now '12 minutes ago')</li>
+					<li>improved clipboard access cleanup on in-clipboard errors, which was sometimes leading to error popups or clipboard lockup</li>
+					<li>rather than the simple 'yes', the review bandwidth usage dialog now puts the waiting estimate (like '12 minutes 50 seconds') in the 'blocked?' column</li>
+					<li>improved external program launch code for non-Windows to remove hydrus-specific LD_LIBRARY_PATH completely when no OS default exists to restore it to. this should fix ffmpeg connection for certain installs</li>
+					<li>fixed a rare bug when initial media results of a page failed to load due to a subset of unexpectedly unfetchable file records</li>
+					<li>gave the rare 'ui freezup on dialog close' event yet another pass. closing via escape key should now be immune to this</li>
+					<li>'remote' files that were once in the client but since deleted now have the 'trashed' icon and will state so on their right-click info summary lines</li>
+					<li>fixed various instances where selection-from-list dialogs were failing to sort their list based on underlying data object uncomparibility. an example of this was when selecting which queries to pull from a separating subscription</li>
+					<li>on the edit parser panels, fetching test data successfully via the quick button or the manual URL entry will now set that URL in the example parsing context</li>
+					<li>on the edit parser panels, the subsidiary page parser's separation formula now launches with the correct example data (the original data from the parent dialog, rather than the post-separated data) on which to test separation. this should nest correctly for multiple subsidiary page parsers</li>
+					<li>to reduce server load spikes, clientside petition processing now approves very large mapping and file petitions (such as a petition to delete one tag from 50k files) as a sequence of smaller chunks</li>
 				</ul>
 				<li><h3>version 356</h3></li>
 				<ul>

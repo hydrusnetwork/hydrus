@@ -282,11 +282,11 @@ class NetworkEngine( object ):
                         
                         if job.IsHydrusJob():
                             
-                            message = 'This hydrus service (' + job.GetLoginNetworkContext().ToString() + ') recently failed to log in. Please hit its \'refresh account\' under \'review services\' and try again.'
+                            message = 'This hydrus service (' + job.GetLoginNetworkContext().ToString() + ') could not do work because: {}'.format( str( e ) )
                             
                         else:
                             
-                            message = 'This job\'s network context (' + job.GetLoginNetworkContext().ToString() + ') seems to have an invalid login, and it is not willing to wait! Please review its login details and then try again.'
+                            message = 'This job\'s network context (' + job.GetLoginNetworkContext().ToString() + ') seems to have an invalid login. The error was: {}'.format( str( e ) )
                             
                         
                         job.Cancel( message )

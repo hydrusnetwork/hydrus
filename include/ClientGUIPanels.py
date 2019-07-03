@@ -864,6 +864,13 @@ class ReviewServicePanel( wx.Panel ):
                 return
                 
             
+            if self._service.GetServiceType() in HC.REPOSITORIES and self._service.IsPaused():
+                
+                wx.MessageBox( 'The service is paused! Please unpause it to refresh its account.' )
+                
+                return
+                
+            
             self._refresh_account_button.Disable()
             self._refresh_account_button.SetLabelText( 'fetching\u2026' )
             
@@ -1222,10 +1229,12 @@ class ReviewServicePanel( wx.Panel ):
             
             def wx_clean_up():
                 
-                if self:
+                if not self:
                     
-                    self._check_running_button.Enable()
+                    return
                     
+                
+                self._check_running_button.Enable()
                 
             
             def do_it():
@@ -1238,9 +1247,9 @@ class ReviewServicePanel( wx.Panel ):
                     
                     wx.CallAfter( wx.MessageBox, message )
                     
-                except:
+                except Exception as e:
                     
-                    message = 'There was a problem! Check your popup messages for the error.'
+                    message = 'There was a problem: {}'.format( str( e ) )
                     
                     wx.CallAfter( wx.MessageBox, message )
                     
@@ -1334,6 +1343,11 @@ class ReviewServicePanel( wx.Panel ):
             
             def wx_done():
                 
+                if not self:
+                    
+                    return
+                    
+                
                 self._ipfs_shares_panel.Enable()
                 
             
@@ -1366,6 +1380,11 @@ class ReviewServicePanel( wx.Panel ):
         def _Unpin( self ):
             
             def wx_done():
+                
+                if not self:
+                    
+                    return
+                    
                 
                 self._ipfs_shares_panel.Enable()
                 

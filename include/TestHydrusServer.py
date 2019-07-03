@@ -175,7 +175,7 @@ class TestServer( unittest.TestCase ):
         except: pass
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
-
+        
         with open( path, 'rb' ) as f:
             
             file_bytes = f.read()

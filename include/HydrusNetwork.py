@@ -381,7 +381,7 @@ class Account( object ):
         
         if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
             
-            raise HydrusExceptions.InsufficientCredentialsException( 'account has exceeded bandwidth' )
+            raise HydrusExceptions.BandwidthException( 'account has exceeded bandwidth' )
             
         
     

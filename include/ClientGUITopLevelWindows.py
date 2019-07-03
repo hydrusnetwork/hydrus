@@ -398,7 +398,12 @@ class NewDialog( wx.Dialog ):
     
     def CleanBeforeDestroy( self ):
         
-        pass
+        parent = self.GetParent()
+        
+        if parent is not None and not ClientGUIFunctions.GetTLP( parent ) == HG.client_controller.gui:
+            
+            wx.CallAfter( parent.SetFocus )
+            
         
     
     def DoOK( self ):
@@ -741,7 +746,12 @@ class Frame( wx.Frame ):
     
     def CleanBeforeDestroy( self ):
         
-        pass
+        parent = self.GetParent()
+        
+        if parent is not None and not ClientGUIFunctions.GetTLP( parent ) == HG.client_controller.gui:
+            
+            wx.CallAfter( parent.SetFocus )
+            
         
     
     def EventAboutToClose( self, event ):
@@ -836,6 +846,11 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
                 ExpandTLWIfPossible( self, self._frame_key, ( desired_delta_width, desired_delta_height ) )
                 
             
+        
+    
+    def GetPanel( self ):
+        
+        return self._panel
         
     
     def SetPanel( self, panel ):

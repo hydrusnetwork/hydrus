@@ -934,6 +934,11 @@ class ServiceRestricted( ServiceRemote ):
             
             network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path )
             
+            if command in ( '', 'account', 'access_key_verification' ):
+                
+                network_job.OnlyTryConnectionOnce()
+                
+            
             if command in ( '', 'access_key', 'access_key_verification' ):
                 
                 # don't try to establish a session key for these requests
@@ -1037,10 +1042,9 @@ class ServiceRestricted( ServiceRemote ):
                 
                 do_it = True
                 
-                if force:
-                    
-                    self._no_requests_until = 0
-                    
+                self._no_requests_until = 0
+                
+                self._account = HydrusNetwork.Account.GenerateUnknownAccount()
                 
             else:
                 
@@ -1790,6 +1794,7 @@ class ServiceIPFS( ServiceRemote ):
         
         network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
         
+        network_job.OnlyTryConnectionOnce()
         network_job.OverrideBandwidth()
         
         HG.client_controller.network_engine.AddJob( network_job )
@@ -2015,17 +2020,20 @@ class ServiceIPFS( ServiceRemote ):
         
         path = client_files_manager.GetFilePath( hash, mime )
         
-        files = { 'path' : ( hash.hex(), open( path, 'rb' ), mime_string ) }
-        
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-        
-        network_job.SetFiles( files )
-        
-        network_job.OverrideBandwidth()
-        
-        HG.client_controller.network_engine.AddJob( network_job )
-        
-        network_job.WaitUntilDone()
+        with open( path, 'rb' ) as f:
+            
+            files = { 'path' : ( hash.hex(), f, mime_string ) }
+            
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+            
+            network_job.SetFiles( files )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
+            
         
         parsing_text = network_job.GetContentText()
         

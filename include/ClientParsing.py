@@ -2611,6 +2611,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             additional_headers = {}
             files = None
+            f = None
             
             if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
                 
@@ -2633,7 +2634,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 else:
                     
-                    files = { self._file_identifier_arg_name : open( path, 'rb' ) }
+                    f = open( path, 'rb' )
+                    
+                    files = { self._file_identifier_arg_name : f }
                     
                 
             else:
@@ -2650,7 +2653,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 network_job.SetFiles( files )
                 
             
-            for ( key, value ) in list(additional_headers.items()):
+            for ( key, value ) in additional_headers.items():
                 
                 network_job.AddAdditionalHeader( key, value )
                 
@@ -2679,6 +2682,13 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             HydrusData.ShowException( e )
             
             raise
+            
+        finally:
+            
+            if f is not None:
+                
+                f.close()
+                
             
         
         if job_key.IsCancelled():

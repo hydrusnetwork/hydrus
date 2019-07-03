@@ -692,7 +692,10 @@ class DB( HydrusDB.HydrusDB ):
         
         result = self._c.execute( 'SELECT account_id FROM accounts WHERE account_key = ?;', ( sqlite3.Binary( account_key ), ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account key in its database.' )
+        if result is None:
+            
+            raise HydrusExceptions.InsufficientCredentialsException( 'The service could not find that account key in its database.' )
+            
         
         ( account_id, ) = result
         
@@ -1932,12 +1935,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
-        result = self._c.execute( 'SELECT account_id, reason_id FROM ' + petitioned_files_table_name + ' ORDER BY RANDOM() LIMIT 1;' ).fetchone()
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' LIMIT 100;' ).fetchall()
         
-        if result is None:
+        if len( result ) == 0:
             
             raise HydrusExceptions.NotFoundException( 'No petitions!' )
             
+        
+        result = random.choice( result )
         
         ( petitioner_account_id, reason_id ) = result
         
@@ -1990,7 +1995,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE ):
             
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' );' ).fetchone()
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' LIMIT 1000 );' ).fetchone()
             
             petition_count_info.append( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
             
@@ -1999,7 +2004,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
             
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT service_tag_id, account_id, reason_id FROM ' + petitioned_mappings_table_name + ' );' ).fetchone()
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT service_tag_id, account_id, reason_id FROM ' + petitioned_mappings_table_name + ' LIMIT 1000 );' ).fetchone()
             
             petition_count_info.append( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
             
@@ -2008,11 +2013,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
             
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_tag_parents_table_name + ';' ).fetchone()
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_tag_parents_table_name + ' LIMIT 1000;' ).fetchone()
             
             petition_count_info.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, num_petitions ) )
             
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_tag_parents_table_name + ';' ).fetchone()
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_tag_parents_table_name + ' LIMIT 1000;' ).fetchone()
             
             petition_count_info.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
             
@@ -2021,11 +2026,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
             
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_tag_siblings_table_name + ';' ).fetchone()
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_tag_siblings_table_name + ' LIMIT 1000;' ).fetchone()
             
             petition_count_info.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING, num_petitions ) )
             
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_tag_siblings_table_name + ';' ).fetchone()
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_tag_siblings_table_name + ' LIMIT 1000;' ).fetchone()
             
             petition_count_info.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
             
@@ -2037,12 +2042,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT account_id, reason_id FROM ' + petitioned_mappings_table_name + ' ORDER BY RANDOM() LIMIT 1;' ).fetchone()
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_mappings_table_name + ' LIMIT 100;' ).fetchall()
         
-        if result is None:
+        if len( result ) == 0:
             
             raise HydrusExceptions.NotFoundException( 'No petitions!' )
             
+        
+        result = random.choice( result )
         
         ( petitioner_account_id, reason_id ) = result
         
@@ -2306,12 +2313,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT account_id, reason_id FROM ' + pending_tag_parents_table_name + ' ORDER BY RANDOM() LIMIT 1;' ).fetchone()
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM ' + pending_tag_parents_table_name + ' LIMIT 100;' ).fetchall()
         
-        if result is None:
+        if len( result ) == 0:
             
             raise HydrusExceptions.NotFoundException( 'No petitions!' )
             
+        
+        result = random.choice( result )
         
         ( petitioner_account_id, reason_id ) = result
         
@@ -2357,12 +2366,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT account_id, reason_id FROM ' + petitioned_tag_parents_table_name + ' ORDER BY RANDOM() LIMIT 1;' ).fetchone()
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_tag_parents_table_name + ' LIMIT 100;' ).fetchall()
         
-        if result is None:
+        if len( result ) == 0:
             
             raise HydrusExceptions.NotFoundException( 'No petitions!' )
             
+        
+        result = random.choice( result )
         
         ( petitioner_account_id, reason_id ) = result
         
@@ -2411,12 +2422,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT account_id, reason_id FROM ' + pending_tag_siblings_table_name + ' ORDER BY RANDOM() LIMIT 1;' ).fetchone()
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM ' + pending_tag_siblings_table_name + ' LIMIT 100;' ).fetchall()
         
-        if result is None:
+        if len( result ) == 0:
             
             raise HydrusExceptions.NotFoundException( 'No petitions!' )
             
+        
+        result = random.choice( result )
         
         ( petitioner_account_id, reason_id ) = result
         
@@ -2462,12 +2475,14 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        result = self._c.execute( 'SELECT account_id, reason_id FROM ' + petitioned_tag_siblings_table_name + ' ORDER BY RANDOM() LIMIT 1;' ).fetchone()
+        result = self._c.execute( 'SELECT DISTINCT account_id, reason_id FROM ' + petitioned_tag_siblings_table_name + ' LIMIT 100;' ).fetchall()
         
-        if result is None:
+        if len( result ) == 0:
             
             raise HydrusExceptions.NotFoundException( 'No petitions!' )
             
+        
+        result = random.choice( result )
         
         ( petitioner_account_id, reason_id ) = result
         

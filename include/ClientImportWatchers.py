@@ -1086,6 +1086,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 return self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
                 
+            elif self._watcher_status != '':
+                
+                return self._watcher_status
+                
+            elif self._file_status != '':
+                
+                return self._file_status
+                
             else:
                 
                 return ''
