@@ -1878,9 +1878,9 @@ class ListBoxTags( ListBox ):
                     
                 
             
-            ClientGUIMenus.AppendSeparator( menu )
-            
             if len( self._ordered_terms ) > len( self._selected_terms ):
+                
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'copy all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
                 

@@ -7,7 +7,9 @@ from . import HydrusDocumentHandling
 from . import HydrusExceptions
 from . import HydrusFlashHandling
 from . import HydrusImageHandling
+from . import HydrusNetwork
 from . import HydrusPaths
+from . import HydrusSerialisable
 from . import HydrusText
 from . import HydrusVideoHandling
 import os
@@ -134,7 +136,7 @@ def GetExtraHashesFromPath( path ):
     
     return ( md5, sha1, sha512 )
     
-def GetFileInfo( path, mime = None ):
+def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     size = os.path.getsize( path )
     
@@ -145,7 +147,7 @@ def GetFileInfo( path, mime = None ):
     
     if mime is None:
         
-        mime = GetMime( path )
+        mime = GetMime( path, ok_to_look_for_hydrus_updates = ok_to_look_for_hydrus_updates )
         
     
     if mime not in HC.ALLOWED_MIMES:
@@ -240,7 +242,7 @@ def GetHashFromPath( path ):
     
     return h.digest()
     
-def GetMime( path ):
+def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     size = os.path.getsize( path )
     
@@ -298,17 +300,43 @@ def GetMime( path ):
         
     except HydrusExceptions.MimeException:
         
-        HydrusData.Print( 'FFMPEG couldn\'t figure out the mime for: ' + path )
+        pass
         
     except Exception as e:
         
-        HydrusData.Print( 'FFMPEG couldn\'t figure out the mime for: ' + path )
+        HydrusData.Print( 'FFMPEG had trouble with: ' + path )
         HydrusData.PrintException( e, do_wait = False )
         
     
     if HydrusText.LooksLikeHTML( bit_to_check ):
         
         return HC.TEXT_HTML
+        
+    
+    if ok_to_look_for_hydrus_updates:
+        
+        with open( path, 'rb' ) as f:
+            
+            update_network_bytes = f.read()
+            
+        
+        try:
+            
+            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+            
+            if isinstance( update, HydrusNetwork.ContentUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
+                
+            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
+                
+            
+        except:
+            
+            pass
+            
         
     
     return HC.APPLICATION_UNKNOWN

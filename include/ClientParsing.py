@@ -2592,6 +2592,8 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             request_args[ self._file_identifier_arg_name ] = self._file_identifier_string_converter.Convert( file_identifier )
             
         
+        f = None
+        
         if self._query_type == HC.GET:
             
             if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
@@ -2611,7 +2613,6 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             additional_headers = {}
             files = None
-            f = None
             
             if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
                 

@@ -14,6 +14,7 @@ class DataMissing( HydrusException ): pass
 class DBException( HydrusException ): pass
 class DBAccessException( HydrusException ): pass
 class FileMissingException( HydrusException ): pass
+class DirectoryMissingException( HydrusException ): pass
 class SerialisationException( HydrusException ): pass
 class NameException( HydrusException ): pass
 class ShutdownException( HydrusException ): pass

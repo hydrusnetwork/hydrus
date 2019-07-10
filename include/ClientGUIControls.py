@@ -1660,24 +1660,36 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
 class StringToStringDictControl( wx.Panel ):
     
-    def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key', value_name = 'value' ):
+    def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key', value_name = 'value', allow_add_delete = True, edit_keys = True ):
         
         wx.Panel.__init__( self, parent )
         
         self._key_name = key_name
         self._value_name = value_name
         
+        self._edit_keys = edit_keys
+        
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
         columns = [ ( self._key_name, 20 ), ( self._value_name, -1 ) ]
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        use_simple_delete = allow_add_delete
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = use_simple_delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
-        listctrl_panel.AddButton( 'add', self._Add )
+        if allow_add_delete:
+            
+            listctrl_panel.AddButton( 'add', self._Add )
+            
+        
         listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        listctrl_panel.AddDeleteButton()
+        
+        if allow_add_delete:
+            
+            listctrl_panel.AddDeleteButton()
+            
         
         #
         
@@ -1740,23 +1752,30 @@ class StringToStringDictControl( wx.Panel ):
             
             ( key, value ) = data
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
+            if self._edit_keys:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
                     
-                    edited_key = dlg.GetValue()
-                    
-                    if edited_key != key and edited_key in self._GetExistingKeys():
+                    if dlg.ShowModal() == wx.ID_OK:
                         
-                        wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                        edited_key = dlg.GetValue()
+                        
+                        if edited_key != key and edited_key in self._GetExistingKeys():
+                            
+                            wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                            
+                            break
+                            
+                        
+                    else:
                         
                         break
                         
                     
-                else:
-                    
-                    break
-                    
+                
+            else:
+                
+                edited_key = key
                 
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._value_name, default = value, allow_blank = True ) as dlg:

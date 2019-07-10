@@ -230,7 +230,10 @@ class Controller( HydrusController.HydrusController ):
         
         job = ClientThreading.WXAwareJob( self, job_scheduler, window, initial_delay, call )
         
-        job_scheduler.AddJob( job )
+        if job_scheduler is not None:
+            
+            job_scheduler.AddJob( job )
+            
         
         return job
         
@@ -243,7 +246,10 @@ class Controller( HydrusController.HydrusController ):
         
         job = ClientThreading.WXAwareRepeatingJob( self, job_scheduler, window, initial_delay, period, call )
         
-        job_scheduler.AddJob( job )
+        if job_scheduler is not None:
+            
+            job_scheduler.AddJob( job )
+            
         
         return job
         

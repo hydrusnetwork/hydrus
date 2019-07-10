@@ -15,6 +15,8 @@ class HydrusLogger( object ):
         self._log_path_base = self._GetLogPathBase()
         self._lock = threading.Lock()
         
+        self._log_closed = False
+        
     
     def __enter__( self ):
         
@@ -37,6 +39,8 @@ class HydrusLogger( object ):
         #sys.stderr = self._previous_sys_stderr
         
         self._CloseLog()
+        
+        self._log_closed = True
         
         return False
         
@@ -90,6 +94,11 @@ class HydrusLogger( object ):
     
     def flush( self ):
         
+        if self._log_closed:
+            
+            return
+            
+        
         with self._lock:
             
             if not self._problem_with_previous_stdout:
@@ -116,6 +125,11 @@ class HydrusLogger( object ):
         
     
     def write( self, value ):
+        
+        if self._log_closed:
+            
+            return
+            
         
         with self._lock:
             

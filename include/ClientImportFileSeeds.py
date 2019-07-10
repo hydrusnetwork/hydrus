@@ -158,6 +158,11 @@ class FileImportJob( object ):
     
     def __init__( self, temp_path, file_import_options = None ):
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job created for path {}.'.format( temp_path ) )
+            
+        
         if file_import_options is None:
             
             file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
@@ -177,6 +182,11 @@ class FileImportJob( object ):
     
     def CheckIsGoodToImport( self ):
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job testing if good to import for file import options' )
+            
+        
         ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
         
         self._file_import_options.CheckFileIsValid( size, mime, width, height )
@@ -184,9 +194,9 @@ class FileImportJob( object ):
     
     def DoWork( self ):
         
-        if HG.file_report_mode:
+        if HG.file_import_report_mode:
             
-            HydrusData.ShowText( 'New file import job!' )
+            HydrusData.ShowText( 'File import job starting work.' )
             
         
         ( pre_import_status, hash, note ) = self.GenerateHashAndStatus()
@@ -208,6 +218,11 @@ class FileImportJob( object ):
             import_status = pre_import_status
             
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job is done, now publishing content updates' )
+            
+        
         self.PubsubContentUpdates()
         
         return ( import_status, hash, note )
@@ -219,7 +234,17 @@ class FileImportJob( object ):
         
         self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job hash: {}'.format( self._hash.hex() ) )
+            
+        
         ( self._pre_import_status, hash, note ) = HG.client_controller.Read( 'hash_status', 'sha256', self._hash, prefix = 'file recognised' )
+        
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job pre-import status: {}, {}'.format( CC.status_string_lookup[ self._pre_import_status ], note ) )
+            
         
         return ( self._pre_import_status, self._hash, note )
         
@@ -228,11 +253,26 @@ class FileImportJob( object ):
         
         mime = HydrusFileHandling.GetMime( self._temp_path )
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job mime: {}'.format( HC.mime_string_lookup[ mime ] ) )
+            
+        
         new_options = HG.client_controller.new_options
         
         if mime in HC.DECOMPRESSION_BOMB_IMAGES and not self._file_import_options.AllowsDecompressionBombs():
             
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job testing for decompression bomb' )
+                
+            
             if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
+                
+                if HG.file_import_report_mode:
+                    
+                    HydrusData.ShowText( 'File import job: it was a decompression bomb' )
+                    
                 
                 raise HydrusExceptions.DecompressionBombException( 'Image seems to be a Decompression Bomb!' )
                 
@@ -242,7 +282,17 @@ class FileImportJob( object ):
         
         ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job file info: {}'.format( self._file_info ) )
+            
+        
         if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job generating thumbnail' )
+                
             
             bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
             
@@ -255,7 +305,17 @@ class FileImportJob( object ):
         
         if mime in HC.MIMES_WE_CAN_PHASH:
             
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job generating phashes' )
+                
+            
             self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
+            
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job generated {} phashes'.format( len( self._phashes ) ) )
+                
             
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )

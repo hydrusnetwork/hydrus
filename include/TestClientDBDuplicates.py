@@ -871,11 +871,116 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _test_dissolve( self ):
         
-        # pull a file out of main group, test it has no relations and is reset in potentials
-        # pull alt out of alt group, dissolving its media. test old alt king has no relations and is reset in potentials
-        # dissolve alt group completely? or somehow otherwise break false pos relationship?
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
         
-        pass
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
+        
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_POTENTIAL ], self._get_group_potential_count( file_duplicate_types_to_counts ) )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+        # remove member
+        
+        self._write( 'remove_duplicates_member', ( self._dupe_hashes[7], ) )
+        
+        self._our_main_dupe_group_hashes.discard( self._dupe_hashes[7] )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
+        
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+        # clear fps
+        
+        self._write( 'clear_false_positive_relations', ( self._king_hash, ) )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+        # remove alt
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, {} ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 2 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 2 )
+        
+        self._write( 'remove_alternates_member', ( self._false_positive_king_hash, ) )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
+        # dissolve alt
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, {} ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        self._write( 'dissolve_alternates_group', ( self._king_hash, ) )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 0 )
+        
+        # dissolve group
+        
+        rows = []
+        
+        rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], {} ) )
+        
+        self._write( 'duplicate_pair_status', rows )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 1 )
+        
+        self._write( 'dissolve_duplicates_group', ( self._king_hash, ) )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 0 )
         
     
     def test_duplicates( self ):

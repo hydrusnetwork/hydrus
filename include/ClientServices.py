@@ -13,6 +13,7 @@ from . import HydrusGlobals as HG
 from . import HydrusNATPunch
 from . import HydrusNetwork
 from . import HydrusNetworking
+from . import HydrusPaths
 from . import HydrusSerialisable
 import json
 import os
@@ -40,7 +41,6 @@ def GenerateDefaultServiceDictionary( service_type ):
                 
                 dictionary[ 'metadata' ] = HydrusNetwork.Metadata()
                 dictionary[ 'paused' ] = False
-                dictionary[ 'tag_archive_sync' ] = []
                 
             
         
@@ -48,12 +48,9 @@ def GenerateDefaultServiceDictionary( service_type ):
             
             dictionary[ 'credentials' ] = HydrusNetwork.Credentials( '127.0.0.1', 5001 )
             dictionary[ 'multihash_prefix' ] = ''
+            dictionary[ 'use_nocopy' ] = False
+            dictionary[ 'nocopy_abs_path_translations' ] = {}
             
-        
-    
-    if service_type == HC.LOCAL_TAG:
-        
-        dictionary[ 'tag_archive_sync' ] = []
         
     
     if service_type in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ):
@@ -487,29 +484,7 @@ class ServiceClientAPI( ServiceLocalServerService ):
     
 class ServiceLocalTag( Service ):
     
-    def _GetSerialisableDictionary( self ):
-        
-        dictionary = Service._GetSerialisableDictionary( self )
-        
-        dictionary[ 'tag_archive_sync' ] = list(self._tag_archive_sync.items())
-        
-        return dictionary
-        
-    
-    def _LoadFromDictionary( self, dictionary ):
-        
-        Service._LoadFromDictionary( self, dictionary )
-        
-        self._tag_archive_sync = dict( dictionary[ 'tag_archive_sync' ] )
-        
-    
-    def GetTagArchiveSync( self ):
-        
-        with self._lock:
-            
-            return self._tag_archive_sync
-            
-        
+    pass
     
 class ServiceLocalRating( Service ):
     
@@ -1184,7 +1159,6 @@ class ServiceRepository( ServiceRestricted ):
         
         dictionary[ 'metadata' ] = self._metadata
         dictionary[ 'paused' ] = self._paused
-        dictionary[ 'tag_archive_sync' ] = list(self._tag_archive_sync.items())
         
         return dictionary
         
@@ -1195,7 +1169,66 @@ class ServiceRepository( ServiceRestricted ):
         
         self._metadata = dictionary[ 'metadata' ]
         self._paused = dictionary[ 'paused' ]
-        self._tag_archive_sync = dict( dictionary[ 'tag_archive_sync' ] )
+        
+    
+    def _SyncProcessUpdates( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
+        
+        with self._lock:
+            
+            if not self._CanSyncProcess():
+                
+                return
+                
+            
+        
+        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+            
+            return
+            
+        
+        try:
+            
+            ( did_some_work, did_everything ) = HG.client_controller.WriteSynchronous( 'process_repository', self._service_key, maintenance_mode = maintenance_mode, stop_time = stop_time )
+            
+            if did_some_work:
+                
+                with self._lock:
+                    
+                    self._SetDirty()
+                    
+                    if self._service_type == HC.TAG_REPOSITORY:
+                        
+                        HG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                        
+                    
+                
+            
+            if not did_everything:
+                
+                time.sleep( 3 ) # stop spamming of repo sync daemon from bringing this up again too quick
+                
+            
+        except HydrusExceptions.ShutdownException:
+            
+            return
+            
+        except Exception as e:
+            
+            with self._lock:
+                
+                message = 'Failed to process updates for the ' + self._name + ' repository! The error follows:'
+                
+                HydrusData.ShowText( message )
+                
+                HydrusData.ShowException( e )
+                
+                self._paused = True
+                
+                self._SetDirty()
+                
+            
+            HG.client_controller.pub( 'important_dirt_to_clean' )
+            
         
     
     def CanDoIdleShutdownWork( self ):
@@ -1220,14 +1253,6 @@ class ServiceRepository( ServiceRestricted ):
         with self._lock:
             
             return self._metadata.GetNextUpdateDueString( from_client = True )
-            
-        
-    
-    def GetTagArchiveSync( self ):
-        
-        with self._lock:
-            
-            return self._tag_archive_sync
             
         
     
@@ -1302,7 +1327,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 self.SyncDownloadUpdates( stop_time )
                 
-                self.SyncProcessUpdates( maintenance_mode, stop_time )
+                self._SyncProcessUpdates( maintenance_mode = maintenance_mode, stop_time = stop_time )
                 
                 self.SyncThumbnails( stop_time )
                 
@@ -1549,61 +1574,9 @@ class ServiceRepository( ServiceRestricted ):
     
     def SyncProcessUpdates( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
-        with self._lock:
+        with self._sync_lock:
             
-            if not self._CanSyncProcess():
-                
-                return
-                
-            
-        
-        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
-            
-            return
-            
-        
-        try:
-            
-            ( did_some_work, did_everything ) = HG.client_controller.WriteSynchronous( 'process_repository', self._service_key, maintenance_mode = maintenance_mode, stop_time = stop_time )
-            
-            if did_some_work:
-                
-                with self._lock:
-                    
-                    self._SetDirty()
-                    
-                    if self._service_type == HC.TAG_REPOSITORY:
-                        
-                        HG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
-                        
-                    
-                
-            
-            if not did_everything:
-                
-                time.sleep( 3 ) # stop spamming of repo sync daemon from bringing this up again too quick
-                
-            
-        except HydrusExceptions.ShutdownException:
-            
-            return
-            
-        except Exception as e:
-            
-            with self._lock:
-                
-                message = 'Failed to process updates for the ' + self._name + ' repository! The error follows:'
-                
-                HydrusData.ShowText( message )
-                
-                HydrusData.ShowException( e )
-                
-                self._paused = True
-                
-                self._SetDirty()
-                
-            
-            HG.client_controller.pub( 'important_dirt_to_clean' )
+            self._SyncProcessUpdates( maintenance_mode = maintenance_mode, stop_time = stop_time )
             
         
     
@@ -1704,6 +1677,8 @@ class ServiceIPFS( ServiceRemote ):
         dictionary = ServiceRemote._GetSerialisableDictionary( self )
         
         dictionary[ 'multihash_prefix' ] = self._multihash_prefix
+        dictionary[ 'use_nocopy' ] = self._use_nocopy
+        dictionary[ 'nocopy_abs_path_translations' ] = self._nocopy_abs_path_translations
         
         return dictionary
         
@@ -1713,6 +1688,8 @@ class ServiceIPFS( ServiceRemote ):
         ServiceRemote._LoadFromDictionary( self, dictionary )
         
         self._multihash_prefix = dictionary[ 'multihash_prefix' ]
+        self._use_nocopy = dictionary[ 'use_nocopy' ]
+        self._nocopy_abs_path_translations = dictionary[ 'nocopy_abs_path_translations' ]
         
     
     def _ConvertMultihashToURLTree( self, name, size, multihash ):
@@ -1783,6 +1760,33 @@ class ServiceIPFS( ServiceRemote ):
         return api_base_url
         
     
+    def EnableNoCopy( self, value ):
+        
+        with self._lock:
+            
+            api_base_url = self._GetAPIBaseURL()
+            
+        
+        arg_value = json.dumps( value ) # lower case true/false
+        
+        url = api_base_url + 'config?arg=Experimental.FilestoreEnabled&arg={}&bool=true'.format( arg_value )
+        
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+        
+        network_job.OnlyTryConnectionOnce()
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        parsing_text = network_job.GetContentText()
+        
+        j = json.loads( parsing_text )
+        
+        return j[ 'Value' ] == value
+        
+    
     def GetDaemonVersion( self ):
         
         with self._lock:
@@ -1814,6 +1818,45 @@ class ServiceIPFS( ServiceRemote ):
             
             return self._multihash_prefix
             
+        
+    
+    def GetNoCopyEnabled( self ):
+        
+        with self._lock:
+            
+            api_base_url = self._GetAPIBaseURL()
+            
+        
+        url = api_base_url + 'config?arg=Experimental.FilestoreEnabled'
+        
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+        
+        network_job.OnlyTryConnectionOnce()
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        try:
+            
+            network_job.WaitUntilDone()
+            
+        except HydrusExceptions.ServerException:
+            
+            # returns 500 and error if not yet set, wew
+            
+            parsing_text = network_job.GetContentText()
+            
+            if 'Experimental key has no attributes' in parsing_text:
+                
+                return False
+                
+            
+        
+        parsing_text = network_job.GetContentText()
+        
+        j = json.loads( parsing_text )
+        
+        return j[ 'Value' ]
         
     
     def ImportFile( self, multihash ):
@@ -2007,14 +2050,10 @@ class ServiceIPFS( ServiceRemote ):
     
     def PinFile( self, hash, mime ):
         
-        mime_string = HC.mime_string_lookup[ mime ]
-        
         with self._lock:
             
             api_base_url = self._GetAPIBaseURL()
             
-        
-        url = api_base_url + 'add'
         
         client_files_manager = HG.client_controller.client_files_manager
         
@@ -2022,7 +2061,46 @@ class ServiceIPFS( ServiceRemote ):
         
         with open( path, 'rb' ) as f:
             
-            files = { 'path' : ( hash.hex(), f, mime_string ) }
+            if self._use_nocopy:
+                
+                url = api_base_url + 'add?nocopy=true'
+                
+                mime_string = 'application/octet-stream'
+                
+                ipfs_abspath = None
+                
+                for ( hydrus_portable_path, ipfs_translation ) in self._nocopy_abs_path_translations.items():
+                    
+                    hydrus_path = HydrusPaths.ConvertPortablePathToAbsPath( hydrus_portable_path )
+                    
+                    if path.startswith( hydrus_path ):
+                        
+                        if ipfs_translation == '':
+                            
+                            raise Exception( 'The path {} does not have an IPFS translation set! Please check your IPFS path mappings under manage services!'.format( hydrus_path ) )
+                            
+                        
+                        ipfs_abspath = path.replace( hydrus_path, ipfs_translation )
+                        
+                        break
+                        
+                    
+                
+                if ipfs_abspath is None:
+                    
+                    raise Exception( 'Could not figure out an ipfs absolute path for {}! Have new paths been added due to a database migration? Please check your IPFS path mappings under manage services!'.format( path ) )
+                    
+                
+                files = { 'path' : ( hash.hex(), f, mime_string, { 'Abspath' : ipfs_abspath } ) }
+                
+            else:
+                
+                url = api_base_url + 'add'
+                
+                mime_string = HC.mime_string_lookup[ mime ]
+                
+                files = { 'path' : ( hash.hex(), f, mime_string ) }
+                
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             

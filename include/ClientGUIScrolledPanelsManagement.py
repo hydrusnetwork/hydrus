@@ -12,6 +12,7 @@ from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
+from . import ClientGUIPanels
 from . import ClientGUIPredicates
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
@@ -1201,54 +1202,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 ClientGUICommon.StaticBox.__init__( self, parent, 'tags' )
                 
                 self._st = ClientGUICommon.BetterStaticText( self )
-                '''
-            if service_type in HC.TAG_SERVICES:
                 
-                self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
-                
-                self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
-                
-                self._archive_sync_add = wx.Button( self._archive_panel, label = 'add' )
-                self._archive_sync_add.Bind( wx.EVT_BUTTON, self.EventArchiveAdd )
-                
-                self._archive_sync_edit = wx.Button( self._archive_panel, label = 'edit' )
-                self._archive_sync_edit.Bind( wx.EVT_BUTTON, self.EventArchiveEdit )
-                
-                self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
-                self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
-                
-                
-            if service_type in HC.TAG_SERVICES:
-                
-                for ( portable_hta_path, namespaces ) in info[ 'tag_archive_sync' ].items():
-                    
-                    name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
-                    
-                    self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
-                    
-                
-            
-            
-            
-            if service_type in HC.TAG_SERVICES:
-                
-                tag_archives = {}
-                
-                for i in range( self._archive_sync.GetCount() ):
-                    
-                    ( portable_hta_path, namespaces ) = self._archive_sync.GetClientData( i )
-                    
-                    tag_archives[ portable_hta_path ] = namespaces
-                    
-                
-                info[ 'tag_archive_sync' ] = tag_archives
-                
-            
-                
-            '''
-                #
-                
-                self._st.SetLabelText( 'This is a tag service. This box will get regain tag archive options in a future update.' )
+                self._st.SetLabelText( 'This is a tag service. There are no additional options for it at present.' )
                 
                 #
                 
@@ -1404,13 +1359,57 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs' )
                 
+                interaction_panel = ClientGUIPanels.IPFSDaemonStatusAndInteractionPanel( self, self.GetParent().GetValue )
+                
+                tts = 'This is an *experimental* IPFS filestore that will not copy files when they are pinned. IPFS will refer to files using their original location (i.e. your hydrus client\'s file folder(s)).'
+                tts += os.linesep * 2
+                tts += 'Only turn this on if you know what it is.'
+                
+                self._use_nocopy = wx.CheckBox( self )
+                
+                self._use_nocopy.SetToolTip( tts )
+                
+                initial_dict = dict( dictionary[ 'nocopy_abs_path_translations' ] )
+                
+                current_file_locations = HG.client_controller.client_files_manager.GetCurrentFileLocations()
+                
+                for portable_hydrus_path in list( initial_dict.keys() ):
+                    
+                    hydrus_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hydrus_path )
+                    
+                    initial_dict[ hydrus_path ] = initial_dict[ portable_hydrus_path ]
+                    
+                    del initial_dict[ portable_hydrus_path ]
+                    
+                    if hydrus_path not in current_file_locations:
+                        
+                        del initial_dict[ hydrus_path ]
+                        
+                    
+                
+                for hydrus_path in current_file_locations:
+                    
+                    if hydrus_path not in initial_dict:
+                        
+                        initial_dict[ hydrus_path ] = ''
+                        
+                    
+                
+                help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+                
+                help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this path remapping control -->', wx.Colour( 0, 0, 255 ) )
+                
+                self._nocopy_abs_path_translations = ClientGUIControls.StringToStringDictControl( self, initial_dict, key_name = 'hydrus path', value_name = 'ipfs path', allow_add_delete = False, edit_keys = False )
+                
                 self._multihash_prefix = wx.TextCtrl( self )
                 
-                tts = 'When you tell the client to copy the ipfs multihash to your clipboard, it will prefix it with this.'
+                tts = 'When you tell the client to copy a ipfs multihash to your clipboard, it will prefix it with whatever is set here.'
                 tts += os.linesep * 2
-                tts += 'Use this if you would rather copy a full gateway url with that action. For instance, you could put here:'
+                tts += 'Use this if you want to copy a full gateway url. For instance, you could put here:'
                 tts += os.linesep * 2
                 tts += 'http://127.0.0.1:8080/ipfs/'
+                tts += os.linesep
+                tts += '-or-'
                 tts += os.linesep
                 tts += 'http://ipfs.io/ipfs/'
                 
@@ -1418,16 +1417,76 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
+                self._use_nocopy.SetValue( dictionary[ 'use_nocopy' ] )
                 self._multihash_prefix.SetValue( dictionary[ 'multihash_prefix' ] )
                 
                 #
                 
-                self.Add( ClientGUICommon.WrapInText( self._multihash_prefix, self, 'multihash prefix: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                rows = []
+                
+                rows.append( ( 'clipboard multihash url prefix: ', self._multihash_prefix ) )
+                rows.append( ( 'use \'nocopy\' filestore for pinning: ', self._use_nocopy ) )
+                
+                gridbox = ClientGUICommon.WrapInGrid( self, rows )
+                
+                self.Add( interaction_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self.Add( help_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self.Add( self._nocopy_abs_path_translations, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._UpdateButtons()
+                
+                self.Bind( wx.EVT_CHECKBOX, self.EventCheckbox )
+                
+            
+            def _ShowHelp( self ):
+                
+                message = '\'nocopy\' is experimental and advanced!'
+                message += os.linesep * 2
+                message += 'In order to add a file through \'nocopy\', IPFS needs to be given a path that is beneath the directory in which its datastore is. Usually this is your USERDIR (default IPFS location is ~/.ipfs). Also, if your IPFS daemon runs on another computer, that path needs to be according to that machine\'s filesystem (and, perhaps, pointing to a shared folder that can stores your hydrus files).'
+                message += os.linesep * 2
+                message += 'If your hydrus client_files directory is not already in your USERDIR, you will need to make some symlinks and then put these paths in the control so hydrus knows how to translate the paths when it pins.'
+                message += os.linesep * 2
+                message += 'e.g. If you symlink E:\\hydrus\\files to C:\\users\\you\\ipfs_maps\\e_media, then put that same C:\\users\\you\\ipfs_maps\\e_media in the right column for that hydrus file location, and you _should_ be good.'
+                
+                wx.MessageBox( message )
+                
+            
+            def _UpdateButtons( self ):
+                
+                if self._use_nocopy.GetValue():
+                    
+                    self._nocopy_abs_path_translations.Enable()
+                    
+                else:
+                    
+                    self._nocopy_abs_path_translations.Disable()
+                    
+                
+            
+            def EventCheckbox( self, event ):
+                
+                self._UpdateButtons()
                 
             
             def GetValue( self ):
                 
                 dictionary_part = {}
+                
+                dictionary_part[ 'use_nocopy' ] = self._use_nocopy.GetValue()
+                
+                nocopy_abs_path_translations = self._nocopy_abs_path_translations.GetValue()
+                
+                for hydrus_path in list( nocopy_abs_path_translations.keys() ):
+                    
+                    portable_hydrus_path = HydrusPaths.ConvertAbsPathToPortablePath( hydrus_path )
+                    
+                    nocopy_abs_path_translations[ portable_hydrus_path ] = nocopy_abs_path_translations[ hydrus_path ]
+                    
+                    del nocopy_abs_path_translations[ hydrus_path ]
+                    
+                
+                dictionary_part[ 'nocopy_abs_path_translations' ] = nocopy_abs_path_translations
                 
                 dictionary_part[ 'multihash_prefix' ] = self._multihash_prefix.GetValue()
                 

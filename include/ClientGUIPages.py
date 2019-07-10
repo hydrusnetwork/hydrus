@@ -1195,38 +1195,6 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def _ShiftPage( self, page_index, delta = None, new_index = None ):
-        
-        new_page_index = page_index
-        
-        if delta is not None:
-            
-            new_page_index = page_index + delta
-            
-        
-        if new_index is not None:
-            
-            new_page_index = new_index
-            
-        
-        if new_page_index == page_index:
-            
-            return
-            
-        
-        if 0 <= new_page_index and new_page_index <= self.GetPageCount() - 1:
-            
-            page_is_selected = self.GetSelection() == page_index
-            
-            page = self.GetPage( page_index )
-            name = self.GetPageText( page_index )
-            
-            self.RemovePage( page_index )
-            
-            self.InsertPage( new_page_index, page, name, page_is_selected )
-            
-        
-    
     def _RefreshPageName( self, index ):
         
         if index == -1 or index > self.GetPageCount() - 1:
@@ -1352,6 +1320,38 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def _ShiftPage( self, page_index, delta = None, new_index = None ):
+        
+        new_page_index = page_index
+        
+        if delta is not None:
+            
+            new_page_index = page_index + delta
+            
+        
+        if new_index is not None:
+            
+            new_page_index = new_index
+            
+        
+        if new_page_index == page_index:
+            
+            return
+            
+        
+        if 0 <= new_page_index and new_page_index <= self.GetPageCount() - 1:
+            
+            page_is_selected = self.GetSelection() == page_index
+            
+            page = self.GetPage( page_index )
+            name = self.GetPageText( page_index )
+            
+            self.RemovePage( page_index )
+            
+            self.InsertPage( new_page_index, page, name, page_is_selected )
+            
+        
+    
     def _ShowMenu( self, screen_position ):
         
         ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
@@ -1434,6 +1434,12 @@ class PagesNotebook( wx.Notebook ):
                     ClientGUIMenus.AppendMenuItem( self, menu, 'move to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index = end_index )
                     
                 
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'sort pages by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'sort pages by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
+                
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1491,6 +1497,49 @@ class PagesNotebook( wx.Notebook ):
             
         
         self._controller.PopupMenu( self, menu )
+        
+    
+    def _SortPagesByFileCount( self, order ):
+        
+        ordered_pages = list( self.GetPages() )
+        
+        def key( page ):
+            
+            ( total_num_files, ( total_num_value, total_num_range ) ) = page.GetNumFileSummary()
+            
+            return ( total_num_files, total_num_range, total_num_value )
+            
+        
+        ordered_pages.sort( key = key )
+        
+        if order == 'desc':
+            
+            ordered_pages.reverse()
+            
+        
+        selected_page = self.GetCurrentPage()
+        
+        pages_to_names = {}
+        
+        for i in range( self.GetPageCount() ):
+            
+            page = self.GetPage( 0 )
+            
+            name = self.GetPageText( 0 )
+            
+            pages_to_names[ page ] = name
+            
+            self.RemovePage( 0 )
+            
+        
+        for page in ordered_pages:
+            
+            is_selected = page == selected_page
+            
+            name = pages_to_names[ page ]
+            
+            self.AddPage( page, name, select = is_selected )
+            
         
     
     def AppendGUISession( self, name, load_in_a_page_of_pages = True ):

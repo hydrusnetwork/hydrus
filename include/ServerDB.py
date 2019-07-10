@@ -1985,59 +1985,6 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _RepositoryGetNumPetitions( self, service_key, account ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        petition_count_info = []
-        
-        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
-        
-        if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' LIMIT 1000 );' ).fetchone()
-            
-            petition_count_info.append( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
-            
-        
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
-        
-        if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT service_tag_id, account_id, reason_id FROM ' + petitioned_mappings_table_name + ' LIMIT 1000 );' ).fetchone()
-            
-            petition_count_info.append( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
-            
-        
-        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
-        
-        if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_tag_parents_table_name + ' LIMIT 1000;' ).fetchone()
-            
-            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, num_petitions ) )
-            
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_tag_parents_table_name + ' LIMIT 1000;' ).fetchone()
-            
-            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
-            
-        
-        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
-        
-        if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + pending_tag_siblings_table_name + ' LIMIT 1000;' ).fetchone()
-            
-            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING, num_petitions ) )
-            
-            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + petitioned_tag_siblings_table_name + ' LIMIT 1000;' ).fetchone()
-            
-            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
-            
-        
-        return petition_count_info
-        
-    
     def _RepositoryGetMappingPetition( self, service_id ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
@@ -2068,6 +2015,8 @@ class DB( HydrusDB.HydrusDB ):
         
         min_weight_permitted = None
         max_weight_permitted = None
+        
+        petition_namespace = None
         
         max_total_weight = None
         
@@ -2126,9 +2075,22 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             master_tag_id = self._RepositoryGetMasterTagId( service_id, service_tag_id )
-            master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
             
             tag = self._GetTag( master_tag_id )
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            
+            if petition_namespace is None:
+                
+                petition_namespace = namespace
+                
+            
+            if namespace != petition_namespace:
+                
+                continue
+                
+            
+            master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
             
             hashes = self._GetHashes( master_hash_ids )
             
@@ -2139,7 +2101,7 @@ class DB( HydrusDB.HydrusDB ):
             total_num_petitions += 1
             total_weight += content_weight
             
-            if total_num_petitions > 20 and total_weight > 10000:
+            if total_num_petitions > 500 or total_weight > 50000:
                 
                 break
                 
@@ -2179,6 +2141,59 @@ class DB( HydrusDB.HydrusDB ):
         ( master_tag_id, ) = result
         
         return master_tag_id
+        
+    
+    def _RepositoryGetNumPetitions( self, service_key, account ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        petition_count_info = []
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+        
+        if account.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE ):
+            
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_files_table_name + ' LIMIT 1000 );' ).fetchone()
+            
+            petition_count_info.append( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
+            
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+        
+        if account.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
+            
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT service_tag_id, account_id, reason_id FROM ' + petitioned_mappings_table_name + ' LIMIT 1000 );' ).fetchone()
+            
+            petition_count_info.append( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
+            
+        
+        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+        
+        if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+            
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + pending_tag_parents_table_name + ' LIMIT 1000 );' ).fetchone()
+            
+            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, num_petitions ) )
+            
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_tag_parents_table_name + ' LIMIT 1000 );' ).fetchone()
+            
+            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
+            
+        
+        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+        
+        if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+            
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + pending_tag_siblings_table_name + ' LIMIT 1000 );' ).fetchone()
+            
+            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING, num_petitions ) )
+            
+            ( num_petitions, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM ' + petitioned_tag_siblings_table_name + ' LIMIT 1000 );' ).fetchone()
+            
+            petition_count_info.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED, num_petitions ) )
+            
+        
+        return petition_count_info
         
     
     def _RepositoryGetPetition( self, service_key, account, content_type, status ):

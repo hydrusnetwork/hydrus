@@ -25,6 +25,7 @@ shortcut_report_mode = False
 subprocess_report_mode = False
 subscription_report_mode = False
 hover_window_report_mode = False
+file_import_report_mode = False
 menu_profile_mode = False
 network_report_mode = False
 pubsub_report_mode = False

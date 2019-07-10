@@ -543,7 +543,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     HydrusData.ShowText( 'Starting server\u2026' )
                     
-                    db_param = '-d="' + self._controller.GetDBDir() + '"'
+                    db_param = '-d=' + self._controller.GetDBDir()
                     
                     if HC.PLATFORM_WINDOWS:
                         
@@ -793,110 +793,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 self._controller.Write( 'db_integrity' )
                 
             
-        
-    
-    def _CheckFileIntegrity( self, allowed_mimes = None ):
-        
-        client_files_manager = self._controller.client_files_manager
-        
-        if allowed_mimes is None:
-            
-            file_desc = 'files'
-            
-        else:
-            
-            file_desc = os.linesep * 2 + os.linesep.join( ( HC.mime_string_lookup[ mime ] for mime in allowed_mimes ) ) + os.linesep * 2 + 'files'
-            
-        
-        message = 'This will go through all the ' + file_desc + ' the database thinks it has and check that they actually exist. Any files that are missing will be deleted from the internal record.'
-        message += os.linesep * 2
-        message += 'You can perform a quick existence check, which will only look to see if a file exists, or a thorough content check, which will also make sure existing files are not corrupt or otherwise incorrect.'
-        message += os.linesep * 2
-        message += 'The thorough check will have to read all of your files\' content, which can take a long time. You should probably only do it if you suspect hard drive corruption and are now working on a safe drive.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose how thorough your integrity check will be.', yes_label = 'quick', no_label = 'thorough' ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                do_quick = True
-                
-            elif result == wx.ID_NO:
-                
-                do_quick = False
-                
-                text = 'If an existing file is found to be corrupt/incorrect, would you like to move it or delete it?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose what do to with bad files.', yes_label = 'move', no_label = 'delete' ) as dlg_2:
-                    
-                    result = dlg_2.ShowModal()
-                    
-                    if result == wx.ID_YES:
-                        
-                        with wx.DirDialog( self, 'Select location.' ) as dlg_3:
-                            
-                            if dlg_3.ShowModal() == wx.ID_OK:
-                                
-                                move_location = dlg_3.GetPath()
-                                
-                            else:
-                                
-                                return
-                                
-                            
-                        
-                    elif result == wx.ID_NO:
-                        
-                        move_location = None
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            else:
-                
-                return
-                
-            
-        
-        message = 'Would you like to export a .txt file including known URLs for any missing files?'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Make a URL .txt?' ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                wx.MessageBox( 'A .txt with missing URLs will be created in your db directory!' )
-                
-                create_urls_txt = True
-                
-            elif result == wx.ID_NO:
-                
-                create_urls_txt = False
-                
-            else:
-                
-                return
-                
-            
-        
-        if do_quick:
-            
-            self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'quick', allowed_mimes = allowed_mimes, create_urls_txt = create_urls_txt )
-            
-        else:
-            
-            self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', allowed_mimes = allowed_mimes, create_urls_txt = create_urls_txt, move_location = move_location )
-            
-        
-    
-    def _CheckFileIntegrityRepositoryUpdates( self ):
-        
-        self._CheckFileIntegrity( allowed_mimes = HC.HYDRUS_UPDATE_FILES )
         
     
     def _CheckImportFolder( self, name = None ):
@@ -1357,11 +1253,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             self._dirty_menus.add( name )
             
-        
-    
-    def _DoFileMaintenance( self ):
-        
-        self._controller.CallToThread( self._controller.files_maintenance_manager.DoMaintenance, maintenance_mode = HC.MAINTENANCE_FORCED )
         
     
     def _ExportDownloader( self ):
@@ -1896,9 +1787,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'review scheduled file maintenance', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'file maintenance', 'Run any outstanding file maintenance.', self._DoFileMaintenance )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
             
@@ -1912,8 +1803,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             submenu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self._CheckFileIntegrity )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'file integrity - only repository updates', 'Have the database check if it truly has the repository update files it thinks it does, and remove records when not.', self._CheckFileIntegrityRepositoryUpdates )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
             
@@ -2312,6 +2201,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
@@ -3603,6 +3493,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         frame.SetPanel( panel )
         
     
+    def _ReviewFileMaintenance( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'file maintenance' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewFileMaintenance( frame, self._controller )
+        
+        frame.SetPanel( panel )
+        
+    
     def _ReviewNetworkJobs( self ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review network jobs' )
@@ -4094,6 +3993,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'db_profile_mode':
             
             HG.db_profile_mode = not HG.db_profile_mode
+            
+        elif name == 'file_import_report_mode':
+            
+            HG.file_import_report_mode = not HG.file_import_report_mode
             
         elif name == 'file_report_mode':
             

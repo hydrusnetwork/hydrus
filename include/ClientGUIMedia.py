@@ -8,6 +8,7 @@ from . import ClientGUICanvas
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
 from . import ClientGUIDialogsQuick
+from . import ClientGUIDuplicates
 from . import ClientGUIExport
 from . import ClientGUIFunctions
 from . import ClientGUIMenus
@@ -2306,6 +2307,60 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 self._CopyHashesToClipboard( 'sha256' )
                 
+            elif action == 'duplicate_media_clear_focused_false_positives':
+                
+                if self._focussed_media is not None:
+                    
+                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_dissolve_focus_alternate_group':
+                
+                if self._focussed_media is not None:
+                    
+                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_dissolve_focus_duplicate_group':
+                
+                if self._focussed_media is not None:
+                    
+                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_remove_focus_from_alternate_group':
+                
+                if self._focussed_media is not None:
+                    
+                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_remove_focus_from_duplicate_group':
+                
+                if self._focussed_media is not None:
+                    
+                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_reset_focused_potential_search':
+                
+                if self._focussed_media is not None:
+                    
+                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    
+                
             elif action == 'duplicate_media_set_alternate':
                 
                 self._SetDuplicates( HC.DUPLICATE_ALTERNATE )
@@ -4185,6 +4240,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._file_service_key, focussed_hash )
                 
             
+            focus_is_in_duplicate_group = False
+            focus_is_in_alternate_group = False
+            focus_has_fps = False
+            focus_can_be_searched = self._focussed_media.GetDisplayMedia().GetMime() in HC.MIMES_WE_CAN_PHASH
+            
             if file_duplicate_info is None:
                 
                 ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'could not fetch file\'s duplicates (db currently locked)' )
@@ -4223,6 +4283,19 @@ class MediaPanelThumbnails( MediaPanel ):
                                 
                                 ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
                                 
+                                if duplicate_type == HC.DUPLICATE_MEMBER:
+                                    
+                                    focus_is_in_duplicate_group = True
+                                    
+                                elif duplicate_type == HC.DUPLICATE_ALTERNATE:
+                                    
+                                    focus_is_in_alternate_group = True
+                                    
+                                elif duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
+                                    
+                                    focus_has_fps = True
+                                    
+                                
                             
                         
                     
@@ -4230,32 +4303,65 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
             
-            set_king_action_available = True
+            focus_is_definitely_king = file_duplicate_info is not None and file_duplicate_info[ 'is_king' ]
             
-            if file_duplicate_info is not None and file_duplicate_info[ 'is_king' ]:
-                
-                set_king_action_available = False
-                
+            dissolution_actions_available = focus_can_be_searched or focus_is_in_duplicate_group or focus_is_in_alternate_group or focus_has_fps
             
-            set_multiple_action_available = multiple_selected and advanced_mode
+            single_action_available = dissolution_actions_available or not focus_is_definitely_king
             
-            if set_multiple_action_available or set_king_action_available:
+            if multiple_selected or single_action_available:
                 
                 duplicates_action_submenu = wx.Menu()
                 
-                if set_king_action_available:
+                if file_duplicate_info is None:
                     
-                    if file_duplicate_info is None:
-                        
-                        ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch whether this was the best file of its group (db currently locked)' )
-                        
-                    else:
+                    ClientGUIMenus.AppendMenuLabel( duplicates_action_submenu, 'could not fetch info to check for available file actions (db currently locked)' )
+                    
+                else:
+                    
+                    if not focus_is_definitely_king:
                         
                         ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set this file as the best quality of its group', 'Set the focused media to be the King of its group.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_focused_king' ) )
                         
                     
+                    if dissolution_actions_available:
+                        
+                        duplicates_single_dissolution_menu = wx.Menu()
+                        
+                        media_to_action = self._focussed_media.GetDisplayMedia()
+                        
+                        if focus_can_be_searched:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_reset_focused_potential_search' ) )
+                            
+                        
+                        if focus_is_in_duplicate_group:
+                            
+                            if not focus_is_definitely_king:
+                                
+                                ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focus_from_duplicate_group' ) )
+                                
+                            
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focus_duplicate_group' ) )
+                            
+                        
+                        if focus_is_in_alternate_group:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focus_from_alternate_group' ) )
+                            
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'dissolve thes file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focus_alternate_group' ) )
+                            
+                        
+                        if focus_has_fps:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'delete all false-positive relationships this file\'s alternate group has with other groups', 'Clear out all false-positive relationships this file\'s alternates group has with other groups and resets search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_clear_focused_false_positives' ) )
+                            
+                        
+                        ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_single_dissolution_menu, 'remove/reset for this file' )
+                        
+                    
                 
-                if set_multiple_action_available:
+                if multiple_selected:
                     
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
@@ -4299,7 +4405,20 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
                     ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
-                    
+                    '''
+                    if advanced_mode:
+                        
+                        duplicates_multiple_dissolution_menu = wx.Menu()
+                        
+                        # reset all search status
+                        # dissolve all medias
+                        # dissolve all alternates
+                        # clear all fps
+                        # clear all fps within group
+                        
+                        ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for this file' )
+                        
+                    '''
                 
                 ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
                 

@@ -4196,7 +4196,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     controller.WriteSynchronous( 'content_updates', { petition_service_key : content_updates } )
                     
-                    num_done += len( chunk_of_approved_contents )
+                    num_done += 1
                     
                 
                 if len( denied_contents ) > 0:

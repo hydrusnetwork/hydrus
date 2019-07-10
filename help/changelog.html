@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 359</h3></li>
+				<ul>
+					<li>ipfs nocopy:</li>
+					<li>wrote a new panel to better show ipfs daemon status and added it to the review and manage ipfs service panels</li>
+					<li>added nocopy config review and enable status and buttons to this new panel</li>
+					<li>added an EXPERIMENTAL 'use nocopy' checkbox to the ipfs manage services panel</li>
+					<li>added accompanying WEWLAD path translation ui to enable nocopy when your hydrus media storage paths are inaccessible to the ipfs daemon for nocopy purposes. a help button explains this more--it currently needs some symlinking, so non-advanced users should stay away</li>
+					<li>if everything is set up, ipfs nocopy seems to work! I am not totally happy about the setup required here, so feedback from advanced ipfs-fluent users would be appreciated and we can iterate on this</li>
+					<li>improved stability of ipfs daemon/version checking code</li>
+					<li>.</li>
+					<li>file maintenance:</li>
+					<li>wrote some proper file maintenance ui under database->maintain->review scheduled file maintenance!</li>
+					<li>for existing work, the new file maintenance ui shows how much work is scheduled for each job type and lets you cancel that work or run it manually</li>
+					<li>for new work, the new file maintenance ui lets you queue up work of any type for files you select with the standard tag autocomplete search interface! you can schedule all pngs to be rescanned in case they are truly apngs, or regen thumbs for all files imported before a certain date, or whatever you wish. you can also queue up repository update files</li>
+					<li>the file maintenance manager can now deal with repository update files when it does a complete file metadata regen</li>
+					<li>the file maintenance manager now takes responsibility for checking file presence and file integrity. the old 'check file integrity' options under database->maintenance, which did all files in one go, are now gone</li>
+					<li>file integrity checks will now always export broken files and missing/broken files' known urls to .txt files to your db_dir/missing_and_invalid_files. appropriate popups and log data will be sent as well. also, the known urls will be both exported on a per-file .txt basis and appended to one unified .txt</li>
+					<li>if a file now fails to parse on a metadata reparse, it is now automatically checked for file data integrity</li>
+					<li>if a repository encounters a missing, invalid, or incorrect filetype update during update processing, it now schedules all updates in the repo to be appropriately rescanned by the file maintenance manager</li>
+					<li>if the storage subdirectory directory does not exist on a client file path request or thumbnail-add attempt, a special error will now be raised with instructions to reconnect the location or shut the client down immediately</li>
+					<li>cleaned up some ffmpeg mime-detection logspam</li>
+					<li>.</li>
+					<li>duplicates:</li>
+					<li>added several single-file thumbnail right-click dissolve/reset duplicate actions:</li>
+					<li>- reset search status</li>
+					<li>- remove from duplicate group (if in one and not the king)</li>
+					<li>- dissolve duplicate group (if in a group)</li>
+					<li>- remove from alternate group (if in one)</li>
+					<li>- dissolve alternate group (if in one)</li>
+					<li>- clear false-positive relations (if it has some)</li>
+					<li>added some new code to deal with dissolution and member extraction at the db level</li>
+					<li>when a member is extracted from alternate group, its constituent files are now requeued for potential search</li>
+					<li>multi-selection duplicate right-click actions are now available to non-advanced-mode users</li>
+					<li>wrote some unit tests for the new dissolve/reset actions</li>
+					<li>cleaned up some misc duplicates code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed a recent bug in the file lookup script GET call--I apologise for the mistake</li>
+					<li>the main gui page tab menu now lets you sort page tabs by the number of files they have</li>
+					<li>deviant art seem to be rolling out a new page format. this week hydrus introduces completely new deviant art downloader objects that, fingers crossed, will update any existing users smoothly and also provide new tag search functionality. users who are still logged in may still be getting the old page format. if this is you, and this update does not work (although I _think_ it should, even so), please try clearing your existing login and logging in again</li>
+					<li>new deviant art login script, artist + tag GUGs, gallery url classes, file and gallery parsers</li>
+					<li>updated the shimmie file page parser to pull source time and md5</li>
+					<li>improved the 'process now' advanced button to only focus on actual specific outstanding processing. previously, it was also checking for new metadata when due, which, when the server was not available, could seemingly idle for a time before actually processing updates due to the new delaying connection retry code</li>
+					<li>wrote a new 'file import report mode' mode to help->debug->report modes</li>
+					<li>fixed a progress display issue with the janitorial petitions processing page</li>
+					<li>improved accuracy of sibling and parent petition counts, and properly capped them at 1000</li>
+					<li>mapping petitions are now grouped by namespace, and will come in more manageable chunks</li>
+					<li>fixed the server launch-and-init test debug code</li>
+					<li>misc string-to-string control improvements to support the new ipfs edit ui</li>
+					<li>removed the old 'continual tag archive sync' legacy code from tag services, which has been semi/non-functional for a long time</li>
+					<li>cleaned up the annoying separator hanging on the end of certain tag right-click menus</li>
+					<li>cleared out the 'Exception ignored in' spam that is often printed after the log closes</li>
+				</ul>
 				<li><h3>version 358</h3></li>
 				<ul>
 					<li>duplicates:</li>

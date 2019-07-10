@@ -19,6 +19,211 @@ import os
 import time
 import wx
 
+class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
+    
+    def __init__( self, parent, service_callable ):
+        
+        ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs daemon' )
+        
+        self._is_running = False
+        self._nocopy_enabled = False
+        
+        self._service_callable = service_callable
+        
+        self._running_status = ClientGUICommon.BetterStaticText( self )
+        self._check_running_button = ClientGUICommon.BetterButton( self, 'check daemon', self._CheckRunning )
+        self._nocopy_status = ClientGUICommon.BetterStaticText( self )
+        self._check_nocopy = ClientGUICommon.BetterButton( self, 'check nocopy', self._CheckNoCopy )
+        self._enable_nocopy = ClientGUICommon.BetterButton( self, 'enable nocopy', self._EnableNoCopy )
+        
+        self._check_running_button.Disable()
+        self._check_nocopy.Disable()
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.Add( self._check_running_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._running_status, CC.FLAGS_VCENTER )
+        gridbox.Add( self._check_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._nocopy_status, CC.FLAGS_VCENTER )
+        gridbox.Add( self._enable_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_VCENTER )
+        
+        self.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        self._CheckRunning()
+        
+    
+    def _CheckNoCopy( self ):
+        
+        def wx_clean_up( result, nocopy_enabled ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._nocopy_status.SetLabelText( result )
+            
+            self._check_nocopy.Enable()
+            
+            self._nocopy_enabled = nocopy_enabled
+            
+            if self._nocopy_enabled:
+                
+                self._enable_nocopy.Disable()
+                
+            else:
+                
+                self._enable_nocopy.Enable()
+                
+            
+        
+        def do_it( service ):
+            
+            try:
+                
+                nocopy_enabled = service.GetNoCopyEnabled()
+                
+                if nocopy_enabled:
+                    
+                    result = 'Nocopy is enabled.'
+                    
+                else:
+                    
+                    result = 'Nocopy is not enabled.'
+                    
+                
+            except Exception as e:
+                
+                result = 'Problem: {}'.format( str( e ) )
+                
+                nocopy_enabled = False
+                
+            finally:
+                
+                wx.CallAfter( wx_clean_up, result, nocopy_enabled )
+                
+            
+        
+        self._check_nocopy.Disable()
+        
+        self._nocopy_status.SetLabelText( 'checking\u2026' )
+        
+        service = self._service_callable()
+        
+        HG.client_controller.CallToThread( do_it, service )
+        
+    
+    def _CheckRunning( self ):
+        
+        def wx_clean_up( result, is_running ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._running_status.SetLabelText( result )
+            
+            self._is_running = is_running
+            
+            self._check_running_button.Enable()
+            
+            if self._is_running:
+                
+                self._check_nocopy.Enable()
+                
+                self._CheckNoCopy()
+                
+            
+        
+        def do_it( service ):
+            
+            try:
+                
+                version = service.GetDaemonVersion()
+                
+                result = 'Running version {}.'.format( version )
+                
+                is_running = True
+                
+            except Exception as e:
+                
+                result = 'Problem: {}'.format( str( e ) )
+                
+                is_running = False
+                
+            finally:
+                
+                wx.CallAfter( wx_clean_up, result, is_running )
+                
+            
+        
+        self._check_running_button.Disable()
+        self._check_nocopy.Disable()
+        self._enable_nocopy.Disable()
+        
+        self._running_status.SetLabelText( 'checking\u2026' )
+        
+        service = self._service_callable()
+        
+        HG.client_controller.CallToThread( do_it, service )
+        
+    
+    def _EnableNoCopy( self ):
+        
+        def wx_clean_up( success ):
+            
+            if not self:
+                
+                return
+                
+            
+            if success:
+                
+                self._CheckNoCopy()
+                
+            else:
+                
+                wx.MessageBox( 'Unfortunately, was unable to set nocopy configuration.' )
+                
+                self._enable_nocopy.Enable()
+                
+            
+        
+        def do_it( service ):
+            
+            try:
+                
+                success = service.EnableNoCopy( True )
+                
+            except Exception as e:
+                
+                message = 'Problem: {}'.format( str( e ) )
+                
+                wx.CallAfter( wx.MessageBox, message )
+                
+                success = False
+                
+            finally:
+                
+                wx.CallAfter( wx_clean_up, success )
+                
+            
+        
+        self._enable_nocopy.Disable()
+        
+        service = self._service_callable()
+        
+        HG.client_controller.CallToThread( do_it, service )
+        
+    
 class ReviewServicePanel( wx.Panel ):
     
     def __init__( self, parent, service ):
@@ -1105,7 +1310,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     def do_it():
                         
-                        self._service.Sync( maintenance_mode = HC.MAINTENANCE_FORCED )
+                        self._service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_FORCED )
                         
                         self._my_updater.Update()
                         
@@ -1198,11 +1403,11 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._check_running_button = ClientGUICommon.BetterButton( self, 'check daemon', self._CheckRunning )
+            interaction_panel = IPFSDaemonStatusAndInteractionPanel( self, self.GetService )
             
             self._ipfs_shares_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            columns = [ ( 'multihash', 34 ), ( 'num files', 6 ), ( 'total size', 6 ), ( 'note', -1 ) ]
+            columns = [ ( 'multihash', 34 ), ( 'num files', 11 ), ( 'total size', 12 ), ( 'note', -1 ) ]
             
             self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, 'ipfs_shares', 12, 32, columns, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
             
@@ -1219,49 +1424,10 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.Add( self._check_running_button, CC.FLAGS_LONE_BUTTON )
+            self.Add( interaction_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._ipfs_shares_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
-            
-        
-        def _CheckRunning( self ):
-            
-            def wx_clean_up():
-                
-                if not self:
-                    
-                    return
-                    
-                
-                self._check_running_button.Enable()
-                
-            
-            def do_it():
-                
-                try:
-                    
-                    version = self._service.GetDaemonVersion()
-                    
-                    message = 'Everything looks ok! Daemon reports version: ' + version
-                    
-                    wx.CallAfter( wx.MessageBox, message )
-                    
-                except Exception as e:
-                    
-                    message = 'There was a problem: {}'.format( str( e ) )
-                    
-                    wx.CallAfter( wx.MessageBox, message )
-                    
-                finally:
-                    
-                    wx.CallAfter( wx_clean_up )
-                    
-                
-            
-            self._check_running_button.Disable()
-            
-            HG.client_controller.CallToThread( do_it )
             
         
         def _ConvertDataToListCtrlTuple( self, data ):
@@ -1417,6 +1583,11 @@ class ReviewServicePanel( wx.Panel ):
                     HG.client_controller.CallToThread( do_it, self._service, multihashes )
                     
                 
+            
+        
+        def GetService( self ):
+            
+            return self._service
             
         
         def ServiceUpdated( self, service ):

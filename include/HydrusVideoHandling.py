@@ -213,16 +213,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
     lines = text.splitlines()
     
-    try:
-        
-        CheckFFMPEGError( lines )
-        
-    except:
-        
-        HydrusData.Print( 'FFMPEG had problem with file: ' + path )
-        
-        raise
-        
+    CheckFFMPEGError( lines )
     
     return lines
     

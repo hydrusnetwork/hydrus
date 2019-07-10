@@ -1228,145 +1228,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _CheckFileIntegrity( self, mode, allowed_mimes = None, create_urls_txt = False, move_location = None ):
-        
-        prefix_string = 'checking file integrity: '
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        try:
-            
-            job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            if allowed_mimes is None:
-                
-                select = 'SELECT hash_id, mime FROM current_files NATURAL JOIN files_info WHERE service_id = ?;'
-                
-            else:
-                
-                select = 'SELECT hash_id, mime FROM current_files NATURAL JOIN files_info WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( allowed_mimes ) + ';'
-                
-            
-            info = self._c.execute( select, ( self._combined_local_file_service_id, ) ).fetchall()
-            
-            missing_count = 0
-            deletee_hash_ids = []
-            
-            client_files_manager = self._controller.client_files_manager
-            
-            for ( i, ( hash_id, mime ) ) in enumerate( info ):
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    break
-                    
-                
-                job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( info ) ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i, len( info ) ) )
-                
-                hash = self._GetHash( hash_id )
-                
-                try:
-                    
-                    # lockless because this db call is made by the locked client files manager
-                    path = client_files_manager.LocklessGetFilePath( hash, mime )
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    HydrusData.Print( 'Could not find the file for ' + hash.hex() + '!' )
-                    
-                    deletee_hash_ids.append( hash_id )
-                    
-                    missing_count += 1
-                    
-                    continue
-                    
-                
-                if mode == 'thorough':
-                    
-                    actual_hash = HydrusFileHandling.GetHashFromPath( path )
-                    
-                    if actual_hash != hash:
-                        
-                        deletee_hash_ids.append( hash_id )
-                        
-                        if move_location is not None:
-                            
-                            move_filename = 'believed ' + hash.hex() + ' actually ' + actual_hash.hex() + HC.mime_ext_lookup[ mime ]
-                            
-                            move_path = os.path.join( move_location, move_filename )
-                            
-                            HydrusPaths.MergeFile( path, move_path )
-                            
-                        
-                    
-                
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.SetVariable( 'popup_text_1', prefix_string + 'deleting the incorrect records' )
-            
-            self._SetLocalFileDeletionReason( deletee_hash_ids, 'Deleted during File Integrity check.' )
-            
-            self._DeleteFiles( self._local_file_service_id, deletee_hash_ids )
-            self._DeleteFiles( self._trash_service_id, deletee_hash_ids )
-            self._DeleteFiles( self._combined_local_file_service_id, deletee_hash_ids )
-            
-            final_text = 'done! '
-            
-            if len( deletee_hash_ids ) == 0:
-                
-                final_text += 'all files ok!'
-                
-            else:
-                
-                if create_urls_txt:
-                    
-                    with open( os.path.join( self._db_dir, 'missing filename urls.txt' ), 'w', encoding = 'utf-8' ) as f:
-                        
-                        for hash_id in deletee_hash_ids:
-                            
-                            urls = self._STL( self._c.execute( 'SELECT url FROM url_map NATURAL JOIN urls WHERE hash_id = ?;', ( hash_id, ) ) )
-                            
-                            for url in urls:
-                                
-                                f.write( url )
-                                f.write( os.linesep )
-                                
-                            
-                        
-                    
-                
-                final_text += HydrusData.ToHumanInt( missing_count ) + ' files were missing!'
-                
-                if mode == 'thorough':
-                    
-                    final_text += ' ' + HydrusData.ToHumanInt( len( deletee_hash_ids ) - missing_count ) + ' files were incorrect and thus '
-                    
-                    if move_location is None:
-                        
-                        final_text += 'deleted!'
-                        
-                    else:
-                        
-                        final_text += 'moved!'
-                        
-                    
-                
-            
-            job_key.SetVariable( 'popup_text_1', prefix_string + final_text )
-            
-        finally:
-            
-            HydrusData.Print( job_key.ToString() )
-            
-            job_key.Finish()
-            
-        
-    
     def _CleanUpCaches( self ):
         
         self._subscriptions_cache = {}
@@ -2167,6 +2028,89 @@ class DB( HydrusDB.HydrusDB ):
         return false_positive_pair_found
         
     
+    def _DuplicatesClearAllFalsePositiveRelations( self, alternates_group_id ):
+        
+        self._c.execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
+        
+        media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+        
+        for media_id in media_ids:
+            
+            hash_ids = self._DuplicatesGetDuplicateHashIds( media_id )
+            
+            self._PHashesResetSearch( hash_ids )
+            
+        
+    
+    def _DuplicatesClearAllFalsePositiveRelationsFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        for hash_id in hash_ids:
+            
+            media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+                
+                if alternates_group_id is not None:
+                    
+                    self._DuplicatesClearAllFalsePositiveRelations( alternates_group_id )
+                    
+                
+            
+        
+    
+    def _DuplicatesClearFalsePositiveRelationsBetweenGroups( self, alternates_group_ids ):
+        
+        pairs = list( itertools.combinations( alternates_group_ids, 2 ) )
+        
+        for ( alternates_group_id_a, alternates_group_id_b ) in pairs:
+            
+            smaller_alternates_group_id = min( alternates_group_id_a, alternates_group_id_b )
+            larger_alternates_group_id = max( alternates_group_id_a, alternates_group_id_b )
+            
+            self._c.execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? AND larger_alternates_group_id = ?;', ( smaller_alternates_group_id, larger_alternates_group_id ) )
+            
+        
+        for alternates_group_id in alternates_group_ids:
+            
+            media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+            
+            for media_id in media_ids:
+                
+                hash_ids = self._DuplicatesGetDuplicateHashIds( media_id )
+                
+                self._PHashesResetSearch( hash_ids )
+                
+            
+        
+    
+    def _DuplicatesClearFalsePositiveRelationsBetweenGroupsFromHashes( self, hashes ):
+        
+        alternates_group_ids = set()
+        
+        hash_id = self._GetHashId( hash )
+        
+        media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+        
+        if media_id is not None:
+            
+            alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+            
+            if alternates_group_id is not None:
+                
+                alternates_group_ids.add( alternates_group_id )
+                
+            
+        
+        if len( alternates_group_ids ) > 1:
+            
+            self._DuplicatesClearFalsePositiveRelationsBetweenGroups( alternates_group_ids )
+            
+        
+    
     def _DuplicatesClearPotentialsBetweenMedias( self, media_ids_a, media_ids_b ):
         
         # these two groups of medias now have a false positive or alternates relationship set between them, or they are about to be merged
@@ -2209,7 +2153,7 @@ class DB( HydrusDB.HydrusDB ):
         self._DuplicatesClearPotentialsBetweenMedias( media_ids_a, media_ids_b )
         
     
-    def _DuplicatesDeletePotentialDuplicatePairs( self ):
+    def _DuplicatesDeleteAllPotentialDuplicatePairs( self ):
         
         media_ids = set()
         
@@ -2228,7 +2172,37 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'DELETE FROM potential_duplicate_pairs;' )
         
-        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._PHashesResetSearch( hash_ids )
+        
+    
+    def _DuplicatesDissolveAlternatesGroupId( self, alternates_group_id ):
+        
+        media_ids = self._DuplicatesGetAlternateMediaIds( alternates_group_id )
+        
+        for media_id in media_ids:
+            
+            self._DuplicatesDissolveMediaId( media_id )
+            
+        
+    
+    def _DuplicatesDissolveAlternatesGroupIdFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        for hash_id in hash_ids:
+            
+            media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                alternates_group_id = self._DuplicatesGetAlternatesGroupId( media_id, do_not_create = True )
+                
+                if alternates_group_id is not None:
+                    
+                    self._DuplicatesDissolveAlternatesGroupId( alternates_group_id )
+                    
+                
+            
         
     
     def _DuplicatesDissolveMediaId( self, media_id ):
@@ -2242,7 +2216,22 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM duplicate_file_members WHERE media_id = ?;', ( media_id, ) )
         self._c.execute( 'DELETE FROM duplicate_files WHERE media_id = ?;', ( media_id, ) )
         
-        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        self._PHashesResetSearch( hash_ids )
+        
+    
+    def _DuplicatesDissolveMediaIdFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        for hash_id in hash_ids:
+            
+            media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                self._DuplicatesDissolveMediaId( media_id )
+                
+            
         
     
     def _DuplicatesGetAlternatesGroupId( self, media_id, do_not_create = False ):
@@ -3261,6 +3250,25 @@ class DB( HydrusDB.HydrusDB ):
                 self._c.execute( 'DELETE FROM duplicate_false_positives WHERE smaller_alternates_group_id = ? OR larger_alternates_group_id = ?;', ( alternates_group_id, alternates_group_id ) )
                 
             
+            hash_ids = self._DuplicatesGetDuplicateHashIds( media_id )
+            
+            self._PHashesResetSearch( hash_ids )
+            
+        
+    
+    def _DuplicatesRemoveAlternateMemberFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        for hash_id in hash_ids:
+            
+            media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+            
+            if media_id is not None:
+                
+                self._DuplicatesRemoveAlternateMember( media_id )
+                
+            
         
     
     def _DuplicatesRemoveMediaIdMember( self, hash_id ):
@@ -3279,8 +3287,18 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'DELETE FROM duplicate_file_members WHERE hash_id = ?;', ( hash_id, ) )
                 
-                self._c.execute( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( hash_id, ) )
+                self._PHashesResetSearch( ( hash_id, ) )
                 
+            
+        
+    
+    def _DuplicatesRemoveMediaIdMemberFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        for hash_id in hash_ids:
+            
+            self._DuplicatesRemoveMediaIdMember( hash_id )
             
         
     
@@ -3637,9 +3655,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _FileMaintenanceAddJobs( self, hashes, job_type, time_can_start = 0 ):
-        
-        hash_ids = self._GetHashIds( hashes )
+    def _FileMaintenanceAddJobs( self, hash_ids, job_type, time_can_start = 0 ):
         
         deletee_job_types =  ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ]
         
@@ -3651,6 +3667,18 @@ class DB( HydrusDB.HydrusDB ):
         #
         
         self._c.executemany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
+        
+    
+    def _FileMaintenanceAddJobsHashes( self, hashes, job_type, time_can_start = 0 ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        self._FileMaintenanceAddJobs( hash_ids, job_type, time_can_start = time_can_start )
+        
+    
+    def _FileMaintenanceCancelJobs( self, job_type ):
+        
+        self._c.execute( 'DELETE FROM file_maintenance_jobs WHERE job_type = ?;', ( job_type, ) )
         
     
     def _FileMaintenanceClearJobs( self, cleared_job_tuples ):
@@ -3673,11 +3701,14 @@ class DB( HydrusDB.HydrusDB ):
                     
                     new_file_info_hashes.add( hash )
                     
-                    result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                    
-                    if result is None:
+                    if mime not in HC.HYDRUS_UPDATE_FILES:
                         
-                        self._FileMaintenanceAddJobs( { hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
+                        result = self._c.execute( 'SELECT 1 FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                        
+                        if result is None:
+                            
+                            self._FileMaintenanceAddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
+                            
                         
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
@@ -4275,6 +4306,29 @@ class DB( HydrusDB.HydrusDB ):
     def _GetClientFilesLocations( self ):
         
         result = { prefix : HydrusPaths.ConvertPortablePathToAbsPath( location ) for ( prefix, location ) in self._c.execute( 'SELECT prefix, location FROM client_files_locations;' ) }
+        
+        if len( result ) < 512:
+            
+            message = 'When fetching the directories where your files are stored, the database discovered some entries were missing!'
+            message += os.linesep * 2
+            message += 'Default values will now be inserted. If you have previously migrated your files or thumbnails, and assuming this is occuring on boot, you will next be presented with a dialog to remap them to the correct location.'
+            message += os.linesep * 2
+            message += 'If this is not happening on client boot, you should kill the hydrus process right now, as a serious hard drive fault has likely recently occurred.'
+            
+            self._DisplayCatastrophicError( message )
+            
+            client_files_default = os.path.join( self._db_dir, 'client_files' )
+            
+            HydrusPaths.MakeSureDirectoryExists( client_files_default )
+            
+            location = HydrusPaths.ConvertAbsPathToPortablePath( client_files_default )
+            
+            for prefix in HydrusData.IterateHexPrefixes():
+                
+                self._c.execute( 'INSERT OR IGNORE INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 'f' + prefix, location ) )
+                self._c.execute( 'INSERT OR IGNORE INTO client_files_locations ( prefix, location ) VALUES ( ?, ? );', ( 't' + prefix, location ) )
+                
+            
         
         return result
         
@@ -7763,6 +7817,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ImportFile( self, file_import_job ):
         
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job starting db job' )
+            
+        
         hash = file_import_job.GetHash()
         
         hash_id = self._GetHashId( hash )
@@ -7770,6 +7829,11 @@ class DB( HydrusDB.HydrusDB ):
         ( status, status_hash, note ) = self._GetHashIdStatus( hash_id, prefix = 'file recognised' )
         
         if status != CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+            
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job adding new file' )
+                
             
             ( size, mime, width, height, duration, num_frames, num_words ) = file_import_job.GetFileInfo()
             
@@ -7779,10 +7843,25 @@ class DB( HydrusDB.HydrusDB ):
             
             if phashes is not None:
                 
+                if HG.file_import_report_mode:
+                    
+                    HydrusData.ShowText( 'File import job associating phashes' )
+                    
+                
                 self._PHashesAssociatePHashes( hash_id, phashes )
                 
             
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job adding file info row' )
+                
+            
             self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
+            
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job mapping file to local file service' )
+                
             
             self._AddFiles( self._local_file_service_id, [ ( hash_id, timestamp ) ] )
             
@@ -7800,9 +7879,19 @@ class DB( HydrusDB.HydrusDB ):
             
             if file_import_options.AutomaticallyArchives():
                 
+                if HG.file_import_report_mode:
+                    
+                    HydrusData.ShowText( 'File import job archiving new file' )
+                    
+                
                 self._ArchiveFiles( ( hash_id, ) )
                 
             else:
+                
+                if HG.file_import_report_mode:
+                    
+                    HydrusData.ShowText( 'File import job inboxing new file' )
+                    
                 
                 self._InboxFiles( ( hash_id, ) )
                 
@@ -7810,29 +7899,9 @@ class DB( HydrusDB.HydrusDB ):
             status = CC.STATUS_SUCCESSFUL_AND_NEW
             
         
-        tag_services = self._GetServices( HC.TAG_SERVICES )
-        
-        for service in tag_services:
+        if HG.file_import_report_mode:
             
-            service_key = service.GetServiceKey()
-            
-            tag_archive_sync = service.GetTagArchiveSync()
-            
-            for ( portable_hta_path, namespaces ) in list(tag_archive_sync.items()):
-                
-                hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
-                
-                adding = True
-                
-                try:
-                    
-                    self._SyncHashesToTagArchive( [ hash ], hta_path, service_key, adding, namespaces )
-                    
-                except:
-                    
-                    pass
-                    
-                
+            HydrusData.ShowText( 'File import job done at db level, final status: {}, {}'.format( CC.status_string_lookup[ status ], note ) )
             
         
         return ( status, note )
@@ -8832,6 +8901,18 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.Delete( 5 )
             
+        
+    
+    def _PHashesResetSearch( self, hash_ids ):
+        
+        self._c.executemany( 'UPDATE shape_search_cache SET searched_distance = NULL WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
+        
+    
+    def _PHashesResetSearchFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        self._PHashesResetSearch( hash_ids )
         
     
     def _PHashesSearchForPotentialDuplicates( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
@@ -10264,7 +10345,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_i_can_process = set()
         
-        update_indices = list(update_indices_to_unprocessed_hash_ids.keys())
+        update_indices = list( update_indices_to_unprocessed_hash_ids.keys() )
         
         update_indices.sort()
         
@@ -10337,14 +10418,51 @@ class DB( HydrusDB.HydrusDB ):
                             
                             update_hash = self._GetHash( hash_id )
                             
-                            update_path = client_files_manager.LocklessGetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
+                            try:
+                                
+                                update_path = client_files_manager.LocklessGetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
+                                
+                            except HydrusExceptions.FileMissingException:
+                                
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                                
                             
                             with open( update_path, 'rb' ) as f:
                                 
                                 update_network_bytes = f.read()
                                 
                             
-                            definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+                            try:
+                                
+                                definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+                                
+                            except:
+                                
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                                
+                            
+                            if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
+                                
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
+                                
                             
                             precise_timestamp = HydrusData.GetNowPrecise()
                             
@@ -10424,14 +10542,51 @@ class DB( HydrusDB.HydrusDB ):
                             
                             update_hash = self._GetHash( hash_id )
                             
-                            update_path = client_files_manager.LocklessGetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
+                            try:
+                                
+                                update_path = client_files_manager.LocklessGetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT )
+                                
+                            except HydrusExceptions.FileMissingException:
+                                
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                                
                             
                             with open( update_path, 'rb' ) as f:
                                 
                                 update_network_bytes = f.read()
                                 
                             
-                            content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+                            try:
+                                
+                                content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+                                
+                            except:
+                                
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                raise Exception( 'An unusual error has occured during repository processing: an update file was missing or invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                                
+                            
+                            if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
+                                
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+                                
+                                self._Commit()
+                                
+                                self._BeginImmediate()
+                                
+                                raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
+                                
                             
                             did_whole_update = self._ProcessRepositoryContentUpdate( job_key, service_id, content_update )
                             
@@ -10966,6 +11121,15 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_job( 'clear_all_thumbnails' )
         self.pub_after_job( 'notify_new_options' )
+        
+    
+    def _ScheduleRepositoryUpdateFileMaintenance( self, service_id, job_type ):
+        
+        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+        
+        update_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
+        
+        self._FileMaintenanceAddJobs( update_hash_ids, job_type )
         
     
     def _SetIdealClientFilesLocations( self, locations_to_ideal_weights, ideal_thumbnail_override_location ):
@@ -13338,7 +13502,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultParsers( ( 'pixiv file page api parser' ) )
+                domain_manager.OverwriteDefaultParsers( ( 'pixiv file page api parser', ) )
                 
                 #
                 
@@ -13347,6 +13511,63 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 358:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'shimmie file page parser', 'deviant gallery page api parser', 'deviant art file page parser' ) )
+                
+                domain_manager.OverwriteDefaultGUGs( ( 'deviant art tag search', 'deviant art artist lookup' ) )
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'deviant art artist gallery page api', 'deviant art tag gallery page api' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+                #
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                
+                login_manager.OverwriteDefaultLoginScripts( ( 'deviant art login', ) )
+                
+                login_scripts = login_manager.GetLoginScripts()
+                
+                login_scripts = [ login_script for login_script in login_scripts if login_script.GetName() != 'deviant art login (only works on a client that has already done some downloading)' ]
+                
+                login_manager.SetLoginScripts( login_scripts )
+                
+                login_manager.TryToLinkMissingLoginScripts( ( 'www.deviantart.com', ) )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
                 
             except Exception as e:
                 
@@ -13691,37 +13912,6 @@ class DB( HydrusDB.HydrusDB ):
         
         old_dictionary = HydrusSerialisable.CreateFromString( old_dictionary_string )
         
-        if service_type in HC.TAG_SERVICES:
-            
-            old_tag_archive_sync = dict( old_dictionary[ 'tag_archive_sync' ] )
-            new_tag_archive_sync = dict( dictionary[ 'tag_archive_sync' ] )
-            
-            for portable_hta_path in list(new_tag_archive_sync.keys()):
-                
-                namespaces = set( new_tag_archive_sync[ portable_hta_path ] )
-                
-                if portable_hta_path in old_tag_archive_sync:
-                    
-                    old_namespaces = old_tag_archive_sync[ portable_hta_path ]
-                    
-                    namespaces.difference_update( old_namespaces )
-                    
-                    if len( namespaces ) == 0:
-                        
-                        continue
-                        
-                    
-                
-                hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
-                
-                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-                adding = True
-                
-                self._controller.pub( 'sync_to_tag_archive', hta_path, service_key, file_service_key, adding, namespaces )
-                
-            
-        
         if service_type in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ):
             
             self.pub_after_job( 'restart_client_server_service', service_key )
@@ -13916,6 +14106,8 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'analyze': self._AnalyzeStaleBigTables( *args, **kwargs )
         elif action == 'associate_repository_update_hashes': self._AssociateRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'backup': self._Backup( *args, **kwargs )
+        elif action == 'clear_false_positive_relations': self._DuplicatesClearAllFalsePositiveRelationsFromHashes( *args, **kwargs )
+        elif action == 'clear_false_positive_relations_between_groups': self._DuplicatesClearFalsePositiveRelationsBetweenGroupsFromHashes( *args, **kwargs )
         elif action == 'clear_orphan_file_records': self._ClearOrphanFileRecords( *args, **kwargs )
         elif action == 'clear_orphan_tables': self._ClearOrphanTables( *args, **kwargs )
         elif action == 'content_updates': self._ProcessContentUpdates( *args, **kwargs )
@@ -13926,13 +14118,16 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
         elif action == 'delete_serialisable_named': self._DeleteJSONDumpNamed( *args, **kwargs )
         elif action == 'delete_service_info': self._DeleteServiceInfo( *args, **kwargs )
-        elif action == 'delete_potential_duplicate_pairs': self._DuplicatesDeletePotentialDuplicatePairs( *args, **kwargs )
+        elif action == 'delete_potential_duplicate_pairs': self._DuplicatesDeleteAllPotentialDuplicatePairs( *args, **kwargs )
         elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
+        elif action == 'dissolve_alternates_group': self._DuplicatesDissolveAlternatesGroupIdFromHashes( *args, **kwargs )
+        elif action == 'dissolve_duplicates_group': self._DuplicatesDissolveMediaIdFromHashes( *args, **kwargs )
         elif action == 'duplicate_pair_status': self._DuplicatesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'duplicate_set_king': self._DuplicatesSetKingFromHash( *args, **kwargs )
         elif action == 'export_mappings': self._ExportToTagArchive( *args, **kwargs )
-        elif action == 'file_integrity': self._CheckFileIntegrity( *args, **kwargs )
         elif action == 'file_maintenance_add_jobs': self._FileMaintenanceAddJobs( *args, **kwargs )
+        elif action == 'file_maintenance_add_jobs_hashes': self._FileMaintenanceAddJobsHashes( *args, **kwargs )
+        elif action == 'file_maintenance_cancel_jobs': self._FileMaintenanceCancelJobs( *args, **kwargs )
         elif action == 'file_maintenance_clear_jobs': self._FileMaintenanceClearJobs( *args, **kwargs )
         elif action == 'imageboard': self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'ideal_client_files_locations': self._SetIdealClientFilesLocations( *args, **kwargs )
@@ -13948,8 +14143,11 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_ac_cache': self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
+        elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
+        elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )
         elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
+        elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
         elif action == 'schedule_full_phash_regen': self._PHashesSchedulePHashRegeneration()
         elif action == 'serialisable_simple': self._SetJSONSimple( *args, **kwargs )

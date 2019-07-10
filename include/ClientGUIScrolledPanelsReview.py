@@ -3,6 +3,8 @@ from . import ClientData
 from . import ClientDefaults
 from . import ClientDragDrop
 from . import ClientExporting
+from . import ClientFiles
+from . import ClientGUIACDropdown
 from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
@@ -25,6 +27,7 @@ from . import ClientNetworkingLogin
 from . import ClientParsing
 from . import ClientPaths
 from . import ClientRendering
+from . import ClientSearch
 from . import ClientSerialisable
 from . import ClientTags
 from . import ClientThreading
@@ -1901,6 +1904,363 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     def ImportFromDragDrop( self, paths ):
         
         self._ImportPaths( paths )
+        
+    
+class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, stats ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._hash_ids = None
+        
+        self._notebook = ClientGUICommon.BetterNotebook( self )
+        
+        #
+        
+        self._current_work_panel = wx.Panel( self._notebook )
+        
+        gridbox = wx.FlexGridSizer( 4 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        self._job_types_to_controls = {}
+        
+        for job_type in ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER:
+            
+            label_st = ClientGUICommon.BetterStaticText( self._current_work_panel, label = ClientFiles.regen_file_enum_to_str_lookup[ job_type ] )
+            
+            st = ClientGUICommon.BetterStaticText( self._current_work_panel )
+            
+            clear_button = ClientGUICommon.BetterButton( self._current_work_panel, 'clear', self._DeleteWork, job_type )
+            
+            go_button = ClientGUICommon.BetterButton( self._current_work_panel, 'go!', self._DoWork, job_type )
+            
+            self._job_types_to_controls[ job_type ] = ( st, clear_button, go_button )
+            
+            gridbox.Add( label_st, CC.FLAGS_VCENTER )
+            gridbox.Add( st, CC.FLAGS_VCENTER )
+            gridbox.Add( clear_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.Add( go_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+        
+        self._do_all_work = ClientGUICommon.BetterButton( self._current_work_panel, 'do all work', self._DoWork )
+        
+        self._refresh_button = ClientGUICommon.BetterButton( self._current_work_panel, 'refresh', self._RefreshWorkDue )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._do_all_work, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._refresh_button, CC.FLAGS_LONE_BUTTON )
+        
+        self._current_work_panel.SetSizer( vbox )
+        
+        #
+        
+        self._new_work_panel = wx.Panel( self._notebook )
+        
+        #
+        
+        self._search_panel = ClientGUICommon.StaticBox( self._new_work_panel, 'select files by search' )
+        
+        page_key = HydrusData.GenerateKey()
+        
+        self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, page_key, [] )
+        
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+        
+        self._tag_ac_input = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, page_key, file_search_context )
+        
+        self._run_search_st = ClientGUICommon.BetterStaticText( self._search_panel, label = 'no results yet' )
+        
+        self._run_search = ClientGUICommon.BetterButton( self._search_panel, 'run this search', self._RunSearch )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._run_search_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._run_search, CC.FLAGS_VCENTER )
+        
+        self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._search_panel.Add( self._tag_ac_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        self._button_panel = ClientGUICommon.StaticBox( self._new_work_panel, 'select special files' )
+        
+        self._select_repo_files = ClientGUICommon.BetterButton( self._button_panel, 'all repository update files', self._SelectRepoUpdateFiles )
+        
+        self._button_panel.Add( self._select_repo_files, CC.FLAGS_LONE_BUTTON )
+        
+        #
+        
+        self._action_panel = ClientGUICommon.StaticBox( self._new_work_panel, 'add job' )
+        
+        self._selected_files_st = ClientGUICommon.BetterStaticText( self._action_panel, label = 'no files selected yet' )
+        
+        self._action_selector = ClientGUICommon.BetterChoice( self._action_panel )
+        
+        for job_type in ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER:
+            
+            self._action_selector.Append( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], job_type )
+            
+        
+        self._add_new_job = ClientGUICommon.BetterButton( self._action_panel, 'add job', self._AddJob )
+        
+        self._add_new_job.Disable()
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._selected_files_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._action_selector, CC.FLAGS_VCENTER )
+        hbox.Add( self._add_new_job, CC.FLAGS_VCENTER )
+        
+        self._action_panel.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._action_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._new_work_panel.SetSizer( vbox )
+        
+        #
+        
+        self._notebook.AddPage( self._current_work_panel, 'scheduled work' )
+        self._notebook.AddPage( self._new_work_panel, 'add new work' )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._RefreshWorkDue()
+        
+        HG.client_controller.sub( self, '_RefreshWorkDue', 'notify_files_maintenance_done' )
+        
+    
+    def _AddJob( self ):
+        
+        def wx_done():
+            
+            if not self:
+                
+                return
+                
+            
+            wx.MessageBox( 'Jobs added!' )
+            
+            self._add_new_job.Enable()
+            
+            self._RefreshWorkDue()
+            
+        
+        def do_it( hash_ids, job_type ):
+            
+            HG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs', hash_ids, job_type )
+            
+            wx.CallAfter( wx_done )
+            
+        
+        hash_ids = self._hash_ids
+        job_type = self._action_selector.GetChoice()
+        
+        if len( hash_ids ) > 1000:
+            
+            message = 'Are you sure you want to schedule "{}" on {} files?'.format( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], HydrusData.ToHumanInt( len( hash_ids ) ) )
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
+        
+        self._add_new_job.Disable()
+        
+        HG.client_controller.CallToThread( do_it, hash_ids, job_type )
+        
+    
+    def _DeleteWork( self, job_type ):
+        
+        def wx_done():
+            
+            if not self:
+                
+                return
+                
+            
+            self._RefreshWorkDue()
+            
+        
+        def do_it( job_type ):
+            
+            job_types_to_counts = HG.client_controller.WriteSynchronous( 'file_maintenance_cancel_jobs', job_type )
+            
+            wx.CallAfter( wx_done )
+            
+        
+        message = 'Clear all the scheduled "{}" work?'.format( ClientFiles.regen_file_enum_to_str_lookup[ job_type ] )
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES:
+                
+                return
+                
+            
+        
+        HG.client_controller.CallToThread( do_it, job_type )
+        
+    
+    def _DoWork( self, job_type = None ):
+        
+        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.DoMaintenance, mandated_job_type = job_type, maintenance_mode = HC.MAINTENANCE_FORCED )
+        
+    
+    def _RefreshWorkDue( self ):
+        
+        def wx_done( job_types_to_counts ):
+            
+            if not self:
+                
+                return
+                
+            
+            some_work_to_do = False
+            
+            for ( job_type, ( st, clear_button, go_button ) ) in self._job_types_to_controls.items():
+                
+                if job_type in job_types_to_counts:
+                    
+                    st.SetLabelText( '{} jobs'.format( HydrusData.ToHumanInt( job_types_to_counts[ job_type ] ) ) )
+                    
+                    clear_button.Enable()
+                    go_button.Enable()
+                    
+                    some_work_to_do = True
+                    
+                else:
+                    
+                    st.SetLabelText( 'done!' )
+                    
+                
+            
+            if some_work_to_do:
+                
+                self._do_all_work.Enable()
+                
+            
+        
+        def do_it():
+            
+            job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
+            
+            wx.CallAfter( wx_done, job_types_to_counts )
+            
+        
+        for ( st, clear_button, go_button ) in self._job_types_to_controls.values():
+            
+            st.SetLabelText( 'loading\u2026' )
+            clear_button.Disable()
+            go_button.Disable()
+            
+        
+        self._do_all_work.Disable()
+        
+        HG.client_controller.CallToThread( do_it )
+        
+    
+    def _RunSearch( self ):
+        
+        def wx_done( hash_ids ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._run_search_st.SetLabelText( '{} files found'.format( HydrusData.ToHumanInt( len( hash_ids ) ) ) )
+            
+            self._run_search.Enable()
+            
+            self._SetHashIds( hash_ids )
+            
+        
+        def do_it( fsc ):
+            
+            query_hash_ids = HG.client_controller.Read( 'file_query_ids', fsc )
+            
+            wx.CallAfter( wx_done, query_hash_ids )
+            
+        
+        self._run_search_st.SetLabelText( 'loading\u2026' )
+        
+        self._run_search.Disable()
+        
+        file_search_context = self._tag_ac_input.GetFileSearchContext()
+        
+        current_predicates = self._current_predicates_box.GetPredicates()
+        
+        file_search_context.SetPredicates( current_predicates )
+        
+        HG.client_controller.CallToThread( do_it, file_search_context )
+        
+    
+    def _SelectRepoUpdateFiles( self ):
+        
+        def wx_done( hash_ids ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._select_repo_files.Enable()
+            
+            self._SetHashIds( hash_ids )
+            
+        
+        def do_it( fsc ):
+            
+            query_hash_ids = HG.client_controller.Read( 'file_query_ids', fsc )
+            
+            wx.CallAfter( wx_done, query_hash_ids )
+            
+        
+        self._select_repo_files.Disable()
+        
+        file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_UPDATE_SERVICE_KEY )
+        
+        HG.client_controller.CallToThread( do_it, file_search_context )
+        
+    
+    def _SetHashIds( self, hash_ids ):
+        
+        if hash_ids is None:
+            
+            hash_ids = set()
+            
+        
+        self._hash_ids = hash_ids
+        
+        self._selected_files_st.SetLabelText( '{} files selected'.format( HydrusData.ToHumanInt( len( hash_ids ) ) ) )
+        
+        if len( hash_ids ) == 0:
+            
+            self._add_new_job.Disable()
+            
+        else:
+            
+            self._add_new_job.Enable()
+            
         
     
 class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
