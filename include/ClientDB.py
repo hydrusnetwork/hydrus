@@ -1589,7 +1589,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_vptree ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );' )
         self._CreateIndex( 'external_caches.shape_vptree', [ 'parent_id' ] )
         
-        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_maintenance_phash_regen ( hash_id INTEGER PRIMARY KEY );' )
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
@@ -3717,6 +3716,25 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
                     
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA:
+                    
+                    phashes = additional_data
+                    
+                    self._PHashesSetFileMetadata( hash_id, phashes )
+                    
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP:
+                    
+                    should_include = additional_data
+                    
+                    if should_include:
+                        
+                        self._PHashesEnsureFileInSystem( hash_id )
+                        
+                    else:
+                        
+                        self._PhashesEnsureFileOutOfSystem( hash_id )
+                        
+                    
                 
             
             job_types_to_delete = [ job_type ]
@@ -3734,15 +3752,15 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _FileMaintenanceGetJob( self, job_type = None ):
+    def _FileMaintenanceGetJob( self, job_types = None ):
         
-        if job_type is None:
+        if job_types is None:
             
             possible_job_types = ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER
             
         else:
             
-            possible_job_types = [ job_type ]
+            possible_job_types = job_types
             
         
         for job_type in possible_job_types:
@@ -3985,7 +4003,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetAutocompleteTagIds( self, service_key, search_text, exact_match, job_key = None ):
         
+        parameters = []
+        
         if exact_match:
+            
+            table_join = 'tags'
             
             predicates = []
             
@@ -4012,7 +4034,10 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            def GetPossibleSubtagIds( half_complete_subtag ):
+            # Note: you'll have trouble doing MATCH with other OR predicates. namespace LIKE "blah" OR subtag MATCH "blah" is trouble
+            # AND is OK
+            
+            def GetSubTagSearchInfo( half_complete_subtag ):
                 
                 # complicated queries are passed to LIKE, because MATCH only supports appended wildcards 'gun*', and not complex stuff like '*gun*'
                 
@@ -4020,14 +4045,20 @@ class DB( HydrusDB.HydrusDB ):
                     
                     like_param = ConvertWildcardToSQLiteLikeParameter( half_complete_subtag )
                     
-                    return self._STL( self._c.execute( 'SELECT subtag_id FROM subtags WHERE subtag LIKE ?;', ( like_param, ) ) )
+                    t_j = ' NATURAL JOIN subtags'
+                    pred = 'subtag LIKE ?'
+                    param = like_param
                     
                 else:
                     
                     subtags_fts4_param = '"' + half_complete_subtag + '"'
                     
-                    return self._STL( self._c.execute( 'SELECT docid FROM subtags_fts4 WHERE subtag MATCH ?;', ( subtags_fts4_param, ) ) )
+                    t_j = ', subtags_fts4 ON ( subtag_id = docid )'
+                    pred = 'subtag MATCH ?'
+                    param = subtags_fts4_param
                     
+                
+                return ( t_j, pred, param )
                 
             
             ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
@@ -4038,13 +4069,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if '*' in namespace:
                     
+                    table_join = 'tags NATURAL JOIN namespaces'
+                    
                     like_param = ConvertWildcardToSQLiteLikeParameter( namespace )
                     
-                    possible_namespace_ids = self._STL( self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( like_param, ) ) )
+                    predicates.append( 'namespace LIKE ?' )
                     
-                    predicates.append( 'namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) )
+                    parameters.append( like_param )
                     
                 else:
+                    
+                    table_join = 'tags'
                     
                     result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
                     
@@ -4062,33 +4097,48 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if half_complete_subtag not in ( '*', '' ):
                     
-                    possible_subtag_ids = GetPossibleSubtagIds( half_complete_subtag )
+                    ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_subtag )
                     
-                    predicates.append( 'subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) )
+                    table_join += t_j
+                    predicates.append( pred )
+                    parameters.append( param )
                     
                 
                 predicates_phrase = ' AND '.join( predicates )
                 
             else:
                 
+                table_join = 'tags'
+                
+                predicates = []
+                
                 if ClientSearch.ConvertTagToSearchable( half_complete_subtag ) in ( '', '*' ):
                     
                     return set()
                     
                 
-                like_param = ConvertWildcardToSQLiteLikeParameter( half_complete_subtag )
+                ( t_j, pred, param ) = GetSubTagSearchInfo( half_complete_subtag )
                 
-                possible_namespace_ids = self._STL( self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( like_param, ) ) )
+                table_join += t_j
+                predicates.append( pred )
+                parameters.append( param )
                 
-                possible_subtag_ids = GetPossibleSubtagIds( half_complete_subtag )
-                
-                predicates_phrase = 'namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' OR subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids )
+                predicates_phrase = ' OR '.join( predicates )
                 
             
         
         tag_ids = set()
         
-        cursor = self._c.execute( 'SELECT tag_id FROM tags WHERE ' + predicates_phrase + ';' )
+        query = 'SELECT DISTINCT tag_id FROM {} WHERE {};'.format( table_join, predicates_phrase )
+        
+        if len( parameters ) > 0:
+            
+            cursor = self._c.execute( query, parameters )
+            
+        else:
+            
+            cursor = self._c.execute( query )
+            
         
         group_of_tag_id_tuples = cursor.fetchmany( 1000 )
         
@@ -4115,7 +4165,21 @@ class DB( HydrusDB.HydrusDB ):
             sibling_service_key = service_key
             
         
-        sibling_tag_ids = self._GetTagSiblingIds( sibling_service_key, tag_ids )
+        sibling_service_id = self._GetServiceId( sibling_service_key )
+        
+        sibling_tag_ids = set()
+        
+        for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1024 ):
+            
+            if job_key is not None and job_key.IsCancelled():
+                
+                return set()
+                
+            
+            group_of_sibling_tag_ids = self._GetTagSiblingIds( sibling_service_id, group_of_tag_ids )
+            
+            sibling_tag_ids.update( group_of_sibling_tag_ids )
+            
         
         tag_ids.update( sibling_tag_ids )
         
@@ -4161,6 +4225,11 @@ class DB( HydrusDB.HydrusDB ):
                 search_tag_service_key = self._GetService( search_tag_service_id ).GetServiceKey()
                 
                 ids_to_count = self._GetAutocompleteCounts( search_tag_service_id, file_service_id, group_of_tag_ids, include_current, include_pending )
+                
+                if len( ids_to_count ) == 0:
+                    
+                    continue
+                    
                 
                 #
                 
@@ -7580,19 +7649,17 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _GetTagSiblingIds( self, service_key, tag_ids ):
+    def _GetTagSiblingIds( self, service_id, tag_ids ):
         
         search_tag_ids = set( tag_ids )
         searched_tag_ids = set()
         sibling_tag_ids = set()
         
-        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+        if service_id == self._combined_tag_service_id:
             
             service_predicate = ''
             
         else:
-            
-            service_id = self._GetServiceId( service_key )
             
             service_predicate = ' AND service_id = ' + str( service_id )
             
@@ -8341,6 +8408,27 @@ class DB( HydrusDB.HydrusDB ):
         return phash_ids
         
     
+    def _PHashesEnsureFileInSystem( self, hash_id ):
+        
+        result = self._c.execute( 'SELECT 1 FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            self._FileMaintenanceAddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+            
+        
+    def _PhashesEnsureFileOutOfSystem( self, hash_id ):
+        
+        current_phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+        
+        if len( current_phash_ids ) > 0:
+            
+            self._PHashesDisassociatePHashes( hash_id, current_phash_ids )
+            
+        
+        self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
+        
+    
     def _PHashesDeleteFile( self, hash_id ):
         
         phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
@@ -8348,7 +8436,6 @@ class DB( HydrusDB.HydrusDB ):
         self._PHashesDisassociatePHashes( hash_id, phash_ids )
         
         self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
-        self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
         
     
     def _PHashesDisassociatePHashes( self, hash_id, phash_ids ):
@@ -8453,12 +8540,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _PHashesGetMaintenanceStatus( self ):
         
-        ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
         ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
         
         searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
         
-        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count )
+        return ( num_branches_to_regen, searched_distances_to_count )
         
     
     def _PHashesGetPHashId( self, phash ):
@@ -8481,134 +8567,7 @@ class DB( HydrusDB.HydrusDB ):
         return phash_id
         
     
-    def _PHashesMaintainFiles( self, job_key = None, stop_time = None ):
-        
-        time_started = HydrusData.GetNow()
-        pub_job_key = False
-        job_key_pubbed = False
-        
-        if job_key is None:
-            
-            job_key = ClientThreading.JobKey( cancellable = True )
-            
-            pub_job_key = True
-            
-        
-        try:
-            
-            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) )
-            
-            client_files_manager = self._controller.client_files_manager
-            
-            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
-            
-            for ( i, hash_id ) in enumerate( hash_ids ):
-                
-                job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
-                
-                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
-                    
-                    self._controller.pub( 'modal_message', job_key )
-                    
-                    job_key_pubbed = True
-                    
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
-                
-                if should_quit or should_stop:
-                    
-                    return
-                    
-                
-                if i % 50 == 0:
-                    
-                    gc.collect()
-                    
-                
-                if i % 10 == 0:
-                    
-                    text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
-                    
-                    HG.client_controller.pub( 'splash_set_status_subtext', text )
-                    job_key.SetVariable( 'popup_text_1', text )
-                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-                    
-                
-                try:
-                    
-                    hash = self._GetHash( hash_id )
-                    mime = self._GetMime( hash_id )
-                    
-                    if mime in HC.MIMES_WE_CAN_PHASH:
-                        
-                        path = client_files_manager.GetFilePath( hash, mime )
-                        
-                        if mime in HC.MIMES_WE_CAN_PHASH:
-                            
-                            try:
-                                
-                                phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
-                                
-                            except Exception as e:
-                                
-                                HydrusData.Print( 'Could not generate phashes for ' + path )
-                                
-                                HydrusData.PrintException( e )
-                                
-                                phashes = []
-                                
-                            
-                        
-                    else:
-                        
-                        phashes = []
-                        
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    phashes = []
-                    
-                
-                existing_phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
-                
-                correct_phash_ids = self._PHashesAssociatePHashes( hash_id, phashes )
-                
-                incorrect_phash_ids = existing_phash_ids.difference( correct_phash_ids )
-                
-                if len( incorrect_phash_ids ) > 0:
-                    
-                    self._PHashesDisassociatePHashes( hash_id, incorrect_phash_ids )
-                    
-                
-                self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            
-            job_key.Finish()
-            
-            job_key.Delete( 5 )
-            
-        
-    
-    def _PHashesMaintainTree( self, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
-        
-        if abandon_if_other_work_to_do:
-            
-            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
-            
-            if result is not None:
-                
-                return
-                
-            
+    def _PHashesMaintainTree( self, job_key = None, stop_time = None ):
         
         time_started = HydrusData.GetNow()
         pub_job_key = False
@@ -8685,18 +8644,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
-            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
-            
-            if count > 0:
-                
-                return True
-                
-            
             search_distance = new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
-            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchone()
+            ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT 1 FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ? LIMIT 100 );', ( search_distance, ) ).fetchone()
             
-            if count > 100:
+            if count >= 100:
                 
                 return True
                 
@@ -8919,13 +8871,6 @@ class DB( HydrusDB.HydrusDB ):
         
         if abandon_if_other_work_to_do:
             
-            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
-            
-            if result is not None:
-                
-                return
-                
-            
             result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
             
             if result is not None:
@@ -9001,16 +8946,6 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.Delete( 5 )
             
-        
-    
-    def _PHashesSchedulePHashRegeneration( self, hash_ids = None ):
-        
-        if hash_ids is None:
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM files_info NATURAL JOIN current_files WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_WE_CAN_PHASH ) + ';', ( self._combined_local_file_service_id, ) ) )
-            
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO shape_maintenance_phash_regen ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
     def _PHashesSearch( self, hash_id, max_hamming_distance ):
@@ -9158,6 +9093,21 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return similar_hash_ids_and_distances
+        
+    
+    def _PHashesSetFileMetadata( self, hash_id, phashes ):
+        
+        current_phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
+        
+        if len( current_phash_ids ) > 0:
+            
+            self._PHashesDisassociatePHashes( hash_id, current_phash_ids )
+            
+        
+        if len( phashes ) > 0:
+            
+            self._PHashesAssociatePHashes( hash_id, phashes )
+            
         
     
     def _PopulateHashIdsToHashesCache( self, hash_ids, exception_on_error = False ):
@@ -10967,7 +10917,6 @@ class DB( HydrusDB.HydrusDB ):
         main_cache_tables.add( 'shape_perceptual_hashes' )
         main_cache_tables.add( 'shape_perceptual_hash_map' )
         main_cache_tables.add( 'shape_vptree' )
-        main_cache_tables.add( 'shape_maintenance_phash_regen' )
         main_cache_tables.add( 'shape_maintenance_branch_regen' )
         main_cache_tables.add( 'shape_search_cache' )
         main_cache_tables.add( 'integer_subtags' )
@@ -11522,449 +11471,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 300:
-            
-            try:
-                
-                sank_nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
-                
-                bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
-                
-                rules = bandwidth_manager.GetRules( sank_nc )
-                
-                rules = rules.Duplicate()
-                
-                rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1024 * 1024 ) # added as a compromise to try to reduce hydrus sankaku bandwidth usage until their new API and subscription model comes in
-                
-                bandwidth_manager.SetRules( sank_nc, rules )
-                
-                self._SetJSONDump( bandwidth_manager )
-                
-                message = 'Sankaku Complex have mentioned to me, Hydrus Dev, that they have recently been running into bandwidth problems. They were respectful in reaching out to me and I am sympathetic to their problem. After some discussion, rather than removing hydrus support for Sankaku entirely, I am in this version adding a new restrictive default bandwidth rule for the sankakucomplex.com domain of 64MB/day.'
-                
-                self.pub_initial_message( message )
-                
-                message = 'If you are a heavy Sankaku downloader, please bear with this limit until we can come up with a better solution. They told me they have plans for API upgrades and will be rolling out a subscription service in the coming months that may relieve this problem. I also expect to write some way to embed \'Here is how to support this source: (LINK)\' links into the downloader ui of my new downloader engine for those who can and wish to help out with bandwidth costs. Please check my release post if you would like to read more, and feel free to contact me directly to discuss it further.'
-                
-                self.pub_initial_message( message )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Attempting to add a new rule to sankaku\'s domain failed. The error has been printed to your log file--please let hydrus dev know the details.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 301:
-            
-            try:
-                
-                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
-                
-                self._SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to set new simple downloader parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 303:
-            
-            try:
-                
-                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                default_sdf = ClientDefaults.GetDefaultSimpleDownloaderFormulae()
-                
-                new_yiff_sdf = [ sdf for sdf in default_sdf if 'yiff' in sdf.GetName() ]
-                
-                existing_sdf = list( new_options.GetSimpleDownloaderFormulae() )
-                
-                existing_sdf.extend( new_yiff_sdf )
-                
-                new_options.SetSimpleDownloaderFormulae( existing_sdf )
-                
-                self._SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to set new simple downloader parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                url_classes = ClientDefaults.GetDefaultURLClasses()
-                
-                url_classes = [ url_class for url_class in url_classes if 'xbooru' in url_class.GetName() ]
-                
-                existing_url_classes = [ url_class for url_class in domain_manager.GetURLClasses() if 'xbooru' not in url_class.GetName() ]
-                
-                url_classes.extend( existing_url_classes )
-                
-                domain_manager.SetURLClasses( url_classes )
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update xbooru url classes failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            try:
-                
-                self._controller.pub( 'splash_set_status_subtext', 'generating normalised urls: initialising' )
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                all_url_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM urls;' ) )
-                
-                num_to_do = len( all_url_hash_ids )
-                
-                for ( i, hash_id ) in enumerate( all_url_hash_ids ):
-                    
-                    urls = self._STS( self._c.execute( 'SELECT url FROM urls WHERE hash_id = ?;', ( hash_id, ) ) )
-                    
-                    normalised_urls = set()
-                    
-                    for url in urls:
-                        
-                        normalised_url = domain_manager.NormaliseURL( url )
-                        
-                        if normalised_url not in urls:
-                            
-                            normalised_urls.add( normalised_url )
-                            
-                        
-                    
-                    if len( normalised_urls ) > 0:
-                        
-                        self._c.executemany( 'INSERT OR IGNORE INTO urls ( hash_id, url ) VALUES ( ?, ? );', ( ( hash_id, normalised_url ) for normalised_url in normalised_urls ) )
-                        
-                    
-                    if i % 100 == 0:
-                        
-                        self._controller.pub( 'splash_set_status_subtext', 'generating normalised uls: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
-                        
-                    
-                
-                message = 'You\'ll have some additional \'normalised\' known urls for your files this week. I expect to have some ui ready to collapse the old unnormalised semi-duplicates back down in the coming weeks.'
-                
-                self.pub_initial_message( message )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to generate normalised urls at the db level failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 304:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                url_classes = ClientDefaults.GetDefaultURLClasses()
-                
-                url_classes = [ url_class for url_class in url_classes if 'pixiv file page' in url_class.GetName() or 'yiff.party' in url_class.GetName() ]
-                
-                existing_url_classes = [ url_class for url_class in domain_manager.GetURLClasses() if 'pixiv file page' not in url_class.GetName() and 'yiff.party' not in url_class.GetName() ]
-                
-                url_classes.extend( existing_url_classes )
-                
-                domain_manager.SetURLClasses( url_classes )
-                
-                #
-                
-                existing_parsers = domain_manager.GetParsers()
-                
-                existing_names = { parser.GetName() for parser in existing_parsers }
-                
-                new_parsers = list( existing_parsers )
-                
-                default_parsers = ClientDefaults.GetDefaultParsers()
-                
-                interesting_new_parsers = [ parser for parser in default_parsers if parser.GetName() not in existing_names ] # add it
-                
-                new_parsers.extend( interesting_new_parsers )
-                
-                domain_manager.SetParsers( new_parsers )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update pixiv url class failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 305:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv file page', 'twitter tweet' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( '4chan thread api parser', 'pixiv single file page parser - japanese tags' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            message = 'The Newgrounds gallery parser no longer works! I hope to have it back once the new downloader engine\'s gallery work is done. You may want to pause any Newgrounds subscriptions.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 306:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'e621 file page parser', 'gelbooru 0.2.5 file page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 307:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'tumblr file page', 'artstation file page' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 308:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'inkbunny file page' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'inkbunny file page parser', 'gelbooru 0.2.0 file page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            #
-            
-            def get_url_id( url ):
-                
-                result = self._c.execute( 'SELECT url_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
-                
-                if result is None:
-                    
-                    try:
-                        
-                        domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
-                        
-                    except HydrusExceptions.URLClassException:
-                        
-                        domain = 'unknown.com'
-                        
-                    
-                    self._c.execute( 'INSERT INTO urls ( domain, url ) VALUES ( ?, ? );', ( domain, url ) )
-                    
-                    url_id = self._c.lastrowid
-                    
-                else:
-                    
-                    ( url_id, ) = result
-                    
-                
-                return url_id
-                
-            
-            self._controller.pub( 'splash_set_status_subtext', 'moving urls to better storage' )
-            
-            old_data = self._c.execute( 'SELECT hash_id, url FROM urls;' ).fetchall()
-            
-            self._c.execute( 'DROP TABLE urls;' )
-            
-            #
-            
-            self._c.execute( 'CREATE TABLE url_map ( hash_id INTEGER, url_id INTEGER, PRIMARY KEY ( hash_id, url_id ) );' )
-            self._CreateIndex( 'url_map', [ 'url_id' ] )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain TEXT, url TEXT UNIQUE );' )
-            self._CreateIndex( 'external_master.urls', [ 'domain' ] )
-            
-            #
-            
-            for ( hash_id, url ) in old_data:
-                
-                url_id = get_url_id( url )
-                
-                self._c.execute( 'INSERT OR IGNORE INTO url_map ( hash_id, url_id ) VALUES ( ?, ? );', ( hash_id, url_id ) )
-                
-            
-            #
-            
-            message = 'If you are an EU/EEA user and are subject to GDPR, the tumblr downloader has likely broken for you. If so, please hit _network->downloaders->DEBUG->do tumblr GDPR click-through_ to restore tumblr downloader functionality.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 309:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'inkbunny file page', 'artstation file page', 'artstation file page json api', 'pixiv file page', 'pixiv manga page', 'pixiv manga_big page' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'inkbunny file page parser', 'artstation file page api parser', 'twitter tweet parser', 'pixiv single file page parser', 'pixiv single file page parser - japanese tags', 'pixiv manga page parser', 'pixiv manga_big page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 310:
             
@@ -13579,6 +13085,41 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 359:
+            
+            self._c.execute( 'ANALYZE duplicate_files;' )
+            self._c.execute( 'ANALYZE duplicate_file_members;' )
+            self._c.execute( 'ANALYZE duplicate_false_positives;' )
+            self._c.execute( 'ANALYZE alternate_file_groups;' )
+            self._c.execute( 'ANALYZE alternate_file_group_members;' )
+            self._c.execute( 'ANALYZE potential_duplicate_pairs;' )
+            self._c.execute( 'ANALYZE confirmed_alternate_pairs;' )
+            
+            #
+            
+            result = self._c.execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( 'shape_maintenance_phash_regen', ) ).fetchone()
+            
+            if result is not None:
+                
+                try:
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, ? FROM shape_maintenance_phash_regen;', ( ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, 0 ) )
+                    
+                    self._c.execute( 'DROP TABLE shape_maintenance_phash_regen;' )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to migrate similar files maintenance schedule failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+            self._c.execute( 'ANALYZE file_maintenance_jobs;' )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -14136,7 +13677,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'last_shutdown_work_time': self._SetLastShutdownWorkTime( *args, **kwargs )
         elif action == 'local_booru_share': self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'maintain_similar_files_search_for_potential_duplicates': self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
-        elif action == 'maintain_similar_files_phashes': self._PHashesMaintainFiles( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self._PHashesMaintainTree( *args, **kwargs )
         elif action == 'process_repository': result = self._ProcessRepositoryUpdates( *args, **kwargs )
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
@@ -14149,7 +13689,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
-        elif action == 'schedule_full_phash_regen': self._PHashesSchedulePHashRegeneration()
         elif action == 'serialisable_simple': self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisable': self._SetJSONDump( *args, **kwargs )
         elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )

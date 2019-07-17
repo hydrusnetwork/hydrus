@@ -155,11 +155,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'ser*' )
         
-        preds = set()
-        
-        preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
-        
-        self.assertEqual( set( result ), preds )
+        self.assertEqual( result, [] )
         
         #
         

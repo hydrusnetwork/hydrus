@@ -397,7 +397,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     try:
                         
-                        if os.path.exists( path ):
+                        if os.path.exists( path ) and not os.path.isdir( path ):
                             
                             ClientPaths.DeletePath( path )
                             
@@ -413,15 +413,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        HydrusData.ShowText( 'Import folder tried to delete ' + path + ', but could not:' )
-                        
-                        HydrusData.ShowException( e )
-                        
-                        HydrusData.ShowText( 'Import folder has been paused.' )
-                        
-                        self._paused = True
-                        
-                        return
+                        raise Exception( 'Tried to delete "{}", but could not.'.format( path ) )
                         
                     
                 
@@ -444,10 +436,10 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         if not os.path.exists( dest_dir ):
                             
-                            raise HydrusExceptions.DataMissing( 'The move location "' + dest_dir + '" does not exist!' )
+                            raise Exception( 'Tried to move "{}" to "{}", but the destination directory did not exist.'.format( path, dest_dir ) )
                             
                         
-                        if os.path.exists( path ):
+                        if os.path.exists( path ) and not os.path.isdir( path ):
                             
                             filename = os.path.basename( path )
                             
@@ -496,11 +488,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _CheckFolder( self, job_key ):
         
-        filenames = os.listdir( self._path )
-        
-        raw_paths = [ os.path.join( self._path, filename ) for filename in filenames ]
-        
-        all_paths = ClientFiles.GetAllPaths( raw_paths )
+        all_paths = ClientFiles.GetAllFilePaths( [ self._path ] )
         
         all_paths = HydrusPaths.FilterFreePaths( all_paths )
         

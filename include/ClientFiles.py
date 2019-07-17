@@ -26,6 +26,9 @@ REGENERATE_FILE_DATA_JOB_OTHER_HASHES = 3
 REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES = 4
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE = 5
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA = 6
+REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS = 7
+REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP = 8
+REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA = 9
 
 regen_file_enum_to_str_lookup = {}
 
@@ -36,6 +39,9 @@ regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 'regene
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 'delete duplicate neighbours with incorrect file extension'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = 'check if file is present in file system'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 'check full file data integrity'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'fix file read/write permissions'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'check for membership in the similar files search system'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'regenerate similar files metadata'
 
 regen_file_enum_to_ideal_job_size_lookup = {}
 
@@ -46,6 +52,9 @@ regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES 
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 100
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = 10000
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 100
+regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 250
+regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 100
+regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 100
 
 regen_file_enum_to_overruled_jobs = {}
 
@@ -56,14 +65,17 @@ regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ]
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = []
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = []
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ]
 
-ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_COMPLETE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
+ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_COMPLETE, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
 
-def GetAllPaths( raw_paths, do_human_sort = True ):
+def GetAllFilePaths( raw_paths, do_human_sort = True ):
     
     file_paths = []
     
-    paths_to_process = raw_paths
+    paths_to_process = list( raw_paths )
     
     while len( paths_to_process ) > 0:
         
@@ -161,7 +173,7 @@ class ClientFilesManager( object ):
             
             if not os.path.exists( thumb_dir ):
                 
-                raise HydrusExceptions.DirectoryMissingException( 'The directory {} was not found! Reconnect the missing location or shut down the client immediately!' )
+                raise HydrusExceptions.DirectoryMissingException( 'The directory {} was not found! Reconnect the missing location or shut down the client immediately!'.format( thumb_dir ) )
                 
             
             raise HydrusExceptions.FileMissingException( 'The thumbnail for file "{}" failed to write to path "{}". This event suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.'.format( hash.hex(), dest_path ) )
@@ -537,7 +549,7 @@ class ClientFilesManager( object ):
         
         if not os.path.exists( subdir ):
             
-            raise HydrusExceptions.DirectoryMissingException( 'The directory {} was not found! Reconnect the missing location or shut down the client immediately!' )
+            raise HydrusExceptions.DirectoryMissingException( 'The directory {} was not found! Reconnect the missing location or shut down the client immediately!'.format( subdir ) )
             
         
         raise HydrusExceptions.FileMissingException( 'File for ' + hash.hex() + ' not found!' )
@@ -1403,11 +1415,18 @@ class FilesMaintenanceManager( object ):
         return file_was_bad
         
     
+    def _CheckSimilarFilesMembership( self, media_result ):
+        
+        mime = media_result.GetMime()
+        
+        return mime in HC.MIMES_WE_CAN_PHASH
+        
+    
     def _ClearJobs( self, hashes, job_type ):
         
         cleared_jobs = [ ( hash, job_type, None ) for hash in hashes ]
         
-        self._controller.Write( 'file_maintenance_clear_jobs', cleared_jobs )
+        self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
         
     
     def _DeleteNeighbourDupes( self, media_result ):
@@ -1416,6 +1435,23 @@ class FilesMaintenanceManager( object ):
         mime = media_result.GetMime()
         
         self._controller.client_files_manager.DeleteNeighbourDupes( hash, mime )
+        
+    
+    def _FixFilePermissions( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            HydrusPaths.MakeFileWritable( path )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
         
     
     def _RegenFileData( self, media_result ):
@@ -1484,6 +1520,32 @@ class FilesMaintenanceManager( object ):
             
             return None
             
+        
+    
+    def _RegenSimilarFilesMetadata( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.MIMES_WE_CAN_PHASH:
+            
+            self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
+            
+            return None
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+        phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
+        
+        return phashes
         
     
     def _RegenFileThumbnailForce( self, media_result ):
@@ -1602,6 +1664,18 @@ class FilesMaintenanceManager( object ):
                         
                         self._DeleteNeighbourDupes( media_result )
                         
+                    elif job_type == REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP:
+                        
+                        additional_data = self._CheckSimilarFilesMembership( media_result )
+                        
+                    elif job_type == REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA:
+                        
+                        additional_data = self._RegenSimilarFilesMetadata( media_result )
+                        
+                    elif job_type == REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS:
+                        
+                        self._FixFilePermissions( media_result )
+                        
                     elif job_type in ( REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ):
                         
                         file_was_bad = self._CheckFileIntegrity( media_result, job_type )
@@ -1656,7 +1730,7 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def DoMaintenance( self, mandated_job_type = None, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
+    def DoMaintenance( self, mandated_job_types = None, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
         if maintenance_mode == HC.MAINTENANCE_IDLE:
             
@@ -1693,7 +1767,7 @@ class FilesMaintenanceManager( object ):
                 
                 while True:
                     
-                    job = self._controller.Read( 'file_maintenance_get_job', mandated_job_type )
+                    job = self._controller.Read( 'file_maintenance_get_job', mandated_job_types )
                     
                     if job is None:
                         

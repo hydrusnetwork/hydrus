@@ -555,16 +555,17 @@ def MakeFileWritable( path ):
         if HC.PLATFORM_WINDOWS:
             
             # this is actually the same value as S_IWUSR, but let's not try to second guess ourselves
-            desired_bit = stat.S_IWRITE
+            desired_bits = stat.S_IREAD | stat.S_IWRITE
             
         else:
             
-            desired_bit = stat.S_IWUSR
+            # guarantee 644 for regular files m8
+            desired_bits = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
             
         
-        if not desired_bit & current_bits:
+        if not ( desired_bits & current_bits ) == desired_bits:
             
-            os.chmod( path, current_bits | desired_bit )
+            os.chmod( path, current_bits | desired_bits )
             
         
     except Exception as e:

@@ -319,6 +319,11 @@ def GetXYTopTLP( screen_position ):
     
 def IsWXAncestor( child, ancestor, through_tlws = False ):
     
+    if child == ancestor:
+        
+        return True
+        
+    
     parent = child
     
     if through_tlws:
@@ -335,14 +340,16 @@ def IsWXAncestor( child, ancestor, through_tlws = False ):
         
     else:
         
+        # get parent first, then test, then loop test. otherwise we exclude ancestor if it is a tlp
+        
         while not isinstance( parent, wx.TopLevelWindow ):
+            
+            parent = parent.GetParent()
             
             if parent == ancestor:
                 
                 return True
                 
-            
-            parent = parent.GetParent()
             
         
     

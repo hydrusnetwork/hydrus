@@ -1377,9 +1377,12 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     hydrus_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hydrus_path )
                     
-                    initial_dict[ hydrus_path ] = initial_dict[ portable_hydrus_path ]
-                    
-                    del initial_dict[ portable_hydrus_path ]
+                    if hydrus_path != portable_hydrus_path:
+                        
+                        initial_dict[ hydrus_path ] = initial_dict[ portable_hydrus_path ]
+                        
+                        del initial_dict[ portable_hydrus_path ]
+                        
                     
                     if hydrus_path not in current_file_locations:
                         
@@ -3577,20 +3580,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             ac_panel = ClientGUICommon.StaticBox( self, 'tag autocomplete' )
             
-            self._num_autocomplete_chars = wx.SpinCtrl( ac_panel, min = 1, max = 100 )
-            self._num_autocomplete_chars.SetToolTip( 'how many characters you enter before the gui fetches autocomplete results from the db. (otherwise, it will only fetch exact matches)' + os.linesep + 'increase this if you find autocomplete results are slow' )
+            self._autocomplete_results_fetch_automatically = wx.CheckBox( ac_panel )
             
-            self._fetch_ac_results_automatically = wx.CheckBox( ac_panel )
-            self._fetch_ac_results_automatically.Bind( wx.EVT_CHECKBOX, self.EventFetchAuto )
-            
-            self._autocomplete_long_wait = wx.SpinCtrl( ac_panel, min = 0, max = 10000 )
-            self._autocomplete_long_wait.SetToolTip( 'how long the gui will typically wait, after you enter a character, before it queries the db with what you have entered so far' )
-            
-            self._autocomplete_short_wait_chars = wx.SpinCtrl( ac_panel, min = 1, max = 100 )
-            self._autocomplete_short_wait_chars.SetToolTip( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
-            
-            self._autocomplete_short_wait = wx.SpinCtrl( ac_panel, min = 0, max = 10000 )
-            self._autocomplete_short_wait.SetToolTip( 'how long the gui will typically wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            self._autocomplete_exact_match_threshold = ClientGUICommon.NoneableSpinCtrl( ac_panel, none_phrase = 'always do full search', min = 1, max = 1024 )
+            self._autocomplete_exact_match_threshold.SetToolTip( 'If the search input has this many characters or fewer, it will fetch exact results rather than full autocomplete results.' )
             
             #
             
@@ -3624,17 +3617,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._video_buffer_size_mb.SetValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
             
-            self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
+            self._autocomplete_results_fetch_automatically.SetValue( self._new_options.GetBoolean( 'autocomplete_results_fetch_automatically' ) )
             
-            self._fetch_ac_results_automatically.SetValue( HC.options[ 'fetch_ac_results_automatically' ] )
-            
-            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
-            
-            self._autocomplete_long_wait.SetValue( long_wait )
-            
-            self._autocomplete_short_wait_chars.SetValue( char_limit )
-            
-            self._autocomplete_short_wait.SetValue( short_wait )
+            self._autocomplete_exact_match_threshold.SetValue( self._new_options.GetNoneableInteger( 'autocomplete_exact_match_threshold' ) )
             
             self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
             
@@ -3714,11 +3699,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Automatically fetch autocomplete results after a short delay: ', self._fetch_ac_results_automatically ) )
-            rows.append( ( 'Autocomplete long wait character threshold: ', self._num_autocomplete_chars ) )
-            rows.append( ( 'Autocomplete long wait (ms): ', self._autocomplete_long_wait ) )
-            rows.append( ( 'Autocomplete short wait character threshold: ', self._autocomplete_short_wait_chars ) )
-            rows.append( ( 'Autocomplete short wait (ms): ', self._autocomplete_short_wait ) )
+            rows.append( ( 'Automatically fetch autocomplete results: ', self._autocomplete_results_fetch_automatically ) )
+            rows.append( ( 'Fetch exact match results if input has <= this many characters: ', self._autocomplete_exact_match_threshold ) )
             
             gridbox = ClientGUICommon.WrapInGrid( ac_panel, rows )
             
@@ -3744,7 +3726,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self.EventFetchAuto( None )
             self.EventFullscreensUpdate( None )
             self.EventThumbnailsUpdate( None )
             self.EventVideoBufferUpdate( None )
@@ -3765,24 +3746,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             message += 'Unless you are testing, do not go crazy with this stuff. You can set 8192MB if you like, but there are diminishing (and potentially negative) returns.'
             
             wx.MessageBox( message )
-            
-        
-        def EventFetchAuto( self, event ):
-            
-            if self._fetch_ac_results_automatically.GetValue() == True:
-                
-                self._num_autocomplete_chars.Enable()
-                self._autocomplete_long_wait.Enable()
-                self._autocomplete_short_wait_chars.Enable()
-                self._autocomplete_short_wait.Enable()
-                
-            else:
-                
-                self._num_autocomplete_chars.Disable()
-                self._autocomplete_long_wait.Disable()
-                self._autocomplete_short_wait_chars.Disable()
-                self._autocomplete_short_wait.Disable()
-                
             
         
         def EventFullscreensUpdate( self, event ):
@@ -3841,17 +3804,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
             
-            HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
-            
-            HC.options[ 'fetch_ac_results_automatically' ] = self._fetch_ac_results_automatically.GetValue()
-            
-            long_wait = self._autocomplete_long_wait.GetValue()
-            
-            char_limit = self._autocomplete_short_wait_chars.GetValue()
-            
-            short_wait = self._autocomplete_short_wait.GetValue()
-            
-            HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
+            self._new_options.SetBoolean( 'autocomplete_results_fetch_automatically', self._autocomplete_results_fetch_automatically.GetValue() )
+            self._new_options.SetNoneableInteger( 'autocomplete_exact_match_threshold', self._autocomplete_exact_match_threshold.GetValue() )
             
         
     

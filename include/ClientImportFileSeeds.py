@@ -314,8 +314,13 @@ class FileImportJob( object ):
             
             if HG.file_import_report_mode:
                 
-                HydrusData.ShowText( 'File import job generated {} phashes'.format( len( self._phashes ) ) )
+                HydrusData.ShowText( 'File import job generated {} phashes: {}'.format( len( self._phashes ), [ phash.hex() for phash in self._phashes ] ) )
                 
+            
+        
+        if HG.file_import_report_mode:
+            
+            HydrusData.ShowText( 'File import job generating other hashes' )
             
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )

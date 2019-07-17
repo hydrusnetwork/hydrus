@@ -1,3 +1,4 @@
+from . import ClientGUIScrolledPanelsButtonQuestions
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUITopLevelWindows
 from . import HydrusExceptions
@@ -30,6 +31,39 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             
             raise HydrusExceptions.CancelledException()
             
+        
+    
+def GetFinishFilteringAnswer( win, label ):
+    
+    with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, label ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionFinishFilteringPanel( dlg, label )
+        
+        dlg.SetPanel( panel )
+        
+        return dlg.ShowModal()
+        
+    
+def GetInterstitialFilteringAnswer( win, label ):
+    
+    with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, label ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionCommitInterstitialFilteringPanel( dlg, label )
+        
+        dlg.SetPanel( panel )
+        
+        return dlg.ShowModal()
+        
+    
+def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no' ):
+    
+    with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, title ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionYesNoPanel( dlg, message, yes_label = yes_label, no_label = no_label )
+        
+        dlg.SetPanel( panel )
+        
+        return dlg.ShowModal()
         
     
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):

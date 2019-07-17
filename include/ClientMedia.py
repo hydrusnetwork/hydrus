@@ -652,6 +652,7 @@ class LocationsManager( object ):
                     self._inbox = False
                     
                     self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    self._deleted.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                     
                 
             elif action == HC.CONTENT_UPDATE_UNDELETE:
@@ -1080,7 +1081,10 @@ class MediaList( object ):
     
     def DeletePending( self, service_key ):
         
-        for media in self._collected_media: media.DeletePending( service_key )
+        for media in self._collected_media:
+            
+            media.DeletePending( service_key )
+            
         
     
     def GenerateMediaResults( self, has_location = None, discriminant = None, selected_media = None, unrated = None, for_media_viewer = False ):

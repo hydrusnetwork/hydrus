@@ -1028,10 +1028,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._preparing_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'maintenance' )
         
-        self._num_phashes_to_regen = ClientGUICommon.BetterStaticText( self._preparing_panel )
+        self._eligible_files = ClientGUICommon.BetterStaticText( self._preparing_panel )
         self._num_branches_to_regen = ClientGUICommon.BetterStaticText( self._preparing_panel )
         
-        self._phashes_button = ClientGUICommon.BetterBitmapButton( self._preparing_panel, CC.GlobalBMPs.play, self._RegeneratePhashes )
         self._branches_button = ClientGUICommon.BetterBitmapButton( self._preparing_panel, CC.GlobalBMPs.play, self._RebalanceTree )
         
         #
@@ -1121,9 +1120,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         gridbox_1.AddGrowableCol( 0, 1 )
         
-        gridbox_1.Add( self._num_phashes_to_regen, CC.FLAGS_VCENTER )
+        gridbox_1.Add( self._eligible_files, CC.FLAGS_VCENTER )
         gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        gridbox_1.Add( self._phashes_button, CC.FLAGS_VCENTER )
+        gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         gridbox_1.Add( self._num_branches_to_regen, CC.FLAGS_VCENTER )
         gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         gridbox_1.Add( self._branches_button, CC.FLAGS_VCENTER )
@@ -1346,19 +1345,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _RegeneratePhashes( self ):
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'initialising' )
-        
-        self._controller.Write( 'maintain_similar_files_phashes', job_key = job_key )
-        
-        self._controller.pub( 'modal_message', job_key )
-        
-        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
-        
-    
     def _ResetUnknown( self ):
         
         text = 'This will delete all the potential duplicate pairs and reset their files\' search status.'
@@ -1465,28 +1451,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             return
             
         
-        ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count ) = self._similar_files_maintenance_status
+        ( num_branches_to_regen, searched_distances_to_count ) = self._similar_files_maintenance_status
         
         self._cog_button.Enable()
         
-        total_num_files = max( num_phashes_to_regen, sum( searched_distances_to_count.values() ) )
+        total_num_files = sum( searched_distances_to_count.values() )
         
-        if num_phashes_to_regen == 0:
-            
-            self._num_phashes_to_regen.SetLabelText( 'All ' + HydrusData.ToHumanInt( total_num_files ) + ' eligible files up to date!' )
-            
-            self._phashes_button.Disable()
-            
-        else:
-            
-            num_done = total_num_files - num_phashes_to_regen
-            
-            self._num_phashes_to_regen.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( num_done, total_num_files ) + ' eligible files up to date.' )
-            
-            self._phashes_button.Enable()
-            
-            work_can_be_done = True
-            
+        self._eligible_files.SetLabelText( '{} eligible files in the system.'.format( HydrusData.ToHumanInt( total_num_files ) ) )
         
         if num_branches_to_regen == 0:
             

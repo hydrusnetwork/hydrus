@@ -1087,27 +1087,6 @@ class PagesNotebook( wx.Notebook ):
         return [ self.GetPage( i ) for i in range( self.GetPageCount() ) ]
         
     
-    def _GetPageFromPageKey( self, page_key ):
-        
-        for page in self._GetPages():
-            
-            if page.GetPageKey() == page_key:
-                
-                return page
-                
-            
-            if isinstance( page, PagesNotebook ):
-                
-                if page.HasPageKey( page_key ):
-                    
-                    return page._GetPageFromPageKey( page_key )
-                    
-                
-            
-        
-        return None
-        
-    
     def _GetPageFromName( self, page_name ):
         
         for page in self._GetPages():
@@ -2020,6 +1999,27 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def GetPageFromPageKey( self, page_key ):
+        
+        for page in self._GetPages():
+            
+            if page.GetPageKey() == page_key:
+                
+                return page
+                
+            
+            if isinstance( page, PagesNotebook ):
+                
+                if page.HasPageKey( page_key ):
+                    
+                    return page.GetPageFromPageKey( page_key )
+                    
+                
+            
+        
+        return None
+        
+    
     def GetPageKey( self ):
         
         return self._page_key
@@ -2261,7 +2261,7 @@ class PagesNotebook( wx.Notebook ):
     
     def MediaDragAndDropDropped( self, source_page_key, hashes ):
         
-        source_page = self._GetPageFromPageKey( source_page_key )
+        source_page = self.GetPageFromPageKey( source_page_key )
         
         if source_page is None:
             
@@ -2620,7 +2620,7 @@ class PagesNotebook( wx.Notebook ):
     
     def PageDragAndDropDropped( self, page_key ):
         
-        page = self._GetPageFromPageKey( page_key )
+        page = self.GetPageFromPageKey( page_key )
         
         if page is None:
             

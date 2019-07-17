@@ -42,6 +42,7 @@ from . import ClientConstants as CC
 from . import ClientDB
 from . import ClientGUI
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUITopLevelWindows
 import gc
@@ -255,7 +256,7 @@ class Controller( HydrusController.HydrusController ):
         
     
     def CheckAlreadyRunning( self ):
-    
+        
         while HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
             
             self.pub( 'splash_set_status_text', 'client already running' )
@@ -266,12 +267,13 @@ class Controller( HydrusController.HydrusController ):
                 message += os.linesep * 2
                 message += 'If the old instance is closing and does not quit for a _very_ long time, it is usually safe to force-close it from task manager.'
                 
-                with ClientGUIDialogs.DialogYesNo( self._splash, message, 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self._splash, message, title = 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' )
+                
+                if result != wx.ID_YES:
                     
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        raise HydrusExceptions.ShutdownException()
-                        
+                    HG.shutting_down_due_to_already_running = True
+                    
+                    raise HydrusExceptions.ShutdownException()
                     
                 
             
@@ -450,7 +452,10 @@ class Controller( HydrusController.HydrusController ):
             self.ShutdownView()
             self.ShutdownModel()
             
-            HydrusData.CleanRunningFile( self.db_dir, 'client' )
+            if not HG.shutting_down_due_to_already_running:
+                
+                HydrusData.CleanRunningFile( self.db_dir, 'client' )
+                
             
         else:
             
@@ -934,20 +939,6 @@ class Controller( HydrusController.HydrusController ):
         
         if self.new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
-            phashes_stop_time = stop_time
-            
-            if phashes_stop_time is None:
-                
-                phashes_stop_time = HydrusData.GetNow() + 15
-                
-            
-            self.WriteSynchronous( 'maintain_similar_files_phashes', stop_time = phashes_stop_time )
-            
-            if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
-                
-                return
-                
-            
             tree_stop_time = stop_time
             
             if tree_stop_time is None:
@@ -955,7 +946,7 @@ class Controller( HydrusController.HydrusController ):
                 tree_stop_time = HydrusData.GetNow() + 30
                 
             
-            self.WriteSynchronous( 'maintain_similar_files_tree', stop_time = tree_stop_time, abandon_if_other_work_to_do = True )
+            self.WriteSynchronous( 'maintain_similar_files_tree', stop_time = tree_stop_time )
             
             if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
                 
@@ -1493,7 +1484,10 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
             
-            HydrusData.CleanRunningFile( self.db_dir, 'client' )
+            if not HG.shutting_down_due_to_already_running:
+                
+                HydrusData.CleanRunningFile( self.db_dir, 'client' )
+                
             
         except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ):
             

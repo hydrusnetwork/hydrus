@@ -26,6 +26,7 @@ subprocess_report_mode = False
 subscription_report_mode = False
 hover_window_report_mode = False
 file_import_report_mode = False
+phash_generation_report_mode = False
 menu_profile_mode = False
 network_report_mode = False
 pubsub_report_mode = False
@@ -37,6 +38,8 @@ no_page_limit_mode = False
 thumbnail_debug_mode = False
 server_busy = False
 currently_uploading_pending = False
+
+shutting_down_due_to_already_running = False
 
 do_idle_shutdown_work = False
 shutdown_complete = False

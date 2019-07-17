@@ -15,6 +15,7 @@ from . import ClientGUIHoverFrames
 from . import ClientGUIMedia
 from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
+from . import ClientGUIScrolledPanelsButtonQuestions
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIShortcuts
@@ -3131,25 +3132,22 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions?'
             
-            with ClientGUIDialogs.DialogFinishFiltering( self, label ) as dlg:
+            result = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+            
+            if result == wx.ID_CANCEL:
                 
-                modal = dlg.ShowModal()
+                close_was_triggered_by_everything_being_processed = len( self._unprocessed_pairs ) == 0
                 
-                if modal == wx.ID_CANCEL:
+                if close_was_triggered_by_everything_being_processed:
                     
-                    close_was_triggered_by_everything_being_processed = len( self._unprocessed_pairs ) == 0
+                    self._GoBack()
                     
-                    if close_was_triggered_by_everything_being_processed:
-                        
-                        self._GoBack()
-                        
-                    
-                    return
-                    
-                elif modal == wx.ID_YES:
-                    
-                    self._CommitProcessed()
-                    
+                
+                return
+                
+            elif result == wx.ID_YES:
+                
+                self._CommitProcessed()
                 
             
         
@@ -3542,29 +3540,26 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions and continue?'
             
-            with ClientGUIDialogs.DialogCommitInterstitialFiltering( self, label ) as dlg:
+            result = ClientGUIDialogsQuick.GetInterstitialFilteringAnswer( self, label )
+            
+            if result == wx.ID_YES:
                 
-                modal = dlg.ShowModal()
+                self._CommitProcessed()
                 
-                if modal == wx.ID_YES:
-                    
-                    self._CommitProcessed()
-                    
-                else:
+            else:
+                
+                ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                
+                self._unprocessed_pairs.append( hash_pair )
+                
+                while was_auto_skipped:
                     
                     ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                     
                     self._unprocessed_pairs.append( hash_pair )
                     
-                    while was_auto_skipped:
-                        
-                        ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
-                        
-                        self._unprocessed_pairs.append( hash_pair )
-                        
-                    
-                    self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
-                    
+                
+                self._hashes_due_to_be_deleted_in_this_batch.difference_update( hash_pair )
                 
             
         
@@ -4265,64 +4260,61 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
                 
-                with ClientGUIDialogs.DialogFinishFiltering( self, label ) as dlg:
+                result = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+                
+                if result == wx.ID_CANCEL:
                     
-                    result = dlg.ShowModal()
+                    if self._current_media in self._kept:
+                        
+                        self._kept.remove( self._current_media )
+                        
                     
-                    if result == wx.ID_CANCEL:
+                    if self._current_media in self._deleted:
                         
-                        if self._current_media in self._kept:
-                            
-                            self._kept.remove( self._current_media )
-                            
+                        self._deleted.remove( self._current_media )
                         
-                        if self._current_media in self._deleted:
-                            
-                            self._deleted.remove( self._current_media )
-                            
+                    
+                    return
+                    
+                elif result == wx.ID_YES:
+                    
+                    def process_in_thread( service_keys_and_content_updates ):
                         
-                        return
-                        
-                    elif result == wx.ID_YES:
-                        
-                        def process_in_thread( service_keys_and_content_updates ):
+                        for ( service_key, content_update ) in service_keys_and_content_updates:
                             
-                            for ( service_key, content_update ) in service_keys_and_content_updates:
-                                
-                                HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
-                                
+                            HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
                             
                         
-                        self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
-                        self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                    
+                    self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
+                    self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                    
+                    service_keys_and_content_updates = []
+                    
+                    reason = 'Deleted in Archive/Delete filter.'
+                    
+                    for chunk_of_hashes in HydrusData.SplitListIntoChunks( self._deleted_hashes, 64 ):
                         
-                        service_keys_and_content_updates = []
+                        service_keys_and_content_updates.append( ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) ) )
                         
-                        reason = 'Deleted in Archive/Delete filter.'
+                    
+                    service_keys_and_content_updates.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ) )
+                    
+                    HG.client_controller.CallToThread( process_in_thread, service_keys_and_content_updates )
+                    
+                    self._kept = set()
+                    self._deleted = set()
+                    
+                    self._current_media = self._GetFirst() # so the pubsub on close is better
+                    
+                    if HC.options[ 'remove_filtered_files' ]:
                         
-                        for chunk_of_hashes in HydrusData.SplitListIntoChunks( self._deleted_hashes, 64 ):
-                            
-                            service_keys_and_content_updates.append( ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) ) )
-                            
+                        all_hashes = set()
                         
-                        service_keys_and_content_updates.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ) )
+                        all_hashes.update( self._deleted_hashes )
+                        all_hashes.update( self._kept_hashes )
                         
-                        HG.client_controller.CallToThread( process_in_thread, service_keys_and_content_updates )
-                        
-                        self._kept = set()
-                        self._deleted = set()
-                        
-                        self._current_media = self._GetFirst() # so the pubsub on close is better
-                        
-                        if HC.options[ 'remove_filtered_files' ]:
-                            
-                            all_hashes = set()
-                            
-                            all_hashes.update( self._deleted_hashes )
-                            all_hashes.update( self._kept_hashes )
-                            
-                            HG.client_controller.pub( 'remove_media', self._page_key, all_hashes )
-                            
+                        HG.client_controller.pub( 'remove_media', self._page_key, all_hashes )
                         
                     
                 

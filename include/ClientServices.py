@@ -911,6 +911,7 @@ class ServiceRestricted( ServiceRemote ):
             
             if command in ( '', 'account', 'access_key_verification' ):
                 
+                network_job.OverrideBandwidth()
                 network_job.OnlyTryConnectionOnce()
                 
             
@@ -1909,6 +1910,34 @@ class ServiceIPFS( ServiceRemote ):
         HG.client_controller.CallToThread( off_wx )
         
     
+    def IsPinned( self, multihash ):
+        
+        with self._lock:
+            
+            api_base_url = self._GetAPIBaseURL()
+            
+        
+        # check if it is pinned. if we try to unpin something not pinned, the daemon 500s
+        
+        url = api_base_url + '/pin/ls?arg={}'.format( multihash )
+        
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+        
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        parsing_text = network_job.GetContentText()
+        
+        j = json.loads( parsing_text )
+        
+        file_is_pinned = 'Keys' in j and multihash in j['Keys']
+        
+        return file_is_pinned
+        
+    
     def PinDirectory( self, hashes, note ):
         
         job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
@@ -2139,15 +2168,18 @@ class ServiceIPFS( ServiceRemote ):
             api_base_url = self._GetAPIBaseURL()
             
         
-        url = api_base_url + 'pin/rm/' + multihash
-        
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
-        
-        network_job.OverrideBandwidth()
-        
-        HG.client_controller.network_engine.AddJob( network_job )
-        
-        network_job.WaitUntilDone()
+        if self.IsPinned( multihash ):
+            
+            url = api_base_url + 'pin/rm/' + multihash
+            
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
+            
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_DELETE, multihash ) ]
         
@@ -2161,9 +2193,9 @@ class ServiceIPFS( ServiceRemote ):
             api_base_url = self._GetAPIBaseURL()
             
         
-        url = api_base_url + 'pin/rm/' + multihash
-        
-        try:
+        if self.IsPinned( multihash ):
+            
+            url = api_base_url + 'pin/rm/' + multihash
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
@@ -2172,13 +2204,6 @@ class ServiceIPFS( ServiceRemote ):
             HG.client_controller.network_engine.AddJob( network_job )
             
             network_job.WaitUntilDone()
-            
-        except HydrusExceptions.NetworkException as e:
-            
-            if 'not pinned' not in str( e ):
-                
-                raise
-                
             
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]

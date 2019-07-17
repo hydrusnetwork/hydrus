@@ -31,7 +31,17 @@ def GenerateNumPyImage( path, mime ):
     
 def GenerateShapePerceptualHashes( path, mime ):
     
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: loading image' )
+        
+    
     numpy_image = GenerateNumPyImage( path, mime )
+    
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: image shape: {}'.format( numpy_image.shape ) )
+        
     
     ( y, x, depth ) = numpy_image.shape
     
@@ -67,11 +77,27 @@ def GenerateShapePerceptualHashes( path, mime ):
         numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2GRAY )
         
     
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: grey image shape: {}'.format( numpy_image_gray.shape ) )
+        
+    
     numpy_image_tiny = cv2.resize( numpy_image_gray, ( 32, 32 ), interpolation = cv2.INTER_AREA )
+    
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: tiny image shape: {}'.format( numpy_image_tiny.shape ) )
+        
     
     # convert to float and calc dct
     
     numpy_image_tiny_float = numpy.float32( numpy_image_tiny )
+    
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: tiny float image shape: {}'.format( numpy_image_tiny_float.shape ) )
+        HydrusData.ShowText( 'phash generation: generating dct' )
+        
     
     dct = cv2.dct( numpy_image_tiny_float )
     
@@ -90,9 +116,19 @@ def GenerateShapePerceptualHashes( path, mime ):
     
     median = numpy.median( dct_88.reshape( 64 )[1:] )
     
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: median: {}'.format( median ) )
+        
+    
     # make a monochromatic, 64-bit hash of whether the entry is above or below the median
     
     dct_88_boolean = dct_88 > median
+    
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: collapsing bytes' )
+        
     
     # convert TTTFTFTF to 11101010 by repeatedly shifting answer and adding 0 or 1
     # you can even go ( a << 1 ) + b and leave out the initial param on the reduce call as bools act like ints for this
@@ -131,6 +167,11 @@ def GenerateShapePerceptualHashes( path, mime ):
     
     phash = bytes( list_of_bytes ) # this works!
     
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: phash: {}'.format( phash.hex() ) )
+        
+    
     # now discard the blank hash, which is 1000000... and not useful
     
     phashes = set()
@@ -138,6 +179,11 @@ def GenerateShapePerceptualHashes( path, mime ):
     phashes.add( phash )
     
     phashes = DiscardBlankPerceptualHashes( phashes )
+    
+    if HG.phash_generation_report_mode:
+        
+        HydrusData.ShowText( 'phash generation: final phashes: {}'.format( len( phashes ) ) )
+        
     
     # we good
     

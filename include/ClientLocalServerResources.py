@@ -27,7 +27,7 @@ LOCAL_BOORU_JSON_PARAMS = set()
 LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id' }
-CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
@@ -1571,6 +1571,41 @@ class HydrusResourceClientAPIRestrictedManagePages( HydrusResourceClientAPIRestr
     def _CheckAPIPermissions( self, request ):
         
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES )
+        
+    
+class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        def do_it( page_key ):
+            
+            return HG.client_controller.gui.ShowPage( page_key )
+            
+        
+        if 'page_key' not in request.parsed_request_args:
+            
+            raise HydrusExceptions.BadRequestException( 'No "page_key" given!' )
+            
+        
+        page_key = request.parsed_request_args[ 'page_key' ]
+        
+        if not isinstance( page_key, bytes ):
+            
+            raise HydrusExceptions.BadRequestException( '"page_key" did not seem to be a hex string!' )
+            
+        
+        try:
+            
+            HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it, page_key )
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that page!' )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
         
     
 class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClientAPIRestrictedManagePages ):

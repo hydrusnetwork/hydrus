@@ -80,6 +80,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         root.putChild( b'manage_pages', manage_pages )
         
+        manage_pages.putChild( b'focus_page', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesFocusPage( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'get_pages', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePagesGetPages( self._service, self._client_requests_domain ) )
         
         return root

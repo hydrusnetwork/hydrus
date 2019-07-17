@@ -22,10 +22,7 @@ def GetClientDefaultOptions():
     options[ 'fullscreen_cache_size' ] = 150 * 1048576
     options[ 'thumbnail_dimensions' ] = [ 150, 125 ]
     options[ 'password' ] = None
-    options[ 'num_autocomplete_chars' ] = 2
     options[ 'default_gui_session' ] = 'last session'
-    options[ 'fetch_ac_results_automatically' ] = True
-    options[ 'ac_timings' ] = ( 4, 300, 100 )
     options[ 'idle_period' ] = 60 * 30
     options[ 'idle_mouse_period' ] = 60 * 10
     options[ 'idle_cpu_max' ] = 50

@@ -1253,6 +1253,32 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( pages[ 'name' ], 'top pages notebook' )
         
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_pages/focus_page'
+        
+        page_key = os.urandom( 32 )
+        
+        request_dict = { 'page_key' : page_key.hex() }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        result = HG.test_controller.GetWrite( 'show_page' )
+        
+        expected_result = [ ( ( page_key, ), {} ) ]
+        
+        self.assertEqual( result, expected_result )
+        
     
     def _test_search_files( self, connection, set_up_permissions ):
         

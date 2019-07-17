@@ -739,6 +739,11 @@ class Controller( object ):
         return False
         
     
+    def ShowPage( self, page_key ):
+        
+        self.Write( 'show_page', page_key )
+        
+    
     def TidyUp( self ):
         
         time.sleep( 2 )

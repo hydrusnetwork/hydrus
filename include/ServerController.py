@@ -43,6 +43,8 @@ def ProcessStartingAction( db_dir, action ):
                     
                 
             
+            HG.shutting_down_due_to_already_running = True
+            
             raise HydrusExceptions.ShutdownException( 'Exiting!' )
             
         else:
@@ -269,7 +271,10 @@ class Controller( HydrusController.HydrusController ):
         
         self.ShutdownModel()
         
-        HydrusData.CleanRunningFile( self.db_dir, 'server' )
+        if not HG.shutting_down_due_to_already_running:
+            
+            HydrusData.CleanRunningFile( self.db_dir, 'server' )
+            
         
     
     def GetFilesDir( self ):

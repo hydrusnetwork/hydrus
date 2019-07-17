@@ -1208,7 +1208,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: self._controller.Write( 'delete_pending', service_key )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.Write( 'delete_pending', service_key )
+                
             
         
     
@@ -1780,13 +1783,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
-            
-            submenu = wx.Menu()
-            
             ClientGUIMenus.AppendMenuItem( self, submenu, 'review scheduled file maintenance', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
@@ -1813,6 +1809,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
             
             return ( menu, '&database' )
             
@@ -2207,6 +2212,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'similar files metadata generation report mode', 'Have the phash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'subprocess report mode', 'Report whenever an external process is called.', HG.subprocess_report_mode, self._SwitchBoolean, 'subprocess_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
@@ -3662,7 +3668,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, ord( c ) )
                 
-                t += 0.05
+                t += 0.02
                 
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
@@ -3693,7 +3699,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             for i in range( 16 ):
                 
-                t += 1.0
+                t += 2.0
                 
                 for j in range( i + 1 ):
                     
@@ -3704,7 +3710,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
                 
-                t += 1.0
+                t += 2.0
                 
                 HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
                 
@@ -4021,6 +4027,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'network_report_mode':
             
             HG.network_report_mode = not HG.network_report_mode
+            
+        elif name == 'phash_generation_report_mode':
+            
+            HG.phash_generation_report_mode = not HG.phash_generation_report_mode
             
         elif name == 'pubsub_report_mode':
             
@@ -4665,6 +4675,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 good_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
                 
+            elif predicate_type == HC.PREDICATE_TYPE_LABEL:
+                
+                continue
+            
             else:
                 
                 good_predicates.append( predicate )
@@ -5299,6 +5313,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def SetStatusBarDirty( self ):
         
         self._statusbar_thread_updater.Update()
+        
+    
+    def ShowPage( self, page_key ):
+        
+        page = self._notebook.GetPageFromPageKey( page_key )
+        
+        if page is None:
+            
+            raise HydrusExceptions.DataMissing( 'Could not find that page!' )
+            
+        
+        self._notebook.ShowPage( page )
         
     
     def SyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes = None ):

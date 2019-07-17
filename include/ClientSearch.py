@@ -1599,6 +1599,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             base += ' OR '.join( ( or_predicate.ToString( render_for_user = render_for_user ) for or_predicate in or_predicates ) )
             
+        elif self._predicate_type == HC.PREDICATE_TYPE_LABEL:
+            
+            label = self._value
+            
+            base = label
+            
         
         return base
         

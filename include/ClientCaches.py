@@ -647,7 +647,7 @@ class FileViewingStatsManager( object ):
                 if media_min is None or viewtime_delta >= media_min:
                     
                     media_views_delta = 1
-                    media_viewtime_delta = min( viewtime_delta, media_max )
+                    media_viewtime_delta = viewtime_delta
                     
                 
             

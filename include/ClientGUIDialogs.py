@@ -1024,7 +1024,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                     raw_paths = unparsed_paths_queue.get( block = False )
                     
-                    paths = ClientFiles.GetAllPaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
+                    paths = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
                     unparsed_paths.extend( paths )
                     
@@ -1042,7 +1042,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                     raw_paths = unparsed_paths_queue.get( timeout = 5 )
                     
-                    paths = ClientFiles.GetAllPaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
+                    paths = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
                     
                     unparsed_paths.extend( paths )
                     

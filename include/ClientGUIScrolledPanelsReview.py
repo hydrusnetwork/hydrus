@@ -1913,6 +1913,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._hash_ids = None
+        self._job_types_to_counts = {}
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -1920,39 +1921,22 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._current_work_panel = wx.Panel( self._notebook )
         
-        gridbox = wx.FlexGridSizer( 4 )
+        jobs_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._current_work_panel )
         
-        gridbox.AddGrowableCol( 1, 1 )
+        columns = [ ( 'job type', -1 ), ( 'scheduled jobs', 16 ) ]
         
-        self._job_types_to_controls = {}
+        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrl( jobs_listctrl_panel, 'file maintenance jobs', 8, 48, columns, self._ConvertJobTypeToListCtrlTuples )
         
-        for job_type in ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER:
-            
-            label_st = ClientGUICommon.BetterStaticText( self._current_work_panel, label = ClientFiles.regen_file_enum_to_str_lookup[ job_type ] )
-            
-            st = ClientGUICommon.BetterStaticText( self._current_work_panel )
-            
-            clear_button = ClientGUICommon.BetterButton( self._current_work_panel, 'clear', self._DeleteWork, job_type )
-            
-            go_button = ClientGUICommon.BetterButton( self._current_work_panel, 'go!', self._DoWork, job_type )
-            
-            self._job_types_to_controls[ job_type ] = ( st, clear_button, go_button )
-            
-            gridbox.Add( label_st, CC.FLAGS_VCENTER )
-            gridbox.Add( st, CC.FLAGS_VCENTER )
-            gridbox.Add( clear_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.Add( go_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
+        jobs_listctrl_panel.SetListCtrl( self._jobs_listctrl )
         
-        self._do_all_work = ClientGUICommon.BetterButton( self._current_work_panel, 'do all work', self._DoWork )
-        
-        self._refresh_button = ClientGUICommon.BetterButton( self._current_work_panel, 'refresh', self._RefreshWorkDue )
+        jobs_listctrl_panel.AddButton( 'clear', self._DeleteWork, enabled_only_on_selection = True )
+        jobs_listctrl_panel.AddButton( 'do work', self._DoWork, enabled_only_on_selection = True )
+        jobs_listctrl_panel.AddButton( 'do all work', self._DoAllWork, enabled_check_func = self._WorkToDo )
+        jobs_listctrl_panel.AddButton( 'refresh', self._RefreshWorkDue )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._do_all_work, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._refresh_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( jobs_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._current_work_panel.SetSizer( vbox )
         
@@ -2088,7 +2072,29 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         HG.client_controller.CallToThread( do_it, hash_ids, job_type )
         
     
-    def _DeleteWork( self, job_type ):
+    def _ConvertJobTypeToListCtrlTuples( self, job_type ):
+        
+        pretty_job_type = ClientFiles.regen_file_enum_to_str_lookup[ job_type ]
+        sort_job_type = pretty_job_type
+        
+        if job_type in self._job_types_to_counts:
+            
+            num_to_do = self._job_types_to_counts[ job_type ]
+            
+        else:
+            
+            num_to_do = 0
+            
+        
+        pretty_num_to_do = HydrusData.ToHumanInt( num_to_do )
+        
+        display_tuple = ( pretty_job_type, pretty_num_to_do )
+        sort_tuple = ( sort_job_type, num_to_do )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DeleteWork( self ):
         
         def wx_done():
             
@@ -2100,14 +2106,17 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             self._RefreshWorkDue()
             
         
-        def do_it( job_type ):
+        def do_it( job_types ):
             
-            job_types_to_counts = HG.client_controller.WriteSynchronous( 'file_maintenance_cancel_jobs', job_type )
+            for job_type in job_types:
+                
+                HG.client_controller.WriteSynchronous( 'file_maintenance_cancel_jobs', job_type )
+                
             
             wx.CallAfter( wx_done )
             
         
-        message = 'Clear all the scheduled "{}" work?'.format( ClientFiles.regen_file_enum_to_str_lookup[ job_type ] )
+        message = 'Clear all the selected scheduled work?'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -2117,12 +2126,26 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        HG.client_controller.CallToThread( do_it, job_type )
+        job_types = self._jobs_listctrl.GetData( only_selected = True )
+        
+        HG.client_controller.CallToThread( do_it, job_types )
         
     
-    def _DoWork( self, job_type = None ):
+    def _DoAllWork( self ):
         
-        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.DoMaintenance, mandated_job_type = job_type, maintenance_mode = HC.MAINTENANCE_FORCED )
+        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.DoMaintenance, maintenance_mode = HC.MAINTENANCE_FORCED )
+        
+    
+    def _DoWork( self ):
+        
+        job_types = self._jobs_listctrl.GetData( only_selected = True )
+        
+        if len( job_types ) == 0:
+            
+            return
+            
+        
+        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.DoMaintenance, mandated_job_types = job_types, maintenance_mode = HC.MAINTENANCE_FORCED )
         
     
     def _RefreshWorkDue( self ):
@@ -2134,29 +2157,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
                 return
                 
             
-            some_work_to_do = False
+            self._job_types_to_counts = job_types_to_counts
             
-            for ( job_type, ( st, clear_button, go_button ) ) in self._job_types_to_controls.items():
-                
-                if job_type in job_types_to_counts:
-                    
-                    st.SetLabelText( '{} jobs'.format( HydrusData.ToHumanInt( job_types_to_counts[ job_type ] ) ) )
-                    
-                    clear_button.Enable()
-                    go_button.Enable()
-                    
-                    some_work_to_do = True
-                    
-                else:
-                    
-                    st.SetLabelText( 'done!' )
-                    
-                
+            job_types = list( job_types_to_counts.keys() )
             
-            if some_work_to_do:
-                
-                self._do_all_work.Enable()
-                
+            self._jobs_listctrl.SetData( job_types )
             
         
         def do_it():
@@ -2165,15 +2170,6 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             wx.CallAfter( wx_done, job_types_to_counts )
             
-        
-        for ( st, clear_button, go_button ) in self._job_types_to_controls.values():
-            
-            st.SetLabelText( 'loading\u2026' )
-            clear_button.Disable()
-            go_button.Disable()
-            
-        
-        self._do_all_work.Disable()
         
         HG.client_controller.CallToThread( do_it )
         
@@ -2261,6 +2257,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._add_new_job.Enable()
             
+        
+    
+    def _WorkToDo( self ):
+        
+        return len( self._job_types_to_counts ) > 0
         
     
 class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
