@@ -17,7 +17,9 @@
 			<h3>what you will need</h3>
 			<p>You will need basic python experience, python 3.x and a number of python modules. Most of it you can get through pip.</p>
 			<p>If you are on Linux or OS X, or if you are on Windows and have an existing python you do not want to stomp all over with new modules, I recommend you create a virtual environment:</p>
-			<p><i>Note, <a href="https://wiki.wxpython.org/wxPythonVirtualenvOnMac">trying to get wx working in a virtual environment on OS X can be a mega-pain</a>. TBH, if you want to run the client on OS X, it is a lot easier to just pip-install to your OS X's python (if that isn't a conflict with what else you are doing).</i></p>
+			<p><i>Note, if you are on Linux, it may be easier to use your package manager instead of messing around with venv. A user has written a great summary with all needed packages <a href="running_from_source_linux_packages.txt">here</a>.</i></p>
+			<p><i>Also, <a href="https://wiki.wxpython.org/wxPythonVirtualenvOnMac">trying to get wx working in a virtual environment on OS X can be a mega-pain</a>. TBH, if you want to run the client from source on OS X, it is a lot easier to just pip-install to your OS X's python (if that isn't a conflict with what else you are doing).</i></p>
+			<p>Nonetheless, if you do want to create a new venv environment:</p>
 			<ul>
 				<li>(navigate to your hydrus extract folder)</li>
 				<li>pip3 install virtualenv (if you need it)</li>
@@ -43,7 +45,7 @@
 			<ul>
 				<li>pip3 install --upgrade libraryname</li>
 			</ul>
-			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python27\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
+			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python37\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>You will also need wxPython 4.0. This can be simple or complicated. For Windows and OS X, just get it with pip like the rest:</p>
 			<ul>
 				<li>pip3 install wxPython</li>
@@ -59,18 +61,12 @@
 			</ul>
 			<p>I think the wheel might only need libsdl1.2-dev on Ubuntu 16.04, but your situation may be different. Again, this was a pain to figure out, so good luck!</p>
 			<p>YMMV. Feel free to email me if you run into trouble or discover any neat tricks.</p>
-			<p>OS X 10.9 is easier these days. If you can't get opencv working from pip, this should do it:</p>
-			<p><ul>
-				<li>brew tap homebrew/homebrew-science</li>
-				<li>brew install opencv <i>(or try opencv3, although I have had trouble with this)</i></li>
-				<li>export PYTHONPATH=/usr/local/lib/python2.7/site-packages:$PYTHONPATH</li>
-			</ul></p>
-			<p>If you don't have ffmpeg in your path and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. You can either copy the exe from one of those releases, or download the latest build right from the FFMPEG site. I don't include these exes in the source release just because they are so big.</a>
-			<p>Once you have everything set up, client.pyw and server.py should look for and run off client.db and server.db just like the executables. They will look in the 'db' directory by default, or anywhere you point them with the "-d" parameter.</p>
+			<p>If you don't have ffmpeg in your PATH and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. On Windows, you can copy the exe from one of those releases, or just download the latest static build right from the FFMPEG site.</a>
+			<p>Once you have everything set up, client.pyw and server.py should look for and run off client.db and server.db just like the executables. They will look in the 'db' directory by default, or anywhere you point them with the "-d" parameter, just like the executables.</p>
 			<p>I develop hydrus on and am most experienced with Windows, so the program is much more stable and reasonable on that. I do not have as much experience with Linux or OS X, so I would particularly appreciate your Linux/OS X bug reports and any informed suggestions.</p>
 			<h3>my code</h3>
 			<p>Unlike most software people, I am more INFJ than INTP/J. My coding style is unusual and unprofessional, and everything is pretty much hacked together. Please look through the source if you are interested in how things work and ask me if you don't understand something. I'm constantly throwing new code together and then cleaning and overhauling it down the line.</p>
-			<p>I work alone, so while I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests. Everything is <a href="http://sam.zoy.org/wtfpl/COPYING">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
+			<p>I work strictly alone, so while I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests. Everything I do is <a href="http://sam.zoy.org/wtfpl/COPYING">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
 		</div>
 	</body>
 </html>

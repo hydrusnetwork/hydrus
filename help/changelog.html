@@ -8,6 +8,58 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 360</h3></li>
+				<ul>
+					<li>tag autocomplete:</li>
+					<li>after various tag autocomplete async work, fetch timings get a complete overhaul this week. the intention is for a/c jobs to appear as fast as possible, with good ui feedback, without interrupting ui while they work. feedback on how this works IRL would be appreciated</li>
+					<li>there are now just two autocomplete options under options->speed and memory:</li>
+					<li>- whether autocomplete results are ever fetched automatically, defaults to true</li>
+					<li>- the max number of characters in the input that will cause just exact results vs. full autocomplete results, defaults to 2, can be None</li>
+					<li>namespaces are no longer searched from an unnamespaced query ('char' no longer matches 'character:samus aran'). this proved too slow for real use, and remains better available with explicit namespace searches such as 'character:' or 'char*:*'</li>
+					<li>the 'exact results' character limit now also applies to subtags of namespace searches! so, entering 'character:a' will deliver the same short exact match results as just 'a'--no more gigantic lists when you put in a simple namespace</li>
+					<li>improved tag results caching to deal with the new non-namespace matching on subtag input</li>
+					<li>tag autocomplete dropdowns will now display a non-selectable 'loading results...' label when results take more than 200ms to load.</li>
+					<li>tag autocomplete dropdowns will now also display 'static' tags, such as 'namespace:*anything*' for 'read' inputs and the exact entered text and possible siblings/parents for 'write' inputs, during loading. so, typing 'character:' just to get the special 'character:*anything*' predicate is now simple and does not need a whole load wait to enter!</li>
+					<li>cleaned up some tag listbox code to handle parent selection and navigation better along with the new label type</li>
+					<li>greatly improved autocomplete search logic in the critical text search portion, collapsing it into one cleverer and more easily cancellable query rather than two or three simpler ones with potentially gigantic lists thrown back and forth</li>
+					<li>improved speed of autocomplete cancel for certain large lists with many siblings</li>
+					<li>.</li>
+					<li>file maintenance:</li>
+					<li>the new file maintenance ui now shows scheduled jobs in a listctrl, and only shows jobs that have outstanding work. you can clear/do work on multiple selected jobs</li>
+					<li>the file manager should now try to guarantee at least 644 permission on file imports (previously, it was only trying to add 600, which lead to problems with nocopy ipfs running on another user etc...)</li>
+					<li>added a file maintenance job to check and fix file permissions</li>
+					<li>added a file maintenance job to regenerate similar files metadata</li>
+					<li>added a file maintenance job to check if a file should be in the similar files system--if it should and isn't, it is queued to get its metadata data regenerated, and if it is and shouldn't be, it is removed</li>
+					<li>the previous bulky similar files metadata regen job from the duplicates page is now removed, and any outstanding scheduled regen will be transferred to the new file maintenance manager on update</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>added POST /manage_pages/focus_page, which makes the given page the current page in the main gui</li>
+					<li>added help and unit tests for this new call</li>
+					<li>client api is now version 9</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed an issue recording media viewtimes when no max viewtime is set</li>
+					<li>fixed the new missingdirectory errors not printing the missing path</li>
+					<li>fixed an issue with some human-started repository actions waiting silently on bandwidth when it was not intended (e.g. account refresh)</li>
+					<li>export folders now raise proper errors and pause themselves if their path is not set, does not exist on the file system, or is not a directory (previously, they silently stopped work without error)</li>
+					<li>cleaned up some misc import folder code, and put in additional protections to the delete/move code to ensure folders cannot be so actioned if they somehow end up in the path import queue</li>
+					<li>when unpinning a file or directory from ipfs, the clientside service now first checks that the current daemon considers it pinned (previously, this 500 errored when the object was not pinned due to a reinitialised daemon etc...)</li>
+					<li>fixed an issue with the new ipfs path translation control, which was forgetting values when the clientside path was outside of the default db structure</li>
+					<li>media objects that transition from trashed to physically deleted but remain in view will now correctly be aware of their complete previously-deleted status (rather than being simply remote, as they were before until a client restart)</li>
+					<li>improved some of the recent duplicates db update code to pre-optimise the new tables on update (some users were getting slow behaviour due to mis-scheduled analysis maintenance)</li>
+					<li>extended the new panel system to deal with custom button panels and moved the duplicate filter 'commit and continue?' dialog to the new panel system</li>
+					<li>moved the archive/delete and duplicate filter 'commit and finish' dialog to the new panel system</li>
+					<li>wrote a new question panel for the typical yes/no dialog used across the program and started a cleanup job to migrate all 140-odd instances of this over</li>
+					<li>fixed an issue where a program instance that quit due to a user deciding to leave an already running instance in place would clear the original instance's 'running' file in its shutdown, meaning subsequent runs would charge ahead and hit 'database is locked' problems on db init!</li>
+					<li>wrote a new 'similar files metadata generation report mode' to provide debug info on this cpu/gpu intensive routine</li>
+					<li>added 'why use sqlite?' entry to the help faq, with a link to prkc's excellent document about the subject, https://gitgud.io/prkc/hydrus-why-sqlite/blob/master/README.md</li>
+					<li>also added prkc's excellent Linux package requirements information to the 'running from source' help page</li>
+					<li>fixed some old py 2.7 references in running from source help and an old link in ipfs help</li>
+					<li>moved the 'file viewing statistics' menu down on the database menu</li>
+					<li>fixed some dialog Escape key event handling</li>
+					<li>fixed some ui ancestory testing code</li>
+					<li>improved some misc similar files system code</li>
+				</ul>
 				<li><h3>version 359</h3></li>
 				<ul>
 					<li>ipfs nocopy:</li>

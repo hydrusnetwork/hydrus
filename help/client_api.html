@@ -65,6 +65,7 @@
 					<h4>Managing Pages</h4>
 					<ul>
 						<li><a href="#manage_pages_get_pages">GET /manage_pages/get_pages</a></li>
+						<li><a href="#manage_pages_focus_page">POST /manage_pages/focus_page</a></li>
 					</ul>
 					<h4>Searching and Fetching Files</h4>
 					<ul>
@@ -595,6 +596,37 @@
 					</ul>
 					<p>The top page of pages will always be there, and always selected. 'selected' means which page is currently in view and will propagate down other page of pages until it terminates. It may terminate in an empty page of pages, so do not assume it will end on a 'media' page.</p>
 					<p>The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.</p>
+				</ul>
+			</div>
+			<div class="apiborder" id="manage_pages_focus_page">
+				<h3><b>POST /manage_pages/focus_page</b></h3>
+				<p><i>'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Pages permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in JSON):</p>
+						<ul>
+							<li>page_key : (the page key for the page you wish to show)</li>
+						</ul>
+					</li>
+					<p>The page key is the same as fetched in the <a href="#manage_pages_get_pages">/manage_pages/get_pages</a> call.</p>
+					<li>
+						<p>Example request body:</p>
+						<ul>
+							<li>
+<pre>{
+	"page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<li><p>Response description: 200 with no content. If the page key is not found, this will 404.</p></li>
 				</ul>
 			</div>
 			<h3>Searching Files</h3>

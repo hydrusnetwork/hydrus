@@ -1,0 +1,61 @@
+Why use distro packages instead of pip?
+* Integrates well with the system, can be installed/updated/removed with the package manager which users probably already know how to use
+* No need to use pip and venv, no need to compile anything
+ 
+The following lists should work for any recent release of the named distros and derivatives
+ 
+Arch Linux, Manjaro
+===================
+Install from the AUR: https://aur.archlinux.org/packages/hydrus/
+(this is what I use personally and it works great - it's basically just a script which installs deps + clones the source from the official repo and puts it in the right place)
+Even if not installing from the AUR, the above link has a full and up-to-date list of the required package dependencies
+ 
+Fedora
+======
+Package search: https://apps.fedoraproject.org/packages/
+ 
+Required packages:
+python3-beautifulsoup4 python3-chardet
+python3-html5lib python3-lxml python3-nose
+python3-numpy python3-opencv python3-six python3-pillow python3-psutil
+python3-pyOpenSSL python3-pyyaml python3-requests
+python3-send2trash python3-service-identity
+python3-twisted python3-wxpython4
+ 
+The optional stuff:
+python3-lz4 python3-pysocks python3-matplotlib python3-matplotlib-wx python3-httmock
+ 
+mock and pylzma doesn't seem to be packaged, and ffmpeg isn't in the base Fedora repo (due to licensing/patents scare?),
+but can be installed from the rpmfusin repo (https://rpmfusion.org/)
+ 
+Ubuntu, Debian, Linux Mint
+==========================
+Package search: https://packages.debian.org/, https://packages.ubuntu.com/
+ 
+Required:
+python3-chardet python3-html5lib python3-bs4 python3-lxml
+python3-nose python3-numpy python3-opencv python3-six python3-pil
+python3-psutil python3-openssl python3-yaml python3-requests
+python3-send2trash python3-service-identity python3-twisted
+ffmpeg python3-wxgtk4.0
+ 
+Optional:
+python3-lz4 python3-pysocks python3-matplotlib python3-mock python3-httmock
+ 
+pylzma doesn't seem to be packaged
+ 
+openSuse
+========
+Package search: https://software.opensuse.org/search
+ 
+Required:
+python3-beautifulsoup4 python3-chardet python3-html5lib python3-lxml
+python3-nose python3-numpy python3-opencv python3-six
+python3-Pillow python3-psutil python3-pyOpenSSL
+python3-PyYAML python3-requests python3-Send2Trash
+python3-service_identity python3-Twisted
+python3-wxPython ffmpeg-4
+ 
+Optional:
+python3-lz4 python3-pylzma python3-PySocks python3-matplotlib python3-matplotlib-wx
+python3-mock python3-httmock
