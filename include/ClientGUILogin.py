@@ -232,7 +232,7 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._name.SetValue( credential_definition.GetName() )
-        self._credential_type.SelectClientData( credential_definition.GetType() )
+        self._credential_type.SetValue( credential_definition.GetType() )
         
         #
         
@@ -250,7 +250,7 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
     def GetValue( self ):
         
         name = self._name.GetValue()
-        credential_type = self._credential_type.GetChoice()
+        credential_type = self._credential_type.GetValue()
         string_match = self._string_match.GetValue()
         
         credential_definition = ClientNetworkingLogin.LoginCredentialDefinition( name = name, credential_type = credential_type, string_match = string_match )
@@ -2083,8 +2083,8 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._name.SetValue( name )
-        self._scheme.SelectClientData( scheme )
-        self._method.SelectClientData( method )
+        self._scheme.SetValue( scheme )
+        self._method.SetValue( method )
         self._subdomain.SetValue( subdomain )
         self._path.SetValue( path )
         
@@ -2125,8 +2125,8 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
     def GetValue( self ):
         
         name = self._name.GetValue()
-        scheme = self._scheme.GetChoice()
-        method = self._method.GetChoice()
+        scheme = self._scheme.GetValue()
+        method = self._method.GetValue()
         subdomain = self._subdomain.GetValue()
         path = self._path.GetValue()
         

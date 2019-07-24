@@ -374,7 +374,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
                 
                 if favourite_file_lookup_script in script_names_to_scripts:
                     
-                    self._script_choice.SelectClientData( script_names_to_scripts[ favourite_file_lookup_script ] )
+                    self._script_choice.SetValue( script_names_to_scripts[ favourite_file_lookup_script ] )
                     
                 else:
                     
@@ -422,7 +422,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
     
     def FetchTags( self ):
         
-        script = self._script_choice.GetChoice()
+        script = self._script_choice.GetValue()
         
         if script.UsesUserInput():
             

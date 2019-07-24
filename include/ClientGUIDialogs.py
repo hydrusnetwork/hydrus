@@ -221,68 +221,6 @@ class DialogChooseNewServiceMethod( Dialog ):
         return self._should_register
         
     
-class DialogCommitInterstitialFiltering( Dialog ):
-    
-    def __init__( self, parent, label ):
-        
-        Dialog.__init__( self, parent, 'commit and continue?', position = 'center' )
-        
-        self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.EndModal, wx.ID_YES )
-        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._back = ClientGUICommon.BetterButton( self, 'go back', self.EndModal, wx.ID_NO )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._commit.SetFocus )
-        
-    
-class DialogFinishFiltering( Dialog ):
-    
-    def __init__( self, parent, label ):
-        
-        Dialog.__init__( self, parent, 'are you sure?', position = 'center' )
-        
-        self._commit = ClientGUICommon.BetterButton( self, 'commit', self.EndModal, wx.ID_YES )
-        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._forget = ClientGUICommon.BetterButton( self, 'forget', self.EndModal, wx.ID_NO )
-        self._forget.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        self._back = ClientGUICommon.BetterButton( self, 'back to filtering', self.EndModal, wx.ID_CANCEL )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._commit.SetFocus )
-        
-    
 class DialogGenerateNewAccounts( Dialog ):
     
     def __init__( self, parent, service_key ):
@@ -360,11 +298,11 @@ class DialogGenerateNewAccounts( Dialog ):
         
         num = self._num.GetValue()
         
-        account_type = self._account_types.GetChoice()
+        account_type = self._account_types.GetValue()
         
         account_type_key = account_type.GetAccountTypeKey()
         
-        lifetime = self._lifetime.GetChoice()
+        lifetime = self._lifetime.GetValue()
         
         if lifetime is None:
             
@@ -440,7 +378,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
             self._timeout_number.SetValue( None )
             
-            self._timeout_multiplier.SelectClientData( 60 )
+            self._timeout_multiplier.SetValue( 60 )
             
         else:
             
@@ -452,7 +390,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
             self._timeout_number.SetValue( time_left // time_value )
             
-            self._timeout_multiplier.SelectClientData( time_value )
+            self._timeout_multiplier.SetValue( time_value )
             
         
         self._hashes = hashes
@@ -558,7 +496,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         timeout = self._timeout_number.GetValue()
         
-        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetChoice() + HydrusData.GetNow()
+        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetValue() + HydrusData.GetNow()
         
         return ( self._share_key, name, text, timeout, self._hashes )
         
@@ -866,34 +804,35 @@ class FrameInputLocalFiles( wx.Frame ):
     
     def RemovePaths( self ):
         
-        with DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        text = 'Remove all selected?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            paths_to_delete = self._paths_list.GetData( only_selected = True )
+            
+            self._paths_list.DeleteSelected()
+            
+            for path in paths_to_delete:
                 
-                paths_to_delete = self._paths_list.GetData( only_selected = True )
+                del self._current_path_data[ path ]
                 
-                self._paths_list.DeleteSelected()
+            
+            flat_path_data = [ ( index, path, mime, size ) for ( path, ( index, mime, size ) ) in self._current_path_data.items() ]
+            
+            flat_path_data.sort()
+            
+            new_index = 1
+            
+            for ( old_index, path, mime, size ) in flat_path_data:
                 
-                for path in paths_to_delete:
-                    
-                    del self._current_path_data[ path ]
-                    
+                self._current_path_data[ path ] = ( new_index, mime, size )
                 
-                flat_path_data = [ ( index, path, mime, size ) for ( path, ( index, mime, size ) ) in self._current_path_data.items() ]
+                new_index += 1
                 
-                flat_path_data.sort()
-                
-                new_index = 1
-                
-                for ( old_index, path, mime, size ) in flat_path_data:
-                    
-                    self._current_path_data[ path ] = ( new_index, mime, size )
-                    
-                    new_index += 1
-                    
-                
-                self._paths_list.UpdateDatas()
-                
+            
+            self._paths_list.UpdateDatas()
             
         
     
@@ -1415,7 +1354,7 @@ class DialogInputUPnPMapping( Dialog ):
     def GetInfo( self ):
         
         external_port = self._external_port.GetValue()
-        protocol_type = self._protocol_type.GetChoice()
+        protocol_type = self._protocol_type.GetValue()
         internal_port = self._internal_port.GetValue()
         description = self._description.GetValue()
         duration = self._duration.GetValue()
@@ -1605,7 +1544,7 @@ class DialogModifyAccounts( Dialog ):
     def EventChangeAccountType( self, event ):
         
         raise NotImplementedError()
-        #self._DoModification( HC.CHANGE_ACCOUNT_TYPE, account_type_key = self._account_types.GetChoice() )
+        #self._DoModification( HC.CHANGE_ACCOUNT_TYPE, account_type_key = self._account_types.GetValue() )
         
     
     def EventSetExpires( self, event ):

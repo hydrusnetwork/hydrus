@@ -212,6 +212,13 @@ def CopyFileLikeToFileLike( f_source, f_dest ):
     
 def DeletePath( path ):
     
+    if HG.file_report_mode:
+        
+        HydrusData.ShowText( 'Deleting {}'.format( path ) )
+        
+        HydrusData.ShowText( ''.join( traceback.format_stack() ) )
+        
+    
     if os.path.exists( path ):
         
         MakeFileWritable( path )
@@ -857,6 +864,13 @@ def ReadFileLikeAsBlocks( f ):
         
     
 def RecyclePath( path ):
+    
+    if HG.file_report_mode:
+        
+        HydrusData.ShowText( 'Recycling {}'.format( path ) )
+        
+        HydrusData.ShowText( ''.join( traceback.format_stack() ) )
+        
     
     if os.path.exists( path ):
         

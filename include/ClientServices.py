@@ -1332,11 +1332,15 @@ class ServiceRepository( ServiceRestricted ):
                 
                 self.SyncThumbnails( stop_time )
                 
+            except HydrusExceptions.ShutdownException:
+                
+                pass
+                
             except Exception as e:
                 
                 self._DelayFutureRequests( str( e ) )
                 
-                HydrusData.ShowText( 'The service "' + self._name + '" encountered an error while trying to sync! It will not do any work for a little while. Please elevate this to hydrus dev if a fix is not obvious.' )
+                HydrusData.ShowText( 'The service "{}" encountered an error while trying to sync! The error was "{}". It will not do any work for a little while. If the fix is not obvious, please elevate this to hydrus dev.'.format( self._name, str( e ) ) )
                 
                 HydrusData.ShowException( e )
                 

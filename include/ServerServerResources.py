@@ -549,9 +549,9 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
         
         with HG.dirty_object_lock:
             
-            service_keys_to_access_keys = HG.server_controller.WriteSynchronous( 'services', request.hydrus_account, services )
-            
             HG.server_controller.SetServices( services )
+            
+            service_keys_to_access_keys = HG.server_controller.WriteSynchronous( 'services', request.hydrus_account, services )
             
         
         body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )

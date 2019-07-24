@@ -284,12 +284,11 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         message += os.linesep * 2
         message += 'Does that look good? (Ideally, every object should have correct and sane domains listed here)'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != wx.ID_YES:
             
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
+            return
             
         
         gug_names = set()
@@ -1047,7 +1046,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._rule_type.SelectClientData( rule_type )
+        self._rule_type.SetValue( rule_type )
         self._tag_name.SetValue( tag_name )
         self._tag_index.SetValue( tag_index )
         self._tag_depth.SetValue( tag_depth )
@@ -1116,7 +1115,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateTypeControls( self ):
         
-        rule_type = self._rule_type.GetChoice()
+        rule_type = self._rule_type.GetValue()
         
         if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
             
@@ -1166,7 +1165,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        rule_type = self._rule_type.GetChoice()
+        rule_type = self._rule_type.GetValue()
         
         tag_name = self._tag_name.GetValue()
         
@@ -1265,7 +1264,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             self._tag_rules.Append( pretty_rule, rule )
             
         
-        self._content_to_fetch.SelectClientData( content_to_fetch )
+        self._content_to_fetch.SetValue( content_to_fetch )
         
         self._attribute_to_fetch.SetValue( attribute_to_fetch )
         
@@ -1326,7 +1325,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateControls( self ):
         
-        if self._content_to_fetch.GetChoice() == ClientParsing.HTML_CONTENT_ATTRIBUTE:
+        if self._content_to_fetch.GetValue() == ClientParsing.HTML_CONTENT_ATTRIBUTE:
             
             self._attribute_to_fetch.Enable()
             
@@ -1412,7 +1411,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tags_rules = [ self._tag_rules.GetClientData( i ) for i in range( self._tag_rules.GetCount() ) ]
         
-        content_to_fetch = self._content_to_fetch.GetChoice()
+        content_to_fetch = self._content_to_fetch.GetValue()
         
         attribute_to_fetch = self._attribute_to_fetch.GetValue()
         
@@ -1480,7 +1479,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( parse_rule_type, parse_rule ) = rule
         
-        self._parse_rule_type.SelectClientData( parse_rule_type )
+        self._parse_rule_type.SetValue( parse_rule_type )
         
         if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
@@ -1519,7 +1518,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._string_match.Disable()
         self._index.Disable()
         
-        parse_rule_type = self._parse_rule_type.GetChoice()
+        parse_rule_type = self._parse_rule_type.GetValue()
         
         if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
@@ -1538,7 +1537,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        parse_rule_type = self._parse_rule_type.GetChoice()
+        parse_rule_type = self._parse_rule_type.GetValue()
         
         if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
@@ -1622,7 +1621,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             self._parse_rules.Append( pretty_rule, rule )
             
         
-        self._content_to_fetch.SelectClientData( content_to_fetch )
+        self._content_to_fetch.SetValue( content_to_fetch )
         
         #
         
@@ -1747,7 +1746,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parse_rules = [ self._parse_rules.GetClientData( i ) for i in range( self._parse_rules.GetCount() ) ]
         
-        content_to_fetch = self._content_to_fetch.GetChoice()
+        content_to_fetch = self._content_to_fetch.GetValue()
         
         string_match = self._string_match_button.GetValue()
         
@@ -1908,13 +1907,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name.SetValue( name )
         
-        self._content_type.SelectClientData( content_type )
+        self._content_type.SetValue( content_type )
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
             ( url_type, priority ) = additional_info
             
-            self._url_type.SelectClientData( url_type )
+            self._url_type.SetValue( url_type )
             self._file_priority.SetValue( priority )
             
         elif content_type == HC.CONTENT_TYPE_MAPPINGS:
@@ -1927,13 +1926,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             hash_type = additional_info
             
-            self._hash_type.SelectClientData( hash_type )
+            self._hash_type.SetValue( hash_type )
             
         elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
             
             timestamp_type = additional_info
             
-            self._timestamp_type.SelectClientData( timestamp_type )
+            self._timestamp_type.SetValue( timestamp_type )
             
         elif content_type == HC.CONTENT_TYPE_TITLE:
             
@@ -1955,8 +1954,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             self._temp_variable_name.SetValue( temp_variable_name )
             
         
-        self._sort_type.SelectClientData( sort_type )
-        self._sort_asc.SelectClientData( sort_asc )
+        self._sort_type.SetValue( sort_type )
+        self._sort_asc.SetValue( sort_asc )
         
         #
         
@@ -2095,7 +2094,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventContentTypeChange( self, event ):
         
-        choice = self._content_type.GetChoice()
+        choice = self._content_type.GetValue()
         
         self._urls_panel.Hide()
         self._mappings_panel.Hide()
@@ -2140,7 +2139,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventSortTypeChange( self, event ):
         
-        choice = self._sort_type.GetChoice()
+        choice = self._sort_type.GetValue()
         
         if choice == ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE:
             
@@ -2161,16 +2160,16 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = self._name.GetValue()
         
-        content_type = self._content_type.GetChoice()
+        content_type = self._content_type.GetValue()
         
         formula = self._formula.GetValue()
         
-        sort_type = self._sort_type.GetChoice()
-        sort_asc = self._sort_asc.GetChoice()
+        sort_type = self._sort_type.GetValue()
+        sort_asc = self._sort_asc.GetValue()
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
-            url_type = self._url_type.GetChoice()
+            url_type = self._url_type.GetValue()
             priority = self._file_priority.GetValue()
             
             additional_info = ( url_type, priority )
@@ -2183,13 +2182,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif content_type == HC.CONTENT_TYPE_HASH:
             
-            hash_type = self._hash_type.GetChoice()
+            hash_type = self._hash_type.GetValue()
             
             additional_info = hash_type
             
         elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
             
-            timestamp_type = self._timestamp_type.GetChoice()
+            timestamp_type = self._timestamp_type.GetValue()
             
             additional_info = timestamp_type
             
@@ -2535,12 +2534,13 @@ class EditNodes( wx.Panel ):
     
     def Delete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        text = 'Remove all selected?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._nodes.RemoveAllSelected()
-                
+            self._nodes.RemoveAllSelected()
             
         
     
@@ -3554,8 +3554,8 @@ And pass that html to a number of 'parsing children' that will each look through
         
         self._name.SetValue( name )
         
-        self._query_type.SelectClientData( query_type )
-        self._file_identifier_type.SelectClientData( file_identifier_type )
+        self._query_type.SetValue( query_type )
+        self._file_identifier_type.SetValue( file_identifier_type )
         self._file_identifier_arg_name.SetValue( file_identifier_arg_name )
         
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
@@ -3639,7 +3639,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         test_arg = self._test_arg.GetValue()
         
-        file_identifier_type = self._file_identifier_type.GetChoice()
+        file_identifier_type = self._file_identifier_type.GetValue()
         
         if file_identifier_type == ClientParsing.FILE_IDENTIFIER_TYPE_FILE:
             
@@ -3765,8 +3765,8 @@ And pass that html to a number of 'parsing children' that will each look through
         
         name = self._name.GetValue()
         url = self._url.GetValue()
-        query_type = self._query_type.GetChoice()
-        file_identifier_type = self._file_identifier_type.GetChoice()
+        query_type = self._query_type.GetValue()
+        file_identifier_type = self._file_identifier_type.GetValue()
         file_identifier_string_converter = self._file_identifier_string_converter.GetValue()
         file_identifier_arg_name = self._file_identifier_arg_name.GetValue()
         static_args = self._static_args.GetValue()
@@ -3958,12 +3958,13 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Delete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        text = 'Remove all selected?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._scripts.RemoveAllSelected()
-                
+            self._scripts.RemoveAllSelected()
             
         
     

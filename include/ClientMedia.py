@@ -21,6 +21,7 @@ from . import HydrusSerialisable
 import itertools
 
 hashes_to_jpeg_quality = {}
+hashes_to_pixel_hashes = {}
 
 def FlattenMedia( media_list ):
     
@@ -64,6 +65,12 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     #
     
     statements_and_scores = {}
+    
+    s_hash = shown_media.GetHash()
+    c_hash = comparison_media.GetHash()
+    
+    s_mime = shown_media.GetMime()
+    c_mime = comparison_media.GetMime()
     
     # size
     
@@ -150,9 +157,6 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # same/diff mime
     
-    s_mime = shown_media.GetMime()
-    c_mime = comparison_media.GetMime()
-    
     if s_mime != c_mime:
         
         statement = '{} vs {}'.format( HC.mime_string_lookup[ s_mime ], HC.mime_string_lookup[ c_mime ] )
@@ -222,13 +226,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
     
-    s_mime = shown_media.GetMime()
-    c_mime = comparison_media.GetMime()
-    
     if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
-        
-        s_hash = shown_media.GetHash()
-        c_hash = comparison_media.GetHash()
         
         global hashes_to_jpeg_quality
         
@@ -283,6 +281,52 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             statement = '{} vs {} jpeg quality'.format( s_label, c_label )
             
             statements_and_scores[ 'jpeg_quality' ] = ( statement, score )
+            
+        
+    
+    if shown_media.IsStaticImage() and comparison_media.IsStaticImage() and shown_media.GetResolution() == comparison_media.GetResolution():
+        
+        global hashes_to_pixel_hashes
+        
+        if s_hash not in hashes_to_pixel_hashes:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+            
+            hashes_to_pixel_hashes[ s_hash ] = HydrusImageHandling.GetImagePixelHash( path, s_mime )
+            
+        
+        if c_hash not in hashes_to_pixel_hashes:
+            
+            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+            
+            hashes_to_pixel_hashes[ c_hash ] = HydrusImageHandling.GetImagePixelHash( path, c_mime )
+            
+        
+        s_pixel_hash = hashes_to_pixel_hashes[ s_hash ]
+        c_pixel_hash = hashes_to_pixel_hashes[ c_hash ]
+        
+        if s_pixel_hash == c_pixel_hash:
+            
+            if s_mime == HC.IMAGE_PNG and c_mime != HC.IMAGE_PNG:
+                
+                statement = 'this is a pixel-for-pixel duplicate png!'
+                
+                score = -100
+                
+            elif s_mime != HC.IMAGE_PNG and c_mime == HC.IMAGE_PNG:
+                
+                statement = 'other file is a pixel-for-pixel duplicate png!'
+                
+                score = 100
+                
+            else:
+                
+                statement = 'images are pixel-for-pixel duplicates!'
+                
+                score = 0
+                
+            
+            statements_and_scores[ 'pixel_duplicates' ] = ( statement, score )
             
         
     
@@ -627,6 +671,8 @@ class LocationsManager( object ):
                         self._inbox = True
                         
                         self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                        
+                        self._deleted.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                         
                         self._current_to_timestamps[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = HydrusData.GetNow()
                         
@@ -1906,6 +1952,11 @@ class MediaSingleton( Media ):
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None
     
+    def IsStaticImage( self ):
+        
+        return self._media_result.IsStaticImage()
+        
+    
     def MatchesDiscriminant( self, has_location = None, discriminant = None, not_uploaded_to = None ):
         
         if discriminant is not None:
@@ -2079,6 +2130,11 @@ class MediaResult( object ):
     def GetTagsManager( self ):
         
         return self._tags_manager
+        
+    
+    def IsStaticImage( self ):
+        
+        return self._file_info_manager.mime in HC.IMAGES and self._file_info_manager.duration in ( None, 0 )
         
     
     def ProcessContentUpdate( self, service_key, content_update ):

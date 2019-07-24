@@ -77,11 +77,11 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                choice_control.SelectClientData( selection_row )
+                choice_control.SetValue( selection_row )
                 
             except:
                 
-                choice_control.SelectClientData( ( content_type, None ) )
+                choice_control.SetValue( ( content_type, None ) )
                 
             
             self._permission_controls.append( choice_control )
@@ -143,7 +143,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         
         for permission_control in self._permission_controls:
             
-            ( content_type, action ) = permission_control.GetChoice()
+            ( content_type, action ) = permission_control.GetValue()
             
             if action is not None:
                 
@@ -628,7 +628,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( file_service_key, hashes, description ) = self._action_radio.GetChoice()
+        ( file_service_key, hashes, description ) = self._action_radio.GetValue()
         
         self._simple_description.SetLabel( description )
         
@@ -679,7 +679,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetReason( self ):
         
-        reason = self._reason_radio.GetChoice()
+        reason = self._reason_radio.GetValue()
         
         if reason is None:
             
@@ -780,7 +780,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateControls( self ):
         
-        ( file_service_key, hashes, description ) = self._action_radio.GetChoice()
+        ( file_service_key, hashes, description ) = self._action_radio.GetValue()
         
         reason_permitted = file_service_key in ( CC.LOCAL_FILE_SERVICE_KEY, 'physical_delete' )
         
@@ -794,7 +794,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             self._custom_reason.Disable()
             
         
-        reason = self._reason_radio.GetChoice()
+        reason = self._reason_radio.GetValue()
         
         if reason is None:
             
@@ -815,7 +815,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         involves_physical_delete = False
         
-        ( file_service_key, hashes, description ) = self._action_radio.GetChoice()
+        ( file_service_key, hashes, description ) = self._action_radio.GetValue()
         
         reason = self._GetReason()
         
@@ -1137,30 +1137,36 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_services_panel = ClientGUICommon.StaticBox( self, 'tag services' )
         
-        self._tag_service_actions = ClientGUIListCtrl.SaneListCtrl( tag_services_panel, 120, [ ( 'service name', 120 ), ( 'action', 240 ), ( 'tags merged', -1 ) ], delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        tag_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( tag_services_panel )
         
-        self._tag_service_actions.SetMinSize( ( 560, 120 ) )
+        columns = [ ( 'service name', 24 ), ( 'action', 36 ), ( 'tags merged', -1 ) ]
         
-        add_tag_button = ClientGUICommon.BetterButton( tag_services_panel, 'add', self._AddTag )
-        edit_tag_button = ClientGUICommon.BetterButton( tag_services_panel, 'edit', self._EditTag )
-        delete_tag_button = ClientGUICommon.BetterButton( tag_services_panel, 'delete', self._DeleteTag )
+        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrl( tag_services_listctrl_panel, 'duplicate_action_options_tag_services', 5, 36, columns, self._ConvertTagDataToListCtrlTuple, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        
+        tag_services_listctrl_panel.SetListCtrl( self._tag_service_actions )
+        
+        tag_services_listctrl_panel.AddButton( 'add', self._AddTag )
+        tag_services_listctrl_panel.AddButton( 'edit', self._EditTag, enabled_only_on_selection = True )
+        tag_services_listctrl_panel.AddButton( 'delete', self._DeleteTag, enabled_only_on_selection = True )
         
         #
         
         rating_services_panel = ClientGUICommon.StaticBox( self, 'rating services' )
         
-        self._rating_service_actions = ClientGUIListCtrl.SaneListCtrl( rating_services_panel, 120, [ ( 'service name', -1 ), ( 'action', 240 ) ], delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
+        rating_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( rating_services_panel )
         
-        self._rating_service_actions.SetMinSize( ( 380, 120 ) )
+        columns = [ ( 'service name', -1 ), ( 'action', 36 ) ]
         
-        add_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'add', self._AddRating )
+        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrl( rating_services_listctrl_panel, 'duplicate_action_options_rating_services', 5, 24, columns, self._ConvertRatingDataToListCtrlTuple, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
         
+        rating_services_listctrl_panel.SetListCtrl( self._rating_service_actions )
+        
+        rating_services_listctrl_panel.AddButton( 'add', self._AddRating )
         if self._duplicate_action == HC.DUPLICATE_BETTER: # because there is only one valid action otherwise
             
-            edit_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'edit', self._EditRating )
+            rating_services_listctrl_panel.AddButton( 'edit', self._EditRating, enabled_only_on_selection = True )
             
-        
-        delete_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'delete', self._DeleteRating )
+        rating_services_listctrl_panel.AddButton( 'delete', self._DeleteRating, enabled_only_on_selection = True )
         
         #
         
@@ -1183,29 +1189,17 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         services_manager = HG.client_controller.services_manager
         
-        for ( service_key, action, tag_filter ) in tag_service_options:
-            
-            if services_manager.ServiceExists( service_key ):
-                
-                sort_tuple = ( service_key, action, tag_filter )
-                
-                display_tuple = self._GetTagDisplayTuple( sort_tuple )
-                
-                self._tag_service_actions.Append( display_tuple, sort_tuple )
-                
-            
+        self._service_keys_to_tag_options = { service_key : ( action, tag_filter ) for ( service_key, action, tag_filter ) in tag_service_options }
         
-        for ( service_key, action ) in rating_service_options:
-            
-            if services_manager.ServiceExists( service_key ):
-                
-                sort_tuple = ( service_key, action )
-                
-                display_tuple = self._GetRatingDisplayTuple( sort_tuple )
-                
-                self._rating_service_actions.Append( display_tuple, sort_tuple )
-                
-            
+        self._tag_service_actions.SetData( list( self._service_keys_to_tag_options.keys() ) )
+        
+        self._tag_service_actions.Sort()
+        
+        self._service_keys_to_rating_options = { service_key : action for ( service_key, action ) in rating_service_options }
+        
+        self._rating_service_actions.SetData( list( self._service_keys_to_rating_options.keys() ) )
+        
+        self._rating_service_actions.Sort()
         
         self._sync_archive.SetValue( sync_archive )
         
@@ -1216,37 +1210,20 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._sync_archive.Disable()
             self._sync_urls_action.Disable()
             
-            self._sync_urls_action.SelectClientData( None )
+            self._sync_urls_action.SetValue( None )
             
         else:
             
-            self._sync_urls_action.SelectClientData( sync_urls_action )
+            self._sync_urls_action.SetValue( sync_urls_action )
             
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_hbox.Add( add_tag_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( edit_tag_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( delete_tag_button, CC.FLAGS_VCENTER )
-        
-        tag_services_panel.Add( self._tag_service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
-        tag_services_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        tag_services_panel.Add( tag_services_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_hbox.Add( add_rating_button, CC.FLAGS_VCENTER )
-        if self._duplicate_action == HC.DUPLICATE_BETTER:
-            
-            button_hbox.Add( edit_rating_button, CC.FLAGS_VCENTER )
-            
-        button_hbox.Add( delete_rating_button, CC.FLAGS_VCENTER )
-        
-        rating_services_panel.Add( self._rating_service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
-        rating_services_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        rating_services_panel.Add( rating_services_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -1269,13 +1246,6 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddRating( self ):
         
-        existing_service_keys = set()
-        
-        for ( service_key, action ) in self._rating_service_actions.GetClientData():
-            
-            existing_service_keys.add( service_key )
-            
-        
         services_manager = HG.client_controller.services_manager
         
         choice_tuples = []
@@ -1284,7 +1254,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             service_key = service.GetServiceKey()
             
-            if service_key not in existing_service_keys:
+            if service_key not in self._service_keys_to_rating_options:
                 
                 name = service.GetName()
                 
@@ -1336,22 +1306,15 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
                 
             
-            sort_tuple = ( service_key, action )
+            self._service_keys_to_rating_options[ service_key ] = action
             
-            display_tuple = self._GetRatingDisplayTuple( sort_tuple )
+            self._rating_service_actions.AddDatas( ( service_key, ) )
             
-            self._rating_service_actions.Append( display_tuple, sort_tuple )
+            self._rating_service_actions.Sort()
             
         
     
     def _AddTag( self ):
-        
-        existing_service_keys = set()
-        
-        for ( service_key, action, tag_filter ) in self._tag_service_actions.GetClientData():
-            
-            existing_service_keys.add( service_key )
-            
         
         services_manager = HG.client_controller.services_manager
         
@@ -1361,7 +1324,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             service_key = service.GetServiceKey()
             
-            if service_key not in existing_service_keys:
+            if service_key not in self._service_keys_to_tag_options:
                 
                 name = service.GetName()
                 
@@ -1427,14 +1390,41 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     tag_filter = panel.GetValue()
                     
-                    sort_tuple = ( service_key, action, tag_filter )
+                    self._service_keys_to_tag_options[ service_key ] = ( action, tag_filter )
                     
-                    display_tuple = self._GetTagDisplayTuple( sort_tuple )
+                    self._tag_service_actions.AddDatas( ( service_key, ) )
                     
-                    self._tag_service_actions.Append( display_tuple, sort_tuple )
+                    self._tag_service_actions.Sort()
                     
                 
             
+        
+    
+    def _ConvertRatingDataToListCtrlTuple( self, service_key ):
+        
+        action = self._service_keys_to_rating_options[ service_key ]
+        
+        service_name = HG.client_controller.services_manager.GetName( service_key )
+        pretty_action = HC.content_merge_string_lookup[ action ]
+        
+        display_tuple = ( service_name, pretty_action )
+        sort_tuple = ( service_name, pretty_action )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _ConvertTagDataToListCtrlTuple( self, service_key ):
+        
+        ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
+        
+        service_name = HG.client_controller.services_manager.GetName( service_key )
+        pretty_action = HC.content_merge_string_lookup[ action ]
+        pretty_tag_filter = tag_filter.ToPermittedString()
+        
+        display_tuple = ( service_name, pretty_action, pretty_tag_filter )
+        sort_tuple = ( service_name, pretty_action, pretty_tag_filter )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _DeleteRating( self ):
@@ -1443,7 +1433,12 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._rating_service_actions.RemoveAllSelected()
+                for service_key in self._rating_service_actions.GetData( only_selected = True ):
+                    
+                    del self._service_keys_to_rating_options[ service_key ]
+                    
+                
+                self._rating_service_actions.DeleteSelected()
                 
             
         
@@ -1454,18 +1449,23 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._tag_service_actions.RemoveAllSelected()
+                for service_key in self._tag_service_actions.GetData( only_selected = True ):
+                    
+                    del self._service_keys_to_tag_options[ service_key ]
+                    
+                
+                self._tag_service_actions.DeleteSelected()
                 
             
         
     
     def _EditRating( self ):
         
-        all_selected = self._rating_service_actions.GetAllSelected()
+        service_keys = self._rating_service_actions.GetData( only_selected = True )
         
-        for index in all_selected:
+        for service_key in service_keys:
             
-            ( service_key, action ) = self._rating_service_actions.GetClientData( index )
+            action = self._service_keys_to_rating_options[ service_key ]
             
             if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
@@ -1479,7 +1479,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except HydrusExceptions.CancelledException:
                     
-                    return
+                    break
                     
                 
             else: # This shouldn't get fired because the edit button is hidden, but w/e
@@ -1487,21 +1487,21 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
                 
             
-            sort_tuple = ( service_key, action )
+            self._service_keys_to_rating_options[ service_key ] = action
             
-            display_tuple = self._GetRatingDisplayTuple( sort_tuple )
+            self._rating_service_actions.UpdateDatas( ( service_key, ) )
             
-            self._rating_service_actions.UpdateRow( index, display_tuple, sort_tuple )
+            self._rating_service_actions.Sort()
             
         
     
     def _EditTag( self ):
         
-        all_selected = self._tag_service_actions.GetAllSelected()
+        service_keys = self._tag_service_actions.GetData( only_selected = True )
         
-        for index in all_selected:
+        for service_key in service_keys:
             
-            ( service_key, action, tag_filter ) = self._tag_service_actions.GetClientData( index )
+            ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
             
             if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
@@ -1515,7 +1515,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except HydrusExceptions.CancelledException:
                     
-                    return
+                    break
                     
                 
             else:
@@ -1535,11 +1535,11 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     tag_filter = panel.GetValue()
                     
-                    sort_tuple = ( service_key, action, tag_filter )
+                    self._service_keys_to_tag_options[ service_key ] = ( action, tag_filter )
                     
-                    display_tuple = self._GetTagDisplayTuple( sort_tuple )
+                    self._tag_service_actions.UpdateDatas( ( service_key, ) )
                     
-                    self._tag_service_actions.UpdateRow( index, display_tuple, sort_tuple )
+                    self._tag_service_actions.Sort()
                     
                 else:
                     
@@ -1549,44 +1549,12 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _GetRatingDisplayTuple( self, sort_tuple ):
-        
-        ( service_key, action ) = sort_tuple
-        
-        services_manager = HG.client_controller.services_manager
-        
-        service = services_manager.GetService( service_key )
-        
-        name = service.GetName()
-        
-        pretty_action = HC.content_merge_string_lookup[ action ]
-        
-        return ( name, pretty_action )
-        
-    
-    def _GetTagDisplayTuple( self, sort_tuple ):
-        
-        ( service_key, action, tag_filter ) = sort_tuple
-        
-        services_manager = HG.client_controller.services_manager
-        
-        service = services_manager.GetService( service_key )
-        
-        name = service.GetName()
-        
-        pretty_action = HC.content_merge_string_lookup[ action ]
-        
-        pretty_tag_filter = tag_filter.ToPermittedString()
-        
-        return ( name, pretty_action, pretty_tag_filter )
-        
-    
     def GetValue( self ):
         
-        tag_service_actions = self._tag_service_actions.GetClientData()
-        rating_service_actions = self._rating_service_actions.GetClientData()
+        tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, ( action, tag_filter ) ) in self._service_keys_to_tag_options.items() ]
+        rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._service_keys_to_rating_options.items() ]
         sync_archive = self._sync_archive.GetValue()
-        sync_urls_action = self._sync_urls_action.GetChoice()
+        sync_urls_action = self._sync_urls_action.GetValue()
         
         duplicate_action_options = ClientDuplicates.DuplicateActionOptions( tag_service_actions, rating_service_actions, sync_archive, sync_urls_action )
         
@@ -1856,10 +1824,10 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( x, y ) = default_gravity
         
-        self._default_gravity_x.SelectClientData( x )
-        self._default_gravity_y.SelectClientData( y )
+        self._default_gravity_x.SetValue( x )
+        self._default_gravity_y.SetValue( y )
         
-        self._default_position.SelectClientData( default_position )
+        self._default_position.SetValue( default_position )
         
         self._maximised.SetValue( maximised )
         self._fullscreen.SetValue( fullscreen )
@@ -1894,12 +1862,12 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         last_size = self._last_size.GetValue()
         last_position = self._last_position.GetValue()
         
-        x = self._default_gravity_x.GetChoice()
-        y = self._default_gravity_y.GetChoice()
+        x = self._default_gravity_x.GetValue()
+        y = self._default_gravity_y.GetValue()
         
         default_gravity = [ x, y ]
         
-        default_position = self._default_position.GetChoice()
+        default_position = self._default_position.GetValue()
         
         maximised = self._maximised.GetValue()
         fullscreen = self._fullscreen.GetValue()
@@ -2606,18 +2574,18 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._media_show_action.SelectClientData( media_show_action )
-        self._preview_show_action.SelectClientData( preview_show_action )
+        self._media_show_action.SetValue( media_show_action )
+        self._preview_show_action.SetValue( preview_show_action )
         
-        self._media_scale_up.SelectClientData( media_scale_up )
-        self._media_scale_down.SelectClientData( media_scale_down )
-        self._preview_scale_up.SelectClientData( preview_scale_up )
-        self._preview_scale_down.SelectClientData( preview_scale_down )
+        self._media_scale_up.SetValue( media_scale_up )
+        self._media_scale_down.SetValue( media_scale_down )
+        self._preview_scale_up.SetValue( preview_scale_up )
+        self._preview_scale_down.SetValue( preview_scale_down )
         
         self._exact_zooms_only.SetValue( exact_zooms_only )
         
-        self._scale_up_quality.SelectClientData( scale_up_quality )
-        self._scale_down_quality.SelectClientData( scale_down_quality )
+        self._scale_up_quality.SetValue( scale_up_quality )
+        self._scale_down_quality.SetValue( scale_down_quality )
         
         #
         
@@ -2673,7 +2641,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventActionChange( self, event ):
         
-        if self._media_show_action.GetChoice() in CC.no_support and self._preview_show_action.GetChoice() in CC.no_support:
+        if self._media_show_action.GetValue() in CC.no_support and self._preview_show_action.GetValue() in CC.no_support:
             
             self._media_scale_up.Disable()
             self._media_scale_down.Disable()
@@ -2707,18 +2675,18 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        media_show_action = self._media_show_action.GetChoice()
-        preview_show_action = self._preview_show_action.GetChoice()
+        media_show_action = self._media_show_action.GetValue()
+        preview_show_action = self._preview_show_action.GetValue()
         
-        media_scale_up = self._media_scale_up.GetChoice()
-        media_scale_down = self._media_scale_down.GetChoice()
-        preview_scale_up = self._preview_scale_up.GetChoice()
-        preview_scale_down = self._preview_scale_down.GetChoice()
+        media_scale_up = self._media_scale_up.GetValue()
+        media_scale_down = self._media_scale_down.GetValue()
+        preview_scale_up = self._preview_scale_up.GetValue()
+        preview_scale_down = self._preview_scale_down.GetValue()
         
         exact_zooms_only = self._exact_zooms_only.GetValue()
         
-        scale_up_quality = self._scale_up_quality.GetChoice()
-        scale_down_quality = self._scale_down_quality.GetChoice()
+        scale_up_quality = self._scale_up_quality.GetValue()
+        scale_down_quality = self._scale_down_quality.GetValue()
         
         return ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
         
@@ -2770,7 +2738,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._context_type.SelectClientData( network_context.context_type )
+        self._context_type.SetValue( network_context.context_type )
         
         self._Update()
         
@@ -2788,11 +2756,11 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
-                self._context_data_services.SelectClientData( network_context.context_data )
+                self._context_data_services.SetValue( network_context.context_data )
                 
             elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
                 
-                self._context_data_subscriptions.SelectClientData( network_context.context_data )
+                self._context_data_subscriptions.SetValue( network_context.context_data )
                 
             
         
@@ -2816,9 +2784,9 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Update( self ):
         
-        self._context_type_info.SetLabelText( CC.network_context_type_description_lookup[ self._context_type.GetChoice() ] )
+        self._context_type_info.SetLabelText( CC.network_context_type_description_lookup[ self._context_type.GetValue() ] )
         
-        context_type = self._context_type.GetChoice()
+        context_type = self._context_type.GetValue()
         
         self._context_data_text.Disable()
         self._context_data_services.Disable()
@@ -2854,7 +2822,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        context_type = self._context_type.GetChoice()
+        context_type = self._context_type.GetValue()
         
         if self._context_data_none.GetValue() == True:
             
@@ -2868,11 +2836,11 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
-                context_data = self._context_data_services.GetChoice()
+                context_data = self._context_data_services.GetValue()
                 
             elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
                 
-                context_data = self._context_data_subscriptions.GetChoice()
+                context_data = self._context_data_subscriptions.GetValue()
                 
             
         
@@ -3035,7 +3003,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._value.SetValue( value )
             
-            self._approved.SelectClientData( approved )
+            self._approved.SetValue( approved )
             
             self._reason.SetValue( reason )
             
@@ -3057,7 +3025,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             network_context = self._network_context.GetValue()
             key = self._key.GetValue()
             value = self._value.GetValue()
-            approved = self._approved.GetChoice()
+            approved = self._approved.GetValue()
             reason = self._reason.GetValue()
             
             return ( network_context, key, value, approved, reason )
@@ -3092,80 +3060,36 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._regexes = ClientGUIListCtrl.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._add_button = wx.Button( self, label = 'add' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        columns = [ ( 'regex phrase', 24 ), ( 'description', -1 ) ]
         
-        self._edit_button = wx.Button( self, label = 'edit' )
-        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        self._regexes = ClientGUIListCtrl.BetterListCtrl( regex_listctrl_panel, 'regex_favourites', 8, 48, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
         
-        self._delete_button = wx.Button( self, label = 'delete' )
-        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        regex_listctrl_panel.SetListCtrl( self._regexes )
         
-        #
-        
-        for ( regex_phrase, description ) in regex_favourites:
-            
-            self._regexes.Append( ( regex_phrase, description ), ( regex_phrase, description ) )
-            
+        regex_listctrl_panel.AddButton( 'add', self._Add )
+        regex_listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        regex_listctrl_panel.AddDeleteButton()
         
         #
         
-        regex_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        self._regexes.SetData( regex_favourites )
         
-        regex_buttons.Add( self._add_button, CC.FLAGS_VCENTER )
-        regex_buttons.Add( self._edit_button, CC.FLAGS_VCENTER )
-        regex_buttons.Add( self._delete_button, CC.FLAGS_VCENTER )
+        self._regexes.Sort()
+        
+        #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( regex_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( regex_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
-    def Delete( self ):
+    def _Add( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._regexes.RemoveAllSelected()
-                
-            
-        
-    
-    def Edit( self ):
-        
-        indices = self._regexes.GetAllSelected()
-        
-        for index in indices:
-            
-            ( regex_phrase, description ) = self._regexes.GetClientData( index )
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    regex_phrase = dlg.GetValue()
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
-                        
-                        if dlg_2.ShowModal() == wx.ID_OK:
-                            
-                            description = dlg_2.GetValue()
-                            
-                            self._regexes.UpdateRow( index, ( regex_phrase, description ), ( regex_phrase, description ) )
-                            
-                        
-                    
-                
-            
-        
-    
-    def EventAdd( self, event ):
+        current_data = self._regexes.GetData()
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
             
@@ -3179,26 +3103,73 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                         
                         description = dlg_2.GetValue()
                         
-                        self._regexes.Append( ( regex_phrase, description ), ( regex_phrase, description ) )
+                        row = ( regex_phrase, description )
+                        
+                        if row in current_data:
+                            
+                            wx.MessageBox( 'That regex and description are already in the list!' )
+                            
+                            return
+                            
+                        
+                        self._regexes.AddDatas( ( row, ) )
                         
                     
                 
             
         
     
-    def EventDelete( self, event ):
+    def _ConvertDataToListCtrlTuples( self, row ):
         
-        self.Delete()
+        ( regex_phrase, description ) = row
+        
+        display_tuple = ( regex_phrase, description )
+        sort_tuple = ( regex_phrase, description )
+        
+        return ( display_tuple, sort_tuple )
         
     
-    def EventEdit( self, event ):
+    def _Edit( self ):
         
-        self.Edit()
+        rows = self._regexes.GetData( only_selected = True )
+        
+        for row in rows:
+            
+            ( regex_phrase, description ) = row
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    regex_phrase = dlg.GetValue()
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
+                        
+                        if dlg_2.ShowModal() == wx.ID_OK:
+                            
+                            description = dlg_2.GetValue()
+                            
+                            edited_row = ( regex_phrase, description )
+                            
+                            self._regexes.DeleteDatas( ( row, ) )
+                            
+                            self._regexes.AddDatas( ( edited_row, ) )
+                            
+                        
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._regexes.Sort()
         
     
     def GetValue( self ):
         
-        return self._regexes.GetClientData()
+        return self._regexes.GetData()
         
     
 class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
@@ -6057,9 +6028,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name.SetValue( name )
         
-        self._url_type.SelectClientData( url_type )
+        self._url_type.SetValue( url_type )
         
-        self._preferred_scheme.SelectClientData( preferred_scheme )
+        self._preferred_scheme.SetValue( preferred_scheme )
         
         self._netloc.SetValue( netloc )
         
@@ -6431,8 +6402,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         url_class_key = self._original_url_class.GetMatchKey()
         name = self._name.GetValue()
-        url_type = self._url_type.GetChoice()
-        preferred_scheme = self._preferred_scheme.GetChoice()
+        url_type = self._url_type.GetValue()
+        preferred_scheme = self._preferred_scheme.GetValue()
         netloc = self._netloc.GetValue()
         match_subdomains = self._match_subdomains.GetValue()
         keep_matched_subdomains = self._keep_matched_subdomains.GetValue()
@@ -6442,7 +6413,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
         
-        ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetChoice()
+        ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetValue()
         gallery_index_delta = self._next_gallery_page_delta.GetValue()
         
         example_url = self._example_url.GetValue()
@@ -6456,7 +6427,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # we need to regen possible next gallery page choices before we fetch current value and update everything else
         
-        if self._url_type.GetChoice() == HC.URL_TYPE_GALLERY:
+        if self._url_type.GetValue() == HC.URL_TYPE_GALLERY:
             
             self._next_gallery_page_panel.Enable()
             
@@ -6478,7 +6449,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            existing_choice = self._next_gallery_page_choice.GetChoice()
+            existing_choice = self._next_gallery_page_choice.GetValue()
             
             self._next_gallery_page_choice.Clear()
             
@@ -6487,9 +6458,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._next_gallery_page_choice.Append( name, data )
                 
             
-            self._next_gallery_page_choice.SelectClientData( existing_choice ) # this should fail to ( None, None )
+            self._next_gallery_page_choice.SetValue( existing_choice ) # this should fail to ( None, None )
             
-            ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetChoice() # what was actually set?
+            ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetValue() # what was actually set?
             
             if gallery_index_type is None:
                 
@@ -6608,7 +6579,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._should_be_associated_with_files.GetValue() == True:
             
-            if self._url_type.GetChoice() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
+            if self._url_type.GetValue() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
                 message = 'Please note that it is only appropriate to associate a Gallery or Watchable URL with a file if that URL is non-ephemeral. It is only appropriate if the exact same URL will definitely give the same files in six months\' time (like a fixed doujin chapter gallery).'
                 message += os.linesep * 2
@@ -6619,7 +6590,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            if self._url_type.GetChoice() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+            if self._url_type.GetValue() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
                 
                 message = 'Hydrus uses these file associations to make sure not to re-download the same file when it comes across the same URL in future. It is only appropriate to not associate a file or post url with a file if that url is particularly ephemeral, such as if the URL includes a non-removable random key that becomes invalid after a few minutes.'
                 message += os.linesep * 2
@@ -6639,7 +6610,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventURLTypeUpdate( self, event ):
         
-        url_type = self._url_type.GetChoice()
+        url_type = self._url_type.GetValue()
         
         if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
             

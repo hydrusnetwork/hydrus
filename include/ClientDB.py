@@ -739,9 +739,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            self._HandleCriticalRepositoryError( service_id )
-            
-            raise HydrusExceptions.DataMissing( 'Service file hash map error in database' )
+            self._HandleCriticalRepositoryDefinitionError( service_id )
             
         
         ( hash_id, ) = result
@@ -759,9 +757,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( hash_ids ) != len( service_hash_ids ):
             
-            self._HandleCriticalRepositoryError( service_id )
-            
-            raise HydrusExceptions.DataMissing( 'Service file hash map error in database' )
+            self._HandleCriticalRepositoryDefinitionError( service_id )
             
         
         return hash_ids
@@ -775,9 +771,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            self._HandleCriticalRepositoryError( service_id )
-            
-            raise HydrusExceptions.DataMissing( 'Service tag map error in database' )
+            self._HandleCriticalRepositoryDefinitionError( service_id )
             
         
         ( tag_id, ) = result
@@ -2233,6 +2227,28 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _DuplicatesFilterKingHashIds( self, allowed_hash_ids ):
+        
+        # can't just pull explicit king_hash_ids, since files not in the system are considered king of their group
+        
+        if not isinstance( allowed_hash_ids, set ):
+            
+            allowed_hash_ids = set( allowed_hash_ids )
+            
+        
+        query = 'SELECT king_hash_id FROM duplicate_files WHERE king_hash_id in {};'
+        
+        explicit_king_hash_ids = self._STS( self._SelectFromList( query, allowed_hash_ids ) )
+        
+        query = 'SELECT hash_id FROM duplicate_file_members WHERE hash_id in {};'
+        
+        all_duplicate_member_hash_ids = self._STS( self._SelectFromList( query, allowed_hash_ids ) )
+        
+        all_non_king_hash_ids = all_duplicate_member_hash_ids.difference( explicit_king_hash_ids )
+        
+        return allowed_hash_ids.difference( all_non_king_hash_ids )
+        
+    
     def _DuplicatesGetAlternatesGroupId( self, media_id, do_not_create = False ):
         
         result = self._c.execute( 'SELECT alternates_group_id FROM alternate_file_group_members WHERE media_id = ?;', ( media_id, ) ).fetchone()
@@ -3403,6 +3419,7 @@ class DB( HydrusDB.HydrusDB ):
             larger_media_id = max( media_id_a, media_id_b )
             
             # this shouldn't be strictly needed, but lets do it here anyway to catch unforeseen problems
+            # it is ok to remove this even if we are just about to add it back in--this clears out invalid pairs and increases priority with distance 0
             self._c.execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? AND larger_media_id = ?;', ( smaller_media_id, larger_media_id ) )
             
             if hash_id_a == hash_id_b:
@@ -3507,6 +3524,12 @@ class DB( HydrusDB.HydrusDB ):
                         self._DuplicatesMergeMedias( superior_media_id, mergee_media_id )
                         
                     
+                
+            elif duplicate_type == HC.DUPLICATE_POTENTIAL:
+                
+                potential_duplicate_media_ids_and_distances = [ ( media_id_b, 0 ) ]
+                
+                self._DuplicatesAddPotentialDuplicates( media_id_a, potential_duplicate_media_ids_and_distances )
                 
             
         
@@ -4337,6 +4360,8 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetBonedStats( self ):
         
+        boned_stats = {}
+        
         ( num_total, size_total ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchone()
         ( num_inbox, size_inbox ) = self._c.execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN current_files NATURAL JOIN file_inbox WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchone()
         
@@ -4352,6 +4377,11 @@ class DB( HydrusDB.HydrusDB ):
         
         num_archive = num_total - num_inbox
         size_archive = size_total - size_inbox
+        
+        boned_stats[ 'num_inbox' ] = num_inbox
+        boned_stats[ 'num_archive' ] = num_archive
+        boned_stats[ 'size_inbox' ] = size_inbox
+        boned_stats[ 'size_archive' ] = size_archive
         
         total_viewtime = self._c.execute( 'SELECT SUM( media_views ), SUM( media_viewtime ), SUM( preview_views ), SUM( preview_viewtime ) FROM file_viewing_stats;' ).fetchone()
         
@@ -4369,7 +4399,20 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        return ( num_inbox, num_archive, size_inbox, size_archive, total_viewtime )
+        boned_stats[ 'total_viewtime' ] = total_viewtime
+        
+        total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._c.execute( 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;' ) if count > 1 ) )
+        total_duplicate_files = sum( ( count for ( media_id, count ) in self._c.execute( 'SELECT media_id, COUNT( * ) FROM duplicate_file_members GROUP BY media_id;' ) if count > 1 ) )
+        
+        ( table_join, predicates_string ) = self._DuplicatesGetPotentialDuplicatePairsTableJoinInfoOnFileService( CC.LOCAL_FILE_SERVICE_KEY )
+        
+        ( total_potential_pairs, ) = self._c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} WHERE {} );'.format( table_join, predicates_string ) ).fetchone()
+        
+        boned_stats[ 'total_alternate_files' ] = total_alternate_files
+        boned_stats[ 'total_duplicate_files' ] = total_duplicate_files
+        boned_stats[ 'total_potential_pairs' ] = total_potential_pairs
+        
+        return boned_stats
         
     
     def _GetClientFilesLocations( self ):
@@ -4481,7 +4524,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.TAG_SERVICES:
             
@@ -4501,7 +4544,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.FILE_SERVICES:
             
@@ -4551,7 +4594,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
             
         
         def sys_preds_key( s ):
@@ -4979,6 +5022,8 @@ class DB( HydrusDB.HydrusDB ):
         
         simple_preds = system_predicates.GetSimpleInfo()
         
+        king_filter = system_predicates.GetKingFilter()
+        
         or_predicates = search_context.GetORPredicates()
         
         need_file_domain_cross_reference = file_service_key != CC.COMBINED_FILE_SERVICE_KEY
@@ -5123,11 +5168,11 @@ class DB( HydrusDB.HydrusDB ):
         
         # start with some quick ways to populate query_hash_ids
         
-        def update_qhi( query_hash_ids, some_hash_ids ):
+        def update_qhi( query_hash_ids, some_hash_ids, force_create_new_set = False ):
             
             if query_hash_ids is None:
                 
-                if not isinstance( some_hash_ids, set ):
+                if not isinstance( some_hash_ids, set ) or force_create_new_set:
                     
                     some_hash_ids = set( some_hash_ids )
                     
@@ -5282,6 +5327,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if system_predicates.MustBeInbox():
+            
+            query_hash_ids = update_qhi( query_hash_ids, self._inbox_hash_ids, force_create_new_set = True )
+            
+        
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
             
             only_do_zero = ( operator in ( '=', '\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
@@ -5396,19 +5446,31 @@ class DB( HydrusDB.HydrusDB ):
         
         # at this point, query_hash_ids has something in it
         
+        if system_predicates.MustBeArchive():
+            
+            query_hash_ids.difference_update( self._inbox_hash_ids )
+            
+        
+        if king_filter is not None and king_filter:
+            
+            king_hash_ids = self._DuplicatesFilterKingHashIds( query_hash_ids )
+            
+            query_hash_ids = update_qhi( query_hash_ids, king_hash_ids )
+            
+        
         if not done_files_info_predicates and ( need_file_domain_cross_reference or there_are_simple_files_info_preds_to_search_for ):
             
             files_info_predicates.append( 'hash_id IN {}' )
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
-                update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                query_hash_ids = update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                 
             else:
                 
                 files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                 
-                update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
+                query_hash_ids = update_qhi( query_hash_ids, self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                 
             
             done_files_info_predicates = True
@@ -5472,14 +5534,14 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ) )
+            query_hash_ids = update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( service_id, ) ) ) )
             
         
         for service_key in file_services_to_include_pending:
             
             service_id = self._GetServiceId( service_key )
             
-            update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ) )
+            query_hash_ids = update_qhi( query_hash_ids, self._STI( self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ) )
             
         
         for service_key in file_services_to_exclude_current:
@@ -5508,6 +5570,13 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if king_filter is not None and not king_filter:
+            
+            king_hash_ids = self._DuplicatesFilterKingHashIds( query_hash_ids )
+            
+            query_hash_ids.difference_update( king_hash_ids )
+            
+        
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
             
             only_do_zero = ( operator in ( '=', '\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
@@ -5529,7 +5598,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
-                update_qhi( query_hash_ids, hash_ids )
+                query_hash_ids = update_qhi( query_hash_ids, hash_ids )
                 
             
         
@@ -5554,7 +5623,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 
-                update_qhi( query_hash_ids, hash_ids )
+                query_hash_ids = update_qhi( query_hash_ids, hash_ids )
                 
             
         
@@ -5567,8 +5636,6 @@ class DB( HydrusDB.HydrusDB ):
         
         must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
         must_not_be_local = system_predicates.MustNotBeLocal()
-        must_be_inbox = system_predicates.MustBeInbox()
-        must_be_archive = system_predicates.MustBeArchive()
         
         if file_service_type in HC.LOCAL_FILE_SERVICES:
             
@@ -5583,21 +5650,12 @@ class DB( HydrusDB.HydrusDB ):
             
             if must_be_local:
                 
-                update_qhi( query_hash_ids, local_hash_ids )
+                query_hash_ids = update_qhi( query_hash_ids, local_hash_ids )
                 
             elif must_not_be_local:
                 
                 query_hash_ids.difference_update( local_hash_ids )
                 
-            
-        
-        if must_be_inbox:
-            
-            update_qhi( query_hash_ids, self._inbox_hash_ids )
-            
-        elif must_be_archive:
-            
-            query_hash_ids.difference_update( self._inbox_hash_ids )
             
         
         #
@@ -5610,7 +5668,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if operator: # inclusive
                     
-                    update_qhi( query_hash_ids, url_hash_ids )
+                    query_hash_ids = update_qhi( query_hash_ids, url_hash_ids )
                     
                 else:
                     
@@ -5680,7 +5738,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             elif num_tags_nonzero:
                 
-                update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
+                query_hash_ids = update_qhi( query_hash_ids, nonzero_tag_query_hash_ids )
                 
             
         
@@ -5697,7 +5755,7 @@ class DB( HydrusDB.HydrusDB ):
                 good_tag_count_hash_ids.update( zero_hash_ids )
                 
             
-            update_qhi( query_hash_ids, good_tag_count_hash_ids )
+            query_hash_ids = update_qhi( query_hash_ids, good_tag_count_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -5713,7 +5771,7 @@ class DB( HydrusDB.HydrusDB ):
             
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags )
             
-            update_qhi( query_hash_ids, good_hash_ids )
+            query_hash_ids = update_qhi( query_hash_ids, good_hash_ids )
             
         
         if 'max_tag_as_number' in simple_preds:
@@ -5722,7 +5780,7 @@ class DB( HydrusDB.HydrusDB ):
             
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags )
             
-            update_qhi( query_hash_ids, good_hash_ids )
+            query_hash_ids = update_qhi( query_hash_ids, good_hash_ids )
             
         
         if job_key.IsCancelled():
@@ -7859,13 +7917,22 @@ class DB( HydrusDB.HydrusDB ):
         return names
         
     
-    def _HandleCriticalRepositoryError( self, service_id ):
+    def _HandleCriticalRepositoryDefinitionError( self, service_id ):
         
-        wx.CallAfter( wx.MessageBox, 'A critical error was discovered with one of your repositories. The database is in an invalid state. The cached repository data is now being completely reset, which may take a few minutes. If the client is running (and is not about to abandon a boot attempt), you should restart it as soon as possible and investigate what might have caused a recent database corruption. The hydrus developer would also be interested in hearing the details.' )
+        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
         
-        service = self._GetService( service_id )
+        definition_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM ' + repository_updates_table_name + ' NATURAL JOIN files_info WHERE mime = ?;', ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) ) )
         
-        self._ResetRepository( service )
+        self._c.executemany( 'UPDATE ' + repository_updates_table_name + ' SET processed = ? WHERE hash_id = ?;', ( ( False, hash_id ) for hash_id in definition_hash_ids ) )
+        
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+        
+        self._Commit()
+        
+        self._BeginImmediate()
+        
+        raise Exception( 'A critical error was discovered with one of your repositories: its definition reference is in an invalid state. Your repository should now be paused, and all update files have been scheduled for an integrity and metadata check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository. Once unpaused, it will reprocess your definition files and attempt to fill the missing entries. If this error occurs again once that is complete, please inform hydrus dev.' )
         
     
     def _HashExists( self, hash ):
@@ -11738,7 +11805,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                domain_manager.OverwriteDefaultParsers( ( 'tumblr api creator gallery page parser', 'gelbooru 0.2.x gallery page parser', 'tumblr api post page parser', 'tumblr api post page parser - with post tags', 'zzz - old parser - tumblr api post page parser', 'zzz - old parser - tumblr api post page parser - with post tags', 'rule34.paheal gallery page parser', 'mishimmie gallery page parser' ) )
+                domain_manager.OverwriteDefaultParsers( ( 'tumblr api creator gallery page parser', 'gelbooru 0.2.x gallery page parser', 'tumblr api post page parser', 'tumblr api post page parser - with post tags', 'zzz - old parser - tumblr api post page parser', 'zzz - old parser - tumblr api post page parser - with post tags', 'rule34.paheal gallery page parser' ) )
                 
                 #
                 
@@ -11928,7 +11995,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 boorus = self._STL( self._c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_REMOTE_BOORU, ) ) )
                 
-                default_names = { 'derpibooru', 'gelbooru', 'safebooru', 'e621', 'rule34@paheal', 'danbooru', 'mishimmie', 'rule34@booru.org', 'furry@booru.org', 'xbooru', 'konachan', 'yande.re', 'tbib', 'sankaku chan', 'sankaku idol', 'rule34hentai' }
+                default_names = { 'derpibooru', 'gelbooru', 'safebooru', 'e621', 'rule34@paheal', 'danbooru', 'rule34@booru.org', 'furry@booru.org', 'xbooru', 'konachan', 'yande.re', 'tbib', 'sankaku chan', 'sankaku idol', 'rule34hentai' }
                 
                 new_gugs = []
                 new_parsers = []

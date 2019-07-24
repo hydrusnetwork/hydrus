@@ -1245,7 +1245,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._shape.SelectClientData( dictionary[ 'shape' ] )
+                self._shape.SetValue( dictionary[ 'shape' ] )
                 
                 for ( colour_type, ( border_rgb, fill_rgb ) ) in dictionary[ 'colours' ]:
                     
@@ -1287,7 +1287,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dictionary_part = {}
                 
-                dictionary_part[ 'shape' ] = self._shape.GetChoice()
+                dictionary_part[ 'shape' ] = self._shape.GetValue()
                 
                 dictionary_part[ 'colours' ] = {}
                 
@@ -1369,32 +1369,27 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._use_nocopy.SetToolTip( tts )
                 
-                initial_dict = dict( dictionary[ 'nocopy_abs_path_translations' ] )
+                portable_initial_dict = dict( dictionary[ 'nocopy_abs_path_translations' ] )
+                
+                abs_initial_dict = {}
                 
                 current_file_locations = HG.client_controller.client_files_manager.GetCurrentFileLocations()
                 
-                for portable_hydrus_path in list( initial_dict.keys() ):
+                for ( portable_hydrus_path, ipfs_path ) in portable_initial_dict.items():
                     
                     hydrus_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hydrus_path )
                     
-                    if hydrus_path != portable_hydrus_path:
+                    if hydrus_path in current_file_locations:
                         
-                        initial_dict[ hydrus_path ] = initial_dict[ portable_hydrus_path ]
-                        
-                        del initial_dict[ portable_hydrus_path ]
-                        
-                    
-                    if hydrus_path not in current_file_locations:
-                        
-                        del initial_dict[ hydrus_path ]
+                        abs_initial_dict[ hydrus_path ] = ipfs_path
                         
                     
                 
                 for hydrus_path in current_file_locations:
                     
-                    if hydrus_path not in initial_dict:
+                    if hydrus_path not in abs_initial_dict:
                         
-                        initial_dict[ hydrus_path ] = ''
+                        abs_initial_dict[ hydrus_path ] = ''
                         
                     
                 
@@ -1402,7 +1397,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this path remapping control -->', wx.Colour( 0, 0, 255 ) )
                 
-                self._nocopy_abs_path_translations = ClientGUIControls.StringToStringDictControl( self, initial_dict, key_name = 'hydrus path', value_name = 'ipfs path', allow_add_delete = False, edit_keys = False )
+                self._nocopy_abs_path_translations = ClientGUIControls.StringToStringDictControl( self, abs_initial_dict, key_name = 'hydrus path', value_name = 'ipfs path', allow_add_delete = False, edit_keys = False )
                 
                 self._multihash_prefix = wx.TextCtrl( self )
                 
@@ -1478,18 +1473,18 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dictionary_part[ 'use_nocopy' ] = self._use_nocopy.GetValue()
                 
-                nocopy_abs_path_translations = self._nocopy_abs_path_translations.GetValue()
+                abs_dict = self._nocopy_abs_path_translations.GetValue()
                 
-                for hydrus_path in list( nocopy_abs_path_translations.keys() ):
+                portable_dict = {}
+                
+                for ( hydrus_path, ipfs_path ) in abs_dict.items():
                     
                     portable_hydrus_path = HydrusPaths.ConvertAbsPathToPortablePath( hydrus_path )
                     
-                    nocopy_abs_path_translations[ portable_hydrus_path ] = nocopy_abs_path_translations[ hydrus_path ]
-                    
-                    del nocopy_abs_path_translations[ hydrus_path ]
+                    portable_dict[ portable_hydrus_path ] = ipfs_path
                     
                 
-                dictionary_part[ 'nocopy_abs_path_translations' ] = nocopy_abs_path_translations
+                dictionary_part[ 'nocopy_abs_path_translations' ] = portable_dict
                 
                 dictionary_part[ 'multihash_prefix' ] = self._multihash_prefix.GetValue()
                 
@@ -1554,7 +1549,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._current_colourset.Append( 'default', 'default' )
             self._current_colourset.Append( 'darkmode', 'darkmode' )
             
-            self._current_colourset.SelectClientData( self._new_options.GetString( 'current_colourset' ) )
+            self._current_colourset.SetValue( self._new_options.GetString( 'current_colourset' ) )
             
             self._notebook = wx.Notebook( coloursets_panel )
             
@@ -1654,7 +1649,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            self._new_options.SetString( 'current_colourset', self._current_colourset.GetChoice() )
+            self._new_options.SetString( 'current_colourset', self._current_colourset.GetValue() )
             
         
     
@@ -2442,7 +2437,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_statistics_preview_min_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' ) )
             self._file_viewing_statistics_preview_max_time.SetValue( self._new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' ) )
             
-            self._file_viewing_stats_menu_display.SelectClientData( self._new_options.GetInteger( 'file_viewing_stats_menu_display' ) )
+            self._file_viewing_stats_menu_display.SetValue( self._new_options.GetInteger( 'file_viewing_stats_menu_display' ) )
             
             #
             
@@ -2474,7 +2469,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_min_time', self._file_viewing_statistics_preview_min_time.GetValue() )
             self._new_options.SetNoneableInteger( 'file_viewing_statistics_preview_max_time', self._file_viewing_statistics_preview_max_time.GetValue() )
             
-            self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetChoice() )
+            self._new_options.SetInteger( 'file_viewing_stats_menu_display', self._file_viewing_stats_menu_display.GetValue() )
             
         
     
@@ -2750,13 +2745,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._number_of_gui_session_backups.SetValue( self._new_options.GetInteger( 'number_of_gui_session_backups' ) )
             
-            self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
+            self._default_new_page_goes.SetValue( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
             self._notebook_tabs_on_left.SetValue( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
             
             self._max_page_name_chars.SetValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
             
-            self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
+            self._page_file_count_display.SetValue( self._new_options.GetInteger( 'page_file_count_display' ) )
             
             self._import_page_progress_display.SetValue( self._new_options.GetBoolean( 'import_page_progress_display' ) )
             
@@ -2804,11 +2799,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.GetValue() )
             
-            self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
+            self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetValue() )
             
             self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
             
-            self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
+            self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetValue() )
             self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.GetValue() )
             
             self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.GetValue() )
@@ -2940,7 +2935,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] )
             self._idle_cpu_max.SetValue( HC.options[ 'idle_cpu_max' ] )
             
-            self._idle_shutdown.SelectClientData( HC.options[ 'idle_shutdown' ] )
+            self._idle_shutdown.SetValue( HC.options[ 'idle_shutdown' ] )
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
             self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
             
@@ -3072,7 +3067,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EnableDisableIdleShutdown( self ):
             
-            if self._idle_shutdown.GetChoice() == CC.IDLE_NOT_ON_SHUTDOWN:
+            if self._idle_shutdown.GetValue() == CC.IDLE_NOT_ON_SHUTDOWN:
                 
                 self._shutdown_work_period.Disable()
                 self._idle_shutdown_max_minutes.Disable()
@@ -3123,7 +3118,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'idle_mouse_period' ] = self._idle_mouse_period.GetValue()
             HC.options[ 'idle_cpu_max' ] = self._idle_cpu_max.GetValue()
             
-            HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
+            HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetValue()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
             
             self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
@@ -3489,7 +3484,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetDefaultSort( self._default_sort.GetSort() )
             self._new_options.SetFallbackSort( self._fallback_sort.GetSort() )
             self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.GetValue() )
-            HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
+            HC.options[ 'default_collect' ] = self._default_collect.GetValue()
             
             sort_by_choices = []
             
@@ -3882,9 +3877,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            self._default_tag_repository.SelectClientData( default_tag_repository_key )
+            self._default_tag_repository.SetValue( default_tag_repository_key )
             
-            self._default_tag_service_search_page.SelectClientData( new_options.GetKey( 'default_tag_service_search_page' ) )
+            self._default_tag_service_search_page.SetValue( new_options.GetKey( 'default_tag_service_search_page' ) )
             
             self._show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
             self._ac_select_first_with_count.SetValue( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
@@ -3931,13 +3926,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
+            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetValue()
             HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
             HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.GetValue()
             
             self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.GetValue() )
             
-            self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetChoice() )
+            self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetValue() )
             
             self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
             self._new_options.SetBoolean( 'apply_all_siblings_to_all_services', self._apply_all_siblings_to_all_services.GetValue() )
@@ -4185,9 +4180,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_tags_width.SetValue( self._new_options.GetInteger( 'suggested_tags_width' ) )
             
-            self._suggested_tags_layout.SelectClientData( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
+            self._suggested_tags_layout.SetValue( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
             
-            self._suggested_favourites_services.SelectClientData( CC.LOCAL_TAG_SERVICE_KEY )
+            self._suggested_favourites_services.SetValue( CC.LOCAL_TAG_SERVICE_KEY )
             
             self._show_related_tags.SetValue( self._new_options.GetBoolean( 'show_related_tags' ) )
             
@@ -4197,7 +4192,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_file_lookup_script_tags.SetValue( self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) )
             
-            self._favourite_file_lookup_script.SelectClientData( self._new_options.GetNoneableString( 'favourite_file_lookup_script' ) )
+            self._favourite_file_lookup_script.SetValue( self._new_options.GetNoneableString( 'favourite_file_lookup_script' ) )
             
             self._num_recent_tags.SetValue( self._new_options.GetNoneableInteger( 'num_recent_tags' ) )
             
@@ -4303,7 +4298,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._SaveCurrentSuggestedFavourites()
             
-            self._current_suggested_favourites_service = self._suggested_favourites_services.GetChoice()
+            self._current_suggested_favourites_service = self._suggested_favourites_services.GetValue()
             
             if self._current_suggested_favourites_service in self._suggested_favourites_dict:
                 
@@ -4322,7 +4317,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetInteger( 'suggested_tags_width', self._suggested_tags_width.GetValue() )
-            self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetChoice() )
+            self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetValue() )
             
             self._SaveCurrentSuggestedFavourites()
             
@@ -4338,7 +4333,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'related_tags_search_3_duration_ms', self._related_tags_search_3_duration_ms.GetValue() )
             
             self._new_options.SetBoolean( 'show_file_lookup_script_tags', self._show_file_lookup_script_tags.GetValue() )
-            self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetChoice() )
+            self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetValue() )
             
             self._new_options.SetNoneableInteger( 'num_recent_tags', self._num_recent_tags.GetValue() )
             
@@ -4685,7 +4680,16 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             raise HydrusExceptions.VetoException( 'It looks like some of those services share ports! Please give them unique ports!' )
             
         
-        response = self._clientside_admin_service.Request( HC.POST, 'services', { 'services' : services } )
+        try:
+            
+            response = self._clientside_admin_service.Request( HC.POST, 'services', { 'services' : services } )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            raise HydrusExceptions.VetoException( 'There was an error: {}'.format( str( e ) ) )
+            
         
         service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
         
@@ -5150,7 +5154,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._flip_or_set_action.Append( 'set', HC.CONTENT_UPDATE_SET )
                 self._flip_or_set_action.Append( 'flip on and off', HC.CONTENT_UPDATE_FLIP )
                 
-                self._flip_or_set_action.SelectClientData( HC.CONTENT_UPDATE_SET )
+                self._flip_or_set_action.SetValue( HC.CONTENT_UPDATE_SET )
                 
                 self._tag_panel = ClientGUICommon.StaticBox( self._content_panel, 'tag service actions' )
                 
@@ -5227,7 +5231,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     service_name = self._service.GetName()
                     service_type = self._service.GetServiceType()
                     
-                    self._flip_or_set_action.SelectClientData( action )
+                    self._flip_or_set_action.SetValue( action )
                     
                     if service_type in HC.TAG_SERVICES:
                         
@@ -5407,7 +5411,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     service_key = self._ratings_like_service_keys.GetClientData( selection )
                     
-                    action = self._flip_or_set_action.GetChoice()
+                    action = self._flip_or_set_action.GetValue()
                     
                     if self._ratings_like_like.GetValue():
                         
@@ -5438,7 +5442,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                     
-                    action = self._flip_or_set_action.GetChoice()
+                    action = self._flip_or_set_action.GetValue()
                     
                     if self._ratings_numerical_remove.GetValue():
                         
@@ -5477,7 +5481,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     service_key = self._tag_service_keys.GetClientData( selection )
                     
-                    action = self._flip_or_set_action.GetChoice()
+                    action = self._flip_or_set_action.GetValue()
                     
                     value = self._tag_value.GetValue()
                     

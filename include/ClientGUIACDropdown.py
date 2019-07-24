@@ -59,7 +59,7 @@ def CacheCanBeUsedForInput( search_text_for_cache, new_search_text ):
     
 def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusual_predicate_types, under_construction_or_predicate ):
     
-    ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
+    ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
     
     if search_text in ( '', ':', '*' ):
         
@@ -71,7 +71,12 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
             
             if explicit_wildcard:
                 
-                predicates.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
+                if wildcard_text != search_text:
+                    
+                    predicates.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
+                    
+                
+                predicates.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, wildcard_text, inclusive ) )
                 
             else:
                 
@@ -142,7 +147,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
     file_service_key = file_search_context.GetFileServiceKey()
     tag_service_key = file_search_context.GetTagServiceKey()
     
-    ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
+    ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = parsed_search_text
     
     if search_text in ( '', ':', '*' ):
         
@@ -203,9 +208,14 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                     return
                     
                 
-                can_fetch_from_media = media is not None and len( media ) > 0
+                if job_key.IsCancelled():
+                    
+                    return
+                    
                 
-                if can_fetch_from_media:
+                media_available_and_good = media is not None and len( media ) > 0
+                
+                if media_available_and_good:
                     
                     fetch_from_db = False
                     
@@ -239,6 +249,13 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                     next_search_is_probably_fast = True
                     
                 
+                if job_key.IsCancelled():
+                    
+                    return
+                    
+                
+                matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, search_text, predicates )
+                
             else:
                 
                 # it is possible that media will change between calls to this, so don't cache it
@@ -258,35 +275,42 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                         
                     
                 
-                tags_to_do = set()
+                if job_key.IsCancelled():
+                    
+                    return
+                    
                 
                 current_tags_to_count = collections.Counter()
                 pending_tags_to_count = collections.Counter()
                 
-                if include_current:
+                for group_of_tags_managers in HydrusData.SplitListIntoChunks( tags_managers, 1000 ):
                     
-                    lists_of_current_tags = [ list( tags_manager.GetCurrent( tag_service_key ) ) for tags_manager in tags_managers ]
+                    if include_current:
+                        
+                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key ) for tags_manager in group_of_tags_managers ) )
+                        
                     
-                    current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
+                    if include_pending:
+                        
+                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key ) for tags_manager in group_of_tags_managers ] ) )
+                        
                     
-                    current_tags_flat = ClientSearch.FilterTagsBySearchText( tag_service_key, search_text, current_tags_flat_iterable )
-                    
-                    current_tags_to_count.update( current_tags_flat )
-                    
-                    tags_to_do.update( list(current_tags_to_count.keys()) )
+                    if job_key.IsCancelled():
+                        
+                        return
+                        
                     
                 
-                if include_pending:
+                tags_to_do = set()
+                
+                tags_to_do.update( current_tags_to_count.keys() )
+                tags_to_do.update( pending_tags_to_count.keys() )
+                
+                tags_to_do = ClientSearch.FilterTagsBySearchText( tag_service_key, search_text, tags_to_do )
+                
+                if job_key.IsCancelled():
                     
-                    lists_of_pending_tags = [ list( tags_manager.GetPending( tag_service_key ) ) for tags_manager in tags_managers ]
-                    
-                    pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
-                    
-                    pending_tags_flat = ClientSearch.FilterTagsBySearchText( tag_service_key, search_text, pending_tags_flat_iterable )
-                    
-                    pending_tags_to_count.update( pending_tags_flat )
-                    
-                    tags_to_do.update( list(pending_tags_to_count.keys()) )
+                    return
                     
                 
                 predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
@@ -296,6 +320,11 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                     predicates = siblings_manager.CollapsePredicates( tag_service_key, predicates )
                     
                 
+                if job_key.IsCancelled():
+                    
+                    return
+                    
+                
                 if namespace == '':
                     
                     predicates = ClientData.MergePredicates( predicates, add_namespaceless = True )
@@ -303,8 +332,8 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                 
                 next_search_is_probably_fast = True
                 
-            
-            matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, search_text, predicates )
+                matches = predicates
+                
             
             matches = ClientSearch.SortPredicates( matches )
             
@@ -1438,7 +1467,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _BroadcastCurrentText( self, shift_down ):
         
-        ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
         ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
         
@@ -1535,11 +1564,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             entry_text = raw_entry
             
         
-        tag = HydrusTags.CleanTag( entry_text )
-        
         explicit_wildcard = '*' in entry_text
         
-        search_text = ClientSearch.ConvertEntryTextToSearchText( entry_text )
+        ( wildcard_text, search_text ) = ClientSearch.ConvertEntryTextToSearchText( entry_text )
         
         if explicit_wildcard:
             
@@ -1548,6 +1575,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive )
             
         else:
+            
+            tag = HydrusTags.CleanTag( entry_text )
             
             cache_text = search_text[:-1] # take off the trailing '*' for the cache text
             
@@ -1565,7 +1594,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
             
         
-        return ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate )
+        return ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate )
         
     
     def _RewindORConstruction( self ):
@@ -1608,7 +1637,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _ShouldTakeResponsibilityForEnter( self ):
         
-        ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
         sitting_on_empty = raw_entry == ''
         
@@ -1842,9 +1871,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         tag = HydrusTags.CleanTag( raw_entry )
         
-        search_text = ClientSearch.ConvertEntryTextToSearchText( raw_entry )
+        explicit_wildcard = '*' in raw_entry
         
-        if ClientSearch.IsComplexWildcard( search_text ):
+        ( wildcard_text, search_text ) = ClientSearch.ConvertEntryTextToSearchText( raw_entry )
+        
+        if explicit_wildcard:
             
             cache_text = None
             

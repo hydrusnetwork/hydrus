@@ -1,42 +1,11 @@
 from . import ClientConstants as CC
-from . import ClientDefaults
-from . import ClientDownloading
-from . import ClientDuplicates
-from . import ClientImporting
 from . import ClientGUICommon
-from . import ClientGUIControls
-from . import ClientGUIDialogs
-from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
-from . import ClientGUIImport
-from . import ClientGUIListBoxes
-from . import ClientGUIListCtrl
-from . import ClientGUIMenus
 from . import ClientGUIScrolledPanels
-from . import ClientGUIFileSeedCache
-from . import ClientGUIGallerySeedLog
-from . import ClientGUITags
-from . import ClientGUITime
-from . import ClientGUITopLevelWindows
-from . import ClientImportFileSeeds
-from . import ClientImportOptions
-from . import ClientImportSubscriptions
-from . import ClientMedia
-from . import ClientNetworkingContexts
-from . import ClientNetworkingDomain
-from . import ClientParsing
-from . import ClientPaths
-from . import ClientTags
-import collections
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusNetwork
-from . import HydrusSerialisable
-from . import HydrusTags
-from . import HydrusText
-import os
 import wx
 
 class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):

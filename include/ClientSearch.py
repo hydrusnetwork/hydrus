@@ -43,12 +43,17 @@ def ConvertEntryTextToSearchText( entry_text ):
     
     entry_text = ConvertTagToSearchable( entry_text )
     
-    if not IsComplexWildcard( entry_text ) and not entry_text.endswith( '*' ):
+    ( namespace, subtag ) = HydrusTags.SplitTag( entry_text )
+    
+    wildcard_text = entry_text
+    search_text = entry_text
+    
+    if len( subtag ) > 0 and not subtag.endswith( '*' ):
         
-        entry_text = entry_text + '*'
+        search_text += '*'
         
     
-    return entry_text
+    return ( wildcard_text, search_text )
     
 def FilterPredicatesBySearchText( service_key, search_text, predicates ):
     
@@ -64,7 +69,7 @@ def FilterPredicatesBySearchText( service_key, search_text, predicates ):
             
         
     
-    matching_tags = FilterTagsBySearchText( service_key, search_text, list(tags_to_predicates.keys()) )
+    matching_tags = FilterTagsBySearchText( service_key, search_text, list( tags_to_predicates.keys() ) )
     
     matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
     
@@ -84,13 +89,19 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         # \Z is end of string
         # \s is whitespace
         
-        if s.startswith( '.*' ):
+        if '\:' in s:
             
-            beginning = '(\\A|:)'
+            beginning = '\\A'
+            
+            s = s.replace( '\:', '(\:|.*\\s)', 1 )
+            
+        elif s.startswith( '.*' ):
+            
+            beginning = '(\\A|\:)'
             
         else:
             
-            beginning = '(\\A|:|\\s)'
+            beginning = '(\\A|\:|\\s)'
             
         
         if s.endswith( '.*' ):
@@ -380,6 +391,8 @@ class FileSystemPredicates( object ):
         self._ratings_predicates = []
         
         self._duplicate_count_predicates = []
+        
+        self._king_filter = None
         
         self._file_viewing_stats_predicates = []
         
@@ -675,11 +688,18 @@ class FileSystemPredicates( object ):
                 self._similar_to = ( hash, max_hamming )
                 
             
-            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT:
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
                 
                 ( operator, num_relationships, dupe_type ) = value
                 
                 self._duplicate_count_predicates.append( ( operator, num_relationships, dupe_type ) )
+                
+            
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
+                
+                king = value
+                
+                self._king_filter = king
                 
             
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
@@ -704,6 +724,11 @@ class FileSystemPredicates( object ):
     def GetFileViewingStatsPredicates( self ):
         
         return self._file_viewing_stats_predicates
+        
+    
+    def GetKingFilter( self ):
+        
+        return self._king_filter
         
     
     def GetSimpleInfo( self ):
@@ -1115,6 +1140,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: base = 'local'
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
             elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
                 
                 if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = 'number of tags'
@@ -1153,7 +1179,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
                 
-                base = 'size'
+                base = 'filesize'
                 
                 if self._value is not None:
                     
@@ -1448,9 +1474,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base = n_text + o_text + HydrusData.ToHumanInt( num )
                     
                 
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT:
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
                 
-                base = 'num duplicate relationships'
+                base = 'num file relationships'
                 
                 if self._value is not None:
                     
@@ -1474,6 +1500,26 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     
                     base += ' - has' + o_text + HydrusData.ToHumanInt( num_relationships ) + ' ' + HC.duplicate_type_string_lookup[ dupe_type ]
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
+                
+                base = ''
+                
+                if self._value is not None:
+                    
+                    king = self._value
+                    
+                    if king:
+                        
+                        o_text = 'is the best quality file of its duplicate group'
+                        
+                    else:
+                        
+                        o_text = 'is not the best quality file of its duplicate group'
+                        
+                    
+                    base += o_text
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:

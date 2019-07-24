@@ -195,7 +195,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventChoice( self, event ):
         
-        data = self._action_dropdown.GetChoice()
+        data = self._action_dropdown.GetValue()
         
         if data in ( self.DELETE, self.DELETE_DELETED, self.DELETE_FOR_DELETED_FILES ):
             
@@ -223,9 +223,9 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         # at some point, rewrite this to cope with multiple tags. setsometag is ready to go on that front
         # this should prob be with a listbox so people can enter their new multiple tags in several separate goes, rather than overwriting every time
         
-        action = self._action_dropdown.GetChoice()
+        action = self._action_dropdown.GetValue()
         
-        tag_type = self._tag_type_dropdown.GetChoice()
+        tag_type = self._tag_type_dropdown.GetValue()
         
         if tag_type == self.ALL_MAPPINGS:
             
@@ -284,7 +284,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if action == self.COPY:
             
-            service_key_target = self._service_key_dropdown.GetChoice()
+            service_key_target = self._service_key_dropdown.GetValue()
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
             
@@ -2052,7 +2052,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         hash_ids = self._hash_ids
-        job_type = self._action_selector.GetChoice()
+        job_type = self._action_selector.GetValue()
         
         if len( hash_ids ) > 1000:
             
@@ -2266,16 +2266,23 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
 class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, stats ):
+    def __init__( self, parent, boned_stats ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        ( num_inbox, num_archive, size_inbox, size_archive, total_viewtime ) = stats
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        num_inbox = boned_stats[ 'num_inbox' ]
+        num_archive = boned_stats[ 'num_archive' ]
+        size_inbox = boned_stats[ 'size_inbox' ]
+        size_archive = boned_stats[ 'size_archive' ]
+        total_viewtime = boned_stats[ 'total_viewtime' ]
+        total_alternate_files = boned_stats[ 'total_alternate_files' ]
+        total_duplicate_files = boned_stats[ 'total_duplicate_files' ]
+        total_potential_pairs = boned_stats[ 'total_potential_pairs' ]
         
         num_total = num_archive + num_inbox
         size_total = size_archive + size_inbox
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
         if num_total < 1000:
             
@@ -2340,6 +2347,18 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             vbox.Add( media_st, CC.FLAGS_CENTER )
             vbox.Add( preview_st, CC.FLAGS_CENTER )
             
+            potentials_label = 'Total duplicate potential pairs: {}'.format( HydrusData.ToHumanInt( total_potential_pairs ) )
+            duplicates_label = 'Total files set duplicate: {}'.format( HydrusData.ToHumanInt( total_duplicate_files ) )
+            alternates_label = 'Total duplicate file groups set alternate: {}'.format( HydrusData.ToHumanInt( total_alternate_files ) )
+            
+            potentials_st = ClientGUICommon.BetterStaticText( self, label = potentials_label )
+            duplicates_st = ClientGUICommon.BetterStaticText( self, label = duplicates_label )
+            alternates_st = ClientGUICommon.BetterStaticText( self, label = alternates_label )
+            
+            vbox.Add( potentials_st, CC.FLAGS_CENTER )
+            vbox.Add( duplicates_st, CC.FLAGS_CENTER )
+            vbox.Add( alternates_st, CC.FLAGS_CENTER )
+            
         
         self.SetSizer( vbox )
         
@@ -2398,7 +2417,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._time_delta_usage_bandwidth_type.Append( HC.bandwidth_type_string_lookup[ bandwidth_type ], bandwidth_type )
             
         
-        self._time_delta_usage_bandwidth_type.SelectClientData( HC.BANDWIDTH_TYPE_DATA )
+        self._time_delta_usage_bandwidth_type.SetValue( HC.BANDWIDTH_TYPE_DATA )
         
         monthly_usage = self._bandwidth_tracker.GetMonthlyDataUsage()
         
@@ -2495,7 +2514,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        bandwidth_type = self._time_delta_usage_bandwidth_type.GetChoice()
+        bandwidth_type = self._time_delta_usage_bandwidth_type.GetValue()
         time_delta = self._time_delta_usage_time_delta.GetValue()
         
         time_delta_usage = self._bandwidth_tracker.GetUsage( bandwidth_type, time_delta )

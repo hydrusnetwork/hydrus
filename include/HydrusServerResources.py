@@ -621,6 +621,10 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
             
+        elif failure.type == HydrusExceptions.ServerException:
+            
+            response_context = ResponseContext( 500, mime = default_mime, body = default_encoding( failure.value ) )
+            
         else:
             
             HydrusData.DebugPrint( failure.getTraceback() )

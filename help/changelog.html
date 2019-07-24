@@ -8,6 +8,46 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 361</h3></li>
+				<ul>
+					<li>duplicates:</li>
+					<li>the duplicate filter now compares the pixel content of static image pairs of the same resolution--if they have the exact same pixels, a comparison statement is added, and if one file is a png and the other not (i.e. the png is likely a useless clipboard copy), the statement notes this and a strong duplicate score is applied</li>
+					<li>added 'system:is/is not best file of its group' to search for file kings</li>
+					<li>renamed 'system:num duplicate relationships' to 'system:num file relationships'</li>
+					<li>wrapped the two file relationship system predicates into one 'system:file relationships' stub predicate that opens to a dialog with two pred panels</li>
+					<li>added a 'add potential pairs' command to the thumbnail right-click file relationships menu, which will force-queue files for the duplicates filter</li>
+					<li>the duplicate filter now ensures the two medias' zoom is locked so they have the same width through a transition. furthermore, their current dragged top-left position is pinned in the same location. this ensures files that have slightly different resolution ratios (especially when they are just a couple of pixels off) still remain reasonably comparable when switching back and forth</li>
+					<li>reworked and simplified how position/drag delta is handled in the media canvas to support the above</li>
+					<li>fixed the 'custom action' button on the duplicate filter, which had no 'delete neither' choice and whose 'forget it' button cancelled the whole custom operation, making it impossible to custom action without deleting something. I have added a 'delete neither' green-text button to the front, as the default action</li>
+					<li>mr bones now reports on your potential, duplicate, and alternates numbers</li>
+					<li>.</li>
+					<li>tag autocomplete:</li>
+					<li>greatly sped up tag autocomplete search when fetching from a current media view (i.e. from thumbnails in the search page)--it had some CPU-inefficient testing/counting that mattered at high media/tag counts</li>
+					<li>greatly improved cancelability of tag autocomplete search when pulling from a current media view--this was resulting in high lag when typing fast with multi-thousand results</li>
+					<li>fixed the gui-level tag matching test to match namespaced search inputs with offset subtags (e.g. 'character:aran' now matches 'character:samus aran'), both for wildcard and specific namespaces</li>
+					<li>when typing an explicit wildcard tag search that does not end in a *, you will now be presented with two wildcard options--one with the implicit * suffix, one without</li>
+					<li>fixed 'write' tag autocomplete inputs (like in manage tags) being able to search for chunky 'namespace:*' explicit wildcard searches</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed the ipfs nocopy path translation control saving rows for client file paths outside of the main install path for non-Windows, where it was forgetting on save</li>
+					<li>renamed 'system:size' to 'system:filesize'</li>
+					<li>sped up some system:inbox searches</li>
+					<li>disabled a PIL 'load truncated images' backup mode, which on the current version can seemingly lead to infinite load hangs</li>
+					<li>file report mode now prints info when it deletes/recycles a path, including stack traces</li>
+					<li>fixed a long-running and silent 'port already running' bug related to setting services on the server that was stopping successful service-set-restart from the client in many situations. 'port is already running' checks that conflict with other processes will now give an immediate error to the client without saving any changes</li>
+					<li>the server now prints to the log as it stops/starts/has started its services</li>
+					<li>improved how the server can report certain 500 errors</li>
+					<li>the 'critical service tag/file reference' repository processing error has been improved: rather than reset the whole repository, it now pauses the repo and resets processing status for just the repo's 'definition' update files (without deleting any existing entries, so they should ultimately reprocess super fast) and also schedules a complete integrity and metadata check for all updated files</li>
+					<li>keyboard interrupts from the console should now trigger a clean exit request for the client</li>
+					<li>polite and forced shutdown requests when logging off should now trigger a fast exit (i.e. no yes/no dialog, no shutdown maintenance, but otherwise session saved and so on) for the client. this fast exit is noted in the log</li>
+					<li>moved the tag and rating service listctrls in duplicate merge options panel to the new listctrl object</li>
+					<li>moved the manage regex favourites listctrl to the new object</li>
+					<li>updated a bunch of yes/no dialogs to the new panel system</li>
+					<li>deleted some old unused dialog code and related unit tests</li>
+					<li>fixed up deletion-and-reimport file location handling for lingering media objects, which were not correctly forgetting combined local file deletion record on the reimport</li>
+					<li>improved shutdown error handling during repo processing</li>
+					<li>deleted the mishimmie default downloader</li>
+				</ul>
 				<li><h3>version 360</h3></li>
 				<ul>
 					<li>tag autocomplete:</li>
@@ -15,7 +55,7 @@
 					<li>there are now just two autocomplete options under options->speed and memory:</li>
 					<li>- whether autocomplete results are ever fetched automatically, defaults to true</li>
 					<li>- the max number of characters in the input that will cause just exact results vs. full autocomplete results, defaults to 2, can be None</li>
-					<li>namespaces are no longer searched from an unnamespaced query ('char' no longer matches 'character:samus aran'). this proved too slow for real use, and remains better available with explicit namespace searches such as 'character:' or 'char*:*'</li>
+					<li>namespaces are no longer searched from an unnamespaced query ('char' no longer matches 'character:samus aran'). this proved too slow for real use, and remains better available with explicit namespace searches such as 'character:*' or 'char*:*'</li>
 					<li>the 'exact results' character limit now also applies to subtags of namespace searches! so, entering 'character:a' will deliver the same short exact match results as just 'a'--no more gigantic lists when you put in a simple namespace</li>
 					<li>improved tag results caching to deal with the new non-namespace matching on subtag input</li>
 					<li>tag autocomplete dropdowns will now display a non-selectable 'loading results...' label when results take more than 200ms to load.</li>

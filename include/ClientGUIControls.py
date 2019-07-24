@@ -159,7 +159,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             ( bandwidth_type, time_delta, max_allowed ) = rule
             
-            self._bandwidth_type.SelectClientData( bandwidth_type )
+            self._bandwidth_type.SetValue( bandwidth_type )
             
             self._time_delta.SetValue( time_delta )
             
@@ -189,7 +189,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         def _UpdateEnabled( self ):
             
-            bandwidth_type = self._bandwidth_type.GetChoice()
+            bandwidth_type = self._bandwidth_type.GetValue()
             
             if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
                 
@@ -212,7 +212,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         def GetValue( self ):
             
-            bandwidth_type = self._bandwidth_type.GetChoice()
+            bandwidth_type = self._bandwidth_type.GetValue()
             
             time_delta = self._time_delta.GetValue()
             
@@ -283,17 +283,17 @@ class BytesControl( wx.Panel ):
     
     def GetSeparatedValue( self ):
         
-        return ( self._spin.GetValue(), self._unit.GetChoice() )
+        return ( self._spin.GetValue(), self._unit.GetValue() )
         
     
     def GetValue( self ):
         
-        return self._spin.GetValue() * self._unit.GetChoice()
+        return self._spin.GetValue() * self._unit.GetValue()
         
     
     def SetSeparatedValue( self, value, unit ):
         
-        return ( self._spin.SetValue( value ), self._unit.SelectClientData( unit ) )
+        return ( self._spin.SetValue( value ), self._unit.SetValue( unit ) )
         
     
     def SetValue( self, value ):
@@ -310,7 +310,7 @@ class BytesControl( wx.Panel ):
             
         
         self._spin.SetValue( value )
-        self._unit.SelectClientData( unit )
+        self._unit.SetValue( unit )
         
     
 class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -465,12 +465,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( self._transformations.GetData( only_selected = True ) ) > 0:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected?' ) as dlg:
+            text = 'Delete all selected?'
+            
+            import ClientGUIDialogsQuick
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._transformations.DeleteSelected()
-                    
+                self._transformations.DeleteSelected()
                 
             
         
@@ -690,7 +693,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            self._transformation_type.SelectClientData( transformation_type )
+            self._transformation_type.SetValue( transformation_type )
             
             self._UpdateDataControls()
             
@@ -698,7 +701,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_ENCODE ):
                 
-                self._data_encoding.SelectClientData( data )
+                self._data_encoding.SetValue( data )
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
                 
@@ -712,7 +715,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 ( phrase, timezone_type, timezone_offset ) = data
                 
                 self._data_text.SetValue( phrase )
-                self._data_timezone.SelectClientData( timezone_type )
+                self._data_timezone.SetValue( timezone_type )
                 self._data_timezone_offset.SetValue( timezone_offset )
                 
             elif data is not None:
@@ -765,7 +768,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone.Disable()
             self._data_timezone_offset.Disable()
             
-            transformation_type = self._transformation_type.GetChoice()
+            transformation_type = self._transformation_type.GetValue()
             
             if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
                 
@@ -779,7 +782,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._data_timezone.Enable()
                     
-                    if self._data_timezone.GetChoice() == HC.TIMEZONE_OFFSET:
+                    if self._data_timezone.GetValue() == HC.TIMEZONE_OFFSET:
                         
                         self._data_timezone_offset.Enable()
                         
@@ -812,11 +815,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def GetValue( self ):
             
-            transformation_type = self._transformation_type.GetChoice()
+            transformation_type = self._transformation_type.GetValue()
             
             if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
                 
-                data = self._data_encoding.GetChoice()
+                data = self._data_encoding.GetValue()
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT ):
                 
@@ -836,7 +839,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                 
                 phrase = self._data_text.GetValue()
-                timezone_time = self._data_timezone.GetChoice()
+                timezone_time = self._data_timezone.GetValue()
                 timezone_offset = self._data_timezone_offset.GetValue()
                 
                 data = ( phrase, timezone_time, timezone_offset )
@@ -919,7 +922,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetValue( self ):
         
-        match_type = self._match_type.GetChoice()
+        match_type = self._match_type.GetValue()
         
         if match_type == ClientParsing.STRING_MATCH_ANY:
             
@@ -927,7 +930,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
             
-            match_value = self._match_value_flexible_input.GetChoice()
+            match_value = self._match_value_flexible_input.GetValue()
             
         else:
             
@@ -946,7 +949,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateControls( self ):
         
-        match_type = self._match_type.GetChoice()
+        match_type = self._match_type.GetValue()
         
         if match_type == ClientParsing.STRING_MATCH_ANY:
             
@@ -1027,15 +1030,15 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
         
-        self._match_type.SelectClientData( match_type )
+        self._match_type.SetValue( match_type )
         
         if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
             
-            self._match_value_flexible_input.SelectClientData( match_value )
+            self._match_value_flexible_input.SetValue( match_value )
             
         else:
             
-            self._match_value_flexible_input.SelectClientData( ClientParsing.ALPHA )
+            self._match_value_flexible_input.SetValue( ClientParsing.ALPHA )
             
             self._match_value_text_input.SetValue( match_value )
             

@@ -893,7 +893,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         if self._collect_by.IsShown():
             
-            return self._collect_by.GetChoice()
+            return self._collect_by.GetValue()
             
         else:
             
@@ -3351,7 +3351,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         urls = [ url for url in urls if url.startswith( 'http' ) ]
         
-        simple_downloader_formula = self._formulae.GetChoice()
+        simple_downloader_formula = self._formulae.GetValue()
         
         for url in urls:
             
@@ -3513,7 +3513,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def EventFormulaChanged( self, event ):
         
-        formula = self._formulae.GetChoice()
+        formula = self._formulae.GetValue()
         
         formula_name = formula.GetName()
         
@@ -4058,7 +4058,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
-        panel.Collect( self._page_key, self._collect_by.GetChoice() )
+        panel.Collect( self._page_key, self._collect_by.GetValue() )
         
         panel.Sort( self._page_key, self._sort_by.GetSort() )
         
@@ -4512,7 +4512,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
             
-            panel.Collect( self._page_key, self._collect_by.GetChoice() )
+            panel.Collect( self._page_key, self._collect_by.GetValue() )
             
             panel.Sort( self._page_key, self._sort_by.GetSort() )
             

@@ -98,9 +98,10 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             pred_classes.append( PanelPredicateSystemTagAsNumber )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT:
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS:
             
             pred_classes.append( PanelPredicateSystemDuplicateRelationships )
+            pred_classes.append( PanelPredicateSystemDuplicateKing )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
             
@@ -305,9 +306,44 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         return info
         
     
+class PanelPredicateSystemDuplicateKing( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        choices = [ 'is the best quality file of its group', 'is not the best quality file of its group' ]
+        
+        self._king = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._king, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        wx.CallAfter( self._king.SetFocus )
+        
+    
+    def GetInfo( self ):
+        
+        king_str = self._king.GetStringSelection()
+        
+        king = 'is the' in king_str
+        
+        info = king
+        
+        return info
+        
+    
 class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT
     
     def __init__( self, parent ):
         
@@ -332,7 +368,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num duplicate relationships' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num file relationships' ), CC.FLAGS_VCENTER )
         hbox.Add( self._sign, CC.FLAGS_VCENTER )
         hbox.Add( self._num, CC.FLAGS_VCENTER )
         hbox.Add( self._dupe_type, CC.FLAGS_VCENTER )
@@ -344,7 +380,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._num.GetValue(), self._dupe_type.GetChoice() )
+        info = ( self._sign.GetStringSelection(), self._num.GetValue(), self._dupe_type.GetValue() )
         
         return info
         
@@ -430,7 +466,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetChoice(), self._current_pending.GetChoice(), self._file_service_key.GetChoice() )
+        info = ( self._sign.GetValue(), self._current_pending.GetValue(), self._file_service_key.GetValue() )
         
         return info
         
@@ -655,7 +691,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        operator = self._operator.GetChoice()
+        operator = self._operator.GetValue()
         
         if operator:
             
@@ -706,7 +742,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        operator = self._operator.GetChoice()
+        operator = self._operator.GetValue()
         
         if operator:
             
@@ -755,7 +791,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        operator = self._operator.GetChoice()
+        operator = self._operator.GetValue()
         
         if operator:
             
@@ -812,7 +848,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        operator = self._operator.GetChoice()
+        operator = self._operator.GetValue()
         
         if operator:
             
@@ -825,7 +861,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
         
         rule_type = 'url_class'
         
-        url_class = self._url_classes.GetChoice()
+        url_class = self._url_classes.GetValue()
         
         rule = url_class
         
@@ -1313,7 +1349,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:size' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:filesize' ), CC.FLAGS_VCENTER )
         hbox.Add( self._sign, CC.FLAGS_VCENTER )
         hbox.Add( self._bytes, CC.FLAGS_VCENTER )
         

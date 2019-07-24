@@ -3,6 +3,7 @@ from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIScrolledPanels
 from . import ClientGUITopLevelWindows
@@ -1167,18 +1168,19 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if self._job_key.IsCancellable():
                 
-                with ClientGUIDialogs.DialogYesNo( self, 'Cancel/stop job?' ) as dlg:
+                text = 'Cancel/stop job?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                
+                if result == wx.ID_YES:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        self._job_key.Cancel()
-                        
-                        self._ReleaseMessage()
-                        
-                    else:
-                        
-                        raise HydrusExceptions.VetoException()
-                        
+                    self._job_key.Cancel()
+                    
+                    self._ReleaseMessage()
+                    
+                else:
+                    
+                    raise HydrusExceptions.VetoException()
                     
                 
             else:

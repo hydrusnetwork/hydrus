@@ -546,7 +546,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5, 1048576 ) )
         
-        self.assertEqual( p.ToString(), 'system:size > 5MB' )
+        self.assertEqual( p.ToString(), 'system:filesize > 5MB' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         

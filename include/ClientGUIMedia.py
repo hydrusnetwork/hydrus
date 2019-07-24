@@ -1851,7 +1851,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         yes_no_text = 'unknown duplicate action'
         
-        if duplicate_action_options is None:
+        if duplicate_type == HC.DUPLICATE_POTENTIAL:
+            
+            yes_no_text = 'queue all possible and valid pair combinations into the duplicate filter'
+            
+        elif duplicate_action_options is None:
             
             yes_no_text = 'apply "{}"'.format( HC.duplicate_type_string_lookup[ duplicate_type ] )
             
@@ -1887,13 +1891,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 return False
                 
             
-            first_media = flat_media[0]
-            
-            if duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
+            if duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_POTENTIAL ):
                 
                 media_pairs = list( itertools.combinations( flat_media, 2 ) )
                 
             else:
+                
+                first_media = flat_media[0]
                 
                 media_pairs = [ ( first_media, other_media ) for other_media in flat_media if other_media != first_media ]
                 
@@ -2051,6 +2055,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         focused_hash = self._focussed_media.GetDisplayMedia().GetHash()
         
         HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
+        
+    
+    def _SetDuplicatesPotential( self ):
+        
+        media_group = self._GetSelectedFlatMedia()
+        
+        self._SetDuplicates( HC.DUPLICATE_POTENTIAL, media_group = media_group )
         
     
     def _SetFocussedMedia( self, media ):
@@ -2380,6 +2391,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             elif action == 'duplicate_media_set_focused_king':
                 
                 self._SetDuplicatesFocusedKing()
+                
+            elif action == 'duplicate_media_set_potential':
+                
+                self._SetDuplicatesPotential()
                 
             elif action == 'duplicate_media_set_same_quality':
                 
@@ -4389,6 +4404,10 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set selected collections as groups of alternates', 'Set files in the selection which are collected together as alternates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_alternate_collections' ) )
                         
+                    
+                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_potential' ) )
                     
                     duplicates_edit_action_submenu = wx.Menu()
                     

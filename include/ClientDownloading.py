@@ -230,7 +230,6 @@ def ConvertGalleryIdentifierToGUGName( gallery_identifier ):
         booru_name_converter[ 'e621' ] = 'e621 tag search'
         booru_name_converter[ 'rule34@paheal' ] = 'rule34.paheal tag search'
         booru_name_converter[ 'danbooru' ] = 'danbooru tag search'
-        booru_name_converter[ 'mishimmie' ] = 'mishimmie tag search'
         booru_name_converter[ 'rule34@booru.org' ] = 'rule34.xxx tag search'
         booru_name_converter[ 'furry@booru.org' ] = 'furry.booru.org tag search'
         booru_name_converter[ 'xbooru' ] = 'xbooru tag search'

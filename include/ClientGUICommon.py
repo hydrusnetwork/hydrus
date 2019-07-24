@@ -378,7 +378,7 @@ class BetterChoice( wx.Choice ):
             
         
     
-    def GetChoice( self ):
+    def GetValue( self ):
         
         selection = self.GetSelection()
         
@@ -396,11 +396,11 @@ class BetterChoice( wx.Choice ):
             
         
     
-    def SelectClientData( self, client_data ):
+    def SetValue( self, data ):
         
         for i in range( self.GetCount() ):
             
-            if client_data == self.GetClientData( i ):
+            if data == self.GetClientData( i ):
                 
                 self.Select( i )
                 
@@ -534,7 +534,7 @@ class BetterRadioBox( wx.RadioBox ):
         wx.RadioBox.__init__( self, *args, **kwargs )
         
     
-    def GetChoice( self ):
+    def GetValue( self ):
         
         index = self.GetSelection()
         
@@ -734,7 +734,7 @@ class CheckboxCollect( wx.ComboCtrl ):
         self.SetValue( 'no collections' ) # initialising to this because if there are no collections, no broadcast call goes through
         
     
-    def GetChoice( self ):
+    def GetValue( self ):
         
         return self._collect_by
         
@@ -1118,8 +1118,8 @@ class ChoiceSort( wx.Panel ):
     
     def _GetCurrentSort( self ):
         
-        sort_type = self._sort_type_choice.GetChoice()
-        sort_asc = self._sort_asc_choice.GetChoice()
+        sort_type = self._sort_type_choice.GetValue()
+        sort_asc = self._sort_asc_choice.GetValue()
         
         media_sort = ClientMedia.MediaSort( sort_type, sort_asc )
         
@@ -1148,7 +1148,7 @@ class ChoiceSort( wx.Panel ):
                 asc_to_set = media_sort.sort_asc
                 
             
-            self._sort_asc_choice.SelectClientData( asc_to_set )
+            self._sort_asc_choice.SetValue( asc_to_set )
             
             self._sort_asc_choice.Enable()
             
@@ -1157,7 +1157,7 @@ class ChoiceSort( wx.Panel ):
             self._sort_asc_choice.Append( '', CC.SORT_ASC )
             self._sort_asc_choice.Append( '', CC.SORT_DESC )
             
-            self._sort_asc_choice.SelectClientData( CC.SORT_ASC )
+            self._sort_asc_choice.SetValue( CC.SORT_ASC )
             
             self._sort_asc_choice.Disable()
             
@@ -1219,8 +1219,8 @@ class ChoiceSort( wx.Panel ):
     
     def SetSort( self, media_sort ):
         
-        self._sort_type_choice.SelectClientData( media_sort.sort_type )
-        self._sort_asc_choice.SelectClientData( media_sort.sort_asc )
+        self._sort_type_choice.SetValue( media_sort.sort_type )
+        self._sort_asc_choice.SetValue( media_sort.sort_asc )
         
         self._UpdateAscLabels()
         

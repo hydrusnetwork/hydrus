@@ -1105,7 +1105,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
             
         
-        self._canvas_window.ResetDragDelta()
+        self._canvas_window.ResetMediaWindowCenterPosition()
         
     
     def ProcessApplicationCommand( self, command ):
@@ -1203,7 +1203,7 @@ class Canvas( wx.Window ):
         self._last_drag_coordinates = None
         self._current_drag_is_touch = False
         self._last_motion_coordinates = ( 0, 0 )
-        self._total_drag_delta = ( 0, 0 )
+        self._media_window_position = ( 0, 0 )
         
         self._UpdateBackgroundColour()
         
@@ -1381,9 +1381,9 @@ class Canvas( wx.Window ):
         delta_x = delta_x_step * x_pan_distance
         delta_y = delta_y_step * y_pan_distance
         
-        ( old_delta_x, old_delta_y ) = self._total_drag_delta
+        ( x, y ) = self._media_window_position
         
-        self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+        self._media_window_position = ( x + delta_x, y + delta_y )
         
         self._DrawCurrentMedia()
         
@@ -1466,7 +1466,7 @@ class Canvas( wx.Window ):
         return ''
         
     
-    def _GetMediaContainerSizeAndPosition( self ):
+    def _GetMediaContainerSize( self ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
@@ -1474,15 +1474,9 @@ class Canvas( wx.Window ):
         
         ( media_width, media_height ) = CalculateMediaContainerSize( self._current_media, self._current_zoom, action )
         
-        ( drag_x, drag_y ) = self._total_drag_delta
-        
-        x_offset = ( my_width - media_width ) // 2 + drag_x
-        y_offset = ( my_height - media_height ) // 2 + drag_y
-        
         new_size = ( media_width, media_height )
-        new_position = ( x_offset, y_offset )
         
-        return ( new_size, new_position )
+        return new_size
         
     
     def _Inbox( self ):
@@ -1523,32 +1517,23 @@ class Canvas( wx.Window ):
                 return
                 
             
-            ( previous_width, previous_height ) = previous_media.GetResolution()
-            ( current_width, current_height ) = self._current_media.GetResolution()
+            # set up canvas zoom
             
-            previous_ratio = previous_width / previous_height
-            current_ratio = current_width / current_height
+            show_action = self._GetShowAction( self._current_media )
             
-            if previous_ratio == current_ratio:
-                
-                # if this new one is half the size, the new zoom needs to be twice as much to be the same size
-                
-                zoom_ratio = previous_width / current_width
-                
-                ultimate_canvas_zoom = self._current_zoom * zoom_ratio
-                
-                self._ReinitZoom()
-                
-                self._current_zoom = ultimate_canvas_zoom
-                
-                HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
-                
-            else:
-                
-                self._ResetDragDelta()
-                
-                self._ReinitZoom()
-                
+            ( gumpf_current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_media, show_action )
+            
+            # for init zoom, we want the _width_ to stay the same as previous
+            
+            ( previous_width, previous_height ) = CalculateMediaSize( previous_media, self._current_zoom )
+            
+            ( current_media_100_width, current_media_100_height ) = self._current_media.GetResolution()
+            
+            self._current_zoom = previous_width / current_media_100_width
+            
+            HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+            
+            # and fix drag delta, or rewangle this so drag delta is offset to start with anyway m8, yeah
             
         
     
@@ -1826,9 +1811,24 @@ class Canvas( wx.Window ):
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
     
-    def _ResetDragDelta( self ):
+    def _ResetMediaWindowCenterPosition( self ):
         
-        self._total_drag_delta = ( 0, 0 )
+        if self._current_media is None:
+            
+            return
+            
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        action = self._GetShowAction( self._current_media )
+        
+        ( media_width, media_height ) = CalculateMediaContainerSize( self._current_media, self._current_zoom, action )
+        
+        x = ( my_width - media_width ) // 2
+        y = ( my_height - media_height ) // 2
+        
+        self._media_window_position = ( x, y )
+        
         self._last_drag_coordinates = None
         
     
@@ -1880,14 +1880,14 @@ class Canvas( wx.Window ):
             return
             
         
-        ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
+        new_size = self._GetMediaContainerSize()
         
         if new_size != self._media_container.GetSize():
             
             self._media_container.SetSize( new_size )
             
         
-        if new_position == self._media_container.GetPosition():
+        if self._media_window_position == self._media_container.GetPosition():
             
             if HC.PLATFORM_OSX:
                 
@@ -1896,7 +1896,7 @@ class Canvas( wx.Window ):
             
         else:
             
-            self._media_container.SetPosition( new_position )
+            self._media_container.SetPosition( self._media_window_position )
             
         
     
@@ -1923,11 +1923,16 @@ class Canvas( wx.Window ):
                 
             
         
-        ( drag_x, drag_y ) = self._total_drag_delta
+        ( media_window_width, media_window_height ) = self._media_container.GetSize()
         
-        zoom_ratio = new_zoom / self._current_zoom
+        ( new_media_window_width, new_media_window_height ) = CalculateMediaSize( self._current_media, new_zoom )
         
-        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+        width_delta = media_window_width - new_media_window_width
+        height_delta = media_window_height - new_media_window_height
+        
+        ( x, y ) = self._media_window_position
+        
+        self._media_window_position = ( x + ( width_delta / 2 ), y + ( height_delta / 2 ) )
         
         self._current_zoom = new_zoom
         
@@ -1950,12 +1955,11 @@ class Canvas( wx.Window ):
                 
             else:
                 
-                with ClientGUIDialogs.DialogYesNo( self, 'Undelete this file?' ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, 'Undelete this file?' )
+                
+                if result == wx.ID_YES:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        do_it = True
-                        
+                    do_it = True
                     
                 
             
@@ -2089,12 +2093,12 @@ class Canvas( wx.Window ):
                 new_zoom = 1.0
                 
             
+            self._TryToChangeZoom( new_zoom )
+            
             if new_zoom <= self._canvas_zoom:
                 
-                self._ResetDragDelta()
+                self._ResetMediaWindowCenterPosition()
                 
-            
-            self._TryToChangeZoom( new_zoom )
             
         
     
@@ -2175,6 +2179,8 @@ class Canvas( wx.Window ):
                 if my_width != media_width or my_height != media_height:
                     
                     self._ReinitZoom()
+                    
+                    self._ResetMediaWindowCenterPosition()
                     
                 
             
@@ -2388,9 +2394,9 @@ class Canvas( wx.Window ):
         return command_processed
         
     
-    def ResetDragDelta( self ):
+    def ResetMediaWindowCenterPosition( self ):
         
-        self._ResetDragDelta()
+        self._ResetMediaWindowCenterPosition()
         
     
     def SetMedia( self, media ):
@@ -2415,11 +2421,6 @@ class Canvas( wx.Window ):
             
             self._current_media = media
             
-            if not self._maintain_pan_and_zoom:
-                
-                self._ResetDragDelta()
-                
-            
             if self._current_media is None:
                 
                 self._media_container.SetNoneMedia()
@@ -2435,7 +2436,12 @@ class Canvas( wx.Window ):
                     self._ReinitZoom()
                     
                 
-                ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
+                if not self._maintain_pan_and_zoom:
+                    
+                    self._ResetMediaWindowCenterPosition()
+                    
+                
+                initial_size = self._GetMediaContainerSize()
                 
                 ( initial_width, initial_height ) = initial_size
                 
@@ -2443,7 +2449,7 @@ class Canvas( wx.Window ):
                     
                     show_action = self._GetShowAction( self._current_media )
                     
-                    self._media_container.SetMedia( self._current_media, initial_size, initial_position, show_action )
+                    self._media_container.SetMedia( self._current_media, initial_size, self._media_window_position, show_action )
                     
                     self._PrefetchNeighbours()
                     
@@ -3022,9 +3028,9 @@ class CanvasWithHovers( CanvasWithDetails ):
                     self._last_drag_coordinates = ( x, y )
                     
                 
-                ( old_delta_x, old_delta_y ) = self._total_drag_delta
+                ( x, y ) = self._media_window_position
                 
-                self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+                self._media_window_position = ( x + delta_x, y + delta_y )
                 
                 self._DrawCurrentMedia()
                 
@@ -3152,6 +3158,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
         ClientMedia.hashes_to_jpeg_quality = {} # clear the cache
+        ClientMedia.hashes_to_pixel_hashes = {} # clear the cache
         
         HG.client_controller.pub( 'refresh_dupe_page_numbers' )
         
@@ -3293,6 +3300,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         yes_tuples = []
         
+        yes_tuples.append( ( 'delete neither', 'delete_neither' ) )
         yes_tuples.append( ( 'delete this one', 'delete_first' ) )
         yes_tuples.append( ( 'delete the other', 'delete_second' ) )
         yes_tuples.append( ( 'delete both', 'delete_both' ) )
@@ -3303,7 +3311,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
                 
                 value = dlg.GetValue()
                 
@@ -3318,10 +3328,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 elif value == 'delete_both':
                     
                     delete_both = True
-                    
-                else:
-                    
-                    return
                     
                 
             else:
@@ -3666,9 +3672,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self.SetMedia( self._media_list.GetFirst() )
             
-            self._ResetDragDelta()
-            
             self._ReinitZoom()
+            
+            self._ResetMediaWindowCenterPosition()
             
         
     

@@ -448,20 +448,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         message += os.linesep * 2
         message += 'A \'full\' analyze will force a run over every index in the database. This can take substantially longer. If you do not have a specific reason to select this, it is probably pointless.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full' )
+        
+        if result == wx.ID_YES:
             
-            result = dlg.ShowModal()
+            stop_time = HydrusData.GetNow() + 120
             
-            if result == wx.ID_YES:
-                
-                stop_time = HydrusData.GetNow() + 120
-                
-                self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = stop_time )
-                
-            elif result == wx.ID_NO:
-                
-                self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, force_reanalyze = True )
-                
+            self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = stop_time )
+            
+        elif result == wx.ID_NO:
+            
+            self._controller.Write( 'analyze', maintenance_mode = HC.MAINTENANCE_FORCED, force_reanalyze = True )
             
         
     
@@ -515,12 +512,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         text = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.CallToThread( do_it )
-                
+            self._controller.CallToThread( do_it )
             
         
     
@@ -683,12 +679,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         text = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.CallToThread( do_it )
-                
+            self._controller.CallToThread( do_it )
             
         
     
@@ -725,16 +720,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         text += os.linesep * 2
         text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg_yn:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg_yn.ShowModal() == wx.ID_YES:
-                
-                self._notebook.SaveGUISession( 'last session' )
-                self._notebook.SaveGUISession( 'exit session' )
-                
-                # session save causes a db read in the menu refresh, so let's put this off just a bit
-                self._controller.CallLater( 1.5, self._controller.Write, 'backup', path )
-                
+            self._notebook.SaveGUISession( 'last session' )
+            self._notebook.SaveGUISession( 'exit session' )
+            
+            # session save causes a db read in the menu refresh, so let's put this off just a bit
+            self._controller.CallLater( 1.5, self._controller.Write, 'backup', path )
             
         
     
@@ -773,12 +767,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.CallToThread( do_it )
-                
+            self._controller.CallToThread( do_it )
             
         
     
@@ -786,12 +779,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         message = 'This will check the database for missing and invalid entries. It may take several minutes to complete.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Run integrity check?', yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Run integrity check?', yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.Write( 'db_integrity' )
-                
+            self._controller.Write( 'db_integrity' )
             
         
     
@@ -827,18 +819,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         text = 'Are you sure you want to delete _all_ file viewing records? This cannot be undone.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADVANCED, 'clear' )
-                
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
-                
-                self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                
-                wx.MessageBox( 'Delete done! Please restart the client to see the changes in the UI.')
-                
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADVANCED, 'clear' )
+            
+            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+            
+            self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+            wx.MessageBox( 'Delete done! Please restart the client to see the changes in the UI.')
             
         
     
@@ -848,35 +839,31 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         text += os.linesep * 2
         text += 'Files and thumbnails will be inaccessible while this occurs, so it is best to leave the client alone until it is done.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            text = 'What would you like to do with the orphaned files? Note that all orphaned thumbnails will be deleted.'
+            
+            client_files_manager = self._controller.client_files_manager
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them' )
+            
+            if result == wx.ID_YES:
                 
-                text = 'What would you like to do with the orphaned files? Note that all orphaned thumbnails will be deleted.'
-                
-                client_files_manager = self._controller.client_files_manager
-                
-                with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them' ) as dlg_2:
+                with wx.DirDialog( self, 'Select location.' ) as dlg_3:
                     
-                    result = dlg_2.ShowModal()
-                    
-                    if result == wx.ID_YES:
+                    if dlg_3.ShowModal() == wx.ID_OK:
                         
-                        with wx.DirDialog( self, 'Select location.' ) as dlg_3:
-                            
-                            if dlg_3.ShowModal() == wx.ID_OK:
-                                
-                                path = dlg_3.GetPath()
-                                
-                                self._controller.CallToThread( client_files_manager.ClearOrphans, path )
-                                
-                            
+                        path = dlg_3.GetPath()
                         
-                    elif result == wx.ID_NO:
-                        
-                        self._controller.CallToThread( client_files_manager.ClearOrphans )
+                        self._controller.CallToThread( client_files_manager.ClearOrphans, path )
                         
                     
+                
+            elif result == wx.ID_NO:
+                
+                self._controller.CallToThread( client_files_manager.ClearOrphans )
                 
             
         
@@ -887,12 +874,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         text += os.linesep * 2
         text += 'It will create a popup message while it works and inform you of the number of orphan records found.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.Write( 'clear_orphan_file_records' )
-                
+            self._controller.Write( 'clear_orphan_file_records' )
             
         
     
@@ -902,12 +888,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         text += os.linesep * 2
         text += 'It will create popups if it finds anything to delete.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.Write( 'clear_orphan_tables' )
-                
+            self._controller.Write( 'clear_orphan_tables' )
             
         
     
@@ -921,14 +906,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         text += os.linesep * 2
         text += 'It will work for both preview and media views based on their separate rules.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.WriteSynchronous( 'cull_file_viewing_statistics' )
-                
-                wx.MessageBox( 'Cull done! Please restart the client to see the changes in the UI.')
-                
+            self._controller.WriteSynchronous( 'cull_file_viewing_statistics' )
+            
+            wx.MessageBox( 'Cull done! Please restart the client to see the changes in the UI.')
             
         
     
@@ -1191,35 +1175,39 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         message = 'Delete session "' + name + '"?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Delete session?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Delete session?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
-                
-                self._controller.pub( 'notify_new_sessions' )
-                
+            self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+            
+            self._controller.pub( 'notify_new_sessions' )
             
         
     
     def _DeletePending( self, service_key ):
         
-        service = self._controller.services_manager.GetService( service_key )
+        service_name = self._controller.services_manager.GetName( service_key )
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
+        message = 'Are you sure you want to delete the pending data for {}?'.format( service_name )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.Write( 'delete_pending', service_key )
-                
+            self._controller.Write( 'delete_pending', service_key )
             
         
     
     def _DeleteServiceInfo( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to clear the cached service info? Rebuilding it may slow some GUI elements for a little while.' ) as dlg:
+        message = 'Are you sure you want to clear the cached service info? Rebuilding it may slow some GUI elements for a little while.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES: self._controller.Write( 'delete_service_info' )
+            self._controller.Write( 'delete_service_info' )
             
         
     
@@ -2575,12 +2563,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 message += os.linesep * 2
                 message += 'Would you like to try loading your default session "' + default_gui_session + '", or just a blank page?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load "' + default_gui_session + '"', no_label = 'just load a blank page' ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load "' + default_gui_session + '"', no_label = 'just load a blank page' )
+                
+                if result == wx.ID_NO:
                     
-                    if dlg.ShowModal() == wx.ID_NO:
-                        
-                        load_a_blank_page = True
-                        
+                    load_a_blank_page = True
                     
                 
             
@@ -3436,14 +3423,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                self._controller.Write( 'regenerate_ac_cache' )
-                
+            self._controller.Write( 'regenerate_ac_cache' )
             
         
     
@@ -3455,14 +3439,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         message += os.linesep * 2
         message += 'Do not run this unless you know your phashes need to be regenerated.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                self._controller.Write( 'schedule_full_phash_regen' )
-                
+            self._controller.Write( 'schedule_full_phash_regen' )
             
         
     
@@ -3474,14 +3455,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         message += os.linesep * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                self._controller.Write( 'regenerate_similar_files' )
-                
+            self._controller.Write( 'regenerate_similar_files' )
             
         
     
@@ -3673,11 +3651,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
             
-            t += 0.5
+            t += 2.0
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
             
-            t += 0.5
+            t += 2.0
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_DOWN )
             
@@ -3685,7 +3663,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
             
-            t += 0.5
+            t += 2.0
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_DOWN )
             
@@ -3693,7 +3671,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
             
-            t += 0.5
+            t += 2.0
             
             HG.client_controller.CallLaterWXSafe( self, t, uias.Char, wx.WXK_RETURN )
             
@@ -3913,21 +3891,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 text += os.linesep * 2
                 text += 'Are you sure this is the correct directory?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg_yn:
+                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                
+                if result == wx.ID_YES:
                     
-                    if dlg_yn.ShowModal() == wx.ID_YES:
+                    self._new_options.SetNoneableString( 'backup_path', path )
+                    
+                    text = 'Would you like to create your backup now?'
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                    
+                    if result == wx.ID_YES:
                         
-                        self._new_options.SetNoneableString( 'backup_path', path )
-                        
-                        text = 'Would you like to create your backup now?'
-                        
-                        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg_yn_2:
-                            
-                            if dlg_yn_2.ShowModal() == wx.ID_YES:
-                                
-                                self._BackupDatabase()
-                                
-                            
+                        self._BackupDatabase()
                         
                     
                 
@@ -4140,18 +4116,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         text += os.linesep * 2
         text += 'A \'full\' vacuum will immediately force a vacuum for the entire database. This can take substantially longer.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose how thorough your vacuum will be.', yes_label = 'soft', no_label = 'full' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose how thorough your vacuum will be.', yes_label = 'soft', no_label = 'full' )
+        
+        if result == wx.ID_YES:
             
-            result = dlg.ShowModal()
+            self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED )
             
-            if result == wx.ID_YES:
-                
-                self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED )
-                
-            elif result == wx.ID_NO:
-                
-                self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED, force_vacuum = True )
-                
+        elif result == wx.ID_NO:
+            
+            self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED, force_vacuum = True )
             
         
     
@@ -4657,7 +4630,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIP_COUNT, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'input predicate', hide_buttons = True ) as dlg:
                     

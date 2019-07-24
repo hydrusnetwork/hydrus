@@ -360,7 +360,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         self._comparison_statements_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'mime', 'num_tags', 'time_imported', 'jpeg_quality' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
         
         self._comparison_statements_sts = {}
         

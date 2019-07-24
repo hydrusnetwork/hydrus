@@ -47,6 +47,7 @@ from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUITopLevelWindows
 import gc
 import psutil
+import signal
 import threading
 import time
 import traceback
@@ -54,6 +55,30 @@ import traceback
 if not HG.twisted_is_broke:
     
     from twisted.internet import reactor, defer
+    
+class App( wx.App ):
+    
+    def __init__( self, *args, **kwargs ):
+        
+        wx.App.__init__( self, *args, **kwargs )
+        
+        self.Bind( wx.EVT_QUERY_END_SESSION, self.EventQueryEndSession )
+        self.Bind( wx.EVT_END_SESSION, self.EventEndSession )
+        
+    
+    def EventEndSession( self, event ):
+        
+        HG.emergency_exit = True
+        
+        HG.client_controller.gui.Exit()
+        
+    
+    def EventQueryEndSession( self, event ):
+        
+        HG.emergency_exit = True
+        
+        HG.client_controller.gui.Exit()
+        
     
 class Controller( HydrusController.HydrusController ):
     
@@ -255,6 +280,16 @@ class Controller( HydrusController.HydrusController ):
         return job
         
     
+    def CatchSignal( self, sig, frame ):
+        
+        if sig == signal.SIGINT:
+            
+            event = wx.CloseEvent( wx.wxEVT_CLOSE_WINDOW, -1 )
+            
+            wx.QueueEvent( self.gui, event )
+            
+        
+    
     def CheckAlreadyRunning( self ):
         
         while HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
@@ -448,6 +483,8 @@ class Controller( HydrusController.HydrusController ):
     def Exit( self ):
         
         if HG.emergency_exit:
+            
+            HydrusData.DebugPrint( 'doing fast shutdown\u2026' )
             
             self.ShutdownView()
             self.ShutdownModel()
@@ -1254,7 +1291,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        self._app = wx.App()
+        self._app = App()
         
         self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
         
@@ -1266,6 +1303,8 @@ class Controller( HydrusController.HydrusController ):
         self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
         
         self.CreateSplash()
+        
+        signal.signal( signal.SIGINT, self.CatchSignal )
         
         self.CallToThreadLongRunning( self.THREADBootEverything )
         

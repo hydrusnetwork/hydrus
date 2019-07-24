@@ -245,7 +245,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._path.SetPath( path )
         
-        self._type.SelectClientData( export_type )
+        self._type.SetValue( export_type )
         
         self._delete_from_client_after_export.SetValue( delete_from_client_after_export )
         
@@ -333,7 +333,7 @@ If you select synchronise, be careful!'''
     
     def _UpdateTypeDeleteUI( self ):
         
-        if self._type.GetChoice() == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
+        if self._type.GetValue() == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
             self._delete_from_client_after_export.Disable()
             
@@ -385,7 +385,7 @@ If you select synchronise, be careful!'''
         
         path = self._path.GetPath()
         
-        export_type = self._type.GetChoice()
+        export_type = self._type.GetValue()
         
         delete_from_client_after_export = self._delete_from_client_after_export.GetValue()
         
