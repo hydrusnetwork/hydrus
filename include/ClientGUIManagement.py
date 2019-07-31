@@ -1026,16 +1026,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        self._preparing_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'maintenance' )
-        
-        self._eligible_files = ClientGUICommon.BetterStaticText( self._preparing_panel )
-        self._num_branches_to_regen = ClientGUICommon.BetterStaticText( self._preparing_panel )
-        
-        self._branches_button = ClientGUICommon.BetterBitmapButton( self._preparing_panel, CC.GlobalBMPs.play, self._RebalanceTree )
-        
-        #
-        
         self._searching_panel = ClientGUICommon.StaticBox( self._main_left_panel, 'finding potential duplicates' )
+        
+        self._eligible_files = ClientGUICommon.BetterStaticText( self._searching_panel )
         
         menu_items = []
         
@@ -1116,21 +1109,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._sort_by.Hide()
         self._collect_by.Hide()
         
-        gridbox_1 = wx.FlexGridSizer( 3 )
-        
-        gridbox_1.AddGrowableCol( 0, 1 )
-        
-        gridbox_1.Add( self._eligible_files, CC.FLAGS_VCENTER )
-        gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        gridbox_1.Add( self._num_branches_to_regen, CC.FLAGS_VCENTER )
-        gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        gridbox_1.Add( self._branches_button, CC.FLAGS_VCENTER )
-        
-        self._preparing_panel.Add( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #
-        
         distance_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         distance_hbox.Add( ClientGUICommon.BetterStaticText( self._searching_panel, label = 'search distance: ' ), CC.FLAGS_VCENTER )
@@ -1144,6 +1122,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         gridbox_2.Add( self._num_searched, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         gridbox_2.Add( self._search_button, CC.FLAGS_VCENTER )
         
+        self._searching_panel.Add( self._eligible_files, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._searching_panel.Add( distance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._searching_panel.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1159,7 +1138,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._preparing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._main_left_panel.SetSizer( vbox )
@@ -1254,19 +1232,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, file_search_context, both_files_match )
         
         canvas_frame.SetCanvas( canvas_window )
-        
-    
-    def _RebalanceTree( self ):
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        job_key.SetVariable( 'popup_title', 'initialising' )
-        
-        self._controller.Write( 'maintain_similar_files_tree', job_key = job_key )
-        
-        self._controller.pub( 'modal_message', job_key )
-        
-        self._controller.CallLater( 1.0, WaitOnDupeFilterJob, job_key )
         
     
     def _RefreshDuplicateCounts( self ):
@@ -1451,28 +1416,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             return
             
         
-        ( num_branches_to_regen, searched_distances_to_count ) = self._similar_files_maintenance_status
+        searched_distances_to_count = self._similar_files_maintenance_status
         
         self._cog_button.Enable()
         
         total_num_files = sum( searched_distances_to_count.values() )
         
         self._eligible_files.SetLabelText( '{} eligible files in the system.'.format( HydrusData.ToHumanInt( total_num_files ) ) )
-        
-        if num_branches_to_regen == 0:
-            
-            self._num_branches_to_regen.SetLabelText( 'Search tree is fast!' )
-            
-            self._branches_button.Disable()
-            
-        else:
-            
-            self._num_branches_to_regen.SetLabelText( HydrusData.ToHumanInt( num_branches_to_regen ) + ' search branches to rebalance.' )
-            
-            self._branches_button.Enable()
-            
-            work_can_be_done = True
-            
         
         self._search_distance_button.Enable()
         self._search_distance_spinctrl.Enable()

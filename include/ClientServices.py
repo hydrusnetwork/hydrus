@@ -909,7 +909,7 @@ class ServiceRestricted( ServiceRemote ):
             
             network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path )
             
-            if command in ( '', 'account', 'access_key_verification' ):
+            if command not in ( 'update', 'metadata', 'file', 'thumbnail' ):
                 
                 network_job.OverrideBandwidth()
                 network_job.OnlyTryConnectionOnce()
@@ -1864,13 +1864,15 @@ class ServiceIPFS( ServiceRemote ):
         return j[ 'Value' ]
         
     
-    def ImportFile( self, multihash ):
+    def ImportFile( self, multihash, silent = False ):
         
         def on_wx_select_tree( job_key, url_tree ):
             
             from . import ClientGUIDialogs
             
             with ClientGUIDialogs.DialogSelectFromURLTree( HG.client_controller.gui, url_tree ) as dlg:
+                
+                urls_good = False
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -1880,6 +1882,13 @@ class ServiceIPFS( ServiceRemote ):
                         
                         HG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_key, urls, multihash )
                         
+                        urls_good = True
+                        
+                    
+                
+                if not urls_good:
+                    
+                    job_key.Delete()
                     
                 
             
@@ -1890,11 +1899,29 @@ class ServiceIPFS( ServiceRemote ):
             
             job_key.SetVariable( 'popup_text_1', 'Looking up multihash information' )
             
-            HG.client_controller.pub( 'message', job_key )
+            if not silent:
+                
+                HG.client_controller.pub( 'message', job_key )
+                
             
             with self._lock:
                 
-                url_tree = self._ConvertMultihashToURLTree( multihash, None, multihash )
+                try:
+                    
+                    url_tree = self._ConvertMultihashToURLTree( multihash, None, multihash )
+                    
+                except HydrusExceptions.NotFoundException:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'Failed to find multihash information for "{}"!'.format( multihash ) )
+                    
+                    return
+                    
+                except HydrusExceptions.ServerException as e:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'IPFS Error: "{}"!'.format( e ) )
+                    
+                    return
+                    
                 
             
             if url_tree[0] == 'file':
@@ -1964,10 +1991,12 @@ class ServiceIPFS( ServiceRemote ):
                 
                 if should_quit:
                     
+                    job_key.SetVariable( 'popup_text_1', 'cancelled!' )
+                    
                     return
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'pinning files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
+                job_key.SetVariable( 'popup_text_1', 'ensuring files are pinned: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
                 job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
                 
                 ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
@@ -2013,6 +2042,8 @@ class ServiceIPFS( ServiceRemote ):
                 
                 if should_quit:
                     
+                    job_key.SetVariable( 'popup_text_1', 'cancelled!' )
+                    
                     return
                     
                 
@@ -2057,7 +2088,6 @@ class ServiceIPFS( ServiceRemote ):
             HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
             
             job_key.SetVariable( 'popup_text_1', 'done!' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
             
             with self._lock:
                 
@@ -2066,8 +2096,6 @@ class ServiceIPFS( ServiceRemote ):
             
             job_key.SetVariable( 'popup_clipboard', ( 'copy multihash to clipboard', text ) )
             
-            job_key.Finish()
-            
             return directory_multihash
             
         except Exception as e:
@@ -2075,9 +2103,14 @@ class ServiceIPFS( ServiceRemote ):
             HydrusData.ShowException( e )
             
             job_key.SetVariable( 'popup_text_1', 'error' )
-            job_key.DeleteVariable( 'popup_gauge_1' )
             
             job_key.Cancel()
+            
+        finally:
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
             
         
     

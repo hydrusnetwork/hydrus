@@ -330,6 +330,20 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
+        # create ssl keys
+        
+        cert_here = os.path.exists( self._ssl_cert_path )
+        key_here = os.path.exists( self._ssl_key_path )
+        
+        if cert_here ^ key_here:
+            
+            raise Exception( 'While creating the server database, only one of the paths "{}" and "{}" existed. You can create a server db with these files already in place, but please either delete the existing file (to have hydrus generate its own pair) or find the other in the pair (to use your own).'.format( self._ssl_cert_path, self._ssl_key_path ) )
+            
+        elif not ( cert_here or key_here ):
+            
+            HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+            
+        
         HydrusPaths.MakeSureDirectoryExists( self._files_dir )
         
         for prefix in HydrusData.IterateHexPrefixes():
@@ -375,10 +389,6 @@ class DB( HydrusDB.HydrusDB ):
         ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
         
         self._c.execute( 'INSERT INTO version ( version, year, month ) VALUES ( ?, ?, ? );', ( HC.SOFTWARE_VERSION, current_year, current_month ) )
-        
-        # create ssl keys
-        
-        HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
         
         # set up server admin
         

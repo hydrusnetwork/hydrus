@@ -935,7 +935,7 @@ class ParseFormulaHTML( ParseFormula ):
             
         except Exception as e:
             
-            raise HydrusExceptions.ParseException( 'Unable to parse that HTML: ' + str( e ) )
+            raise HydrusExceptions.ParseException( 'Unable to parse that HTML: {}. HTML Sample: {}'.format( str( e ), parsing_text[:1024] ) )
             
         
         tags = self._FindHTMLTags( root )
@@ -1520,7 +1520,9 @@ class ParseFormulaJSON( ParseFormula ):
             
         except Exception as e:
             
-            raise HydrusExceptions.ParseException( 'Unable to parse that JSON: ' + str( e ) )
+            message = 'Unable to parse that JSON: {}. JSON sample: {}'.format( str( e ), parsing_text[:1024] )
+            
+            raise HydrusExceptions.ParseException( message )
             
         
         raw_texts = self._GetRawTextsFromJSON( j )

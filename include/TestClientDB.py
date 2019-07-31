@@ -1114,45 +1114,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( result, ( pixiv_id, password ) )
         
     
-    def test_repo_downloads( self ):
-        
-        result = self._read( 'downloads' )
-        
-        self.assertEqual( result, set() )
-        
-        #
-        
-        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
-        
-        service_keys_to_content_updates = {}
-        
-        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, ( hash, ) ), )
-        
-        self._write( 'content_updates', service_keys_to_content_updates )
-        
-        #
-        
-        result = self._read( 'downloads' )
-        
-        self.assertEqual( result, { hash } )
-        
-        #
-        
-        hash = b'\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
-        
-        service_keys_to_content_updates = {}
-        
-        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, ( hash, ) ), )
-        
-        self._write( 'content_updates', service_keys_to_content_updates )
-        
-        #
-        
-        result = self._read( 'downloads' )
-        
-        self.assertEqual( result, set() )
-        
-    
     def test_services( self ):
         
         result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.LOCAL_TAG ) )

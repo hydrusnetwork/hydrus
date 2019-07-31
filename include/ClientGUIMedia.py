@@ -545,14 +545,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         self._page_key = page_key
         
-        self._focussed_media = None
-        self._next_best_media_after_focussed_media_removed = None
-        self._shift_focussed_media = None
+        self._focused_media = None
+        self._next_best_media_after_focused_media_removed = None
+        self._shift_focused_media = None
         
         self._selected_media = set()
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        HG.client_controller.sub( self, 'SetFocussedMedia', 'set_focus' )
+        HG.client_controller.sub( self, 'SetFocusedMedia', 'set_focus' )
         HG.client_controller.sub( self, 'Collect', 'collect_media' )
         HG.client_controller.sub( self, 'Sort', 'sort_media' )
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
@@ -609,9 +609,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _CopyBMPToClipboard( self ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            media = self._focussed_media.GetDisplayMedia()
+            media = self._focused_media.GetDisplayMedia()
             
             if media.GetMime() in HC.IMAGES and media.GetDuration() is None:
                 
@@ -647,7 +647,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _CopyHashToClipboard( self, hash_type ):
         
-        display_media = self._focussed_media.GetDisplayMedia()
+        display_media = self._focused_media.GetDisplayMedia()
         
         sha256_hash = display_media.GetHash()
         
@@ -703,7 +703,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _CopyPathToClipboard( self ):
         
-        display_media = self._focussed_media.GetDisplayMedia()
+        display_media = self._focused_media.GetDisplayMedia()
         
         client_files_manager = HG.client_controller.client_files_manager
         
@@ -732,7 +732,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _CopyServiceFilenameToClipboard( self, service_key ):
         
-        display_media = self._focussed_media.GetDisplayMedia()
+        display_media = self._focused_media.GetDisplayMedia()
         
         hash = display_media.GetHash()
         
@@ -806,7 +806,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if involves_physical_delete:
             
-            self._SetFocussedMedia( None )
+            self._SetFocusedMedia( None )
             
         
         def do_it( jobs ):
@@ -852,7 +852,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _DownloadHashes( self, hashes ):
         
-        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
+        HG.client_controller.quick_download_manager.DownloadFiles( hashes )
         
     
     def _EditDuplicateActionOptions( self, duplicate_type ):
@@ -926,9 +926,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _FullScreen( self, first_media = None ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            display_media = self._focussed_media.GetDisplayMedia()
+            display_media = self._focused_media.GetDisplayMedia()
             
             new_options = HG.client_controller.new_options
             
@@ -961,7 +961,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if len( media_results ) > 0:
             
-            if first_media is None and self._focussed_media is not None: first_media = self._focussed_media
+            if first_media is None and self._focused_media is not None: first_media = self._focused_media
             
             if first_media is not None and first_media.GetLocationsManager().IsLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
@@ -1140,9 +1140,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _GetSimilarTo( self, max_hamming ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            hash = self._focussed_media.GetDisplayMedia().GetHash()
+            hash = self._focused_media.GetDisplayMedia().GetHash()
             
             initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, max_hamming ) ) ]
             
@@ -1216,8 +1216,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             if not ctrl and not shift:
                 
                 self._Select( 'none' )
-                self._SetFocussedMedia( None )
-                self._shift_focussed_media = None
+                self._SetFocusedMedia( None )
+                self._shift_focused_media = None
                 
             
         else:
@@ -1228,25 +1228,25 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                     self._DeselectSelect( ( media, ), () )
                     
-                    if self._focussed_media == media:
+                    if self._focused_media == media:
                         
-                        self._SetFocussedMedia( None )
+                        self._SetFocusedMedia( None )
                         
                     
-                    self._shift_focussed_media = None
+                    self._shift_focused_media = None
                     
                 else:
                     
                     self._DeselectSelect( (), ( media, ) )
                     
-                    if self._focussed_media is None: self._SetFocussedMedia( media )
+                    if self._focused_media is None: self._SetFocusedMedia( media )
                     
-                    self._shift_focussed_media = media
+                    self._shift_focused_media = media
                     
                 
-            elif shift and self._shift_focussed_media is not None:
+            elif shift and self._shift_focused_media is not None:
                 
-                start_index = self._sorted_media.index( self._shift_focussed_media )
+                start_index = self._sorted_media.index( self._shift_focused_media )
                 
                 end_index = self._sorted_media.index( media )
                 
@@ -1255,9 +1255,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 self._DeselectSelect( (), media_to_select )
                 
-                self._SetFocussedMedia( media )
+                self._SetFocusedMedia( media )
                 
-                self._shift_focussed_media = media
+                self._shift_focused_media = media
                 
             else:
                 
@@ -1270,8 +1270,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     self._PublishSelectionChange()
                     
                 
-                self._SetFocussedMedia( media )
-                self._shift_focussed_media = media
+                self._SetFocusedMedia( media )
+                self._shift_focused_media = media
                 
             
         
@@ -1355,12 +1355,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             wx.CallAfter( wx_do_it, media, notes )
             
         
-        if self._focussed_media is None:
+        if self._focused_media is None:
             
             return
             
         
-        HG.client_controller.CallToThread( thread_wait, self._focussed_media.GetDisplayMedia() )
+        HG.client_controller.CallToThread( thread_wait, self._focused_media.GetDisplayMedia() )
         
     
     def _ManageRatings( self ):
@@ -1446,9 +1446,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _OpenExternally( self ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            open_externally_media = self._focussed_media.GetDisplayMedia()
+            open_externally_media = self._focused_media.GetDisplayMedia()
             
             if open_externally_media.GetLocationsManager().IsLocal():
                 
@@ -1472,18 +1472,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _OpenFileInWebBrowser( self ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            if self._focussed_media.GetLocationsManager().IsLocal():
+            if self._focused_media.GetLocationsManager().IsLocal():
                 
-                hash = self._focussed_media.GetHash()
-                mime = self._focussed_media.GetMime()
+                hash = self._focused_media.GetHash()
+                mime = self._focused_media.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                self._SetFocussedMedia( None )
+                self._SetFocusedMedia( None )
                 
                 ClientPaths.LaunchPathInWebBrowser( path )
                 
@@ -1492,18 +1492,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _OpenFileLocation( self ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            if self._focussed_media.GetLocationsManager().IsLocal():
+            if self._focused_media.GetLocationsManager().IsLocal():
                 
-                hash = self._focussed_media.GetHash()
-                mime = self._focussed_media.GetMime()
+                hash = self._focused_media.GetHash()
+                mime = self._focused_media.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                self._SetFocussedMedia( None )
+                self._SetFocusedMedia( None )
                 
                 HydrusPaths.OpenFileLocation( path )
                 
@@ -1512,9 +1512,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _OpenKnownURL( self ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            DoOpenKnownURLFromShortcut( self, self._focussed_media )
+            DoOpenKnownURLFromShortcut( self, self._focused_media )
             
         
     
@@ -1697,7 +1697,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
             if do_it_now:
                 
-                self._SetFocussedMedia( None )
+                self._SetFocusedMedia( None )
                 
                 time.sleep( 0.1 )
                 
@@ -1811,14 +1811,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 media_to_select = matching_media.difference( self._selected_media )
                 
             
-            if self._focussed_media in media_to_deselect:
+            if self._focused_media in media_to_deselect:
                 
-                self._SetFocussedMedia( None )
+                self._SetFocusedMedia( None )
                 
             
             self._DeselectSelect( media_to_deselect, media_to_select )
             
-            self._shift_focussed_media = None
+            self._shift_focused_media = None
             
         
     
@@ -2025,14 +2025,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         flat_media = self._GetSelectedFlatMedia()
         
-        if self._focussed_media is None:
+        if self._focused_media is None:
             
             wx.MessageBox( 'No file is focused, so cannot set the focused file as better!' )
             
             return
             
         
-        focused_hash = self._focussed_media.GetDisplayMedia().GetHash()
+        focused_hash = self._focused_media.GetDisplayMedia().GetHash()
         
         ( better_media, ) = [ media for media in flat_media if media.GetHash() == focused_hash ]
         
@@ -2045,14 +2045,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _SetDuplicatesFocusedKing( self ):
         
-        if self._focussed_media is None:
+        if self._focused_media is None:
             
             wx.MessageBox( 'No file is focused, so cannot set the focused file as king!' )
             
             return
             
         
-        focused_hash = self._focussed_media.GetDisplayMedia().GetHash()
+        focused_hash = self._focused_media.GetDisplayMedia().GetHash()
         
         HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
         
@@ -2064,11 +2064,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         self._SetDuplicates( HC.DUPLICATE_POTENTIAL, media_group = media_group )
         
     
-    def _SetFocussedMedia( self, media ):
+    def _SetFocusedMedia( self, media ):
         
-        if media is None and self._focussed_media is not None:
+        if media is None and self._focused_media is not None:
             
-            next_best_media = self._focussed_media
+            next_best_media = self._focused_media
             
             i = self._sorted_media.index( next_best_media )
             
@@ -2086,22 +2086,22 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 next_best_media = self._sorted_media[ i ]
                 
             
-            self._next_best_media_after_focussed_media_removed = next_best_media
+            self._next_best_media_after_focused_media_removed = next_best_media
             
         else:
             
-            self._next_best_media_after_focussed_media_removed = None
+            self._next_best_media_after_focused_media_removed = None
             
         
-        self._focussed_media = media
+        self._focused_media = media
         
-        if self._focussed_media is None:
+        if self._focused_media is None:
             
             publish_media = None
             
         else:
             
-            publish_media = self._focussed_media.GetDisplayMedia()
+            publish_media = self._focused_media.GetDisplayMedia()
             
         
         HG.client_controller.pub( 'preview_changed', self._page_key, publish_media )
@@ -2277,13 +2277,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def PageShown( self ):
         
-        if self._focussed_media is None:
+        if self._focused_media is None:
             
             publish_media = None
             
         else:
             
-            publish_media = self._focussed_media.GetDisplayMedia()
+            publish_media = self._focused_media.GetDisplayMedia()
             
         
         HG.client_controller.pub( 'preview_changed', self._page_key, publish_media )
@@ -2320,56 +2320,110 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
             elif action == 'duplicate_media_clear_focused_false_positives':
                 
-                if self._focussed_media is not None:
+                if self._focused_media is not None:
                     
-                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
                     
                     ClientGUIDuplicates.ClearFalsePositives( self, ( hash, ) )
                     
                 
-            elif action == 'duplicate_media_dissolve_focus_alternate_group':
+            elif action == 'duplicate_media_clear_false_positives':
                 
-                if self._focussed_media is not None:
+                hashes = self._GetSelectedHashes()
+                
+                if len( hashes ) > 0:
                     
-                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    ClientGUIDuplicates.ClearFalsePositives( self, hashes )
+                    
+                
+            elif action == 'duplicate_media_dissolve_focused_alternate_group':
+                
+                if self._focused_media is not None:
+                    
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
                     
                     ClientGUIDuplicates.DissolveAlternateGroup( self, ( hash, ) )
                     
                 
-            elif action == 'duplicate_media_dissolve_focus_duplicate_group':
+            elif action == 'duplicate_media_dissolve_alternate_group':
                 
-                if self._focussed_media is not None:
+                hashes = self._GetSelectedHashes()
+                
+                if len( hashes ) > 0:
                     
-                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    ClientGUIDuplicates.DissolveAlternateGroup( self, hashes )
+                    
+                
+            elif action == 'duplicate_media_dissolve_focused_duplicate_group':
+                
+                if self._focused_media is not None:
+                    
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
                     
                     ClientGUIDuplicates.DissolveDuplicateGroup( self, ( hash, ) )
                     
                 
-            elif action == 'duplicate_media_remove_focus_from_alternate_group':
+            elif action == 'duplicate_media_dissolve_duplicate_group':
                 
-                if self._focussed_media is not None:
+                hashes = self._GetSelectedHashes()
+                
+                if len( hashes ) > 0:
                     
-                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    ClientGUIDuplicates.DissolveDuplicateGroup( self, hashes )
+                    
+                
+            elif action == 'duplicate_media_remove_focused_from_alternate_group':
+                
+                if self._focused_media is not None:
+                    
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
                     
                     ClientGUIDuplicates.RemoveFromAlternateGroup( self, ( hash, ) )
                     
                 
-            elif action == 'duplicate_media_remove_focus_from_duplicate_group':
+            elif action == 'duplicate_media_remove_focused_from_duplicate_group':
                 
-                if self._focussed_media is not None:
+                if self._focused_media is not None:
                     
-                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
                     
                     ClientGUIDuplicates.RemoveFromDuplicateGroup( self, ( hash, ) )
                     
                 
             elif action == 'duplicate_media_reset_focused_potential_search':
                 
-                if self._focussed_media is not None:
+                if self._focused_media is not None:
                     
-                    hash = self._focussed_media.GetDisplayMedia().GetHash()
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
                     
                     ClientGUIDuplicates.ResetPotentialSearch( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_reset_potential_search':
+                
+                hashes = self._GetSelectedHashes()
+                
+                if len( hashes ) > 0:
+                    
+                    ClientGUIDuplicates.ResetPotentialSearch( self, hashes )
+                    
+                
+            elif action == 'duplicate_media_remove_focused_potentials':
+                
+                if self._focused_media is not None:
+                    
+                    hash = self._focused_media.GetDisplayMedia().GetHash()
+                    
+                    ClientGUIDuplicates.RemovePotentials( self, ( hash, ) )
+                    
+                
+            elif action == 'duplicate_media_remove_potentials':
+                
+                hashes = self._GetSelectedHashes()
+                
+                if len( hashes ) > 0:
+                    
+                    ClientGUIDuplicates.RemovePotentials( self, hashes )
                     
                 
             elif action == 'duplicate_media_set_alternate':
@@ -2564,7 +2618,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         return self._SetDuplicates( duplicate_type, media_group = media_group )
         
     
-    def SetFocussedMedia( self, page_key, media ):
+    def SetFocusedMedia( self, page_key, media ):
         
         pass
         
@@ -2979,17 +3033,17 @@ class MediaPanelThumbnails( MediaPanel ):
         return y_start
         
     
-    def _MoveFocussedThumbnail( self, rows, columns, shift ):
+    def _MoveFocusedThumbnail( self, rows, columns, shift ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            media_to_use = self._focussed_media
+            media_to_use = self._focused_media
             
-        elif self._next_best_media_after_focussed_media_removed is not None:
+        elif self._next_best_media_after_focused_media_removed is not None:
             
-            media_to_use = self._next_best_media_after_focussed_media_removed
+            media_to_use = self._next_best_media_after_focused_media_removed
             
-            if columns == -1: # treat it as if the focussed area is between this and the next
+            if columns == -1: # treat it as if the focused area is between this and the next
                 
                 columns = 0
                 
@@ -3137,11 +3191,11 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _RemoveMediaDirectly( self, singleton_media, collected_media ):
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
-            if self._focussed_media in singleton_media or self._focussed_media in collected_media:
+            if self._focused_media in singleton_media or self._focused_media in collected_media:
                 
-                self._SetFocussedMedia( None )
+                self._SetFocusedMedia( None )
                 
             
         
@@ -3150,7 +3204,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._selected_media.difference_update( singleton_media )
         self._selected_media.difference_update( collected_media )
         
-        self._shift_focussed_media = None
+        self._shift_focused_media = None
         
         self._RecalculateVirtualSize()
         
@@ -3345,7 +3399,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             shift = event.ShiftDown()
             
-            self._MoveFocussedThumbnail( self._num_rows_per_canvas_page * direction, 0, shift )
+            self._MoveFocusedThumbnail( self._num_rows_per_canvas_page * direction, 0, shift )
             
         else: event.Skip()
         
@@ -3372,9 +3426,9 @@ class MediaPanelThumbnails( MediaPanel ):
             if command == 'copy_files': self._CopyFilesToClipboard()
             elif command == 'ctrl-space':
                 
-                if self._focussed_media is not None:
+                if self._focused_media is not None:
                     
-                    self._HitMedia( self._focussed_media, True, False )
+                    self._HitMedia( self._focused_media, True, False )
                     
                 
             elif command == 'delete_file':
@@ -3395,14 +3449,14 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'shift_scroll_home': self._ScrollHome( True )
             elif command == 'select': self._Select( data )
             elif command == 'undelete': self._Undelete()
-            elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
-            elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
-            elif command == 'key_left': self._MoveFocussedThumbnail( 0, -1, False )
-            elif command == 'key_right': self._MoveFocussedThumbnail( 0, 1, False )
-            elif command == 'key_shift_up': self._MoveFocussedThumbnail( -1, 0, True )
-            elif command == 'key_shift_down': self._MoveFocussedThumbnail( 1, 0, True )
-            elif command == 'key_shift_left': self._MoveFocussedThumbnail( 0, -1, True )
-            elif command == 'key_shift_right': self._MoveFocussedThumbnail( 0, 1, True )
+            elif command == 'key_up': self._MoveFocusedThumbnail( -1, 0, False )
+            elif command == 'key_down': self._MoveFocusedThumbnail( 1, 0, False )
+            elif command == 'key_left': self._MoveFocusedThumbnail( 0, -1, False )
+            elif command == 'key_right': self._MoveFocusedThumbnail( 0, 1, False )
+            elif command == 'key_shift_up': self._MoveFocusedThumbnail( -1, 0, True )
+            elif command == 'key_shift_down': self._MoveFocusedThumbnail( 1, 0, True )
+            elif command == 'key_shift_left': self._MoveFocusedThumbnail( 0, -1, True )
+            elif command == 'key_shift_right': self._MoveFocusedThumbnail( 0, 1, True )
             else: event.Skip()
             
         
@@ -3571,7 +3625,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         menu = wx.Menu()
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
             # variables
             
@@ -3601,7 +3655,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             i_can_post_ratings = len( local_ratings_services ) > 0
             
-            focussed_is_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
+            focused_is_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._focused_media.GetLocationsManager().GetCurrent()
             
             file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
             upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
@@ -3610,7 +3664,7 @@ class MediaPanelThumbnails( MediaPanel ):
             user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ) }
             ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
             
-            focussed_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote() )
+            focused_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focused_media.GetLocationsManager().GetCurrentRemote() )
             
             if multiple_selected:
                 
@@ -3789,7 +3843,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
-                for line in self._focussed_media.GetPrettyInfoLines():
+                for line in self._focused_media.GetPrettyInfoLines():
                     
                     ClientGUIMenus.AppendMenuLabel( menu, line, line )
                     
@@ -3797,7 +3851,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( self._selected_media ) == 1:
                 
-                AddFileViewingStatsMenu( menu, self._focussed_media )
+                AddFileViewingStatsMenu( menu, self._focused_media )
                 
             
             if len( disparate_current_file_service_keys ) > 0:
@@ -4017,14 +4071,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            if focussed_is_local:
+            if focused_is_local:
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self._OpenExternally )
                 
             
             #
             
-            AddKnownURLsViewCopyMenu( self, menu, self._focussed_media, selected_media = self._selected_media )
+            AddKnownURLsViewCopyMenu( self, menu, self._focused_media, selected_media = self._selected_media )
             
             # share
             
@@ -4032,7 +4086,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            if focussed_is_local:
+            if focused_is_local:
                 
                 show_open_in_web = True
                 show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
@@ -4098,7 +4152,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
             
-            for ipfs_service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
+            for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
                 
                 name = service_keys_to_names[ ipfs_service_key ]
                 
@@ -4115,9 +4169,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
             
-            if focussed_is_local:
+            if focused_is_local:
                 
-                if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None:
+                if self._focused_media.GetMime() in HC.IMAGES and self._focused_media.GetDuration() is None:
                     
                     ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
                     
@@ -4234,7 +4288,7 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
             
         
-        if self._focussed_media is not None:
+        if self._focused_media is not None:
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -4244,7 +4298,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             duplicates_menu = wx.Menu()
             
-            focussed_hash = self._focussed_media.GetDisplayMedia().GetHash()
+            focused_hash = self._focused_media.GetDisplayMedia().GetHash()
             
             if HG.client_controller.DBCurrentlyDoingJob():
                 
@@ -4252,13 +4306,14 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
-                file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._file_service_key, focussed_hash )
+                file_duplicate_info = HG.client_controller.Read( 'file_duplicate_info', self._file_service_key, focused_hash )
                 
             
             focus_is_in_duplicate_group = False
             focus_is_in_alternate_group = False
             focus_has_fps = False
-            focus_can_be_searched = self._focussed_media.GetDisplayMedia().GetMime() in HC.MIMES_WE_CAN_PHASH
+            focus_has_potentials = False
+            focus_can_be_searched = self._focused_media.GetDisplayMedia().GetMime() in HC.MIMES_WE_CAN_PHASH
             
             if file_duplicate_info is None:
                 
@@ -4280,7 +4335,7 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                         else:
                             
-                            ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, focussed_hash, HC.DUPLICATE_KING )
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', self._ShowDuplicatesInNewPage, focused_hash, HC.DUPLICATE_KING )
                             
                         
                         ClientGUIMenus.AppendSeparator( duplicates_view_menu )
@@ -4296,7 +4351,7 @@ class MediaPanelThumbnails( MediaPanel ):
                                 
                                 label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
                                 
-                                ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
+                                ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focused_hash, duplicate_type )
                                 
                                 if duplicate_type == HC.DUPLICATE_MEMBER:
                                     
@@ -4309,6 +4364,10 @@ class MediaPanelThumbnails( MediaPanel ):
                                 elif duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
                                     
                                     focus_has_fps = True
+                                    
+                                elif duplicate_type == HC.DUPLICATE_POTENTIAL:
+                                    
+                                    focus_has_potentials = True
                                     
                                 
                             
@@ -4343,28 +4402,31 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         duplicates_single_dissolution_menu = wx.Menu()
                         
-                        media_to_action = self._focussed_media.GetDisplayMedia()
-                        
                         if focus_can_be_searched:
                             
                             ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'schedule this file to be searched for potentials again', 'Queue this file for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_reset_focused_potential_search' ) )
+                            
+                        
+                        if focus_has_potentials:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file\'s potential relationships', 'Clear out this file\'s potential relationships.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focused_potentials' ) )
                             
                         
                         if focus_is_in_duplicate_group:
                             
                             if not focus_is_definitely_king:
                                 
-                                ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focus_from_duplicate_group' ) )
+                                ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file from its duplicate group', 'Extract this file from its duplicate group and reset its search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focused_from_duplicate_group' ) )
                                 
                             
-                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focus_duplicate_group' ) )
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'dissolve this file\'s duplicate group completely', 'Completely eliminate this file\'s duplicate group and reset all files\' search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focused_duplicate_group' ) )
                             
                         
                         if focus_is_in_alternate_group:
                             
-                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focus_from_alternate_group' ) )
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'remove this file from its alternate group', 'Extract this file\'s duplicate group from its alternate group and reset the duplicate group\'s search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_focused_from_alternate_group' ) )
                             
-                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'dissolve thes file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focus_alternate_group' ) )
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_single_dissolution_menu, 'dissolve this file\'s alternate group completely', 'Completely eliminate this file\'s alternate group and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_focused_alternate_group' ) )
                             
                         
                         if focus_has_fps:
@@ -4409,6 +4471,21 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all possible pair combinations as \'potential\' duplicates for the duplicates filter.', 'Queue all these files up in the duplicates filter.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_potential' ) )
                     
+                    if advanced_mode:
+                        
+                        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                        
+                        duplicates_multiple_dissolution_menu = wx.Menu()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_multiple_dissolution_menu, 'schedule these files to be searched for potentials again', 'Queue these files for another potentials search. Will not remove any existing potentials.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_reset_potential_search' ) )
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_multiple_dissolution_menu, 'remove these files\' potential relationships', 'Clear out these files\' potential relationships.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_potentials' ) )
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_multiple_dissolution_menu, 'dissolve these files\' duplicate groups completely', 'Completely eliminate these files\' duplicate groups and reset all files\' search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_duplicate_group' ) )
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_multiple_dissolution_menu, 'dissolve these files\' alternate groups completely', 'Completely eliminate these files\' alternate groups and all duplicate group members. This resets search status for all involved files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_dissolve_alternate_group' ) )
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_multiple_dissolution_menu, 'delete all false-positive relationships these files\' alternate groups have with other groups', 'Clear out all false-positive relationships these files\' alternates groups has with other groups and resets search status.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_clear_false_positives' ) )
+                        
+                        ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for all selected' )
+                        
+                    
                     duplicates_edit_action_submenu = wx.Menu()
                     
                     for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
@@ -4424,25 +4501,12 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
                     ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
-                    '''
-                    if advanced_mode:
-                        
-                        duplicates_multiple_dissolution_menu = wx.Menu()
-                        
-                        # reset all search status
-                        # dissolve all medias
-                        # dissolve all alternates
-                        # clear all fps
-                        # clear all fps within group
-                        
-                        ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_multiple_dissolution_menu, 'remove/reset for this file' )
-                        
-                    '''
+                    
                 
                 ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set relationship' )
                 
             
-            if self._focussed_media.HasImages():
+            if self._focused_media.HasImages():
                 
                 similar_menu = wx.Menu()
                 
@@ -4558,15 +4622,15 @@ class MediaPanelThumbnails( MediaPanel ):
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
-    def SetFocussedMedia( self, page_key, media ):
+    def SetFocusedMedia( self, page_key, media ):
         
-        MediaPanel.SetFocussedMedia( self, page_key, media )
+        MediaPanel.SetFocusedMedia( self, page_key, media )
         
         if page_key == self._page_key:
             
             if media is None:
                 
-                self._SetFocussedMedia( None )
+                self._SetFocusedMedia( None )
                 
             else:
                 
@@ -4576,7 +4640,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     self._HitMedia( my_media, False, False )
                     
-                    self._ScrollToMedia( self._focussed_media )
+                    self._ScrollToMedia( self._focused_media )
                     
                 except:
                     

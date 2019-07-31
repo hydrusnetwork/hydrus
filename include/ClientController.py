@@ -16,6 +16,7 @@ from . import ClientCaches
 from . import ClientData
 from . import ClientDaemons
 from . import ClientDefaults
+from . import ClientDownloading
 from . import ClientFiles
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
@@ -221,7 +222,7 @@ class Controller( HydrusController.HydrusController ):
         
         while not job_key.IsDone():
             
-            if self._model_shutdown:
+            if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
@@ -805,6 +806,12 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
+        self.quick_download_manager = ClientDownloading.QuickDownloadManager( self )
+        
+        self.CallToThreadLongRunning( self.quick_download_manager.MainLoop )
+        
+        #
+        
         self.shortcuts_manager = ClientGUIShortcuts.ShortcutsManager( self )
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
@@ -895,7 +902,6 @@ class Controller( HydrusController.HydrusController ):
         
         if not HG.no_daemons:
             
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 4 * 3600, init_wait = 60, pre_call_wait = 3 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions', 'wake_idle_workers' ), period = 4 * 3600, pre_call_wait = 1 ) )
@@ -974,21 +980,21 @@ class Controller( HydrusController.HydrusController ):
             return
             
         
+        tree_stop_time = stop_time
+        
+        if tree_stop_time is None:
+            
+            tree_stop_time = HydrusData.GetNow() + 30
+            
+        
+        self.WriteSynchronous( 'maintain_similar_files_tree', stop_time = tree_stop_time )
+        
+        if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+            
+            return
+            
+        
         if self.new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
-            
-            tree_stop_time = stop_time
-            
-            if tree_stop_time is None:
-                
-                tree_stop_time = HydrusData.GetNow() + 30
-                
-            
-            self.WriteSynchronous( 'maintain_similar_files_tree', stop_time = tree_stop_time )
-            
-            if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
-                
-                return
-                
             
             search_distance = self.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
@@ -999,7 +1005,7 @@ class Controller( HydrusController.HydrusController ):
                 search_stop_time = HydrusData.GetNow() + 60
                 
             
-            self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
+            self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, stop_time = search_stop_time )
             
         
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
@@ -1064,7 +1070,7 @@ class Controller( HydrusController.HydrusController ):
         
         disk_cache_maintenance_mb = self.new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
         
-        if disk_cache_maintenance_mb is not None and not self._view_shutdown:
+        if disk_cache_maintenance_mb is not None and not HG.view_shutdown:
             
             cache_period = 3600
             disk_cache_stop_time = HydrusData.GetNow() + 2
@@ -1377,12 +1383,9 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownModel( self ):
         
-        if not HG.emergency_exit:
-            
-            self.file_viewing_stats_manager.Flush()
-            
-            self.SaveDirtyObjects()
-            
+        self.file_viewing_stats_manager.Flush()
+        
+        self.SaveDirtyObjects()
         
         HydrusController.HydrusController.ShutdownModel( self )
         
@@ -1670,7 +1673,7 @@ class Controller( HydrusController.HydrusController ):
         
         while True:
             
-            if self._view_shutdown:
+            if HG.view_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 

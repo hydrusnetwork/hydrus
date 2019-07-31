@@ -49,6 +49,22 @@ def GetDuplicateComparisonScore( shown_media, comparison_media ):
     
     return total_score
     
+NICE_RESOLUTIONS = {}
+
+NICE_RESOLUTIONS[ ( 640, 480 ) ] = '480p'
+NICE_RESOLUTIONS[ ( 1280, 720 ) ] = '720p'
+NICE_RESOLUTIONS[ ( 1920, 1080 ) ] = '1080p'
+NICE_RESOLUTIONS[ ( 3840, 2060 ) ] = '4k'
+
+NICE_RATIOS = {}
+
+NICE_RATIOS[ 1 ] = '1:1'
+NICE_RATIOS[ 4 / 3 ] = '4:3'
+NICE_RATIOS[ 5 / 4 ] = '5:4'
+NICE_RATIOS[ 16 / 9 ] = '16:9'
+NICE_RATIOS[ 21 / 9 ] = '21:9'
+NICE_RATIOS[ 47 / 20 ] = '2.35:1'
+
 def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     new_options = HG.client_controller.new_options
@@ -119,8 +135,11 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     if s_resolution is not None and c_resolution is not None and s_resolution != c_resolution:
         
-        ( s_w, s_h ) = shown_media.GetResolution()
-        ( c_w, c_h ) = comparison_media.GetResolution()
+        s_res = shown_media.GetResolution()
+        c_res = comparison_media.GetResolution()
+        
+        ( s_w, s_h ) = s_res
+        ( c_w, c_h ) = c_res
         
         resolution_ratio = ( s_w * s_h ) / ( c_w * c_h )
         
@@ -150,9 +169,94 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = -duplicate_comparison_score_higher_resolution
             
         
-        statement = '{} {} {}'.format( HydrusData.ConvertResolutionToPrettyString( s_resolution ), operator, HydrusData.ConvertResolutionToPrettyString( c_resolution ) )
+        if s_res in NICE_RESOLUTIONS:
+            
+            s_string = NICE_RESOLUTIONS[ s_res ]
+            
+        else:
+            
+            s_string = HydrusData.ConvertResolutionToPrettyString( s_resolution )
+            
+            if s_w % 2 == 1 or s_h % 2 == 1:
+                
+                s_string += ' (unusual)'
+                
+            
+        
+        if c_res in NICE_RESOLUTIONS:
+            
+            c_string = NICE_RESOLUTIONS[ c_res ]
+            
+        else:
+            
+            c_string = HydrusData.ConvertResolutionToPrettyString( c_resolution )
+            
+            if c_w % 2 == 1 or c_h % 2 == 1:
+                
+                c_string += ' (unusual)'
+                
+            
+        
+        statement = '{} {} {}'.format( s_string, operator, c_string )
         
         statements_and_scores[ 'resolution' ] = ( statement, score )
+        
+        #
+        
+        s_ratio = s_w / s_h
+        c_ratio = c_w / c_h
+        
+        s_nice = s_ratio in NICE_RATIOS
+        c_nice = c_ratio in NICE_RATIOS
+        
+        if s_nice or c_nice:
+            
+            if s_nice:
+                
+                s_string = NICE_RATIOS[ s_ratio ]
+                
+            else:
+                
+                s_string = 'unusual'
+                
+            
+            if c_nice:
+                
+                c_string = NICE_RATIOS[ c_ratio ]
+                
+            else:
+                
+                c_string = 'unusual'
+                
+            
+            if s_nice and c_nice:
+                
+                operator = '-'
+                score = 0
+                
+            elif s_nice:
+                
+                operator = '>'
+                score = 10
+                
+            elif c_nice:
+                
+                operator = '<'
+                score = -10
+                
+            
+            if s_string == c_string:
+                
+                statement = 'both {}'.format( s_string )
+                
+            else:
+                
+                statement = '{} {} {}'.format( s_string, operator, c_string )
+                
+            
+            statements_and_scores[ 'ratio' ] = ( statement, score )
+            
+            
         
     
     # same/diff mime

@@ -309,21 +309,28 @@ def GetDevice( path ):
     
     path = path.lower()
     
-    partition_infos = psutil.disk_partitions( all = True )
-    
-    def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
+    try:
         
-        return - len( partition_info.mountpoint )
+        partition_infos = psutil.disk_partitions( all = True )
         
-    
-    partition_infos.sort( key = sort_descending_mountpoint )
-    
-    for partition_info in partition_infos:
-        
-        if path.startswith( partition_info.mountpoint.lower() ):
+        def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
             
-            return partition_info.device
+            return - len( partition_info.mountpoint )
             
+        
+        partition_infos.sort( key = sort_descending_mountpoint )
+        
+        for partition_info in partition_infos:
+            
+            if path.startswith( partition_info.mountpoint.lower() ):
+                
+                return partition_info.device
+                
+            
+        
+    except UnicodeDecodeError: # wew lad psutil on some russian lad's fun filesystem
+        
+        return None
         
     
     return None

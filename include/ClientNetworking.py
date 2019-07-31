@@ -438,7 +438,7 @@ class NetworkEngine( object ):
         
         self._is_running = True
         
-        while not ( self._local_shutdown or self.controller.ModelIsShutdown() ):
+        while not ( self._local_shutdown or HG.model_shutdown ):
             
             with self._lock:
                 

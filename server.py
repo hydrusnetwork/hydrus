@@ -156,9 +156,17 @@ with HydrusLogger.HydrusLogger( db_dir, 'server' ) as logger:
         HG.view_shutdown = True
         HG.model_shutdown = True
         
-        try: controller.pubimmediate( 'wake_daemons' )
-        except: pass
+        try:
+            
+            controller.pubimmediate( 'wake_daemons' )
+            
+        except:
+            
+            HydrusData.Print( traceback.format_exc() )
+            
         
         reactor.callFromThread( reactor.stop )
+        
+        HydrusData.Print( 'hydrus server shut down' )
         
     

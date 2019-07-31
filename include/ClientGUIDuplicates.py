@@ -172,6 +172,29 @@ def RemoveFromDuplicateGroup( win, hashes ):
             
         
     
+def RemovePotentials( win, hashes ):
+    
+    if len( hashes ) == 1:
+        
+        message = 'Are you sure you want to remove all of this file\'s potentials?'
+        message += os.linesep * 2
+        message += 'This will mean it (or any of its duplicates) will not appear in the duplicate filter unless new potentials are found with new files. Use this command if the file has accidentally received many false positive potential relationships.'
+        
+    else:
+        
+        message = 'Are you sure you want to remove all of these {} files\' potentials?'.format( HydrusData.ToHumanInt( len( hashes ) ) )
+        message += os.linesep * 2
+        message += 'This will mean they (or any of their duplicates) will not appear in the duplicate filter unless new potentials are found with new files. Use this command if the files have accidentally received many false positive potential relationships.'
+        
+    
+    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+        
+        if dlg.ShowModal() == wx.ID_YES:
+            
+            HG.client_controller.Write( 'remove_potential_pairs', hashes )
+            
+        
+    
 def ResetPotentialSearch( win, hashes ):
     
     if len( hashes ) == 1:

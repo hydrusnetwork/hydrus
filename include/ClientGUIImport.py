@@ -1992,8 +1992,10 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         
         my_gug = domain_manager.GetGUG( self._gug_key_and_name )
         
-        gugs = domain_manager.GetGUGs()
+        gugs = list( domain_manager.GetGUGs() )
         gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
+        
+        gugs.sort( key = lambda g: g.GetName() )
         
         functional_gugs = []
         non_functional_gugs = []
@@ -2012,11 +2014,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         
         choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() in gug_keys_to_display ]
         
-        choice_tuples.sort()
-        
         second_choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() not in gug_keys_to_display ]
-        
-        second_choice_tuples.sort()
         
         if len( second_choice_tuples ) > 0:
             
@@ -2026,8 +2024,6 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         if len( non_functional_gugs ) > 0:
             
             non_functional_choice_tuples = [ ( gug.GetName(), gug ) for gug in non_functional_gugs ]
-            
-            non_functional_choice_tuples.sort()
             
             choice_tuples.append( ( '--non-functional galleries', -2 ) )
             

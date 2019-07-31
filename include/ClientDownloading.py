@@ -1,18 +1,15 @@
-import bs4
+from . import ClientImportFileSeeds
+from . import ClientImportOptions
 from . import ClientNetworkingDomain
-from . import ClientNetworkingJobs
 from . import ClientParsing
+from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusExceptions
 from . import HydrusPaths
 from . import HydrusSerialisable
-from . import HydrusTags
-import json
-import os
-import re
-import requests
+from . import HydrusThreading
+import random
 import threading
-import time
 from . import HydrusData
 from . import ClientConstants as CC
 from . import HydrusGlobals as HG
@@ -332,3 +329,244 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IDENTIFIER ] = GalleryIdentifier
+
+class QuickDownloadManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._pending_hashes = set()
+        
+        self._lock = threading.Lock()
+        
+        self._shutting_down = False
+        
+        self._new_files_event = threading.Event()
+        
+        self._controller.sub( self, 'Wake', 'wake_daemons' )
+        
+    
+    def DownloadFiles( self, hashes ):
+        
+        with self._lock:
+            
+            self._pending_hashes.update( hashes )
+            
+            self._new_files_event.set()
+            
+        
+    
+    def MainLoop( self ):
+        
+        hashes_still_to_download_in_this_run = set()
+        total_hashes_in_this_run = 0
+        total_successful_hashes_in_this_run = 0
+        
+        while not ( HydrusThreading.IsThreadShuttingDown() or self._shutting_down or HG.view_shutdown ):
+            
+            with self._lock:
+                
+                if len( self._pending_hashes ) > 0:
+                    
+                    if total_hashes_in_this_run == 0:
+                        
+                        job_key = ClientThreading.JobKey( cancellable = True )
+                        
+                        job_key.SetVariable( 'popup_title', 'downloading' )
+                        
+                        job_key.SetVariable( 'popup_text_1', 'initialising downloader' )
+                        
+                        job_key_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_key )
+                        
+                    
+                    num_before = len( hashes_still_to_download_in_this_run )
+                    
+                    hashes_still_to_download_in_this_run.update( self._pending_hashes )
+                    
+                    num_after = len( hashes_still_to_download_in_this_run )
+                    
+                    total_hashes_in_this_run += num_after - num_before
+                    
+                    self._pending_hashes = set()
+                    
+                
+            
+            if len( hashes_still_to_download_in_this_run ) == 0:
+                
+                total_hashes_in_this_run = 0
+                total_successful_hashes_in_this_run = 0
+                
+                self._new_files_event.wait( 5 )
+                
+                self._new_files_event.clear()
+                
+                continue
+                
+            
+            if job_key.IsCancelled():
+                
+                hashes_still_to_download_in_this_run = set()
+                
+                continue
+                
+            
+            hash = random.sample( hashes_still_to_download_in_this_run, 1 )[0]
+            
+            hashes_still_to_download_in_this_run.discard( hash )
+            
+            total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
+            
+            job_key.SetVariable( 'popup_text_1', 'downloading files from remote services: {}'.format( HydrusData.ConvertValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
+            job_key.SetVariable( 'popup_gauge_1', ( total_done, total_hashes_in_this_run ) )
+            
+            try:
+                
+                errors_occured = []
+                file_successful = False
+                
+                ( media_result, ) = self._controller.Read( 'media_results', ( hash, ) )
+                
+                service_keys = list( media_result.GetLocationsManager().GetCurrent() )
+                
+                random.shuffle( service_keys )
+                
+                if CC.LOCAL_FILE_SERVICE_KEY in service_keys:
+                    
+                    total_successful_hashes_in_this_run += 1
+                    
+                    continue
+                    
+                
+                for service_key in service_keys:
+                    
+                    try:
+                        
+                        service = self._controller.services_manager.GetService( service_key )
+                        
+                    except:
+                        
+                        continue
+                        
+                    
+                    try:
+                        
+                        if service.GetServiceType() == HC.FILE_REPOSITORY:
+                            
+                            file_repository = service
+                            
+                            if file_repository.IsFunctional():
+                                
+                                ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                                
+                                try:
+                                    
+                                    file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
+                                    
+                                    self._controller.WaitUntilModelFree()
+                                    
+                                    exclude_deleted = False # this is the important part here
+                                    do_not_check_known_urls_before_importing = False
+                                    do_not_check_hashes_before_importing = False
+                                    allow_decompression_bombs = True
+                                    min_size = None
+                                    max_size = None
+                                    max_gif_size = None
+                                    min_resolution = None
+                                    max_resolution = None
+                                    automatic_archive = False
+                                    associate_source_urls = True
+                                    
+                                    file_import_options = ClientImportOptions.FileImportOptions()
+                                    
+                                    file_import_options.SetPreImportOptions( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                                    file_import_options.SetPostImportOptions( automatic_archive, associate_source_urls )
+                                    
+                                    file_import_job = ClientImportFileSeeds.FileImportJob( temp_path, file_import_options )
+                                    
+                                    file_import_job.DoWork()
+                                    
+                                    file_successful = True
+                                    
+                                    break
+                                    
+                                finally:
+                                    
+                                    HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                                    
+                                
+                            
+                        elif service.GetServiceType() == HC.IPFS:
+                            
+                            multihashes = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
+                            
+                            if len( multihashes ) > 0:
+                                
+                                multihash = multihashes[0]
+                                
+                                service.ImportFile( multihash, silent = True )
+                                
+                                file_successful = True
+                                
+                                break
+                                
+                            
+                        
+                    except Exception as e:
+                        
+                        errors_occured.append( e )
+                        
+                    
+                
+                if file_successful:
+                    
+                    total_successful_hashes_in_this_run += 1
+                    
+                
+                if len( errors_occured ) > 0:
+                    
+                    if not file_successful:
+                        
+                        raise errors_occured[0]
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                hashes_still_to_download_in_this_run = 0
+                
+            finally:
+                
+                if len( hashes_still_to_download_in_this_run ) == 0:
+                    
+                    job_key.DeleteVariable( 'popup_text_1' )
+                    job_key.DeleteVariable( 'popup_gauge_1' )
+                    
+                    if total_successful_hashes_in_this_run > 0:
+                        
+                        job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
+                        
+                    
+                    job_key_pub_job.Cancel()
+                    
+                    job_key.Finish()
+                    
+                    job_key.Delete( 1 )
+                    
+                
+            
+        
+    
+    def Shutdown( self ):
+        
+        self._shutting_down = True
+        
+        self._new_files_event.set()
+        
+    
+    def Wake( self ):
+        
+        self._new_files_event.set()
+        

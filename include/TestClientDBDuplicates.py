@@ -883,6 +883,21 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
         
+        # remove potentials
+        
+        self._write( 'remove_potential_pairs', ( self._king_hash, ) )
+        
+        result = self._read( 'file_duplicate_info', CC.LOCAL_FILE_SERVICE_KEY, self._king_hash )
+        
+        file_duplicate_types_to_counts = result[ 'counts' ]
+        
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
+        self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_CONFIRMED_ALTERNATE ], 1 )
+        
         # remove member
         
         self._write( 'remove_duplicates_member', ( self._dupe_hashes[7], ) )
@@ -893,7 +908,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 5 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
         
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_FALSE_POSITIVE ], 1 )
@@ -908,7 +923,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
         
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )
@@ -926,7 +941,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
         
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 2 )
@@ -938,7 +953,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         file_duplicate_types_to_counts = result[ 'counts' ]
         
-        self.assertEqual( len( file_duplicate_types_to_counts ), 4 )
+        self.assertEqual( len( file_duplicate_types_to_counts ), 3 )
         
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ], len( self._our_main_dupe_group_hashes ) - 1 )
         self.assertEqual( file_duplicate_types_to_counts[ HC.DUPLICATE_ALTERNATE ], 1 )

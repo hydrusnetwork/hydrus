@@ -873,6 +873,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 num_urls_already_in_file_seed_cache += 1
                                 current_contiguous_num_urls_already_in_file_seed_cache += 1
                                 
+                                if current_contiguous_num_urls_already_in_file_seed_cache >= 100:
+                                    
+                                    can_search_for_more_files = False
+                                    stop_reason = 'saw 100 previously seen urls in a row, so assuming this is a large gallery'
+                                    
+                                    break
+                                    
+                                
                             else:
                                 
                                 num_urls_added += 1
@@ -924,7 +932,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             can_search_for_more_files = False
                             
-                            stop_reason = 'saw ' + HydrusData.ToHumanInt( WE_HIT_OLD_GROUND_THRESHOLD ) + ' previously seen urls, so assuming we caught up'
+                            stop_reason = 'saw ' + HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) + ' previously seen urls, so assuming we caught up'
                             
                         
                         if num_urls_added == 0:

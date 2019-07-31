@@ -2001,6 +2001,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._favourites_list.SetPredicates( predicates )
         
     
+    def SetExpandParents( self, expand_parents ):
+        
+        self._expand_parents = expand_parents
+        
+    
     def SetFetchedResults( self, job_key, search_text, search_text_for_cache, cached_results, results, next_search_is_probably_fast ):
         
         if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():

@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 362</h3></li>
+				<ul>
+					<li>duplicates work finished:</li>
+					<li>updated the duplicates help text and screenshots to reflect the new system</li>
+					<li>duplicate files search tree rebalancing is now done automatically on the normal idle maintenance routine, and its over-technical UI is removed from the duplicates page</li>
+					<li>the duplicate filter's resolution comparison statement now specifies 480p, 720p, 1080p, and 4k resolutions and highlights resolutions with odd (i.e. non-even) numbers</li>
+					<li>if the files are of different resolution, a new 'ratio' comparison statement will now show if either have a nice ratio, with current list 1:1, 4:3, 5:4, 16:9, 21:9, 2.35:1</li>
+					<li>added a 'stop filtering' button to the duplicate hover frame</li>
+					<li>made the ill-fitting 'X' button on top hover frame a stop button and cleaned up some misc related ui layout</li>
+					<li>added a 'remove this file's potential pairs' command to the thumbnail file relationships menu</li>
+					<li>if in advanced mode, multiple thumbnail selection right-click menus' file relationships submenus will now offer mass remove/reset commands for the whole selection. available commands are: 'reset search', 'remove potentials', 'dissolve dupe groups', 'dissolve alt groups', 'remove false positives'</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added link to https://gitgud.io/koto/hydrus-dd/ , a neat neural net tagging library that uses the DeepDanbooru model and has several ways of talking to hydrus, to the client api help</li>
+					<li>cleaned up a little of the ipfs file download code, mostly improving error/cancel states</li>
+					<li>rewrote some ancient file repository file download code, which ipfs was also using when commanded to download via a remote thumbnail middle-click. this code and its related popup is now cleaner, cancellable, and session-based rather than saving download records to the db (which caused a couple of edge-case annoyances for certain clients). I think it will need a bit more work, but it is much saner than it was previously</li>
+					<li>if you do not have the manage tags dialog set to add parents when you add tags, the autocomplete input will no longer expand parents in its results list</li>
+					<li>fixed an issue displaying the 'select a downloader' list when two GUGs have the same name</li>
+					<li>hitting apply on the manage parsers or url classes dialogs will now automatically do a 'try to link' action as under manage url class links</li>
+					<li>fixed (I think!) how the server services start, which was broken for some users in 361. furthermore, errors during initial service creation will now cancel the boot with a nice message, and the 'running ... ctrl+c' message will appear strictly after the services have started ok the first time, and services will shut down completely before the db is asked to stop</li>
+					<li>improved how the program recognises shutdowns right after boot errors, which should speed up clean shutdowns after certain bad server starts</li>
+					<li>the server will use an existing server.crt and server.key pair if they exist on db creation, and complain nicely if only one is present</li>
+					<li>the 'ensure file out of the similar files system' file maintenance job result will now automatically remove from/dissolve the file's duplicate group, if any, and clear out outstanding potential pairs</li>
+					<li>a system language path translation error that was occuring in some unusual filesystems when checking for free disk space before big jobs is now handled better</li>
+					<li>like repository processing, there is now a 1 hour hard limit on any individual import folder run</li>
+					<li>fixed an issue where if a gallery url fetch produced faulty urls, it could sometimes invalidate the whole page with an error rather than just the bad file url items</li>
+					<li>subscriptions will now stop a gallery-page-results-urls-add action early if that one page produces 100 previously seen before urls in a row. this _should_ fix the issue users were seeing with pixiv artist subs resyncing with much older urls that had previously been compacted out of the sub's cache</li>
+					<li>until we can get better asynch ui feedback for admin-level repository commands (lke fetching/setting account types), they now override bandwidth rules and only try the connection once for quicker responses</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 361</h3></li>
 				<ul>
 					<li>duplicates:</li>

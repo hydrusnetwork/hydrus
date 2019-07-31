@@ -242,14 +242,21 @@ class TestNetworkingEngine( unittest.TestCase ):
         self.assertTrue( engine.IsRunning() )
         self.assertFalse( engine.IsShutdown() )
         
-        mock_controller.model_is_shutdown = True
+        HG.model_shutdown = True
         
-        engine._new_work_to_do.set()
-        
-        time.sleep( 0.1 )
-        
-        self.assertFalse( engine.IsRunning() )
-        self.assertTrue( engine.IsShutdown() )
+        try:
+            
+            engine._new_work_to_do.set()
+            
+            time.sleep( 0.1 )
+            
+            self.assertFalse( engine.IsRunning() )
+            self.assertTrue( engine.IsShutdown() )
+            
+        finally:
+            
+            HG.model_shutdown = False
+            
         
     
     def test_engine_shutdown_manual( self ):
@@ -368,10 +375,17 @@ class TestNetworkingJob( unittest.TestCase ):
         self.assertFalse( job.IsCancelled() )
         self.assertFalse( job.IsDone() )
         
-        job.engine.controller.model_is_shutdown = True
+        HG.model_shutdown = True
         
-        self.assertTrue( job.IsCancelled() )
-        self.assertTrue( job.IsDone() )
+        try:
+            
+            self.assertTrue( job.IsCancelled() )
+            self.assertTrue( job.IsDone() )
+            
+        finally:
+            
+            HG.model_shutdown = False
+            
         
     
     def test_sleep( self ):

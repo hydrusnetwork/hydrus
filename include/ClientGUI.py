@@ -750,7 +750,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             while result_bytes == b'1':
                 
-                if self._controller.ViewIsShutdown():
+                if HG.view_shutdown:
                     
                     return
                     
@@ -2183,7 +2183,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
             
@@ -2200,6 +2199,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'similar files metadata generation report mode', 'Have the phash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'subprocess report mode', 'Report whenever an external process is called.', HG.subprocess_report_mode, self._SwitchBoolean, 'subprocess_report_mode' )
@@ -2995,6 +2995,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 domain_manager.SetParsers( parsers )
                 
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
             
         
     
@@ -3228,6 +3230,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 url_classes = panel.GetValue()
                 
                 domain_manager.SetURLClasses( url_classes )
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
                 
             
         

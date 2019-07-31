@@ -265,9 +265,16 @@ def GetSearchURLs( url ):
     
     search_urls.add( url )
     
-    normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
-    
-    search_urls.add( normalised_url )
+    try:
+        
+        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        
+        search_urls.add( normalised_url )
+        
+    except HydrusExceptions.URLClassException:
+        
+        pass
+        
     
     for url in list( search_urls ):
         

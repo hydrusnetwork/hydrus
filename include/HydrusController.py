@@ -28,9 +28,6 @@ class HydrusController( object ):
         
         self.db = None
         
-        self._model_shutdown = False
-        self._view_shutdown = False
-        
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         self._daemons = []
         self._daemon_jobs = {}
@@ -223,7 +220,7 @@ class HydrusController( object ):
     
     def pub( self, topic, *args, **kwargs ):
         
-        if self._model_shutdown:
+        if HG.model_shutdown:
             
             self._pubsub.pubimmediate( topic, *args, **kwargs )
             
@@ -561,11 +558,6 @@ class HydrusController( object ):
         self._MaintainCallToThreads()
         
     
-    def ModelIsShutdown( self ):
-        
-        return self._model_shutdown
-        
-    
     def PrintProfile( self, summary, profile_text ):
         
         boot_pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._timestamps[ 'boot' ] ) )
@@ -683,13 +675,11 @@ class HydrusController( object ):
             HydrusPaths.DeletePath( self.temp_dir )
             
         
-        self._model_shutdown = True
         HG.model_shutdown = True
         
     
     def ShutdownView( self ):
         
-        self._view_shutdown = True
         HG.view_shutdown = True
         
         self._ShutdownDaemons()
@@ -739,16 +729,11 @@ class HydrusController( object ):
         return self._system_busy
         
     
-    def ViewIsShutdown( self ):
-        
-        return self._view_shutdown
-        
-    
     def WaitUntilDBEmpty( self ):
         
         while True:
             
-            if self._model_shutdown:
+            if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 
@@ -774,7 +759,7 @@ class HydrusController( object ):
         
         while True:
             
-            if self._model_shutdown:
+            if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 

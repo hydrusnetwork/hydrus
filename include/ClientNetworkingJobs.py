@@ -264,7 +264,7 @@ class NetworkJob( object ):
             return True
             
         
-        if self.engine.controller.ModelIsShutdown():
+        if HG.model_shutdown:
             
             return True
             
@@ -279,7 +279,7 @@ class NetworkJob( object ):
             return True
             
         
-        if self.engine.controller.ModelIsShutdown() or HydrusThreading.IsThreadShuttingDown():
+        if HG.model_shutdown or HydrusThreading.IsThreadShuttingDown():
             
             return True
             
@@ -1140,7 +1140,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if self.engine.controller.ModelIsShutdown() or HydrusThreading.IsThreadShuttingDown():
+            if HG.model_shutdown or HydrusThreading.IsThreadShuttingDown():
                 
                 raise HydrusExceptions.ShutdownException()
                 

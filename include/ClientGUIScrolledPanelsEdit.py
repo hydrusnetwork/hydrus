@@ -201,14 +201,9 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
             
         except TypeError:
             
-            def sort_key( tup ):
-                
-                return tup[0]
-                
-            
             try:
                 
-                choice_tuples.sort( key = sort_key )
+                choice_tuples.sort( key = lambda t: t[0] )
                 
             except TypeError:
                 
@@ -5393,14 +5388,9 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except TypeError:
                 
-                def sort_key( tup ):
-                    
-                    return tup[0]
-                    
-                
                 try:
                     
-                    choice_tuples.sort( key = sort_key )
+                    choice_tuples.sort( key = lambda t: t[0] )
                     
                 except TypeError:
                     

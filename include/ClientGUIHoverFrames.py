@@ -308,6 +308,9 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
+        close_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close_button.SetToolTip( 'close filter' )
+        
         self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
         self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', 'duplicate_filter_back' )
         
@@ -360,7 +363,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         self._comparison_statements_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
         
         self._comparison_statements_sts = {}
         
@@ -392,6 +395,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         top_button_hbox.Add( self._trash_button, CC.FLAGS_VCENTER )
         top_button_hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
+        top_button_hbox.Add( close_button, CC.FLAGS_VCENTER )
         
         navigation_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -576,22 +580,18 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._top_hbox = wx.BoxSizer( wx.HORIZONTAL )
         self._title_text = ClientGUICommon.BetterStaticText( self, 'title' )
         self._info_text = ClientGUICommon.BetterStaticText( self, 'info' )
-        self._additional_info_text = ClientGUICommon.BetterStaticText( self, '', style = wx.ALIGN_CENTER )
-        self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         self._PopulateLeftButtons()
-        self._top_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._top_hbox.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         self._PopulateCenterButtons()
-        self._top_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._top_hbox.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         self._PopulateRightButtons()
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._top_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._top_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._title_text, CC.FLAGS_CENTER )
         vbox.Add( self._info_text, CC.FLAGS_CENTER )
-        vbox.Add( self._additional_info_text, CC.FLAGS_CENTER )
-        vbox.Add( self._button_hbox, CC.FLAGS_CENTER )
         
         self.SetSizer( vbox )
         
@@ -698,7 +698,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         drag_button.SetToolTip( 'drag from here to export file' )
         drag_button.Bind( wx.EVT_LEFT_DOWN, self.EventDragButton )
         
-        close = ClientGUICommon.BetterButton( self, 'X', HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.SetToolTip( 'close' )
         
         self._top_hbox.Add( self._zoom_text, CC.FLAGS_VCENTER )
@@ -779,15 +779,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             self._info_text.SetLabelText( label )
             
             self._info_text.Show()
-            
-            if self._additional_info_text.GetLabelText() == '':
-                
-                self._additional_info_text.Hide()
-                
-            else:
-                
-                self._additional_info_text.Show()
-                
             
         
     

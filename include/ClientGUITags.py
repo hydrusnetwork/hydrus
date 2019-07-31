@@ -1337,7 +1337,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            expand_parents = True
+            expand_parents = self._new_options.GetBoolean( 'add_parents_on_manage_tags' )
             
             self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
@@ -1379,6 +1379,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
                 
+            
+            HG.client_controller.sub( self, 'CheckboxExpandParents', 'checkbox_manager_inverted' )
             
         
         def _EnterTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
@@ -1987,6 +1989,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self.EnterTags( tags, only_add = only_add )
                 
+            
+        
+        def CheckboxExpandParents( self ):
+            
+            self._add_tag_box.SetExpandParents( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
             
         
         def CleanBeforeDestroy( self ):

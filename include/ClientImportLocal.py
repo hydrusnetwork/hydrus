@@ -792,7 +792,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         error_occured = False
         
-        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
+        stop_time = HydrusData.GetNow() + 3600
+        
+        job_key = ClientThreading.JobKey( pausable = False, cancellable = True, stop_time = stop_time )
         
         try:
             

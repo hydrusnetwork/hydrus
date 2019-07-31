@@ -79,8 +79,6 @@ class MockController( object ):
     
     def __init__( self ):
         
-        self.model_is_shutdown = False
-        
         self.new_options = ClientOptions.ClientOptions()
         
     
@@ -92,11 +90,6 @@ class MockController( object ):
     def JustWokeFromSleep( self ):
         
         return False
-        
-    
-    def ModelIsShutdown( self ):
-        
-        return self.model_is_shutdown or HG.test_controller.ModelIsShutdown()
         
     
     def pub( self, *args, **kwargs ):
@@ -580,11 +573,6 @@ class Controller( object ):
         return False
         
     
-    def ModelIsShutdown( self ):
-        
-        return HG.model_shutdown
-        
-    
     def PageAlive( self, page_key ):
         
         return False
@@ -749,11 +737,6 @@ class Controller( object ):
         time.sleep( 2 )
         
         HydrusPaths.DeletePath( self.db_dir )
-        
-    
-    def ViewIsShutdown( self ):
-        
-        return HG.view_shutdown
         
     
     def WaitUntilModelFree( self ):

@@ -14,8 +14,7 @@ import sys
 import time
 import traceback
 import twisted.internet.ssl
-from twisted.internet import reactor
-from twisted.internet import defer
+from twisted.internet import threads, reactor, defer
 
 def ProcessStartingAction( db_dir, action ):
     
@@ -284,8 +283,8 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            while not self._model_shutdown and not self._shutdown:
-            
+            while not HG.model_shutdown and not self._shutdown:
+                
                 time.sleep( 1 )
                 
             
@@ -408,7 +407,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        reactor.callLater( 0, TWISTEDDoIt )
+        threads.blockingCallFromThread( reactor, TWISTEDDoIt )
         
     
     def SetServices( self, services ):

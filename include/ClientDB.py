@@ -3317,6 +3317,26 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _DuplicatesRemovePotentialPairs( self, hash_id ):
+        
+        media_id = self._DuplicatesGetMediaId( hash_id, do_not_create = True )
+        
+        if media_id is not None:
+            
+            self._c.execute( 'DELETE FROM potential_duplicate_pairs WHERE smaller_media_id = ? OR larger_media_id = ?;', ( media_id, media_id ) )
+            
+        
+    
+    def _DuplicatesRemovePotentialPairsFromHashes( self, hashes ):
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        for hash_id in hash_ids:
+            
+            self._DuplicatesRemovePotentialPairs( hash_id )
+            
+        
+    
     def _DuplicatesSetAlternates( self, media_id_a, media_id_b ):
         
         # let's clear out any outstanding potentials. whether this is a valid or not connection, we don't want to see it again
@@ -3755,7 +3775,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     else:
                         
-                        self._PhashesEnsureFileOutOfSystem( hash_id )
+                        self._PHashesEnsureFileOutOfSystem( hash_id )
                         
                     
                 
@@ -4443,11 +4463,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return result
-        
-    
-    def _GetDownloads( self ):
-        
-        return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers NATURAL JOIN hashes WHERE service_id = ?;', ( self._combined_local_file_service_id, ) ) }
         
     
     def _GetFileHashes( self, given_hashes, given_hash_type, desired_hash_type ):
@@ -8484,7 +8499,9 @@ class DB( HydrusDB.HydrusDB ):
             self._FileMaintenanceAddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
             
         
-    def _PhashesEnsureFileOutOfSystem( self, hash_id ):
+    def _PHashesEnsureFileOutOfSystem( self, hash_id ):
+        
+        self._DuplicatesRemoveMediaIdMember( hash_id )
         
         current_phash_ids = self._STS( self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) )
         
@@ -8607,11 +8624,9 @@ class DB( HydrusDB.HydrusDB ):
     
     def _PHashesGetMaintenanceStatus( self ):
         
-        ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
-        
         searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
         
-        return ( num_branches_to_regen, searched_distances_to_count )
+        return searched_distances_to_count
         
     
     def _PHashesGetPHashId( self, phash ):
@@ -8934,17 +8949,7 @@ class DB( HydrusDB.HydrusDB ):
         self._PHashesResetSearch( hash_ids )
         
     
-    def _PHashesSearchForPotentialDuplicates( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
-        
-        if abandon_if_other_work_to_do:
-            
-            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
-            
-            if result is not None:
-                
-                return
-                
-            
+    def _PHashesSearchForPotentialDuplicates( self, search_distance, job_key = None, stop_time = None ):
         
         time_started = HydrusData.GetNow()
         pub_job_key = False
@@ -10700,7 +10705,6 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
-        elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
         elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetPotentialDuplicatePairsForFiltering( *args, **kwargs )
         elif action == 'file_duplicate_hashes': result = self._DuplicatesGetFileHashesByDuplicateType( *args, **kwargs )
         elif action == 'file_duplicate_info': result = self._DuplicatesGetFileDuplicateInfo( *args, **kwargs )
@@ -13187,6 +13191,17 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'ANALYZE file_maintenance_jobs;' )
             
         
+        if version == 361:
+            
+            service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
+            
+            service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -13752,6 +13767,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'relocate_client_files': self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remove_alternates_member': self._DuplicatesRemoveAlternateMemberFromHashes( *args, **kwargs )
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )
+        elif action == 'remove_potential_pairs': self._DuplicatesRemovePotentialPairsFromHashes( *args, **kwargs )
         elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )

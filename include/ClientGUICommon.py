@@ -1028,6 +1028,8 @@ class CheckboxManagerOptions( CheckboxManager ):
         
         new_options.InvertBoolean( self._boolean_name )
         
+        HG.client_controller.pub( 'checkbox_manager_inverted' )
+        
     
 class ChoiceSort( wx.Panel ):
     

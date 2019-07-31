@@ -827,7 +827,7 @@ class HydrusDB( object ):
         
         error_count = 0
         
-        while not ( ( self._local_shutdown or self._controller.ModelIsShutdown() ) and self._jobs.empty() ):
+        while not ( ( self._local_shutdown or HG.model_shutdown ) and self._jobs.empty() ):
             
             try:
                 
@@ -921,7 +921,7 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
         
-        if self._controller.ModelIsShutdown():
+        if HG.model_shutdown:
             
             raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
             
@@ -947,7 +947,7 @@ class HydrusDB( object ):
         
         job = HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
         
-        if self._controller.ModelIsShutdown():
+        if HG.model_shutdown:
             
             raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
             
