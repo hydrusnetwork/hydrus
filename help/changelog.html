@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 363</h3></li>
+				<ul>
+					<li>has audio:</li>
+					<li>wrote a detection routine that can determine if a video has audio. it reads actual audio data and should be able to detect videos with a 'fake' silent audio track and consider them as not having audio</li>
+					<li>extended the client database, file import pipeline, and file metadata object to track the new has_audio value</li>
+					<li>flash files and audio files (like mp3) are considered to always have audio</li>
+					<li>all 'maybe' audio files (atm this means video) are queued up for a file metadata reparse in the files maintenance manager. your existing videos will start off as not having audio, but once they are rescanned, they will get it. this is one of the first big jobs of the new maintenance system, and I expect it will need some different throttling rules to finish this job in reasonable time--by default it does 100 files a day, but if you have 50,000 videos, that's a long time!</li>
+					<li>files now show if they have audio in their info string that appears on thumbnail right-click or the top of the media viewer. it defaults to the unicode character 🔊, but can be edited under the new 'sound' options page</li>
+					<li>added a system:has audio predicate to search for files with/without audio</li>
+					<li>updated file import unit tests to check 'has audio' parsing, and added tests for system:has audio</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>the /get_files/file_metadata call now provides has_audio info</li>
+					<li>the /get_files/file_metadata call now provides known_urls!</li>
+					<li>added 'cookie management' permission</li>
+					<li>added /manage_cookies/get_cookies to get current cookies by domain</li>
+					<li>added /manage_cookies/set_cookies to set or clear current cookies</li>
+					<li>added/updated unit tests for the above</li>
+					<li>updated help for the above</li>
+					<li>client api version is now 10</li>
+					<li>the rest:</li>
+					<li>system:hash and system:similar to now accept multiple hashes! so, if you have 100 md5s, you can now search for them all at once</li>
+					<li>the thumbnail right-click->file relationships->find similar files now works for multiple selections!</li>
+					<li>when system:hash was just one hash, it would run before anything else and complete a search immediately on finding a match, but now it works like any other predicate, checking for file domain and ANDing with other predicates in the search</li>
+					<li>the 'complete' file maintenance regen job now only does file metadata, not a complete thumb regen. its name and labels are updated to reflect this, and any existing job in the system will get the separate thumb regen job</li>
+					<li>the file maintenance manager now has a couple of how-to sentences at the top, and a new 'see description' button will talk more about each job type</li>
+					<li>the login script testing system now uses a duplicate of the existing domain manager (rather than a fresh empty one), so it will inherit current http headers such as default User-Agent, the lacking of which was messing up some tests</li>
+					<li>fixed the login script testing system not showing downloaded data</li>
+					<li>subscriptions with multiple queries now publish the files they have imported as soon as each query has finished, rather than waiting for the whole sub to be done</li>
+					<li>subscriptions now publish the files they have imported to page/popup even if they have an error</li>
+					<li>added 9:16, 2:3, and 4:5 to the duplicate comparison statement system, for various vertical social media types</li>
+					<li>the autocomplete tag search 'read', which appears on places like search pages, should now more reliably accept the current entered text when there are no search results yet to show</li>
+					<li>the autocomplete tag search 'write', which appears on places like the manage tags dialog, should now correctly accept the input (including appropriate sibling-collapse) when you select a 'stub' result while other results are still loading, rather than broadcasting the exact current text</li>
+					<li>fixed the deviant art file page parser to get source time--however the login script may now be broken/unreliable</li>
+					<li>fixed a missing dialog import when deleting a string transformation</li>
+					<li>reduced the base network connection error reattempt time to 10s (from 60s). there will be more work here in future</li>
+					<li>network jobs that are waiting on a connection error now have a reattempt wait override option in their cog icon menus</li>
+					<li>the post-bad-shutdown 'open your default session or a blank page' dialog will now auto-choose to open your default session in 15 seconds</li>
+					<li>a variety of ui-update events will now not fire as long as the main gui is minimised. as well as saving a sliver of resources, I believe this may fix an issue where long-running subscriptions and other import pipelines could sometimes put the ui in an unrecoverable state due to too many thumb-fade etc... events when the currently focused page was receiving new files while the main gui was minimised</li>
+					<li>maybe fixed a rare problem with deleting old pages</li>
+					<li>cleaned some misc code</li>
+				</ul>
 				<li><h3>version 362</h3></li>
 				<ul>
 					<li>duplicates work finished:</li>
@@ -35,7 +77,7 @@
 					<li>like repository processing, there is now a 1 hour hard limit on any individual import folder run</li>
 					<li>fixed an issue where if a gallery url fetch produced faulty urls, it could sometimes invalidate the whole page with an error rather than just the bad file url items</li>
 					<li>subscriptions will now stop a gallery-page-results-urls-add action early if that one page produces 100 previously seen before urls in a row. this _should_ fix the issue users were seeing with pixiv artist subs resyncing with much older urls that had previously been compacted out of the sub's cache</li>
-					<li>until we can get better asynch ui feedback for admin-level repository commands (lke fetching/setting account types), they now override bandwidth rules and only try the connection once for quicker responses</li>
+					<li>until we can get better asynch ui feedback for admin-level repository commands (like fetching/setting account types), they now override bandwidth rules and only try the connection once for quicker responses</li>
 					<li>misc code cleanup</li>
 				</ul>
 				<li><h3>version 361</h3></li>

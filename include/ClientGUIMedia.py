@@ -1140,11 +1140,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _GetSimilarTo( self, max_hamming ):
         
-        if self._focused_media is not None:
+        hashes = set()
+        
+        media = self._GetSelectedFlatMedia()
+        
+        for m in media:
             
-            hash = self._focused_media.GetDisplayMedia().GetHash()
+            if m.GetMime() in HC.MIMES_WE_CAN_PHASH:
+                
+                hashes.add( m.GetHash() )
+                
             
-            initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, max_hamming ) ) ]
+        
+        if len( hashes ) > 0:
+            
+            initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( tuple( hashes ), max_hamming ) ) ]
             
             HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = initial_predicates )
             
@@ -1632,9 +1642,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if num_files > 0:
             
-            if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE:
+            if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                 
-                text = 'This will reparse the {} selected files\' metadata and regenerate their thumbnails.'.format( HydrusData.ToHumanInt( num_files ) )
+                text = 'This will reparse the {} selected files\' metadata.'.format( HydrusData.ToHumanInt( num_files ) )
                 text += os.linesep * 2
                 text += 'If the files were imported before some more recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
                 
@@ -4510,10 +4520,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 similar_menu = wx.Menu()
                 
-                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
-                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'very similar', 'Search the database for files that look just like this one.', self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
-                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'similar', 'Search the database for files that look generally like this one.', self._GetSimilarTo, HC.HAMMING_SIMILAR )
-                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
+                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
+                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'very similar', 'Search the database for files that look just like those selected.', self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
+                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'similar', 'Search the database for files that look generally like those selected.', self._GetSimilarTo, HC.HAMMING_SIMILAR )
+                ClientGUIMenus.AppendMenuItem( self, similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
                 
                 ClientGUIMenus.AppendMenu( duplicates_menu, similar_menu, 'find similar-looking files' )
                 
@@ -4531,7 +4541,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenuItem( self, regen_menu, 'thumbnails, but only if wrong size', 'Regenerate the selected files\' thumbnails, but only if they are the wrong size.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( self, regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
-            ClientGUIMenus.AppendMenuItem( self, regen_menu, 'file metadata and thumbnails', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+            ClientGUIMenus.AppendMenuItem( self, regen_menu, 'file metadata', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
             
             ClientGUIMenus.AppendMenu( menu, regen_menu, 'regenerate' )
             

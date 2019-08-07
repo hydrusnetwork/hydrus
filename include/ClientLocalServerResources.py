@@ -2,6 +2,7 @@ import collections
 from . import ClientAPI
 from . import ClientConstants as CC
 from . import ClientImportFileSeeds
+from . import ClientNetworkingContexts
 from . import ClientSearch
 from . import ClientTags
 from . import HydrusConstants as HC
@@ -12,6 +13,7 @@ from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusServerResources
 from . import HydrusTags
+import http.cookiejar
 import json
 import os
 import time
@@ -28,7 +30,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 
 CLIENT_API_INT_PARAMS = { 'file_id' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key' }
-CLIENT_API_STRING_PARAMS = { 'name', 'url' }
+CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'system_inbox', 'system_archive', 'tags', 'file_ids', 'only_return_identifiers' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'hashes' }
 
@@ -1485,6 +1487,13 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 metadata_row[ 'duration' ] = file_info_manager.duration
                 metadata_row[ 'num_frames' ] = file_info_manager.num_frames
                 metadata_row[ 'num_words' ] = file_info_manager.num_words
+                metadata_row[ 'has_audio' ] = file_info_manager.has_audio
+                
+                known_urls = list( media_result.GetLocationsManager().GetURLs() )
+                
+                known_urls.sort()
+                
+                metadata_row[ 'known_urls' ] = known_urls
                 
                 tags_manager = media_result.GetTagsManager()
                 
@@ -1562,6 +1571,116 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
             
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedManageCookies( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_COOKIES )
+        
+    
+class HydrusResourceClientAPIRestrictedManageCookiesGetCookies( HydrusResourceClientAPIRestrictedManageCookies ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        if 'domain' not in request.parsed_request_args:
+            
+            raise HydrusExceptions.BadRequestException( 'Please include a domain parameter!' )
+            
+        
+        domain = request.parsed_request_args[ 'domain' ]
+        
+        if '.' not in domain:
+            
+            raise HydrusExceptions.BadRequestException( 'The value "{}" does not seem to be a domain!'.format( domain ) )
+            
+        
+        network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+        
+        session = HG.client_controller.network_engine.session_manager.GetSession( network_context )
+        
+        body_cookies_list = []
+        
+        for cookie in session.cookies:
+            
+            name = cookie.name
+            value = cookie.value
+            domain = cookie.domain
+            path = cookie.path
+            expires = cookie.expires
+            
+            body_cookies_list.append( [ name, value, domain, path, expires ] )
+            
+        
+        body_dict = {}
+        
+        body_dict = { 'cookies' : body_cookies_list }
+        
+        body = json.dumps( body_dict )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_JSON, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceClientAPIRestrictedManageCookies ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        cookie_rows = request.parsed_request_args[ 'cookies' ]
+        
+        for cookie_row in cookie_rows:
+            
+            if len( cookie_row ) != 5:
+                
+                raise HydrusExceptions.BadRequestException( 'The cookie "{}" did not come in the format [ name, value, domain, path, expires ]!'.format( cookie_row ) )
+                
+            
+            ( name, value, domain, path, expires ) = cookie_row
+            
+            ndp_bad = True in ( not isinstance( var, str ) for var in ( name, domain, path ) )
+            v_bad = value is not None and not isinstance( value, str )
+            e_bad = expires is not None and not isinstance( expires, int )
+            
+            if ndp_bad or v_bad or e_bad:
+                
+                raise HydrusExceptions.BadRequestException( 'In the row [ name, value, domain, path, expires ], which I received as "{}", name, domain, and path need to be strings, value needs to be null or a string, and expires needs to be null or an integer!'.format( cookie_row ) )
+                
+            
+            network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+            
+            session = HG.client_controller.network_engine.session_manager.GetSession( network_context )
+            
+            if value is None:
+                
+                session.cookies.clear( domain, path, name )
+                
+            else:
+                
+                version = 0
+                port = None
+                port_specified = False
+                domain_specified = True
+                domain_initial_dot = domain.startswith( '.' )
+                path_specified = True
+                secure = False
+                discard = False
+                comment = None
+                comment_url = None
+                rest = {}
+                
+                cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+                
+                session.cookies.set_cookie( cookie )
+                
+            
+        
+        HG.client_controller.network_engine.session_manager.SetDirty()
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
         

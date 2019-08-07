@@ -607,6 +607,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._current_fetch_job_key.Cancel()
             
+            self._current_fetch_job_key = None
+            
         
     
     def _CancelScheduledListRefresh( self ):
@@ -1157,8 +1159,6 @@ class AutoCompleteDropdown( wx.Panel ):
             self._search_text_for_current_cache = search_text_for_cache
             self._cached_results = cached_results
             
-            self._current_fetch_job_key = None
-            
             self._initial_matches_fetched = True
             
             self._SetResultsToList( results )
@@ -1639,11 +1639,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
-        sitting_on_empty = raw_entry == ''
+        something_to_broadcast = cache_text != ''
+        
+        current_page = self._dropdown_notebook.GetCurrentPage()
+        
+        # looking at empty or system results
+        nothing_to_select = current_page == self._search_results_list and ( self._last_fetched_search_text == '' or not self._search_results_list.HasValues() )
         
         # when the user has quickly typed something in and the results are not yet in
         
-        p1 = not sitting_on_empty and self._last_fetched_search_text != search_text
+        p1 = something_to_broadcast and nothing_to_select
         
         return p1
         
@@ -1943,15 +1948,20 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
+        current_page = self._dropdown_notebook.GetCurrentPage()
+        
         sitting_on_empty = raw_entry == ''
+        
+        something_to_broadcast = not sitting_on_empty
+        nothing_to_select = isinstance( current_page, ClientGUIListBoxes.ListBox ) and not current_page.HasValues()
         
         # when the user has quickly typed something in and the results are not yet in
         
-        p1 = not sitting_on_empty and self._last_fetched_search_text != search_text
+        p1 = something_to_broadcast and nothing_to_select
         
         # when the text ctrl is empty, we are looking at search results, and we want to push a None to the parent dialog
         
-        p2 = sitting_on_empty and self._dropdown_notebook.GetCurrentPage() == self._search_results_list
+        p2 = sitting_on_empty and current_page == self._search_results_list
         
         return p1 or p2
         

@@ -170,6 +170,7 @@ class TestSerialisables( unittest.TestCase ):
         height = 480
         duration = None
         num_frames = None
+        has_audio = False
         num_words = None
         
         local_locations_manager = ClientMedia.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), inbox )
@@ -194,7 +195,7 @@ class TestSerialisables( unittest.TestCase ):
         
         local_hash_has_values = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 1, local_hash_has_values, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 1, local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, file_viewing_stats_manager )
         
@@ -204,7 +205,7 @@ class TestSerialisables( unittest.TestCase ):
         
         other_local_hash_has_values = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 2, other_local_hash_has_values, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 2, other_local_hash_has_values, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, substantial_tags_manager, local_locations_manager, substantial_ratings_manager, file_viewing_stats_manager )
         
@@ -214,7 +215,7 @@ class TestSerialisables( unittest.TestCase ):
         
         local_hash_empty = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 3, local_hash_empty, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 3, local_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, local_locations_manager, empty_ratings_manager, file_viewing_stats_manager )
         
@@ -224,7 +225,7 @@ class TestSerialisables( unittest.TestCase ):
         
         trashed_hash_empty = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 4, trashed_hash_empty, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 4, trashed_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, trash_locations_manager, empty_ratings_manager, file_viewing_stats_manager )
         
@@ -234,7 +235,7 @@ class TestSerialisables( unittest.TestCase ):
         
         deleted_hash_empty = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 5, deleted_hash_empty, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 5, deleted_hash_empty, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, empty_tags_manager, deleted_locations_manager, empty_ratings_manager, file_viewing_stats_manager )
         
@@ -244,7 +245,7 @@ class TestSerialisables( unittest.TestCase ):
         
         one_hash = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 6, one_hash, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 6, one_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, one_tags_manager, local_locations_manager, one_ratings_manager, file_viewing_stats_manager )
         
@@ -254,7 +255,7 @@ class TestSerialisables( unittest.TestCase ):
         
         two_hash = HydrusData.GenerateKey()
         
-        file_info_manager = ClientMedia.FileInfoManager( 7, two_hash, size, mime, width, height, duration, num_frames, num_words )
+        file_info_manager = ClientMedia.FileInfoManager( 7, two_hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
         media_result = ClientMedia.MediaResult( file_info_manager, two_tags_manager, local_locations_manager, two_ratings_manager, file_viewing_stats_manager )
         

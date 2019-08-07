@@ -6,7 +6,7 @@ import traceback
 
 def GetNumWordsFromString( s ):
     
-    s = re.sub( '[\s]+', ' ', s ) # turns multiple spaces into single spaces
+    s = re.sub( r'[\s]+', ' ', s ) # turns multiple spaces into single spaces
     
     num_words = len( s.split( ' ' ) )
     

@@ -240,4 +240,12 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDirty( self ):
+        
+        with self._lock:
+            
+            self._dirty = True
+            
+        
+    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER ] = NetworkSessionManager

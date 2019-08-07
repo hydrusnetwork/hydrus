@@ -322,8 +322,11 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( hash, 'sha256' ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( bytes.fromhex( '0123456789abcdef' * 4 ), 'sha256' ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True, 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False, 1 ) )
+        
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( hash, ), 'sha256' ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 'sha256' ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
@@ -369,8 +372,8 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 200, 201 ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATIO, ( '\u2248', 4, 1 ), 0 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, 5 ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( bytes.fromhex( '0123456789abcdef' * 4 ), 5 ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( hash, ), 5 ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 5 ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
@@ -638,7 +641,7 @@ class TestClientDB( unittest.TestCase ):
         predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = 1 ) )
         predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_INBOX, min_current_count = 1 ) )
         predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 0 ) )
-        predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
+        predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ] ] )
         
         self.assertEqual( set( result ), set( predicates ) )
         
@@ -784,16 +787,16 @@ class TestClientDB( unittest.TestCase ):
         
         test_files = []
         
-        test_files.append( ( 'muh_swf.swf', 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf', 456774, HC.APPLICATION_FLASH, 400, 400, { 33 }, { 1 }, None ) )
-        test_files.append( ( 'muh_mp4.mp4', '2fa293907144a046d043d74e9570b1c792cbfd77ee3f5c93b2b1a1cb3e4c7383', 570534, HC.VIDEO_MP4, 480, 480, { 6266, 6290 }, { 151 }, None ) )
-        test_files.append( ( 'muh_mpeg.mpeg', 'aebb10aaf3b27a5878fd2732ea28aaef7bbecef7449eaa759421c4ba4efff494', 772096, HC.VIDEO_MPEG, 720, 480, { 3500 }, { 105 }, None ) )
-        test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, { 4010 }, { 120 }, None ) )
-        test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, { None }, { None }, None ) )
-        test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49', 31452, HC.IMAGE_PNG, 191, 196, { None }, { None }, None ) )
-        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, { 3133, 1880, 1125, 1800 }, { 27, 47 }, None ) )
-        test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, { 600 }, { 5 }, None ) )
+        test_files.append( ( 'muh_swf.swf', 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf', 456774, HC.APPLICATION_FLASH, 400, 400, { 33 }, { 1 }, True, None ) )
+        test_files.append( ( 'muh_mp4.mp4', '2fa293907144a046d043d74e9570b1c792cbfd77ee3f5c93b2b1a1cb3e4c7383', 570534, HC.VIDEO_MP4, 480, 480, { 6266, 6290 }, { 151 }, True, None ) )
+        test_files.append( ( 'muh_mpeg.mpeg', 'aebb10aaf3b27a5878fd2732ea28aaef7bbecef7449eaa759421c4ba4efff494', 772096, HC.VIDEO_MPEG, 720, 480, { 3500 }, { 105 }, False, None ) )
+        test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, { 4010 }, { 120 }, True, None ) )
+        test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, { None }, { None }, False, None ) )
+        test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49', 31452, HC.IMAGE_PNG, 191, 196, { None }, { None }, False, None ) )
+        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, { 3133, 1880, 1125, 1800 }, { 27, 47 }, False, None ) )
+        test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, { 600 }, { 5 }, False, None ) )
         
-        for ( filename, hex_hash, size, mime, width, height, durations, nums_frame, num_words ) in test_files:
+        for ( filename, hex_hash, size, mime, width, height, durations, num_frames, has_audio, num_words ) in test_files:
             
             path = os.path.join( HC.STATIC_DIR, 'testing', filename )
             
@@ -830,7 +833,7 @@ class TestClientDB( unittest.TestCase ):
             
             ( mr_file_info_manager, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
             
-            ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words ) = mr_file_info_manager.ToTuple()
+            ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_has_audio, mr_num_words ) = mr_file_info_manager.ToTuple()
             
             mr_inbox = mr_locations_manager.GetInbox()
             
@@ -843,7 +846,8 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( mr_width, width )
             self.assertEqual( mr_height, height )
             self.assertIn( mr_duration, durations )
-            self.assertIn( mr_num_frames, nums_frame )
+            self.assertIn( mr_num_frames, num_frames )
+            self.assertEqual( mr_has_audio, has_audio )
             self.assertEqual( mr_num_words, num_words )
             
         
@@ -978,7 +982,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( mr_file_info_manager, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
         
-        ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words ) = mr_file_info_manager.ToTuple()
+        ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_has_audio, mr_num_words ) = mr_file_info_manager.ToTuple()
         
         mr_inbox = mr_locations_manager.GetInbox()
         
@@ -993,13 +997,14 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_height, 200 )
         self.assertEqual( mr_duration, None )
         self.assertEqual( mr_num_frames, None )
+        self.assertEqual( mr_has_audio, False )
         self.assertEqual( mr_num_words, None )
         
         ( media_result, ) = self._read( 'media_results_from_ids', ( 1, ) )
         
         ( mr_file_info_manager, mr_tags_manager, mr_locations_manager, mr_ratings_manager ) = media_result.ToTuple()
         
-        ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words ) = mr_file_info_manager.ToTuple()
+        ( mr_hash_id, mr_hash, mr_size, mr_mime, mr_width, mr_height, mr_duration, mr_num_frames, mr_has_audio, mr_num_words ) = mr_file_info_manager.ToTuple()
         
         mr_inbox = mr_locations_manager.GetInbox()
         
@@ -1014,6 +1019,7 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_height, 200 )
         self.assertEqual( mr_duration, None )
         self.assertEqual( mr_num_frames, None )
+        self.assertEqual( mr_has_audio, False )
         self.assertEqual( mr_num_words, None )
         
     

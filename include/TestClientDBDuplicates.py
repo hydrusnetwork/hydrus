@@ -114,14 +114,14 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         # fake-import the files with the phash
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, None )
+        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
         for hash in self._all_hashes:
             
             fake_file_import_job = ClientImportFileSeeds.FileImportJob( 'fake path' )
             
             fake_file_import_job._hash = hash
-            fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, num_words )
+            fake_file_import_job._file_info = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
             fake_file_import_job._extra_hashes = ( b'abcd', b'abcd', b'abcd' )
             fake_file_import_job._phashes = [ phash ]
             fake_file_import_job._file_import_options = ClientImportOptions.FileImportOptions()

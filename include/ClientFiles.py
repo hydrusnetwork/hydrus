@@ -19,7 +19,7 @@ import threading
 import time
 import wx
 
-REGENERATE_FILE_DATA_JOB_COMPLETE = 0
+REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
 REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1
 REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL = 2
 REGENERATE_FILE_DATA_JOB_OTHER_HASHES = 3
@@ -32,7 +32,7 @@ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA = 9
 
 regen_file_enum_to_str_lookup = {}
 
-regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_COMPLETE ] = 'complete reparse and thumbnail regen'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 'regenerate file metadata'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 'regenerate thumbnail'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 'regenerate thumbnail if incorrect size'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 'regenerate non-standard hashes'
@@ -43,22 +43,35 @@ regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'fix
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'check for membership in the similar files search system'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'regenerate similar files metadata'
 
+regen_file_enum_to_description_lookup = {}
+
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 'This regenerates file metadata like resolution and duration, or even filetype (such as mkv->webm), which may have been misparsed in a previous version.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 'This forces a complete regeneration of the thumbnail from the source file.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 'This looks for the existing thumbnail, and if it is not the correct resolution or is missing, will regenerate a new one for the source file.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 'This regenerates hydrus\'s store of md5, sha1, and sha512 supplementary hashes, which it can use for various external (usually website) lookups.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 'Sometimes, a file metadata regeneration will mean a new filetype and thus a new file extension. If the existing, incorrectly named file is in use, it must be copied rather than renamed, and so there is a spare duplicate left over after the operation. This jobs cleans up the duplicate at a later time.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = 'This checks to see if the file is present in the file system as expected. If it is not, the internal file record in the database is removed, just as if the file were deleted. Use this if you have manually deleted or otherwise lost a number of files from your file structure and need hydrus to re-sync with what it has. Missing files will have their known URLs exported to your database directory if you wish to attempt to re-download them.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 'This does the same check as the \'present\' job, and if the file is where it is expected, it ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. Files that are incorrect will be exported to your database directory along with their known URLs.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'This ensures that files in the file system are readable and writeable. For Linux/OS X users, it specifically sets 644. If you wish to run this job on Linux/OS X, ensure you are first the file owner of all your files.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'This forces a regeneration of the file\'s similar-files \'phashes\'. It is not useful unless you know there is missing data to repair.'
+
 regen_file_enum_to_ideal_job_size_lookup = {}
 
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_COMPLETE ] = 100
+regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 250
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 250
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 1000
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 25
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 100
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = 10000
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 100
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 250
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 100
+regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 500
+regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 1000
 regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 100
 
 regen_file_enum_to_overruled_jobs = {}
 
-regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_COMPLETE ] = [ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ]
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = [ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ]
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = []
@@ -69,7 +82,7 @@ regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ]
 
-ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_COMPLETE, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
+ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
 
 def GetAllFilePaths( raw_paths, do_human_sort = True ):
     
@@ -1454,7 +1467,7 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def _RegenFileData( self, media_result ):
+    def _RegenFileMetadata( self, media_result ):
         
         hash = media_result.GetHash()
         original_mime = media_result.GetMime()
@@ -1463,9 +1476,9 @@ class FilesMaintenanceManager( object ):
             
             path = self._controller.client_files_manager.GetFilePath( hash, original_mime )
             
-            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, ok_to_look_for_hydrus_updates = True )
+            ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = HydrusFileHandling.GetFileInfo( path, ok_to_look_for_hydrus_updates = True )
             
-            additional_data = ( size, mime, width, height, duration, num_frames, num_words )
+            additional_data = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
             
             if mime != original_mime:
                 
@@ -1475,11 +1488,6 @@ class FilesMaintenanceManager( object ):
                     
                     self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusData.GetNow() + ( 7 * 86400 ) )
                     
-                
-            
-            if mime in HC.MIMES_WITH_THUMBNAILS:
-                
-                self._RegenFileThumbnailForce( media_result )
                 
             
             return additional_data
@@ -1603,6 +1611,8 @@ class FilesMaintenanceManager( object ):
         num_bad_files = 0
         num_thumb_refits = 0
         
+        next_gc_collect = HydrusData.GetNow() + 10
+        
         try:
             
             cleared_jobs = []
@@ -1637,9 +1647,9 @@ class FilesMaintenanceManager( object ):
                 
                 try:
                     
-                    if job_type == REGENERATE_FILE_DATA_JOB_COMPLETE:
+                    if job_type == REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                         
-                        additional_data = self._RegenFileData( media_result )
+                        additional_data = self._RegenFileMetadata( media_result )
                         
                     elif job_type == REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
                         
@@ -1705,7 +1715,16 @@ class FilesMaintenanceManager( object ):
                     cleared_jobs.append( ( hash, job_type, additional_data ) )
                     
                 
+                if HydrusData.TimeHasPassed( next_gc_collect ):
+                    
+                    gc.collect()
+                    
+                    next_gc_collect = HydrusData.GetNow() + 10
+                    
+                
                 if len( cleared_jobs ) > 100:
+                    
+                    gc.collect()
                     
                     self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
                     
@@ -1716,6 +1735,8 @@ class FilesMaintenanceManager( object ):
         finally:
             
             if len( cleared_jobs ) > 0:
+                
+                gc.collect()
                 
                 self._controller.Write( 'file_maintenance_clear_jobs', cleared_jobs )
                 

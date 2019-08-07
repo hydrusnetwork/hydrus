@@ -201,6 +201,19 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         duration = int( file_duration_in_s * 1000 )
         
     
+    if mime in HC.MIMES_THAT_DEFINITELY_HAVE_AUDIO:
+        
+        has_audio = True
+        
+    elif mime in HC.MIMES_THAT_MAY_HAVE_AUDIO:
+        
+        has_audio = HydrusAudioHandling.VideoHasAudio( path )
+        
+    else:
+        
+        has_audio = False
+        
+    
     if width is not None and width < 0:
         
         width *= -1
@@ -226,7 +239,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         num_words *= -1
         
     
-    return ( size, mime, width, height, duration, num_frames, num_words )
+    return ( size, mime, width, height, duration, num_frames, has_audio, num_words )
     
 def GetHashFromPath( path ):
     

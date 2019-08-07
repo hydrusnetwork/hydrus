@@ -226,7 +226,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
                 
             
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
+        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
         
     except Exception as e:
         
@@ -244,6 +244,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
     if height is not None: args[ 'height' ] = height
     if duration is not None: args[ 'duration' ] = duration
     if num_frames is not None: args[ 'num_frames' ] = num_frames
+    args[ 'has_audio' ] = has_audio
     if num_words is not None: args[ 'num_words' ] = num_words
     
     if mime in HC.MIMES_WITH_THUMBNAILS:

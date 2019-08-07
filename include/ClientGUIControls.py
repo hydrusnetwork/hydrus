@@ -467,7 +467,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = 'Delete all selected?'
             
-            import ClientGUIDialogsQuick
+            from . import ClientGUIDialogsQuick
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
@@ -1192,6 +1192,11 @@ class NetworkJobControl( wx.Panel ):
         menu = wx.Menu()
         
         if self._network_job is not None:
+            
+            if self._network_job.CurrentlyWaitingOnConnectionError():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'reattempt connection now', 'Stop waiting on a connection error and reattempt the job now.', self._network_job.OverrideConnectionErrorWait )
+                
             
             if self._network_job.ObeysBandwidth():
                 

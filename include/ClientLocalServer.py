@@ -76,6 +76,13 @@ class HydrusServiceClientAPI( HydrusClientService ):
         get_files.putChild( b'file', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetFile( self._service, self._client_requests_domain ) )
         get_files.putChild( b'thumbnail', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( self._service, self._client_requests_domain ) )
         
+        manage_cookies = NoResource()
+        
+        root.putChild( b'manage_cookies', manage_cookies )
+        
+        manage_cookies.putChild( b'get_cookies', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesGetCookies( self._service, self._client_requests_domain ) )
+        manage_cookies.putChild( b'set_cookies', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesSetCookies( self._service, self._client_requests_domain ) )
+        
         manage_pages = NoResource()
         
         root.putChild( b'manage_pages', manage_pages )

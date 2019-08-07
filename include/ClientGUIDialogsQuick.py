@@ -2,6 +2,7 @@ from . import ClientGUIScrolledPanelsButtonQuestions
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUITopLevelWindows
 from . import HydrusExceptions
+from . import HydrusGlobals as HG
 import wx
 
 def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key = None ):
@@ -55,7 +56,7 @@ def GetInterstitialFilteringAnswer( win, label ):
         return dlg.ShowModal()
         
     
-def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no' ):
+def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None ):
     
     with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, title ) as dlg:
         
@@ -63,7 +64,23 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
         
         dlg.SetPanel( panel )
         
-        return dlg.ShowModal()
+        if auto_yes_time is None:
+            
+            return dlg.ShowModal()
+            
+        else:
+            
+            job = HG.client_controller.CallLaterWXSafe( dlg, auto_yes_time, dlg.EndModal, wx.ID_YES )
+            
+            try:
+                
+                return dlg.ShowModal()
+                
+            finally:
+                
+                job.Cancel()
+                
+            
         
     
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):

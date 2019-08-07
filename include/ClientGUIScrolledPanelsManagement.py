@@ -1512,7 +1512,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
-        #self._listbook.AddPage( 'sound', 'sound', self._SoundPanel( self._listbook ) )
+        self._listbook.AddPage( 'sound', 'sound', self._SoundPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
@@ -3496,28 +3496,36 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     class _SoundPanel( wx.Panel ):
         
-        def __init__( self, parent ):
+        def __init__( self, parent, new_options ):
             
             wx.Panel.__init__( self, parent )
             
-            self._play_dumper_noises = wx.CheckBox( self, label = 'play success/fail noises when dumping' )
+            self._new_options = new_options
+            
+            self._has_audio_label = wx.TextCtrl( self )
             
             #
             
-            self._play_dumper_noises.SetValue( HC.options[ 'play_dumper_noises' ] )
+            self._has_audio_label.SetValue( self._new_options.GetString( 'has_audio_label' ) )
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.Add( self._play_dumper_noises, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows = []
+            
+            rows.append( ( 'Label for files with audio: ', self._has_audio_label ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
         
         def UpdateOptions( self ):
             
-            HC.options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
+            self._new_options.SetString( 'has_audio_label', self._has_audio_label.GetValue() )
             
         
     

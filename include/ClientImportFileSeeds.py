@@ -187,7 +187,7 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job testing if good to import for file import options' )
             
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
         
         self._file_import_options.CheckFileIsValid( size, mime, width, height )
         
@@ -280,7 +280,7 @@ class FileImportJob( object ):
         
         self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime )
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
         
         if HG.file_import_report_mode:
             
@@ -348,7 +348,7 @@ class FileImportJob( object ):
     
     def GetMime( self ):
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = self._file_info
         
         return mime
         

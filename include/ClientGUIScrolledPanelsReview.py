@@ -1990,6 +1990,8 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             self._action_selector.Append( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], job_type )
             
         
+        self._description_button = ClientGUICommon.BetterButton( self._action_panel, 'see description', self._SeeDescription )
+        
         self._add_new_job = ClientGUICommon.BetterButton( self._action_panel, 'add job', self._AddJob )
         
         self._add_new_job.Disable()
@@ -1998,6 +2000,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         hbox.Add( self._selected_files_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         hbox.Add( self._action_selector, CC.FLAGS_VCENTER )
+        hbox.Add( self._description_button, CC.FLAGS_VCENTER )
         hbox.Add( self._add_new_job, CC.FLAGS_VCENTER )
         
         self._action_panel.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2006,6 +2009,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        label = 'First, select which files you wish to queue up for the job using a normal search. Hit \'run this search\' to select those files.'
+        label += os.linesep
+        label += 'Then select the job type and click \'add job\'.'
+        
+        vbox.Add( ClientGUICommon.BetterStaticText( self._new_work_panel, label = label ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._action_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2208,6 +2216,13 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         file_search_context.SetPredicates( current_predicates )
         
         HG.client_controller.CallToThread( do_it, file_search_context )
+        
+    
+    def _SeeDescription( self ):
+        
+        job_type = self._action_selector.GetValue()
+        
+        wx.MessageBox( ClientFiles.regen_file_enum_to_description_lookup[ job_type ] )
         
     
     def _SelectRepoUpdateFiles( self ):

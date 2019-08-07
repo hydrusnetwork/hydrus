@@ -1520,6 +1520,11 @@ class ListBox( wx.ScrolledWindow ):
         return self._text_y * len( self._ordered_terms ) + 20
         
     
+    def HasValues( self ):
+        
+        return len( self._ordered_terms ) > 0
+        
+    
     def MoveSelectionDown( self ):
         
         if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:

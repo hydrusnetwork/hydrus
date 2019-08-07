@@ -64,6 +64,9 @@ NICE_RATIOS[ 5 / 4 ] = '5:4'
 NICE_RATIOS[ 16 / 9 ] = '16:9'
 NICE_RATIOS[ 21 / 9 ] = '21:9'
 NICE_RATIOS[ 47 / 20 ] = '2.35:1'
+NICE_RATIOS[ 9 / 16 ] = '9:16'
+NICE_RATIOS[ 2 / 3 ] = '2:3'
+NICE_RATIOS[ 4 / 5 ] = '4:5'
 
 def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
@@ -499,7 +502,7 @@ class DuplicatesManager( object ):
     
 class FileInfoManager( object ):
     
-    def __init__( self, hash_id, hash, size = None, mime = None, width = None, height = None, duration = None, num_frames = None, num_words = None ):
+    def __init__( self, hash_id, hash, size = None, mime = None, width = None, height = None, duration = None, num_frames = None, has_audio = None, num_words = None ):
         
         if mime is None:
             
@@ -514,17 +517,18 @@ class FileInfoManager( object ):
         self.height = height
         self.duration = duration
         self.num_frames = num_frames
+        self.has_audio = has_audio
         self.num_words = num_words
         
     
     def Duplicate( self ):
         
-        return FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
+        return FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
         
     
     def ToTuple( self ):
         
-        return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
+        return ( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
         
     
 class FileViewingStatsManager( object ):
@@ -1780,8 +1784,6 @@ class MediaCollection( MediaList, Media ):
     
     def IsImage( self ): return False
     
-    def IsNoisy( self ): return self.GetDisplayMedia().GetMime() in HC.NOISY_MIMES
-    
     def IsSizeDefinite( self ): return self._size_definite
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -1896,7 +1898,7 @@ class MediaSingleton( Media ):
         file_info_manager = self._media_result.GetFileInfoManager()
         locations_manager = self._media_result.GetLocationsManager()
         
-        ( hash_id, hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
+        ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
         
         info_string = HydrusData.ToHumanBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
@@ -1905,6 +1907,11 @@ class MediaSingleton( Media ):
         if duration is not None: info_string += ', ' + HydrusData.ConvertMillisecondsToPrettyTime( duration )
         
         if num_frames is not None: info_string += ' (' + HydrusData.ToHumanInt( num_frames ) + ' frames)'
+        
+        if has_audio:
+            
+            info_string += ', {}'.format( HG.client_controller.new_options.GetString( 'has_audio_label' ) )
+            
         
         if num_words is not None: info_string += ' (' + HydrusData.ToHumanInt( num_words ) + ' words)'
         
@@ -2017,7 +2024,15 @@ class MediaSingleton( Media ):
         return self._media_result.GetHash() in hashes
         
     
-    def HasArchive( self ): return not self._media_result.GetInbox()
+    def HasArchive( self ):
+        
+        return not self._media_result.GetInbox()
+        
+    
+    def HasAudio( self ):
+        
+        return self._media_result.HasAudio()
+        
     
     def HasDuration( self ):
         
@@ -2051,8 +2066,6 @@ class MediaSingleton( Media ):
         
         return self._media_result.GetMime() in HC.IMAGES and not self.HasDuration()
         
-    
-    def IsNoisy( self ): return self._media_result.GetMime() in HC.NOISY_MIMES
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None
     
@@ -2234,6 +2247,11 @@ class MediaResult( object ):
     def GetTagsManager( self ):
         
         return self._tags_manager
+        
+    
+    def HasAudio( self ):
+        
+        return self._file_info_manager.has_audio is True
         
     
     def IsStaticImage( self ):

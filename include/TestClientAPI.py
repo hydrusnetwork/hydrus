@@ -123,6 +123,7 @@ class TestClientAPI( unittest.TestCase ):
         permissions_to_set_up.append( ( 'add_tags', [ ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS ] ) )
         permissions_to_set_up.append( ( 'add_urls', [ ClientAPI.CLIENT_API_PERMISSION_ADD_URLS ] ) )
         permissions_to_set_up.append( ( 'manage_pages', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES ] ) )
+        permissions_to_set_up.append( ( 'manage_cookies', [ ClientAPI.CLIENT_API_PERMISSION_MANAGE_COOKIES ] ) )
         permissions_to_set_up.append( ( 'search_all_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         permissions_to_set_up.append( ( 'search_green_files', [ ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES ] ) )
         
@@ -1225,6 +1226,130 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+    def _test_manage_cookies( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'manage_cookies' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/manage_cookies/get_cookies?domain=somesite.com'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        cookies = d[ 'cookies' ]
+        
+        self.assertEqual( cookies, [] )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_cookies/set_cookies'
+        
+        cookies = []
+        
+        cookies.append( [ 'one', '1', '.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        cookies.append( [ 'two', '2', 'somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        cookies.append( [ 'four', '4', '.somesite.com', '/', None ] )
+        
+        request_dict = { 'cookies' : cookies }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        path = '/manage_cookies/get_cookies?domain=somesite.com'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        result_cookies = d[ 'cookies' ]
+        
+        frozen_result_cookies = { tuple( row ) for row in result_cookies }
+        frozen_expected_cookies = { tuple( row ) for row in cookies }
+        
+        self.assertEqual( frozen_result_cookies, frozen_expected_cookies )
+        
+        #
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_cookies/set_cookies'
+        
+        cookies = []
+        
+        cookies.append( [ 'one', None, '.somesite.com', '/', None ] )
+        
+        request_dict = { 'cookies' : cookies }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        path = '/manage_cookies/get_cookies?domain=somesite.com'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        result_cookies = d[ 'cookies' ]
+        
+        expected_cookies = []
+        
+        expected_cookies.append( [ 'two', '2', 'somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        expected_cookies.append( [ 'three', '3', 'wew.somesite.com', '/', HydrusData.GetNow() + 86400 ] )
+        expected_cookies.append( [ 'four', '4', '.somesite.com', '/', None ] )
+        
+        frozen_result_cookies = { tuple( row ) for row in result_cookies }
+        frozen_expected_cookies = { tuple( row ) for row in expected_cookies }
+        
+        self.assertEqual( frozen_result_cookies, frozen_expected_cookies )
+        
+    
     def _test_manage_pages( self, connection, set_up_permissions ):
         
         api_permissions = set_up_permissions[ 'manage_pages' ]
@@ -1455,6 +1580,11 @@ class TestClientAPI( unittest.TestCase ):
         
         media_results = []
         
+        urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
+        
+        sorted_urls = list( urls )
+        sorted_urls.sort()
+        
         for ( file_id, hash ) in file_ids_to_hashes.items():
             
             size = random.randint( 8192, 20 * 1048576 )
@@ -1462,14 +1592,15 @@ class TestClientAPI( unittest.TestCase ):
             width = random.randint( 200, 4096 )
             height = random.randint( 200, 4096 )
             duration = random.choice( [ 220, 16.66667, None ] )
+            has_audio = random.choice( [ True, False ] )
             
-            file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
+            file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
             
             service_keys_to_statuses_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
             
             tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
             
-            locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set() )
+            locations_manager = ClientMedia.LocationsManager( set(), set(), set(), set(), urls = urls )
             ratings_manager = ClientRatings.RatingsManager( {} )
             file_viewing_stats_manager = ClientMedia.FileViewingStatsManager( 0, 0, 0, 0 )
             
@@ -1497,8 +1628,11 @@ class TestClientAPI( unittest.TestCase ):
             metadata_row[ 'width' ] = file_info_manager.width
             metadata_row[ 'height' ] = file_info_manager.height
             metadata_row[ 'duration' ] = file_info_manager.duration
+            metadata_row[ 'has_audio' ] = file_info_manager.has_audio
             metadata_row[ 'num_frames' ] = file_info_manager.num_frames
             metadata_row[ 'num_words' ] = file_info_manager.num_words
+            
+            metadata_row[ 'known_urls' ] = list( sorted_urls )
             
             tags_manager = media_result.GetTagsManager()
             
@@ -1853,6 +1987,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_files( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
+        self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
         self._test_permission_failures( connection, set_up_permissions )

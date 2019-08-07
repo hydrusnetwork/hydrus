@@ -1872,9 +1872,9 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                     # ->
                     # http:/www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
                     
-                    while re.search( '\shttp', u ) is not None:
+                    while re.search( r'\shttp', u ) is not None:
                         
-                        u = re.sub( '^.*\shttp', 'http', u )
+                        u = re.sub( r'^.*\shttp', 'http', u )
                         
                     
                 

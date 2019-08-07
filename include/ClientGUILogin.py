@@ -1630,7 +1630,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
                 session_manager = ClientNetworkingSessions.NetworkSessionManager()
-                domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+                domain_manager = HG.client_controller.network_engine.domain_manager.Duplicate() # keep custom headers from current domain stuff
                 login_manager = ClientNetworkingLogin.NetworkLoginManager()
                 
                 network_engine = ClientNetworking.NetworkEngine( HG.client_controller, bandwidth_manager, session_manager, domain_manager, login_manager )

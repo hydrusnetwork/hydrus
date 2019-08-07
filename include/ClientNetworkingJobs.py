@@ -130,6 +130,8 @@ class NetworkJob( object ):
         
         self._bandwidth_tracker = HydrusNetworking.BandwidthTracker()
         
+        self._connection_error_wake_time = 0
+        
         self._wake_time = 0
         
         self._content_type = None
@@ -478,13 +480,13 @@ class NetworkJob( object ):
     
     def _WaitOnConnectionError( self, status_text ):
         
-        time_to_try_again = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * 60 )
+        self._connection_error_wake_time = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * 10 )
         
-        while not HydrusData.TimeHasPassed( time_to_try_again ) and not self._IsCancelled():
+        while not HydrusData.TimeHasPassed( self._connection_error_wake_time ) and not self._IsCancelled():
             
             with self._lock:
                 
-                self._status_text = status_text + ' - retrying in {}'.format( HydrusData.TimestampToPrettyTimeDelta( time_to_try_again ) )
+                self._status_text = status_text + ' - retrying in {}'.format( HydrusData.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
                 
             
             time.sleep( 1 )
@@ -615,6 +617,14 @@ class NetworkJob( object ):
                 
                 return self.engine.login_manager.CheckCanLogin( self._login_network_context )
                 
+            
+        
+    
+    def CurrentlyWaitingOnConnectionError( self ):
+        
+        with self._lock:
+            
+            return not HydrusData.TimeHasPassed( self._connection_error_wake_time )
             
         
     
@@ -854,6 +864,14 @@ class NetworkJob( object ):
                 
                 self._wake_time = min( self._wake_time, self._bandwidth_manual_override_delayed_timestamp + 1 )
                 
+            
+        
+    
+    def OverrideConnectionErrorWait( self ):
+        
+        with self._lock:
+            
+            self._connection_error_wake_time = 0
             
         
     

@@ -1215,9 +1215,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         for page in pages:
             
-            page.CleanBeforeDestroy()
-            
-            page.DestroyLater()
+            if page:
+                
+                page.CleanBeforeDestroy()
+                
+                page.DestroyLater()
+                
             
         
     
@@ -2562,8 +2565,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 message = 'It looks like the last instance of the client did not shut down cleanly.'
                 message += os.linesep * 2
                 message += 'Would you like to try loading your default session "' + default_gui_session + '", or just a blank page?'
+                message += os.linesep * 2
+                message += 'This will auto-choose to open your default session in 15 seconds.'
                 
-                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load "' + default_gui_session + '"', no_label = 'just load a blank page' )
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load "' + default_gui_session + '"', no_label = 'just load a blank page', auto_yes_time = 15 )
                 
                 if result == wx.ID_NO:
                     
@@ -4444,6 +4449,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def TIMEREventAnimationUpdate( self, event ):
         
+        if self.IsIconized():
+            
+            return
+            
+        
         try:
             
             windows = list( self._animation_update_windows )
@@ -4520,21 +4530,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     text += able_to_close_statement
                     
                 
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, text, auto_yes_time = 15 )
+                
+                if result == wx.ID_NO:
                     
-                    job = self._controller.CallLaterWXSafe( dlg, 15, dlg.EndModal, wx.ID_YES )
-                    
-                    try:
-                        
-                        if dlg.ShowModal() == wx.ID_NO:
-                            
-                            return False
-                            
-                        
-                    finally:
-                        
-                        job.Cancel()
-                        
+                    return False
                     
                 
             
@@ -4634,7 +4634,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS, HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS ]:
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'input predicate', hide_buttons = True ) as dlg:
                     
@@ -5118,6 +5118,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGBandwidth( self ):
         
+        if self.IsIconized():
+            
+            return
+            
+        
         global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
         
         boot_time = self._controller.GetBootTime()
@@ -5202,6 +5207,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGPageUpdate( self ):
         
+        if self.IsIconized():
+            
+            return
+            
+        
         page = self.GetCurrentPage()
         
         if page is not None:
@@ -5220,6 +5230,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def REPEATINGUIUpdate( self ):
+        
+        if self.IsIconized():
+            
+            return
+            
         
         for window in list( self._ui_update_windows ):
             

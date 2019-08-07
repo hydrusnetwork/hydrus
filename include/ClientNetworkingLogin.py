@@ -1585,7 +1585,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         
         url = 'Did not make a url.'
         test_result_body = None
-        downloaded_data = 'Did not download data.'
+        downloaded_text = 'Did not download data.'
         new_temp_variables = {}
         original_cookie_strings = session_to_cookie_strings( engine.session_manager.GetSessionForDomain( domain ) )
         test_script_result = 'Did not start.'
@@ -1751,7 +1751,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 new_temp_strings = tuple( ( key + ': ' + value for ( key, value ) in list(new_temp_variables.items()) ) )
                 
-                test_result = ( self._name, url, test_result_body, downloaded_data, new_temp_strings, new_cookie_strings, test_script_result )
+                test_result = ( self._name, url, test_result_body, downloaded_text, new_temp_strings, new_cookie_strings, test_script_result )
                 
                 test_result_callable( test_result )
                 

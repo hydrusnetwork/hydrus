@@ -2,6 +2,7 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIControls
+from . import ClientGUIFunctions
 from . import ClientGUIOptionsPanels
 from . import ClientGUIScrolledPanels
 from . import ClientGUIShortcuts
@@ -54,6 +55,10 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             pred_classes.append( PanelPredicateSystemKnownURLsDomain )
             pred_classes.append( PanelPredicateSystemKnownURLsRegex )
             pred_classes.append( PanelPredicateSystemKnownURLsURLClass )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
+            
+            pred_classes.append( PanelPredicateSystemHasAudio )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
@@ -577,6 +582,41 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         return info
         
     
+class PanelPredicateSystemHasAudio( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        choices = [ 'has audio', 'does not have audio' ]
+        
+        self._has_audio = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._has_audio, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        wx.CallAfter( self._has_audio.SetFocus )
+        
+    
+    def GetInfo( self ):
+        
+        has_audio_string = self._has_audio.GetStringSelection()
+        
+        has_audio = has_audio_string == 'has audio'
+        
+        info = has_audio
+        
+        return info
+        
+    
 class PanelPredicateSystemHash( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HASH
@@ -585,45 +625,44 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self.SetToolTip( 'As this can only ever return one result, it overrules the active file domain and any other active predicate.' )
+        self._hashes = wx.TextCtrl( self, style = wx.TE_MULTILINE )
         
-        self._hash = wx.TextCtrl( self, size = ( 200, -1 ) )
+        init_size = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
+        
+        self._hashes.SetMinSize( init_size )
         
         choices = [ 'sha256', 'md5', 'sha1', 'sha512' ]
         
         self._hash_type = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
         
+        self._hashes.SetValue( 'enter hash (paste newline-separated for multiple hashes)' )
+        
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:hash=' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._hash, CC.FLAGS_VCENTER )
+        hbox.Add( self._hashes, CC.FLAGS_VCENTER )
         hbox.Add( self._hash_type, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
-        wx.CallAfter( self._hash.SetFocus )
+        wx.CallAfter( self._hashes.SetFocus )
         
     
     def GetInfo( self ):
         
-        hex_hash = self._hash.GetValue().lower()
+        hex_hashes_raw = self._hashes.GetValue()
         
-        hex_hash = HydrusText.HexFilter( hex_hash )
+        hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
         
-        if len( hex_hash ) == 0:
-            
-            hex_hash = '00'
-            
-        elif len( hex_hash ) % 2 == 1:
-            
-            hex_hash += '0' # since we are later decoding to byte
-            
+        hex_hashes = [ HydrusText.HexFilter( hex_hash ) for hex_hash in hex_hashes ]
         
-        hash = bytes.fromhex( hex_hash )
+        hex_hashes = HydrusData.DedupeList( hex_hashes )
+        
+        hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
         
         hash_type = self._hash_type.GetStringSelection()
         
-        return ( hash, hash_type )
+        return ( hashes, hash_type )
         
     
 class PanelPredicateSystemHeight( PanelPredicateSystem ):
@@ -1283,13 +1322,17 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._hash = wx.TextCtrl( self )
+        self._hashes = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        
+        init_size = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
+        
+        self._hashes.SetMinSize( init_size )
         
         self._max_hamming = wx.SpinCtrl( self, max = 256, size = ( 60, -1 ) )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        self._hash.SetValue( 'enter hash' )
+        self._hashes.SetValue( 'enter hash (paste newline-separated for multiple hashes)' )
         
         hamming_distance = system_predicates[ 'hamming_distance' ]
         
@@ -1298,31 +1341,28 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:similar_to' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._hash, CC.FLAGS_VCENTER )
+        hbox.Add( self._hashes, CC.FLAGS_VCENTER )
         hbox.Add( wx.StaticText( self, label='\u2248' ), CC.FLAGS_VCENTER )
         hbox.Add( self._max_hamming, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
-        wx.CallAfter( self._hash.SetFocus )
+        wx.CallAfter( self._hashes.SetFocus )
         
     
     def GetInfo( self ):
         
-        hex_hash = self._hash.GetValue()
+        hex_hashes_raw = self._hashes.GetValue()
         
-        hex_hash = HydrusText.HexFilter( hex_hash )
+        hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
         
-        if len( hex_hash ) == 0:
-            
-            hex_hash = '00'
-            
-        elif len( hex_hash ) % 2 == 1:
-            
-            hex_hash += '0' # since we are later decoding to byte
-            
+        hex_hashes = [ HydrusText.HexFilter( hex_hash ) for hex_hash in hex_hashes ]
         
-        info = ( bytes.fromhex( hex_hash ), self._max_hamming.GetValue() )
+        hex_hashes = HydrusData.DedupeList( hex_hashes )
+        
+        hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
+        
+        info = ( hashes, self._max_hamming.GetValue() )
         
         return info
         

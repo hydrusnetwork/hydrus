@@ -1,3 +1,4 @@
+from . import HydrusAudioHandling
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -318,7 +319,7 @@ def GetMime( path ):
             has_webm_video = True in ( webm_video_format in video_format for webm_video_format in webm_video_formats )
             
         
-        ( has_audio, audio_format ) = ParseFFMPEGAudio( lines )
+        ( has_audio, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( lines )
         
         if has_audio:
             
@@ -380,44 +381,6 @@ def HasVideoStream( path ):
     lines = GetFFMPEGInfoLines( path )
     
     return ParseFFMPEGHasVideo( lines )
-    
-def ParseFFMPEGAudio( lines ):
-    
-    # this is from the old stuff--might be helpful later when we add audio
-    
-    lines_audio = [l for l in lines if 'Audio: ' in l]
-    
-    audio_found = lines_audio != []
-    audio_format = None
-    
-    if audio_found:
-        
-        line = lines_audio[0]
-        
-        try:
-            
-            match = re.search(" [0-9]* Hz", line)
-            
-            audio_fps = int(line[match.start()+1:match.end()])
-            
-        except:
-            
-            audio_fps = 'unknown'
-            
-        
-        try:
-            
-            match = re.search( '(?<=Audio\:\s).+?(?=,)', line )
-            
-            audio_format = match.group()
-            
-        except:
-            
-            audio_format = 'unknown'
-            
-        
-    
-    return ( audio_found, audio_format )
     
 def ParseFFMPEGDuration( lines ):
     
@@ -631,7 +594,7 @@ def ParseFFMPEGVideoFormat( lines ):
     
     try:
         
-        match = re.search( '(?<=Video\:\s).+?(?=,)', line )
+        match = re.search( r'(?<=Video\:\s).+?(?=,)', line )
         
         video_format = match.group()
         
@@ -646,7 +609,7 @@ def ParseFFMPEGVideoLine( lines ):
     
     # get the output line that speaks about video
     # the ^\sStream is to exclude the 'title' line, when it exists, includes the string 'Video: ', ha ha
-    lines_video = [ l for l in lines if re.search( '^\s*Stream', l ) is not None and 'Video: ' in l and not ( 'Video: png' in l or 'Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
+    lines_video = [ l for l in lines if re.search( r'^\s*Stream', l ) is not None and 'Video: ' in l and not ( 'Video: png' in l or 'Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
     
     if len( lines_video ) == 0:
         
@@ -788,7 +751,8 @@ class VideoRendererFFMPEG( object ):
             "-pix_fmt", self.pix_fmt,
             "-s", str( w ) + 'x' + str( h ),
             '-vsync', '0',
-            '-vcodec', 'rawvideo', '-' ] )
+            '-vcodec', 'rawvideo',
+            '-' ] )
             
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs()

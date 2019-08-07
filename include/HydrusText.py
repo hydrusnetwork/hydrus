@@ -12,8 +12,8 @@ import json
 import re
 
 re_newlines = re.compile( '[\r\n]+' )
-re_multiple_spaces = re.compile( '\\s+' )
-re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)+' )
+re_multiple_spaces = re.compile( r'\s+' )
+re_leading_space_or_garbage = re.compile( r'^(\s|-|system:)+' )
 re_leading_single_colon = re.compile( '^:(?!:)' )
 re_leading_byte_order_mark = re.compile( '^\ufeff' ) # unicode .txt files prepend with this, wew
 

@@ -211,8 +211,8 @@ class DB( HydrusDB.HydrusDB ):
             insert_phrase = 'INSERT OR IGNORE INTO'
             
         
-        # hash_id, size, mime, width, height, duration, num_frames, num_words
-        self._c.executemany( insert_phrase + ' files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', rows )
+        # hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words
+        self._c.executemany( insert_phrase + ' files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', rows )
         
     
     def _AddFiles( self, service_id, rows ):
@@ -1394,7 +1394,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
         
-        self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
+        self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );' )
         self._CreateIndex( 'files_info', [ 'size' ] )
         self._CreateIndex( 'files_info', [ 'mime' ] )
         self._CreateIndex( 'files_info', [ 'width' ] )
@@ -3733,11 +3733,11 @@ class DB( HydrusDB.HydrusDB ):
             
             if additional_data is not None:
                 
-                if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE:
+                if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                     
-                    ( size, mime, width, height, duration, num_frames, num_words ) = additional_data
+                    ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = additional_data
                     
-                    self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
+                    self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, has_audio = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, has_audio, num_words, hash_id ) )
                     
                     self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
                     
@@ -4602,7 +4602,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             if have_ratings:
                 
@@ -5068,6 +5068,13 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if 'has_audio' in simple_preds:
+            
+            has_audio = simple_preds[ 'has_audio' ]
+            
+            files_info_predicates.append( 'has_audio = {}'.format( int( has_audio ) ) )
+            
+        
         if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
             
             if 'min_timestamp' in simple_preds: files_info_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_timestamp' ] ) )
@@ -5144,42 +5151,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         there_are_simple_files_info_preds_to_search_for = len( files_info_predicates ) > 0
-        
-        #
-        
-        # This now overrides any other predicates, including file domain
-        
-        if 'hash' in simple_preds:
-            
-            query_hash_ids = set()
-            
-            ( search_hash, search_hash_type ) = simple_preds[ 'hash' ]
-            
-            if search_hash_type != 'sha256':
-                
-                result = self._GetFileHashes( [ search_hash ], search_hash_type, 'sha256' )
-                
-                if len( result ) > 0:
-                    
-                    ( search_hash, ) = result
-                    
-                    hash_id = self._GetHashId( search_hash )
-                    
-                    query_hash_ids = { hash_id }
-                    
-                
-            else:
-                
-                if self._HashExists( search_hash ):
-                    
-                    hash_id = self._GetHashId( search_hash )
-                    
-                    query_hash_ids = { hash_id }
-                    
-                
-            
-            return query_hash_ids
-            
         
         # start with some quick ways to populate query_hash_ids
         
@@ -5264,17 +5235,46 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
+        if 'hash' in simple_preds:
+            
+            specific_hash_ids = set()
+            
+            ( search_hashes, search_hash_type ) = simple_preds[ 'hash' ]
+            
+            if search_hash_type == 'sha256':
+                
+                matching_sha256_hashes = [ search_hash for search_hash in search_hashes if self._HashExists( search_hash ) ]
+                
+            else:
+                
+                matching_sha256_hashes = self._GetFileHashes( search_hashes, search_hash_type, 'sha256' )
+                
+            
+            specific_hash_ids = self._GetHashIds( matching_sha256_hashes )
+            
+            query_hash_ids = update_qhi( query_hash_ids, specific_hash_ids )
+            
+        
+        #
+        
         if system_predicates.HasSimilarTo():
             
-            ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
+            ( similar_to_hashes, max_hamming ) = system_predicates.GetSimilarTo()
             
-            hash_id = self._GetHashId( similar_to_hash )
+            all_similar_hash_ids = set()
             
-            similar_hash_ids_and_distances = self._PHashesSearch( hash_id, max_hamming )
+            for similar_to_hash in similar_to_hashes:
+                
+                hash_id = self._GetHashId( similar_to_hash )
+                
+                similar_hash_ids_and_distances = self._PHashesSearch( hash_id, max_hamming )
+                
+                similar_hash_ids = [ similar_hash_id for ( similar_hash_id, distance ) in similar_hash_ids_and_distances ]
+                
+                all_similar_hash_ids.update( similar_hash_ids )
+                
             
-            similar_hash_ids = [ similar_hash_id for ( similar_hash_id, distance ) in similar_hash_ids_and_distances ]
-            
-            query_hash_ids = update_qhi( query_hash_ids, similar_hash_ids )
+            query_hash_ids = update_qhi( query_hash_ids, all_similar_hash_ids )
             
         
         for ( operator, value, rating_service_key ) in system_predicates.GetRatingsPredicates():
@@ -6632,7 +6632,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._PopulateHashIdsToHashesCache( hash_ids )
             
-            hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN {};', hash_ids ) }
+            hash_ids_to_info = { hash_id : ClientMedia.FileInfoManager( hash_id, self._hash_ids_to_hashes_cache[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN {};', hash_ids ) }
             
             hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN {};', hash_ids ) ) )
             
@@ -7941,7 +7941,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'UPDATE ' + repository_updates_table_name + ' SET processed = ? WHERE hash_id = ?;', ( ( False, hash_id ) for hash_id in definition_hash_ids ) )
         
         self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
-        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
         
         self._Commit()
         
@@ -7984,7 +7984,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.ShowText( 'File import job adding new file' )
                 
             
-            ( size, mime, width, height, duration, num_frames, num_words ) = file_import_job.GetFileInfo()
+            ( size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_import_job.GetFileInfo()
             
             timestamp = HydrusData.GetNow()
             
@@ -8005,7 +8005,7 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.ShowText( 'File import job adding file info row' )
                 
             
-            self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
+            self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ], overwrite = True )
             
             if HG.file_import_report_mode:
                 
@@ -8014,7 +8014,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._AddFiles( self._local_file_service_id, [ ( hash_id, timestamp ) ] )
             
-            file_info_manager = ClientMedia.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, num_words )
+            file_info_manager = ClientMedia.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, timestamp ) )
             
@@ -8077,13 +8077,14 @@ class DB( HydrusDB.HydrusDB ):
         height = None
         duration = None
         num_frames = None
+        has_audio = None
         num_words = None
         
         client_files_manager = self._controller.client_files_manager
         
         client_files_manager.LocklessAddFileFromBytes( update_hash, mime, update_network_bytes )
         
-        self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
+        self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ], overwrite = True )
         
         now = HydrusData.GetNow()
         
@@ -9352,9 +9353,9 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 ( file_info_manager, timestamp ) = row
                                 
-                                ( hash_id, hash, size, mime, width, height, duration, num_frames, num_words ) = file_info_manager.ToTuple()
+                                ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
                                 
-                                self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ] )
+                                self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ] )
                                 
                             elif service_type == HC.IPFS:
                                 
@@ -10026,6 +10027,8 @@ class DB( HydrusDB.HydrusDB ):
         
         total_rows = content_update.GetNumRows()
         
+        has_audio = None # hack until we figure this out better
+        
         rows_processed = 0
         
         for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewFiles(), FILES_CHUNK_SIZE ):
@@ -10039,7 +10042,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_id = self._CacheRepositoryNormaliseServiceHashId( service_id, service_hash_id )
                 
-                files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, num_words ) )
+                files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) )
                 
                 files_rows.append( ( hash_id, timestamp ) )
                 
@@ -10477,7 +10480,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
                                 
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                                 
                                 self._Commit()
                                 
@@ -10601,7 +10604,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
                                 
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_COMPLETE )
+                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                                 
                                 self._Commit()
                                 
@@ -13200,6 +13203,85 @@ class DB( HydrusDB.HydrusDB ):
             service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
             
             self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
+            
+        
+        if version == 362:
+            
+            # complete job no longer does thumbs
+            
+            self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, time_can_start FROM file_maintenance_jobs WHERE job_type = ?;', ( ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA ) )
+            
+            #
+            
+            one_row = self._c.execute( 'SELECT * FROM files_info;' ).fetchone()
+            
+            if one_row is None or len( one_row ) == 8: # doesn't have has_audio yet
+                
+                self._controller.pub( 'splash_set_status_subtext', 'adding \'has audio\' metadata column' )
+                
+                existing_files_info = self._c.execute( 'SELECT * FROM files_info;' ).fetchall()
+                
+                self._c.execute( 'DROP TABLE files_info;' )
+                
+                self._c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );' )
+                
+                insert_iterator = ( ( hash_id, size, mime, width, height, duration, num_frames, mime in HC.MIMES_THAT_DEFINITELY_HAVE_AUDIO, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in existing_files_info )
+                
+                self._c.executemany( 'INSERT INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', insert_iterator )
+                
+                self._CreateIndex( 'files_info', [ 'size' ] )
+                self._CreateIndex( 'files_info', [ 'mime' ] )
+                self._CreateIndex( 'files_info', [ 'width' ] )
+                self._CreateIndex( 'files_info', [ 'height' ] )
+                self._CreateIndex( 'files_info', [ 'duration' ] )
+                self._CreateIndex( 'files_info', [ 'num_frames' ] )
+                
+                self._c.execute( 'ANALYZE files_info;' )
+                
+                try:
+                    
+                    service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, ? FROM files_info NATURAL JOIN current_files WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( HC.MIMES_THAT_MAY_HAVE_AUDIO ) + ';', ( ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA, 0, service_id ) )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to schedule audio detection on videos failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'deviant art file page parser', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

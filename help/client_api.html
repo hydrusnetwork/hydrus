@@ -63,6 +63,11 @@
 						<li><a href="#add_urls_add_url">POST /add_urls/add_url</a></li>
 						<li><a href="#add_urls_associate_url">POST /add_urls/associate_url</a></li>
 					</ul>
+					<h4>Managing Cookies</h4>
+					<ul>
+						<li><a href="#manage_cookies_get_cookies">GET /manage_cookies/get_cookies</a></li>
+						<li><a href="#manage_cookies_set_cookies">POST /manage_cookies/set_cookies</a></li>
+					</ul>
 					<h4>Managing Pages</h4>
 					<ul>
 						<li><a href="#manage_pages_get_pages">GET /manage_pages/get_pages</a></li>
@@ -88,7 +93,7 @@
 					<li>
 						<p>Example response:</p>
 						<ul>
-							<li><pre>{"version": 1}</pre></li>
+							<li><pre>{"version" : 1}</pre></li>
 						</ul>
 					</li>
 				</ul>
@@ -114,6 +119,7 @@
 							<li>2 - Add Tags</li>
 							<li>3 - Search for Files</li>
 							<li>4 - Manage Pages</li>
+							<li>5 - Manage Cookies</li>
 						</ul>
 					</li>
 					<li>
@@ -126,7 +132,7 @@
 					<li>
 						<p>Example response:</p>
 						<ul>
-							<li><pre>{"access_key": "73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57"}</pre></li>
+							<li><pre>{"access_key" : "73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57"}</pre></li>
 						</ul>
 					</li>
 				</ul>
@@ -143,7 +149,7 @@
 						<p>Example response:</p>
 						<ul>
 							<li>
-<pre>{"session_key": "f6e651e7467255ade6f7c66050f3d595ff06d6f3d3693a3a6fb1a9c2b278f800"}</pre>
+<pre>{"session_key" : "f6e651e7467255ade6f7c66050f3d595ff06d6f3d3693a3a6fb1a9c2b278f800"}</pre>
 							</li>
 						</ul>
 					</li>
@@ -166,8 +172,8 @@
 						<ul>
 							<li>
 <pre>{
-	"basic_permissions": [0, 1, 3],
-	"human_description": "API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this"
+	"basic_permissions" : [0, 1, 3],
+	"human_description" : "API Permissions (autotagger): add tags to files, import files, search for files: Can search: only autotag this"
 }</pre>
 							</li>
 						</ul>
@@ -190,16 +196,16 @@
 					<blockquote>path : (the path you want to import)</blockquote>
 					<li>
 						<p>Example request body:</p>
-						<blockquote><pre>{"path": "E:\\to_import\\ayanami.jpg"}</pre></blockquote>
+						<blockquote><pre>{"path" : "E:\\to_import\\ayanami.jpg"}</pre></blockquote>
 					</li>
 					<li><p>Arguments (as bytes): You can alternately just send the file's bytes as the POST body.</p></li>
 					<li><p>Response description: Some JSON with the import result. Please note that file imports for large files may take several seconds, and longer if the client is busy doing other db work, so make sure your request is willing to wait that long for the response.</p></li>
 					<li>
 						<p>Example response:</p>
 <pre>{
-	"status": 1,
-	"hash": "29a15ad0c035c0a0e86e2591660207db64b10777ced76565a695102a481c3dd1",
-	"note": ""
+	"status" : 1,
+	"hash" : "29a15ad0c035c0a0e86e2591660207db64b10777ced76565a695102a481c3dd1",
+	"note" : ""
 }</pre>
 						<p>'status' is:</p>
 						<ul>
@@ -240,7 +246,7 @@
 						<ul>
 							<li>
 <pre>{
-	"tags": [ "9", "10", "11", "::)", "bikini", "blue eyes", "character:samus aran", "flower", "wew" ]
+	"tags" : [ "9", "10", "11", "::)", "bikini", "blue eyes", "character:samus aran", "flower", "wew" ]
 }</pre>
 							</li>
 						</ul>
@@ -263,8 +269,8 @@
 						<ul>
 							<li>
 <pre>{
-	"local_tags": [ "local tags" ]
-	"tag_repositories": [ "public tag repository", "mlp fanfic tagging server" ]
+	"local_tags" : [ "local tags" ]
+	"tag_repositories" : [ "public tag repository", "mlp fanfic tagging server" ]
 }</pre>
 							</li>
 						</ul>
@@ -364,12 +370,12 @@
 						<ul>
 							<li>
 <pre>{
-	"normalised_url": "https://safebooru.org/index.php?id=2753608&page=post&s=view"
-	"url_file_statuses": [
+	"normalised_url" : "https://safebooru.org/index.php?id=2753608&page=post&s=view"
+	"url_file_statuses" : [
 		{
-			"status": 2
-			"hash": "20e9002824e5e7ffc240b91b6e4a6af552b3143993c1778fd523c30d9fdde02c",
-			"note": "url recognised: Imported at 2015/10/18 10:58:01, which was 3 years 4 months ago (before this check)."
+			"status" : 2
+			"hash" : "20e9002824e5e7ffc240b91b6e4a6af552b3143993c1778fd523c30d9fdde02c",
+			"note" : "url recognised: Imported at 2015/10/18 10:58:01, which was 3 years 4 months ago (before this check)."
 		}
 	]
 }</pre>
@@ -412,11 +418,11 @@
 						<ul>
 							<li>
 <pre>{
-	"normalised_url": "https://8ch.net/tv/res/1846574.html",
-	"url_type": 4,
-	"url_type_string": "watchable url",
-	"match_name": "8chan thread",
-	"can_parse": true,
+	"normalised_url" : "https://8ch.net/tv/res/1846574.html",
+	"url_type" : 4,
+	"url_type_string" : "watchable url",
+	"match_name" : "8chan thread",
+	"can_parse" : true,
 }</pre>
 							</li>
 						</ul>
@@ -462,9 +468,9 @@
 						<ul>
 							<li>
 <pre>{
-	"url": "https://8ch.net/tv/res/1846574.html",
-	"destination_page_name": "kino zone",
-	"service_names_to_tags": {
+	"url" : "https://8ch.net/tv/res/1846574.html",
+	"destination_page_name" : "kino zone",
+	"service_names_to_tags" : {
 		"local tags" : [ "as seen on /tv/" ]
 	}
 }</pre>
@@ -477,8 +483,8 @@
 						<ul>
 							<li>
 <pre>{
-	"human_result_text": "\"https://8ch.net/tv/res/1846574.html\" URL added successfully.",
-	"normalised_url": "https://8ch.net/tv/res/1846574.html"
+	"human_result_text" : "\"https://8ch.net/tv/res/1846574.html\" URL added successfully.",
+	"normalised_url" : "https://8ch.net/tv/res/1846574.html"
 }</pre>
 							</li>
 						</ul>
@@ -513,13 +519,82 @@
 						<ul>
 							<li>
 <pre>{
-	"url_to_add": "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
-	"hash": "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
+	"url_to_add" : "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
+	"hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
 }</pre>
 							</li>
 						</ul>
 					</li>
 					<li><p>Response description: 200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.</p></li>
+				</ul>
+			</div><h3>Managing Cookies</h3>
+			<p>This refers to the cookies held in the client's session manager, which are sent with network requests to different domains.</p>
+			<div class="apiborder" id="manage_cookies_get_cookies">
+				<h3><b>GET /manage_cookies/get_cookies</b></h3>
+				<p><i>Get the cookies for a particular domain.</i></p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Cookies permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
+					<li>
+						<p>Arguments: domain</p>
+					</li>
+					<li>
+						<p>Example request (for gelbooru.com):</p>
+						<ul>
+							<li><p>/manage_cookies/get_cookies?domain=gelbooru.com</p></li>
+						</ul>
+					</li>
+					<p>Response description: A JSON Object listing all the cookies for that domain in [ name, value, domain, path, expires ] format.</p>
+					<li>
+						<p>Example response:</p>
+						<ul>
+							<li>
+<pre>{
+	"cookies" : [
+		[ "__cfduid", "f1bef65041e54e93110a883360bc7e71", ".gelbooru.com", "/", 1596223327 ],
+		[ "pass_hash", "0b0833b797f108e340b315bc5463c324", "gelbooru.com", "/", 1585855361 ],
+		[ "user_id", "123456", "gelbooru.com", "/", 1585855361 ]
+	]
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<p>Note that these variables are all strings except 'expires', which is either an integer timestamp or <i>null</i> for session cookies.</p>
+					<p>This request will also return any cookies for subdomains. The session system in hydrus generally stores cookies according to the second-level domain, so if you request for specific.someoverbooru.net, you will still get the cookies for someoverbooru.net and all its subdomains.</p>
+				</ul>
+			</div>
+			<div class="apiborder" id="manage_cookies_set_cookies">
+				<h3><b>POST /manage_cookies/set_cookies</b></h3>
+				<p>Set some new cookies for the client. This makes it easier to 'copy' a login from a web browser or similar to hydrus if hydrus's login system can't handle the site yet.</p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Cookies permission needed.</p></li>
+					<li>
+						<p>Required Headers:</p>
+						<ul>
+							<li>Content-Type : application/json</li>
+						</ul>
+					</li>
+					<li>
+						<p>Arguments (in JSON):</p>
+						<ul>
+							<li>cookies : (a list of cookie rows in the same format as the GET request above)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example request body:</p>
+						<ul>
+							<li>
+<pre>{
+	"cookies" : [
+		[ "PHPSESSID", "07669eb2a1a6e840e498bb6e0799f3fb", ".somesite.com", "/", 1627327719 ],
+		[ "tag_filter", "1", ".somesite.com", "/", 1627327719 ]
+	]
+}</pre>
+							</li>
+						</ul>
+					</li>
+					<p>You can set 'value' to be null, which will clear any existing cookie with the corresponding name, domain, and path (acting essentially as a delete).</p>
+					<p>Expires can be null, but session cookies will time-out in hydrus after 60 minutes of non-use.</p>
 				</ul>
 			</div>
 			<h3>Managing Pages</h3>
@@ -622,7 +697,7 @@
 						<ul>
 							<li>
 <pre>{
-	"page_key": "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+	"page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
 }</pre>
 							</li>
 						</ul>
@@ -659,7 +734,7 @@
 						<ul>
 							<li>
 <pre>{
-	"file_ids": [ 125462, 4852415, 123, 591415 ]
+	"file_ids" : [ 125462, 4852415, 123, 591415 ]
 }</pre>
 							</li>
 						</ul>
@@ -718,8 +793,10 @@
 			"width" : 640,
 			"height" : 480,
 			"duration" : null,
+			"has_audio" : false,
 			"num_frames" : null,
 			"num_words" : null,
+			"known_urls" : [],
 			"service_names_to_statuses_to_tags" : {}
 		},
 		{
@@ -731,7 +808,12 @@
 			"height" : 1080,
 			"duration" : 4040,
 			"num_frames" : 102,
-			"num_words" : null
+			"num_words" : null,
+			"known_urls" : [
+				"https://gelbooru.com/index.php?page=post&s=view&id=4841557",
+				"https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+				"http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg"
+			],
 			"service_names_to_statuses_to_tags" : {
 				"local tags" : {
 					"0" : [ "favourites" ]

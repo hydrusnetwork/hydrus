@@ -312,6 +312,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'pause_character' ] = '\u23F8'
         self._dictionary[ 'strings' ][ 'stop_character' ] = '\u23F9'
         self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'safebooru tag search'
+        self._dictionary[ 'strings' ][ 'has_audio_label' ] = '\U0001F50A'
         
         self._dictionary[ 'string_list' ] = {}
         
