@@ -367,7 +367,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         if not HydrusNetworking.LocalPortInUse( port ):
                             
-                            raise Exception( 'Tried to bind port ' + str( port ) + ' but it failed.' )
+                            raise Exception( 'Tried to bind port {} for "{}" but it failed.'.format( port, service.GetName() ) )
                             
                         
                     except Exception as e:

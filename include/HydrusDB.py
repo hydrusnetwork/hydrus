@@ -130,7 +130,7 @@ class HydrusDB( object ):
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 2
     
-    TRANSACTION_COMMIT_TIME = 10
+    TRANSACTION_COMMIT_TIME = 30
     
     def __init__( self, controller, db_dir, db_name ):
         

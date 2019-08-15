@@ -2138,7 +2138,14 @@ class MediaSingleton( Media ):
     
     def RefreshFileInfo( self ):
         
-        self._media_result.RefreshFileInfo()
+        media_results = HG.client_controller.Read( 'media_results', ( self._media_result.GetHash(), ) )
+        
+        if len( media_results ) > 0:
+            
+            media_result = media_results[0]
+            
+            self._media_result = media_result
+            
         
     
 class MediaResult( object ):
@@ -2290,18 +2297,6 @@ class MediaResult( object ):
         elif service_type in HC.RATINGS_SERVICES:
             
             self._ratings_manager.ProcessContentUpdate( service_key, content_update )
-            
-        
-    
-    def RefreshFileInfo( self ):
-        
-        media_results = HG.client_controller.Read( 'media_results', ( self._file_info_manager.hash, ) )
-        
-        if len( media_results ) > 0:
-            
-            media_result = media_results[0]
-            
-            self._file_info_manager = media_result._file_info_manager
             
         
     

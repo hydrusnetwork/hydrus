@@ -291,6 +291,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         self.Bind( wx.EVT_TIMER, self.TIMEREventAnimationUpdate, id = ID_TIMER_ANIMATION_UPDATE )
+        self.Bind( wx.EVT_ICONIZE, self.EventIconize )
         
         self.Bind( wx.EVT_MOVE, self.EventMove )
         self._last_move_pub = 0.0
@@ -3377,7 +3378,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _RefreshStatusBar( self ):
         
-        if not self._notebook or not self._statusbar:
+        if not self._notebook or not self._statusbar or self.IsIconized():
             
             return
             
@@ -4299,7 +4300,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 dlg.SetPanel( panel )
                 
-                r = dlg.ShowModal()
+                dlg.ShowModal()
                 
             
         
@@ -4393,6 +4394,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.EventMenuFromScreenPosition( screen_position )
         
     
+    def EventIconize( self, event ):
+        
+        if not event.IsIconized():
+            
+            wx.CallAfter( self.RefreshMenu )
+            wx.CallAfter( self.RefreshStatusBar )
+            
+        
+    
     def EventMenuClose( self, event ):
         
         menu = event.GetMenu()
@@ -4449,11 +4459,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def TIMEREventAnimationUpdate( self, event ):
         
-        if self.IsIconized():
-            
-            return
-            
-        
         try:
             
             windows = list( self._animation_update_windows )
@@ -4463,6 +4468,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if not window:
                     
                     self._animation_update_windows.discard( window )
+                    
+                    continue
+                    
+                
+                if window.GetTopLevelParent().IsIconized():
                     
                     continue
                     
@@ -5009,7 +5019,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshMenu( self ):
         
-        if not self:
+        if not self or self.IsIconized():
             
             return
             
@@ -5231,16 +5241,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGUIUpdate( self ):
         
-        if self.IsIconized():
-            
-            return
-            
-        
         for window in list( self._ui_update_windows ):
             
             if not window:
                 
                 self._ui_update_windows.discard( window )
+                
+                continue
+                
+            
+            if window.GetTopLevelParent().IsIconized():
                 
                 continue
                 
@@ -5550,7 +5560,7 @@ class FrameSplashStatus( object ):
         self._NotifyUI()
         
     
-    def SetTitleText( self, text, print_to_log = True ):
+    def SetTitleText( self, text, clear_undertexts = True, print_to_log = True ):
         
         if print_to_log:
             
@@ -5560,8 +5570,12 @@ class FrameSplashStatus( object ):
         with self._lock:
             
             self._title_text = text
-            self._status_text = ''
-            self._status_subtext = ''
+            
+            if clear_undertexts:
+                
+                self._status_text = ''
+                self._status_subtext = ''
+                
             
         
         self._NotifyUI()

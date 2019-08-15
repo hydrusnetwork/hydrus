@@ -1125,7 +1125,6 @@ class ReviewServicePanel( wx.Panel ):
             
             if not new_options.GetBoolean( 'advanced_mode' ):
                 
-                self._sync_now_button.Hide()
                 self._export_updates_button.Hide()
                 self._reset_button.Hide()
                 
@@ -1298,11 +1297,9 @@ class ReviewServicePanel( wx.Panel ):
         
         def _SyncNow( self ):
             
-            message = 'This will tell the database to process any outstanding update files.'
+            message = 'This will tell the database to process any possible outstanding update files right now.'
             message += os.linesep * 2
-            message += 'This is a big task that usually runs during idle time. It locks the entire database and takes over the ui, stopping you from interacting with it. It is cancellable but may still take some time to return ui control to you.'
-            message += os.linesep * 2
-            message += 'If you are a new user, click \'no\'!'
+            message += 'You can still use the client while it runs, but it may make some things like autocomplete lookup a bit juddery.'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 

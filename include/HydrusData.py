@@ -1151,6 +1151,34 @@ def SplitListIntoChunks( xs, n ):
         yield xs[ i : i + n ]
         
     
+def SplitMappingIteratorIntoChunks( xs, n ):
+    
+    chunk_weight = 0
+    chunk = []
+    
+    for ( tag_item, hash_items ) in xs:
+        
+        for chunk_of_hash_items in SplitIteratorIntoChunks( hash_items, n ):
+            
+            chunk.append( ( tag_item, chunk_of_hash_items ) )
+            
+            chunk_weight += len( chunk_of_hash_items )
+            
+            if chunk_weight > n:
+                
+                yield chunk
+                
+                chunk_weight = 0
+                chunk = []
+                
+            
+        
+    
+    if len( chunk ) > 0:
+        
+        yield chunk
+        
+    
 def SplitMappingListIntoChunks( xs, n ):
     
     chunk_weight = 0

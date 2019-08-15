@@ -1637,7 +1637,7 @@ class FilesMaintenanceManager( object ):
                 
                 if i % 10 == 0:
                     
-                    self._controller.pub( 'splash_set_status_text', status_text )
+                    self._controller.pub( 'splash_set_status_text', status_text, print_to_log = False )
                     
                 
                 job_key.SetVariable( 'popup_text_1', status_text )

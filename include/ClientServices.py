@@ -1,5 +1,6 @@
 from . import ClientConstants as CC
 from . import ClientDownloading
+from . import ClientFiles
 from . import ClientImporting
 from . import ClientNetworkingContexts
 from . import ClientNetworkingJobs
@@ -1172,189 +1173,87 @@ class ServiceRepository( ServiceRestricted ):
         self._paused = dictionary[ 'paused' ]
         
     
-    def _SyncProcessUpdates( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
+    def _LogFinalRowSpeed( self, precise_timestamp, total_rows, row_name ):
+        
+        if total_rows == 0:
+            
+            return
+            
+        
+        it_took = HydrusData.GetNowPrecise() - precise_timestamp
+        
+        rows_s = HydrusData.ToHumanInt( int( total_rows / it_took ) )
+        
+        summary = '{} processed {} {} at {} rows/s'.format( self._name, HydrusData.ToHumanInt( total_rows ), row_name, rows_s )
+        
+        HydrusData.Print( summary )
+        
+    
+    def _ReportOngoingRowSpeed( self, job_key, rows_done, total_rows, precise_timestamp, rows_done_in_last_packet, row_name ):
+        
+        it_took = HydrusData.GetNowPrecise() - precise_timestamp
+        
+        rows_s = HydrusData.ToHumanInt( int( rows_done_in_last_packet / it_took ) )
+        
+        popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ), rows_s )
+        
+        HG.client_controller.pub( 'splash_set_status_text', popup_message, print_to_log = False )
+        job_key.SetVariable( 'popup_text_2', popup_message )
+        
+    
+    def _SyncDownloadMetadata( self ):
         
         with self._lock:
             
-            if not self._CanSyncProcess():
+            if not self._CanSyncDownload():
                 
                 return
                 
             
+            do_it = self._metadata.UpdateDue( from_client = True )
+            
+            next_update_index = self._metadata.GetNextUpdateIndex()
+            
+            service_key = self._service_key
+            
+            name = self._name
+            
         
-        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+        if do_it:
             
-            return
-            
-        
-        try:
-            
-            ( did_some_work, did_everything ) = HG.client_controller.WriteSynchronous( 'process_repository', self._service_key, maintenance_mode = maintenance_mode, stop_time = stop_time )
-            
-            if did_some_work:
+            try:
                 
-                with self._lock:
-                    
-                    self._SetDirty()
-                    
-                    if self._service_type == HC.TAG_REPOSITORY:
-                        
-                        HG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
-                        
-                    
+                response = self.Request( HC.GET, 'metadata', { 'since' : next_update_index } )
                 
-            
-            if not did_everything:
+                metadata_slice = response[ 'metadata_slice' ]
                 
-                time.sleep( 3 ) # stop spamming of repo sync daemon from bringing this up again too quick
+            except HydrusExceptions.CancelledException as e:
+                
+                self._DelayFutureRequests( str( e ) )
+                
+                return
+                
+            except HydrusExceptions.NetworkException as e:
+                
+                HydrusData.Print( 'Attempting to download metadata for ' + name + ' resulted in a network error:' )
+                
+                HydrusData.Print( e )
+                
+                return
                 
             
-        except HydrusExceptions.ShutdownException:
-            
-            return
-            
-        except Exception as e:
+            HG.client_controller.WriteSynchronous( 'associate_repository_update_hashes', service_key, metadata_slice )
             
             with self._lock:
                 
-                message = 'Failed to process updates for the ' + self._name + ' repository! The error follows:'
-                
-                HydrusData.ShowText( message )
-                
-                HydrusData.ShowException( e )
-                
-                self._paused = True
+                self._metadata.UpdateFromSlice( metadata_slice )
                 
                 self._SetDirty()
                 
             
-            HG.client_controller.pub( 'important_dirt_to_clean' )
-            
         
     
-    def CanDoIdleShutdownWork( self ):
-        
-        with self._lock:
-            
-            if not self._CanSyncProcess():
-                
-                return False
-                
-            
-            service_key = self._service_key
-            
-        
-        ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', service_key )
-        
-        return processing_value < range
-        
-    
-    def GetNextUpdateDueString( self ):
-        
-        with self._lock:
-            
-            return self._metadata.GetNextUpdateDueString( from_client = True )
-            
-        
-    
-    def GetUpdateHashes( self ):
-        
-        with self._lock:
-            
-            return self._metadata.GetUpdateHashes()
-            
-        
-    
-    def GetUpdateInfo( self ):
-        
-        with self._lock:
-            
-            return self._metadata.GetUpdateInfo()
-            
-        
-    
-    def IsPaused( self ):
-        
-        with self._lock:
-            
-            return self._paused
-            
-        
-    
-    def PausePlay( self ):
-        
-        with self._lock:
-            
-            self._paused = not self._paused
-            
-            self._SetDirty()
-            
-            HG.client_controller.pub( 'important_dirt_to_clean' )
-            
-            if not self._paused:
-                
-                HG.client_controller.pub( 'notify_new_permissions' )
-                
-            
-        
-    
-    def Reset( self ):
-        
-        with self._lock:
-            
-            self._no_requests_reason = ''
-            self._no_requests_until = 0
-            
-            self._account = HydrusNetwork.Account.GenerateUnknownAccount()
-            self._next_account_sync = 0
-            
-            self._metadata = HydrusNetwork.Metadata()
-            
-            self._SetDirty()
-            
-            HG.client_controller.pub( 'important_dirt_to_clean' )
-            
-            HG.client_controller.Write( 'reset_repository', self )
-            
-        
-    
-    def Sync( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
-        
-        with self._sync_lock: # to stop sync_now button clicks from stomping over the regular daemon and vice versa
-            
-            try:
-                
-                self.SyncDownloadMetadata()
-                
-                self.SyncDownloadUpdates( stop_time )
-                
-                self._SyncProcessUpdates( maintenance_mode = maintenance_mode, stop_time = stop_time )
-                
-                self.SyncThumbnails( stop_time )
-                
-            except HydrusExceptions.ShutdownException:
-                
-                pass
-                
-            except Exception as e:
-                
-                self._DelayFutureRequests( str( e ) )
-                
-                HydrusData.ShowText( 'The service "{}" encountered an error while trying to sync! The error was "{}". It will not do any work for a little while. If the fix is not obvious, please elevate this to hydrus dev.'.format( self._name, str( e ) ) )
-                
-                HydrusData.ShowException( e )
-                
-            finally:
-                
-                if self.IsDirty():
-                    
-                    HG.client_controller.pub( 'important_dirt_to_clean' )
-                    
-                
-            
-        
-    
-    def SyncDownloadUpdates( self, stop_time ):
+    def _SyncDownloadUpdates( self, stop_time ):
         
         with self._lock:
             
@@ -1525,54 +1424,465 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def SyncDownloadMetadata( self ):
+    def _SyncProcessUpdates( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
         with self._lock:
             
-            if not self._CanSyncDownload():
+            if not self._CanSyncProcess():
                 
                 return
                 
             
-            do_it = self._metadata.UpdateDue( from_client = True )
+        
+        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
             
-            next_update_index = self._metadata.GetNextUpdateIndex()
-            
-            service_key = self._service_key
-            
-            name = self._name
+            return
             
         
-        if do_it:
+        work_done = False
+        
+        try:
+            
+            job_key = ClientThreading.JobKey( cancellable = True, maintenance_mode = maintenance_mode, stop_time = stop_time )
+            
+            title = '{} sync: processing updates'.format( self._name )
+            
+            job_key.SetVariable( 'popup_title', title )
+            
+            ( this_is_first_definitions_work, definition_hashes, this_is_first_content_work, content_hashes ) = HG.client_controller.Read( 'repository_update_hashes_to_process', self._service_key )
+            
+            if len( definition_hashes ) == 0 and len( content_hashes ) == 0:
+                
+                return # no work to do
+                
+            
+            HydrusData.Print( title )
+            
+            num_updates_done = 0
+            num_updates_to_do = len( definition_hashes ) + len( content_hashes )
+            
+            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'splash_set_title_text', title, print_to_log = False )
+            
+            total_definition_rows_completed = 0
+            total_content_rows_completed = 0
+            
+            did_definition_analyze = False
+            did_content_analyze = False
+            
+            definition_start_time = HydrusData.GetNowPrecise()
             
             try:
                 
-                response = self.Request( HC.GET, 'metadata', { 'since' : next_update_index } )
+                for definition_hash in definition_hashes:
+                    
+                    progress_string = HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
+                    
+                    splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
+                    
+                    HG.client_controller.pub( 'splash_set_title_text', splash_title, clear_undertexts = False, print_to_log = False )
+                    
+                    status = 'processing {}'.format( progress_string )
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    job_key.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
+                    
+                    try:
+                        
+                        update_path = HG.client_controller.client_files_manager.GetFilePath( definition_hash, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
+                        
+                    except HydrusExceptions.FileMissingException:
+                        
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
+                        
+                        raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        
+                    
+                    with open( update_path, 'rb' ) as f:
+                        
+                        update_network_bytes = f.read()
+                        
+                    
+                    try:
+                        
+                        definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+                        
+                    except:
+                        
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                        
+                        raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        
+                    
+                    if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
+                        
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                        
+                        raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
+                        
+                    
+                    rows_in_this_update = definition_update.GetNumRows()
+                    rows_done_in_this_update = 0
+                    
+                    iterator_dict = {}
+                    
+                    iterator_dict[ 'service_hash_ids_to_hashes' ] = iter( definition_update.GetHashIdsToHashes().items() )
+                    iterator_dict[ 'service_tag_ids_to_tags' ] = iter( definition_update.GetTagIdsToTags().items() )
+                    
+                    while len( iterator_dict ) > 0:
+                        
+                        this_work_start_time = HydrusData.GetNowPrecise()
+                        
+                        if HG.client_controller.CurrentlyVeryIdle():
+                            
+                            work_time = 29.5
+                            break_time = 0.5
+                            
+                        elif HG.client_controller.CurrentlyIdle():
+                            
+                            work_time = 9.0
+                            break_time = 1.0
+                            
+                        else:
+                            
+                            work_time = 0.5
+                            break_time = 0.5
+                            
+                        
+                        num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_definitions', self._service_key, definition_hash, iterator_dict, job_key, work_time )
+                        
+                        rows_done_in_this_update += num_rows_done
+                        total_definition_rows_completed += num_rows_done
+                        
+                        work_done = True
+                        
+                        if this_is_first_definitions_work and total_definition_rows_completed > 10000 and not did_definition_analyze:
+                            
+                            HG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
+                            
+                            did_definition_analyze = True
+                            
+                        
+                        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_key.IsCancelled():
+                            
+                            return
+                            
+                        
+                        if HydrusData.TimeHasPassedPrecise( this_work_start_time + work_time ):
+                            
+                            time.sleep( break_time )
+                            
+                        
+                        self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'definitions' )
+                        
+                    
+                    num_updates_done += 1
+                    
                 
-                metadata_slice = response[ 'metadata_slice' ]
+                if this_is_first_definitions_work and not did_definition_analyze:
+                    
+                    HG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
+                    
+                    did_definition_analyze = True
+                    
                 
-            except HydrusExceptions.CancelledException as e:
+            finally:
                 
-                self._DelayFutureRequests( str( e ) )
+                self._LogFinalRowSpeed( definition_start_time, total_definition_rows_completed, 'definitions' )
                 
-                return
-                
-            except HydrusExceptions.NetworkException as e:
-                
-                HydrusData.Print( 'Attempting to download metadata for ' + name + ' resulted in a network error:' )
-                
-                HydrusData.Print( e )
+            
+            if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_key.IsCancelled():
                 
                 return
                 
             
-            HG.client_controller.WriteSynchronous( 'associate_repository_update_hashes', service_key, metadata_slice )
+            content_start_time = HydrusData.GetNowPrecise()
+            
+            try:
+                
+                for content_hash in content_hashes:
+                    
+                    progress_string = HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
+                    
+                    splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
+                    
+                    HG.client_controller.pub( 'splash_set_title_text', splash_title, clear_undertexts = False, print_to_log = False )
+                    
+                    status = 'processing {}'.format( progress_string )
+                    
+                    job_key.SetVariable( 'popup_text_1', status )
+                    job_key.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
+                    
+                    try:
+                        
+                        update_path = HG.client_controller.client_files_manager.GetFilePath( content_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT )
+                        
+                    except HydrusExceptions.FileMissingException:
+                        
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
+                        
+                        raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        
+                    
+                    with open( update_path, 'rb' ) as f:
+                        
+                        update_network_bytes = f.read()
+                        
+                    
+                    try:
+                        
+                        content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+                        
+                    except:
+                        
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
+                        
+                        raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
+                        
+                    
+                    if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
+                        
+                        HG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                        
+                        raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
+                        
+                    
+                    rows_in_this_update = content_update.GetNumRows()
+                    rows_done_in_this_update = 0
+                    
+                    iterator_dict = {}
+                    
+                    iterator_dict[ 'new_files' ] = iter( content_update.GetNewFiles() )
+                    iterator_dict[ 'deleted_files' ] = iter( content_update.GetDeletedFiles() )
+                    iterator_dict[ 'new_mappings' ] = iter( content_update.GetNewMappings() )
+                    iterator_dict[ 'deleted_mappings' ] = iter( content_update.GetDeletedMappings() )
+                    iterator_dict[ 'new_parents' ] = iter( content_update.GetNewTagParents() )
+                    iterator_dict[ 'deleted_parents' ] = iter( content_update.GetDeletedTagParents() )
+                    iterator_dict[ 'new_siblings' ] = iter( content_update.GetNewTagSiblings() )
+                    iterator_dict[ 'deleted_siblings' ] = iter( content_update.GetDeletedTagSiblings() )
+                    
+                    while len( iterator_dict ) > 0:
+                        
+                        this_work_start_time = HydrusData.GetNowPrecise()
+                        
+                        if HG.client_controller.CurrentlyVeryIdle():
+                            
+                            work_time = 29.5
+                            break_time = 0.5
+                            
+                        elif HG.client_controller.CurrentlyIdle():
+                            
+                            work_time = 9.0
+                            break_time = 1.0
+                            
+                        else:
+                            
+                            work_time = 0.5
+                            break_time = 0.2
+                            
+                        
+                        num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_content', self._service_key, content_hash, iterator_dict, job_key, work_time )
+                        
+                        rows_done_in_this_update += num_rows_done
+                        total_content_rows_completed += num_rows_done
+                        
+                        work_done = True
+                        
+                        if this_is_first_content_work and total_content_rows_completed > 10000 and not did_content_analyze:
+                            
+                            HG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
+                            
+                            did_content_analyze = True
+                            
+                        
+                        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_key.IsCancelled():
+                            
+                            return
+                            
+                        
+                        if HydrusData.TimeHasPassedPrecise( this_work_start_time + work_time ):
+                            
+                            time.sleep( break_time )
+                            
+                        
+                        self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'content rows' )
+                        
+                    
+                    num_updates_done += 1
+                    
+                
+                if this_is_first_content_work and not did_content_analyze:
+                    
+                    HG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
+                    
+                    did_content_analyze = True
+                    
+                
+            finally:
+                
+                self._LogFinalRowSpeed( content_start_time, total_content_rows_completed, 'content rows' )
+                
+            
+        except HydrusExceptions.ShutdownException:
+            
+            return
+            
+        except Exception as e:
             
             with self._lock:
                 
-                self._metadata.UpdateFromSlice( metadata_slice )
+                message = 'Failed to process updates for the ' + self._name + ' repository! The error follows:'
+                
+                HydrusData.ShowText( message )
+                
+                HydrusData.ShowException( e )
+                
+                self._paused = True
                 
                 self._SetDirty()
+                
+            
+            HG.client_controller.pub( 'important_dirt_to_clean' )
+            
+            
+        finally:
+            
+            if work_done:
+                
+                HG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                
+                self._SetDirty()
+                
+            
+            job_key.DeleteVariable( 'popup_text_1' )
+            job_key.DeleteVariable( 'popup_text_2' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
+            job_key.Delete( 3 )
+            
+            time.sleep( 3 ) # stop daemon restarting instantly if it is being spammed to wake up, just add a break mate
+            
+        
+    
+    def CanDoIdleShutdownWork( self ):
+        
+        with self._lock:
+            
+            if not self._CanSyncProcess():
+                
+                return False
+                
+            
+            service_key = self._service_key
+            
+        
+        ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', service_key )
+        
+        return processing_value < range
+        
+    
+    def GetNextUpdateDueString( self ):
+        
+        with self._lock:
+            
+            return self._metadata.GetNextUpdateDueString( from_client = True )
+            
+        
+    
+    def GetUpdateHashes( self ):
+        
+        with self._lock:
+            
+            return self._metadata.GetUpdateHashes()
+            
+        
+    
+    def GetUpdateInfo( self ):
+        
+        with self._lock:
+            
+            return self._metadata.GetUpdateInfo()
+            
+        
+    
+    def IsPaused( self ):
+        
+        with self._lock:
+            
+            return self._paused
+            
+        
+    
+    def PausePlay( self ):
+        
+        with self._lock:
+            
+            self._paused = not self._paused
+            
+            self._SetDirty()
+            
+            HG.client_controller.pub( 'important_dirt_to_clean' )
+            
+            if not self._paused:
+                
+                HG.client_controller.pub( 'notify_new_permissions' )
+                
+            
+        
+    
+    def Reset( self ):
+        
+        with self._lock:
+            
+            self._no_requests_reason = ''
+            self._no_requests_until = 0
+            
+            self._account = HydrusNetwork.Account.GenerateUnknownAccount()
+            self._next_account_sync = 0
+            
+            self._metadata = HydrusNetwork.Metadata()
+            
+            self._SetDirty()
+            
+            HG.client_controller.pub( 'important_dirt_to_clean' )
+            
+            HG.client_controller.Write( 'reset_repository', self )
+            
+        
+    
+    def Sync( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
+        
+        with self._sync_lock: # to stop sync_now button clicks from stomping over the regular daemon and vice versa
+            
+            try:
+                
+                self._SyncDownloadMetadata()
+                
+                self._SyncDownloadUpdates( stop_time )
+                
+                self._SyncProcessUpdates( maintenance_mode = maintenance_mode, stop_time = stop_time )
+                
+                self.SyncThumbnails( stop_time )
+                
+            except HydrusExceptions.ShutdownException:
+                
+                pass
+                
+            except Exception as e:
+                
+                self._DelayFutureRequests( str( e ) )
+                
+                HydrusData.ShowText( 'The service "{}" encountered an error while trying to sync! The error was "{}". It will not do any work for a little while. If the fix is not obvious, please elevate this to hydrus dev.'.format( self._name, str( e ) ) )
+                
+                HydrusData.ShowException( e )
+                
+            finally:
+                
+                if self.IsDirty():
+                    
+                    HG.client_controller.pub( 'important_dirt_to_clean' )
+                    
                 
             
         

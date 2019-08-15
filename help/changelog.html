@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 364</h3></li>
+				<ul>
+					<li>repo processing makeover:</li>
+					<li>repository processing is now no longer a monolithic atomic database job! it now loads update files at a 'higher' level and streams packets of work to the database without occupying it continuously! hence, repository processing no longer creates a 'modal' popup that blocks the client--you can keep browsing while it works, and it won't hang up the client!</li>
+					<li>this new system runs on some different timings. in this first version, it will have lower rows/s in some situations and higher in others. please send me feedback if your processing is running significantly slower than before and I will tweak how this new routine decides to work and take breaks</li>
+					<li>multiple repos can now sync at once, ha ha</li>
+					<li>shutdown repository processing now states the name of the service being processed and x/y update process in the exit splash screen</li>
+					<li>the process that runs after repository processing that re-syncs all the open thumbnails' tags now works regardless of the number of thumbnails open and works asynchronously, streaming new tag managers in a way that will not block the main thread</li>
+					<li>'process now' button on review services is now available to all users and has a reworded warning text</li>
+					<li>the 1 hour limit on a repo processing job is now gone</li>
+					<li>pre-processing disk cache population is tentatively gone--let's see how it goes</li>
+					<li>the 10s db transaction time is raised to 30s. this speed some things up, including the new repo processing, but if a crash occurs, hydrus may now lose up to 30s of changes before the crash</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>users in advanced mode now have a 'OR' button on their serch autocomplete input dropdown panels. this button opens a new panel that plugs into prkc's neat raw-text -> CNF parser, which allows you to enter raw-text searches such as '( blue eyes and blonde hair ) or ( green eyes and red hair )' into hydrus</li>
+					<li>fixed the silent audio track detection code, which was handling a data type incorrectly</li>
+					<li>improved the silent audio track detection code to handle another type of silence, thank you to the users who submitted examples--please send more false positives if you find them</li>
+					<li>fixed an issue where thumbnails that underwent a file metadata regeneration were not appearing to receive content updates (such as archive, or new tags/ratings) until a subsequent reload showed they had happened silently. this is a long-time bug, but the big whack of files added to the files maintenance system last week revealed it</li>
+					<li>the 'pause ui update cycles while main gui is minimised' change from last week now works on a per-frame basis. if the main gui is minimised, media viewers that are up will still run videos and so on, and vice versa</li>
+					<li>a few more ui events (e.g. statusbar & menubar updates) no longer occur while the client is minimised</li>
+					<li>duplicate processing pages will now only initialise and refresh their maintenance and dupe count numbers while they are the current page. this should speed up session load for heavy users and those with multiple duplicate pages open</li>
+					<li>gave the new autocomplete 'should broadcast the current text' tests another pass--it should be more reliable now broadcasting 'blue eyes' in the up-to-200ms window where the stub/full results for, say, 'blue ey' are still in</li>
+					<li>fixed an accidental logical error that meant 'character:'-style autocomplete queries could do a search and give some odd results, rather than just 'character:*anything*'. a similar check is added to the 'write' autocomplete</li>
+					<li>fixed an issue with autocomplete not clearing its list properly, defaulting back to the last cached results, when it wants to fetch system preds but cannot due to a busy db</li>
+					<li>fixed GET-argument gallery searches for search texts that include '&', '=', '/', or '?' (think 'panty_&_stocking_with_garterbelt')</li>
+					<li>removed the pixiv login script from the defaults--apparently they have added a captcha, so using Hydrus Companion with the Client API is now your best bet</li>
+					<li>the client's petition processing page will now prefer to fetch the same petition type as the last completed job, rather than always going for the top type with non-zero count</li>
+					<li>the client's petition processing page now has options to sort parent or sibling petitions by the left side or right--and it preserves check status!</li>
+					<li>the client's petition processing page now sorts tags by namespace first, then subtag</li>
+					<li>the client now starts, restarts, and stops port-hosted services using the same new technique as the server, increasing reliability and waiting more correctly for previous services to stop and so on</li>
+					<li>the client now explicitly commands its services to shut down on application close. a rare issue could sometimes leave the process alive because of a client api still hanging on to an old connection and having trouble with the shut-down db</li>
+					<li>the file maintenance manager will no longer spam to log during shutdown maintenance</li>
+					<li>sketched out first skeleton of the new unified global maintenance manager</li>
+					<li>improved some post-boot-error shutdown handling that was also doing tiny late errors on server 'stop' command</li>
+					<li>added endchan bunker links to contact pages and github readme</li>
+					<li>updated to ffmpeg 4.2 on windows</li>
+				</ul>
 				<li><h3>version 363</h3></li>
 				<ul>
 					<li>has audio:</li>
@@ -28,6 +65,7 @@
 					<li>added/updated unit tests for the above</li>
 					<li>updated help for the above</li>
 					<li>client api version is now 10</li>
+					<li>.</li>
 					<li>the rest:</li>
 					<li>system:hash and system:similar to now accept multiple hashes! so, if you have 100 md5s, you can now search for them all at once</li>
 					<li>the thumbnail right-click->file relationships->find similar files now works for multiple selections!</li>

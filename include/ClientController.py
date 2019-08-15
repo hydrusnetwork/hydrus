@@ -55,7 +55,7 @@ import traceback
 
 if not HG.twisted_is_broke:
     
-    from twisted.internet import reactor, defer
+    from twisted.internet import threads, reactor, defer
     
 class App( wx.App ):
     
@@ -845,7 +845,6 @@ class Controller( HydrusController.HydrusController ):
         self.CallBlockingToWX( self._splash, wx_code )
         
         self.sub( self, 'ToClipboard', 'clipboard' )
-        self.sub( self, 'RestartClientServerService', 'restart_client_server_service' )
         
     
     def InitView( self ):
@@ -895,10 +894,9 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitView( self )
         
-        self._listening_services = {}
+        self._service_keys_to_connected_ports = {}
         
-        self.RestartClientServerService( CC.LOCAL_BOORU_SERVICE_KEY )
-        self.RestartClientServerService( CC.CLIENT_API_SERVICE_KEY )
+        self.RestartClientServerServices()
         
         if not HG.no_daemons:
             
@@ -1158,95 +1156,13 @@ class Controller( HydrusController.HydrusController ):
         self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
         
     
-    def RestartClientServerService( self, service_key ):
+    def RestartClientServerServices( self ):
         
-        service = self.services_manager.GetService( service_key )
-        service_type = service.GetServiceType()
+        services = [ self.services_manager.GetService( service_key ) for service_key in ( CC.LOCAL_BOORU_SERVICE_KEY, CC.CLIENT_API_SERVICE_KEY ) ]
         
-        name = service.GetName()
+        services = [ service for service in services if service.GetPort() is not None ]
         
-        port = service.GetPort()
-        allow_non_local_connections = service.AllowsNonLocalConnections()
-        
-        def TWISTEDRestartServer():
-            
-            def StartServer( *args, **kwargs ):
-                
-                try:
-                    
-                    time.sleep( 1 )
-                    
-                    if HydrusNetworking.LocalPortInUse( port ):
-                    
-                        text = 'The client\'s {} could not start because something was already bound to port {}.'.format( name, port )
-                        text += os.linesep * 2
-                        text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to completely shut itself down.'
-                        text += os.linesep * 2
-                        text += 'You can change the port this service tries to host on under services->manage services.'
-                        
-                        HydrusData.ShowText( text )
-                        
-                        return
-                        
-                    
-                    from . import ClientLocalServer
-                    
-                    if service_type == HC.LOCAL_BOORU:
-                        
-                        twisted_server = ClientLocalServer.HydrusServiceBooru( service, allow_non_local_connections = allow_non_local_connections )
-                        
-                    elif service_type == HC.CLIENT_API_SERVICE:
-                        
-                        twisted_server = ClientLocalServer.HydrusServiceClientAPI( service, allow_non_local_connections = allow_non_local_connections )
-                        
-                    
-                    listening_connection = reactor.listenTCP( port, twisted_server )
-                    
-                    self._listening_services[ service_key ] = listening_connection
-                    
-                    if not HydrusNetworking.LocalPortInUse( port ):
-                        
-                        text = 'Tried to bind port ' + str( port ) + ' for the local booru, but it appeared to fail. It could be a firewall or permissions issue, or perhaps another program was quietly already using it.'
-                        
-                        HydrusData.ShowText( text )
-                        
-                    
-                except Exception as e:
-                    
-                    wx.CallAfter( HydrusData.ShowException, e )
-                    
-                
-            
-            if service_key in self._listening_services:
-                
-                listening_connection = self._listening_services[ service_key ]
-                
-                del self._listening_services[ service_key ]
-                
-                deferred = defer.maybeDeferred( listening_connection.stopListening )
-                
-                if port is not None:
-                    
-                    deferred.addCallback( StartServer )
-                    
-                
-            else:
-                
-                if port is not None:
-                    
-                    StartServer()
-                    
-                
-            
-        
-        if HG.twisted_is_broke:
-            
-            HydrusData.ShowText( 'Twisted failed to import, so could not start the {}! Please contact hydrus dev!'.format( name ) )
-            
-        else:
-            
-            reactor.callFromThread( TWISTEDRestartServer )
-            
+        self.CallToThread( self.SetRunningTwistedServices, services )
         
     
     def RestoreDatabase( self ):
@@ -1367,6 +1283,100 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def SetRunningTwistedServices( self, services ):
+        
+        def TWISTEDDoIt():
+            
+            def StartServices( *args, **kwargs ):
+                
+                HydrusData.Print( 'starting services\u2026' )
+                
+                for service in services:
+                    
+                    service_key = service.GetServiceKey()
+                    service_type = service.GetServiceType()
+                    
+                    name = service.GetName()
+                    
+                    port = service.GetPort()
+                    allow_non_local_connections = service.AllowsNonLocalConnections()
+                    
+                    if port is None:
+                        
+                        continue
+                        
+                    
+                    try:
+                        
+                        from . import ClientLocalServer
+                        
+                        if service_type == HC.LOCAL_BOORU:
+                            
+                            http_factory = ClientLocalServer.HydrusServiceBooru( service, allow_non_local_connections = allow_non_local_connections )
+                            
+                        elif service_type == HC.CLIENT_API_SERVICE:
+                            
+                            http_factory = ClientLocalServer.HydrusServiceClientAPI( service, allow_non_local_connections = allow_non_local_connections )
+                            
+                        
+                        self._service_keys_to_connected_ports[ service_key ] = reactor.listenTCP( port, http_factory )
+                        
+                        if not HydrusNetworking.LocalPortInUse( port ):
+                            
+                            HydrusData.ShowText( 'Tried to bind port {} for "{}" but it failed.'.format( port, name ) )
+                            
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'Could not start "{}":'.format( name ) )
+                        HydrusData.ShowException( e )
+                        
+                    
+                
+                HydrusData.Print( 'services started' )
+                
+            
+            if len( self._service_keys_to_connected_ports ) > 0:
+                
+                HydrusData.Print( 'stopping services\u2026' )
+                
+                deferreds = []
+                
+                for port in self._service_keys_to_connected_ports.values():
+                    
+                    deferred = defer.maybeDeferred( port.stopListening )
+                    
+                    deferreds.append( deferred )
+                    
+                
+                self._service_keys_to_connected_ports = {}
+                
+                deferred = defer.DeferredList( deferreds )
+                
+                if len( services ) > 0:
+                    
+                    deferred.addCallback( StartServices )
+                    
+                
+            elif len( services ) > 0:
+                
+                StartServices()
+                
+            
+        
+        if HG.twisted_is_broke:
+            
+            if True in ( service.GetPort() is not None for service in services ):
+                
+                HydrusData.ShowText( 'Twisted failed to import, so could not start the local booru/client api! Please contact hydrus dev!' )
+                
+            
+        else:
+            
+            threads.blockingCallFromThread( reactor, TWISTEDDoIt )
+            
+        
+    
     def SetServices( self, services ):
         
         with HG.dirty_object_lock:
@@ -1379,6 +1389,8 @@ class Controller( HydrusController.HydrusController ):
             
             self.services_manager.RefreshServices()
             
+        
+        self.RestartClientServerServices()
         
     
     def ShutdownModel( self ):
@@ -1410,6 +1422,8 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
+        
+        self.SetRunningTwistedServices( [] )
         
         HydrusController.HydrusController.ShutdownView( self )
         

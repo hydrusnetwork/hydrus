@@ -11,6 +11,7 @@ The client can do quite a lot! Please check out the help inside the release or [
 * [homepage](http://hydrusnetwork.github.io/hydrus/)
 * [email](mailto:hydrus.admin@gmail.com)
 * [8chan board](https://8ch.net/hydrus/index.html)
+* [endchan bunker](https://endchan.net/hydrus/)
 * [twitter](https://twitter.com/hydrusnetwork)
 * [tumblr](http://hydrus.tumblr.com/)
 * [discord](https://discord.gg/3H8UTpb)

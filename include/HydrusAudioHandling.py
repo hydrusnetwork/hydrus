@@ -85,6 +85,7 @@ def VideoHasAudio( path ):
         
     
     # silent PCM data is just 00 bytes
+    # every now and then, you'll get a couple ffs for some reason, but this is not legit audio data
     
     try:
         
@@ -92,12 +93,10 @@ def VideoHasAudio( path ):
         
         while len( chunk_of_pcm_data ) > 0:
             
-            for b in chunk_of_pcm_data:
+            # iterating over bytes gives you ints, recall
+            if True in ( b != 0 and b != 255 for b in chunk_of_pcm_data ):
                 
-                if b != b'\x00':
-                    
-                    return True
-                    
+                return True
                 
             
             chunk_of_pcm_data = process.stdout.read( 65536 )

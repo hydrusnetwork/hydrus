@@ -2707,6 +2707,11 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def ForceTagRecalc( self ):
         
+        if self.GetTopLevelParent().IsIconized():
+            
+            return
+            
+        
         self._RecalcTags()
         
     
@@ -3099,6 +3104,11 @@ class ListBoxTagsSelection( ListBoxTags ):
         
     
     def ForceTagRecalc( self ):
+        
+        if self.GetTopLevelParent().IsIconized():
+            
+            return
+            
         
         self.SetTagsByMedia( self._last_media, force_reload = True )
         

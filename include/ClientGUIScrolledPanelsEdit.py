@@ -26,6 +26,7 @@ from . import ClientNetworkingContexts
 from . import ClientNetworkingDomain
 from . import ClientParsing
 from . import ClientPaths
+from . import ClientSearch
 from . import ClientTags
 import collections
 from . import HydrusConstants as HC
@@ -36,6 +37,7 @@ from . import HydrusNetwork
 from . import HydrusSerialisable
 from . import HydrusTags
 from . import HydrusText
+from . import LogicExpressionQueryParser
 import os
 import wx
 
@@ -154,6 +156,144 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         bandwidth_rules = self._bandwidth_rules_control.GetValue()
         
         return HydrusNetwork.AccountType.GenerateAccountTypeFromParameters( self._account_type_key, title, permissions, bandwidth_rules )
+        
+    
+class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, initial_string = None ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._input_text = wx.TextCtrl( self )
+        
+        self._result_preview = wx.TextCtrl( self, style =  wx.TE_MULTILINE )
+        self._result_preview.SetEditable( False )
+        
+        size = ClientGUIFunctions.ConvertTextToPixels( self._result_preview, ( 64, 6 ) )
+        
+        self._result_preview.SetInitialSize( size )
+        
+        self._current_predicates = []
+        
+        #
+        
+        if initial_string is not None:
+            
+            self._input_text.SetValue( initial_string )
+            
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'Input: ', self._input_text ) )
+        rows.append( ( 'Result preview: ', self._result_preview ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        summary = 'Enter a complicated tag search here, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and prkc\'s code will turn it into hydrus-compatible search predicates.'
+        summary += os.linesep * 2
+        summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor.'
+        summary += os.linesep
+        summary += 'Parentheses work the usual way. \ can be used to escape characters (e.g. to search for tags including parentheses)'
+        
+        st = ClientGUICommon.BetterStaticText( self, summary )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( st, 96 )
+        
+        st.SetWrapWidth( width )
+        
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._UpdateText()
+        
+        self._input_text.Bind( wx.EVT_TEXT, self.EventUpdateText )
+        
+    
+    def _UpdateText( self ):
+        
+        text = self._input_text.GetValue()
+        
+        self._current_predicates = []
+        
+        output = ''
+        colour = ( 0, 0, 0 )
+        
+        if len( text ) > 0:
+            
+            try:
+                
+                # this makes a list of sets, each set representing a list of AND preds
+                result = LogicExpressionQueryParser.parse_logic_expression_query( text )
+                
+                for s in result:
+                    
+                    output += ' OR '.join( s )
+                    output += os.linesep
+                    
+                    row_preds = []
+                    
+                    for tag_string in s:
+                        
+                        if tag_string.startswith( '-' ):
+                            
+                            inclusive = False
+                            
+                            tag_string = tag_string[1:]
+                            
+                        else:
+                            
+                            inclusive = True
+                            
+                        
+                        row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag_string, inclusive )
+                        
+                        row_preds.append( row_pred )
+                        
+                    
+                    if len( row_preds ) == 1:
+                        
+                        self._current_predicates.append( row_preds[0] )
+                        
+                    else:
+                        
+                        self._current_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_OR_CONTAINER, row_preds ) )
+                        
+                    
+                
+                colour = ( 0, 128, 0 )
+                
+            except ValueError:
+                
+                output = 'Could not parse!'
+                colour = ( 128, 0, 0 )
+                
+            
+        
+        self._result_preview.SetValue( output )
+        self._result_preview.SetForegroundColour( colour )
+        
+    
+    def EventUpdateText( self, event ):
+        
+        self._UpdateText()
+        
+    
+    def GetValue( self ):
+        
+        self._UpdateText()
+        
+        if len( self._current_predicates ) == 0:
+            
+            raise HydrusExceptions.VetoException( 'Please enter a string that parses into a set of search rules.' )
+            
+        
+        return self._current_predicates
         
     
 class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):

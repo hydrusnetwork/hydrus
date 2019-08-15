@@ -277,7 +277,7 @@ def SplitTag( tag ):
     
     if ':' in tag:
         
-        return tag.split( ':', 1 )
+        return tuple( tag.split( ':', 1 ) )
         
     else:
         

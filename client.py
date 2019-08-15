@@ -121,6 +121,8 @@ except Exception as e:
     
     sys.exit( 1 )
     
+controller = None
+
 with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
     
     try:
@@ -162,13 +164,9 @@ with HydrusLogger.HydrusLogger( db_dir, 'client' ) as logger:
         HG.view_shutdown = True
         HG.model_shutdown = True
         
-        try:
+        if controller is not None:
             
             controller.pubimmediate( 'wake_daemons' )
-            
-        except:
-            
-            HydrusData.Print( traceback.format_exc() )
             
         
         reactor.callFromThread( reactor.stop )

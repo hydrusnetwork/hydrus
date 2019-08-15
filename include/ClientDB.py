@@ -699,38 +699,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'DELETE FROM local_tags_cache WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in bad_tag_ids ) )
         
     
-    def _CacheRepositoryAddHashes( self, service_id, service_hash_ids_to_hashes ):
-        
-        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
-        
-        inserts = []
-        
-        for ( service_hash_id, hash ) in list(service_hash_ids_to_hashes.items()):
-            
-            hash_id = self._GetHashId( hash )
-            
-            inserts.append( ( service_hash_id, hash_id ) )
-            
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + hash_id_map_table_name + ' ( service_hash_id, hash_id ) VALUES ( ?, ? );', inserts )
-        
-    
-    def _CacheRepositoryAddTags( self, service_id, service_tag_ids_to_tags ):
-        
-        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
-        
-        inserts = []
-        
-        for ( service_tag_id, tag ) in list(service_tag_ids_to_tags.items()):
-            
-            tag_id = self._GetTagId( tag )
-            
-            inserts.append( ( service_tag_id, tag_id ) )
-            
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + tag_id_map_table_name + ' ( service_tag_id, tag_id ) VALUES ( ?, ? );', inserts )
-        
-    
     def _CacheRepositoryNormaliseServiceHashId( self, service_id, service_hash_id ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
@@ -7200,13 +7168,73 @@ class DB( HydrusDB.HydrusDB ):
         return needed_hashes
         
     
+    def _GetRepositoryUpdateHashesICanProcess( self, service_key ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+        
+        result = self._c.execute( 'SELECT 1 FROM {} NATURAL JOIN files_info WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, True ) ).fetchone()
+        
+        this_is_first_definitions_work = result is None
+        
+        result = self._c.execute( 'SELECT 1 FROM {} NATURAL JOIN files_info WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( HC.APPLICATION_HYDRUS_UPDATE_CONTENT, True ) ).fetchone()
+        
+        this_is_first_content_work = result is None
+        
+        update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( self._c.execute( 'SELECT update_index, hash_id FROM {} WHERE processed = ?;'.format( repository_updates_table_name ), ( False, ) ) )
+        
+        hash_ids_i_can_process = set()
+        
+        update_indices = list( update_indices_to_unprocessed_hash_ids.keys() )
+        
+        update_indices.sort()
+        
+        for update_index in update_indices:
+            
+            unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
+            
+            select_statement = 'SELECT hash_id FROM current_files WHERE service_id = ' + str( self._local_update_service_id ) + ' and hash_id IN {};'
+            
+            local_hash_ids = self._STS( self._SelectFromList( select_statement, unprocessed_hash_ids ) )
+            
+            if unprocessed_hash_ids == local_hash_ids:
+                
+                hash_ids_i_can_process.update( unprocessed_hash_ids )
+                
+            else:
+                
+                break
+                
+            
+        
+        select_statement = 'SELECT hash, mime FROM files_info NATURAL JOIN hashes WHERE hash_id IN {};'
+        
+        definition_hashes = set()
+        content_hashes = set()
+        
+        for ( hash, mime ) in self._SelectFromList( select_statement, hash_ids_i_can_process ):
+            
+            if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+                
+                definition_hashes.add( hash )
+                
+            elif mime == HC.APPLICATION_HYDRUS_UPDATE_CONTENT:
+                
+                content_hashes.add( hash )
+                
+            
+        
+        return ( this_is_first_definitions_work, definition_hashes, this_is_first_content_work, content_hashes )
+        
+    
     def _GetRepositoryUpdateHashesIDoNotHave( self, service_key ):
         
         service_id = self._GetServiceId( service_key )
         
         repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
         
-        desired_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM ' + repository_updates_table_name + ' ORDER BY update_index ASC;' ) )
+        desired_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} ORDER BY update_index ASC;'.format( repository_updates_table_name ) ) )
         
         existing_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( self._local_update_service_id, ) ) )
         
@@ -10019,670 +10047,359 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _ProcessRepositoryContentUpdate( self, job_key, service_id, content_update ):
+    def _ProcessRepositoryContent( self, service_key, content_hash, content_iterator_dict, job_key, work_time ):
         
         FILES_CHUNK_SIZE = 200
-        MAPPINGS_CHUNK_SIZE = 50000
+        MAPPINGS_CHUNK_SIZE = 500
         NEW_TAG_PARENTS_CHUNK_SIZE = 10
-        
-        total_rows = content_update.GetNumRows()
-        
-        has_audio = None # hack until we figure this out better
-        
-        rows_processed = 0
-        
-        for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewFiles(), FILES_CHUNK_SIZE ):
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            files_info_rows = []
-            files_rows = []
-            
-            for ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in chunk:
-                
-                hash_id = self._CacheRepositoryNormaliseServiceHashId( service_id, service_hash_id )
-                
-                files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) )
-                
-                files_rows.append( ( hash_id, timestamp ) )
-                
-            
-            self._AddFilesInfo( files_info_rows )
-            
-            self._AddFiles( service_id, files_rows )
-            
-            num_rows = len( files_rows )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new files' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        for chunk in HydrusData.SplitListIntoChunks( content_update.GetDeletedFiles(), FILES_CHUNK_SIZE ):
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            service_hash_ids = chunk
-            
-            hash_ids = self._CacheRepositoryNormaliseServiceHashIds( service_id, service_hash_ids )
-            
-            self._DeleteFiles( service_id, hash_ids )
-            
-            num_rows = len( hash_ids )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted files' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetNewMappings(), MAPPINGS_CHUNK_SIZE ):
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            mappings_ids = []
-            
-            num_rows = 0
-            
-            for ( service_tag_id, service_hash_ids ) in chunk:
-                
-                tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_tag_id )
-                hash_ids = self._CacheRepositoryNormaliseServiceHashIds( service_id, service_hash_ids )
-                
-                mappings_ids.append( ( tag_id, hash_ids ) )
-                
-                num_rows += len( service_hash_ids )
-                
-            
-            self._UpdateMappings( service_id, mappings_ids = mappings_ids )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new mappings' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetDeletedMappings(), MAPPINGS_CHUNK_SIZE ):
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            deleted_mappings_ids = []
-            
-            num_rows = 0
-            
-            for ( service_tag_id, service_hash_ids ) in chunk:
-                
-                tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_tag_id )
-                hash_ids = self._CacheRepositoryNormaliseServiceHashIds( service_id, service_hash_ids )
-                
-                deleted_mappings_ids.append( ( tag_id, hash_ids ) )
-                
-                num_rows += len( service_hash_ids )
-                
-            
-            self._UpdateMappings( service_id, deleted_mappings_ids = deleted_mappings_ids )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted mappings' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewTagParents(), NEW_TAG_PARENTS_CHUNK_SIZE ):
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            parent_ids = []
-            
-            for ( service_child_tag_id, service_parent_tag_id ) in chunk:
-                
-                child_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_child_tag_id )
-                parent_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_parent_tag_id )
-                
-                parent_ids.append( ( child_tag_id, parent_tag_id ) )
-                
-            
-            self._AddTagParents( service_id, parent_ids )
-            
-            num_rows = len( chunk )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new tag parents' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        deleted_parents = content_update.GetDeletedTagParents()
-        
-        if len( deleted_parents ) > 0:
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            parent_ids = []
-            
-            for ( service_child_tag_id, service_parent_tag_id ) in deleted_parents:
-                
-                child_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_child_tag_id )
-                parent_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_parent_tag_id )
-                
-                parent_ids.append( ( child_tag_id, parent_tag_id ) )
-                
-            
-            self._DeleteTagParents( service_id, parent_ids )
-            
-            num_rows = len( deleted_parents )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted tag parents' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        new_siblings = content_update.GetNewTagSiblings()
-        
-        if len( new_siblings ) > 0:
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            sibling_ids = []
-            
-            for ( service_bad_tag_id, service_good_tag_id ) in new_siblings:
-                
-                bad_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_bad_tag_id )
-                good_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_good_tag_id )
-                
-                sibling_ids.append( ( bad_tag_id, good_tag_id ) )
-                
-            
-            self._AddTagSiblings( service_id, sibling_ids )
-            
-            num_rows = len( new_siblings )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'new tag siblings' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        #
-        
-        deleted_siblings = content_update.GetDeletedTagSiblings()
-        
-        if len( deleted_siblings ) > 0:
-            
-            precise_timestamp = HydrusData.GetNowPrecise()
-            
-            sibling_ids = []
-            
-            for ( service_bad_tag_id, service_good_tag_id ) in deleted_siblings:
-                
-                bad_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_bad_tag_id )
-                good_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_good_tag_id )
-                
-                sibling_ids.append( ( bad_tag_id, good_tag_id ) )
-                
-            
-            self._DeleteTagSiblings( service_id, sibling_ids )
-            
-            num_rows = len( deleted_siblings )
-            
-            rows_processed += num_rows
-            
-            report_content_speed_to_job_key( job_key, rows_processed, total_rows, precise_timestamp, num_rows, 'deleted tag siblings' )
-            job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                return False
-                
-            
-        
-        return True
-        
-    
-    def _ProcessRepositoryDefinitionUpdate( self, service_id, definition_update ):
-        
-        service_hash_ids_to_hashes = definition_update.GetHashIdsToHashes()
-        
-        num_rows = len( service_hash_ids_to_hashes )
-        
-        if num_rows > 0:
-            
-            self._CacheRepositoryAddHashes( service_id, service_hash_ids_to_hashes )
-            
-        
-        service_tag_ids_to_tags = definition_update.GetTagIdsToTags()
-        
-        num_rows = len( service_tag_ids_to_tags )
-        
-        if num_rows > 0:
-            
-            self._CacheRepositoryAddTags( service_id, service_tag_ids_to_tags )
-            
-        
-    
-    def _ProcessRepositoryUpdates( self, service_key, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None ):
-        
-        if stop_time is None:
-            
-            stop_time = HydrusData.GetNow() + 3600
-            
-        
-        db_path = os.path.join( self._db_dir, 'client.mappings.db' )
-        
-        db_size = os.path.getsize( db_path )
-        
-        size_needed = min( db_size // 10, 400 * 1024 * 1024 )
-        
-        ( has_space, reason ) = HydrusPaths.HasSpaceForDBTransaction( self._db_dir, size_needed )
-        
-        if not has_space:
-            
-            message = 'Not enough free disk space to guarantee a safe repository processing job. Full text: ' + os.linesep * 2 + reason
-            
-            HydrusData.ShowText( message )
-            
-            raise Exception( message )
-            
+        PAIR_ROWS_CHUNK_SIZE = 1000
         
         service_id = self._GetServiceId( service_key )
         
-        ( name, ) = self._c.execute( 'SELECT name FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        precise_time_to_stop = HydrusData.GetNowPrecise() + work_time
+        
+        num_rows_processed = 0
+        
+        if 'new_files' in content_iterator_dict:
+            
+            has_audio = None # hack until we figure this out better
+            
+            i = content_iterator_dict[ 'new_files' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, FILES_CHUNK_SIZE ):
+                
+                files_info_rows = []
+                files_rows = []
+                
+                for ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in chunk:
+                    
+                    hash_id = self._CacheRepositoryNormaliseServiceHashId( service_id, service_hash_id )
+                    
+                    files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) )
+                    
+                    files_rows.append( ( hash_id, timestamp ) )
+                    
+                
+                self._AddFilesInfo( files_info_rows )
+                
+                self._AddFiles( service_id, files_rows )
+                
+                num_rows_processed += len( files_rows )
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'new_files' ]
+            
+        
+        #
+        
+        if 'deleted_files' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'deleted_files' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, FILES_CHUNK_SIZE ):
+                
+                service_hash_ids = chunk
+                
+                hash_ids = self._CacheRepositoryNormaliseServiceHashIds( service_id, service_hash_ids )
+                
+                self._DeleteFiles( service_id, hash_ids )
+                
+                num_rows_processed += len( hash_ids )
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'deleted_files' ]
+            
+        
+        #
+        
+        if 'new_mappings' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'new_mappings' ]
+            
+            for chunk in HydrusData.SplitMappingIteratorIntoChunks( i, MAPPINGS_CHUNK_SIZE ):
+                
+                mappings_ids = []
+                
+                num_rows = 0
+                
+                for ( service_tag_id, service_hash_ids ) in chunk:
+                    
+                    tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_tag_id )
+                    hash_ids = self._CacheRepositoryNormaliseServiceHashIds( service_id, service_hash_ids )
+                    
+                    mappings_ids.append( ( tag_id, hash_ids ) )
+                    
+                    num_rows += len( service_hash_ids )
+                    
+                
+                self._UpdateMappings( service_id, mappings_ids = mappings_ids )
+                
+                num_rows_processed += num_rows
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'new_mappings' ]
+            
+        
+        #
+        
+        if 'deleted_mappings' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'deleted_mappings' ]
+            
+            for chunk in HydrusData.SplitMappingIteratorIntoChunks( i, MAPPINGS_CHUNK_SIZE ):
+                
+                deleted_mappings_ids = []
+                
+                num_rows = 0
+                
+                for ( service_tag_id, service_hash_ids ) in chunk:
+                    
+                    tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_tag_id )
+                    hash_ids = self._CacheRepositoryNormaliseServiceHashIds( service_id, service_hash_ids )
+                    
+                    deleted_mappings_ids.append( ( tag_id, hash_ids ) )
+                    
+                    num_rows += len( service_hash_ids )
+                    
+                
+                self._UpdateMappings( service_id, deleted_mappings_ids = deleted_mappings_ids )
+                
+                num_rows_processed += num_rows
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'deleted_mappings' ]
+            
+        
+        #
+        
+        if 'new_parents' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'new_parents' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, NEW_TAG_PARENTS_CHUNK_SIZE ):
+                
+                parent_ids = []
+                
+                for ( service_child_tag_id, service_parent_tag_id ) in chunk:
+                    
+                    child_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_child_tag_id )
+                    parent_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_parent_tag_id )
+                    
+                    parent_ids.append( ( child_tag_id, parent_tag_id ) )
+                    
+                
+                self._AddTagParents( service_id, parent_ids )
+                
+                num_rows_processed += len( parent_ids )
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'new_parents' ]
+            
+        
+        #
+        
+        if 'deleted_parents' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'deleted_parents' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, PAIR_ROWS_CHUNK_SIZE ):
+                
+                parent_ids = []
+                
+                for ( service_child_tag_id, service_parent_tag_id ) in chunk:
+                    
+                    child_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_child_tag_id )
+                    parent_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_parent_tag_id )
+                    
+                    parent_ids.append( ( child_tag_id, parent_tag_id ) )
+                    
+                
+                self._DeleteTagParents( service_id, parent_ids )
+                
+                num_rows = len( parent_ids )
+                
+                num_rows_processed += num_rows
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'deleted_parents' ]
+            
+        
+        #
+        
+        if 'new_siblings' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'new_siblings' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, PAIR_ROWS_CHUNK_SIZE ):
+                
+                sibling_ids = []
+                
+                for ( service_bad_tag_id, service_good_tag_id ) in chunk:
+                    
+                    bad_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_bad_tag_id )
+                    good_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_good_tag_id )
+                    
+                    sibling_ids.append( ( bad_tag_id, good_tag_id ) )
+                    
+                
+                self._AddTagSiblings( service_id, sibling_ids )
+                
+                num_rows = len( sibling_ids )
+                
+                num_rows_processed += num_rows
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'new_siblings' ]
+            
+        
+        #
+        
+        if 'deleted_siblings' in content_iterator_dict:
+            
+            i = content_iterator_dict[ 'deleted_siblings' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, PAIR_ROWS_CHUNK_SIZE ):
+                
+                sibling_ids = []
+                
+                for ( service_bad_tag_id, service_good_tag_id ) in chunk:
+                    
+                    bad_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_bad_tag_id )
+                    good_tag_id = self._CacheRepositoryNormaliseServiceTagId( service_id, service_good_tag_id )
+                    
+                    sibling_ids.append( ( bad_tag_id, good_tag_id ) )
+                    
+                
+                self._DeleteTagSiblings( service_id, sibling_ids )
+                
+                num_rows_processed += len( sibling_ids )
+                
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
+                
+            
+            del content_iterator_dict[ 'deleted_siblings' ]
+            
         
         repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
         
-        result = self._c.execute( 'SELECT 1 FROM ' + repository_updates_table_name + ' WHERE processed = ?;', ( True, ) ).fetchone()
+        update_hash_id = self._GetHashId( content_hash )
         
-        if result is None:
-            
-            this_is_first_sync = True
-            
-        else:
-            
-            this_is_first_sync = False
-            
+        self._c.execute( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( True, update_hash_id ) )
         
-        update_indices_to_unprocessed_hash_ids = HydrusData.BuildKeyToSetDict( self._c.execute( 'SELECT update_index, hash_id FROM ' + repository_updates_table_name + ' WHERE processed = ?;', ( False, ) ) )
+        return num_rows_processed
         
-        hash_ids_i_can_process = set()
+    
+    def _ProcessRepositoryDefinitions( self, service_key, definition_hash, definition_iterator_dict, job_key, work_time ):
         
-        update_indices = list( update_indices_to_unprocessed_hash_ids.keys() )
+        service_id = self._GetServiceId( service_key )
         
-        update_indices.sort()
+        precise_time_to_stop = HydrusData.GetNowPrecise() + work_time
         
-        for update_index in update_indices:
-            
-            unprocessed_hash_ids = update_indices_to_unprocessed_hash_ids[ update_index ]
-            
-            select_statement = 'SELECT hash_id FROM current_files WHERE service_id = ' + str( self._local_update_service_id ) + ' and hash_id IN {};'
-            
-            local_hash_ids = self._STS( self._SelectFromList( select_statement, unprocessed_hash_ids ) )
-            
-            if unprocessed_hash_ids == local_hash_ids:
-                
-                hash_ids_i_can_process.update( unprocessed_hash_ids )
-                
-            else:
-                
-                break
-                
-            
+        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
         
-        num_updates_to_do = len( hash_ids_i_can_process )
+        num_rows_processed = 0
         
-        if num_updates_to_do > 0:
+        if 'service_hash_ids_to_hashes' in definition_iterator_dict:
             
-            job_key = ClientThreading.JobKey( cancellable = True, maintenance_mode = maintenance_mode, stop_time = stop_time )
+            i = definition_iterator_dict[ 'service_hash_ids_to_hashes' ]
             
-            try:
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, 500 ):
                 
-                title = name + ' sync: processing updates'
+                inserts = []
                 
-                job_key.SetVariable( 'popup_title', title )
-                
-                HydrusData.Print( title )
-                
-                HG.client_controller.pub( 'modal_message', job_key )
-                
-                status = 'loading pre-processing disk cache'
-                
-                self._controller.pub( 'splash_set_status_text', status, print_to_log = False )
-                job_key.SetVariable( 'popup_text_1', status )
-                
-                stop_time = HydrusData.GetNow() + min( 5 + num_updates_to_do, 20 )
-                
-                self._LoadIntoDiskCache( stop_time = stop_time, for_processing = True )
-                
-                num_updates_done = 0
-                
-                client_files_manager = self._controller.client_files_manager
-                
-                select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ) + ' AND hash_id IN {};'
-                
-                definition_hash_ids = self._STL( self._SelectFromList( select_statement, hash_ids_i_can_process ) )
-                
-                if len( definition_hash_ids ) > 0:
+                for ( service_hash_id, hash ) in chunk:
                     
-                    larger_precise_timestamp = HydrusData.GetNowPrecise()
+                    hash_id = self._GetHashId( hash )
                     
-                    total_definitions_rows = 0
-                    transaction_rows = 0
-                    
-                    try:
-                        
-                        for hash_id in definition_hash_ids:
-                            
-                            status = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
-                            
-                            job_key.SetVariable( 'popup_text_1', status )
-                            job_key.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
-                            
-                            update_hash = self._GetHash( hash_id )
-                            
-                            try:
-                                
-                                update_path = client_files_manager.LocklessGetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
-                                
-                            except HydrusExceptions.FileMissingException:
-                                
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
-                                
-                            
-                            with open( update_path, 'rb' ) as f:
-                                
-                                update_network_bytes = f.read()
-                                
-                            
-                            try:
-                                
-                                definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
-                                
-                            except:
-                                
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                raise Exception( 'An unusual error has occured during repository processing: an update file was invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
-                                
-                            
-                            if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
-                                
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
-                                
-                            
-                            precise_timestamp = HydrusData.GetNowPrecise()
-                            
-                            self._ProcessRepositoryDefinitionUpdate( service_id, definition_update )
-                            
-                            self._c.execute( 'UPDATE ' + repository_updates_table_name + ' SET processed = ? WHERE hash_id = ?;', ( True, hash_id ) )
-                            
-                            num_updates_done += 1
-                            
-                            num_rows = definition_update.GetNumRows()
-                            
-                            report_speed_to_job_key( job_key, precise_timestamp, num_rows, 'definitions' )
-                            
-                            total_definitions_rows += num_rows
-                            transaction_rows += num_rows
-                            
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit:
-                                
-                                return ( True, False )
-                                
-                            
-                            been_a_minute = HydrusData.TimeHasPassed( self._transaction_started + 60 )
-                            been_a_hundred_k = transaction_rows > 100000
-                            
-                            if been_a_minute or been_a_hundred_k:
-                                
-                                job_key.SetVariable( 'popup_text_1', 'committing' )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                time.sleep( 0.5 )
-                                
-                                transaction_rows = 0
-                                
-                            
-                        
-                        # let's atomically save our progress here to avoid the desync issue some people had.
-                        # the desync issue was that after a power-cut during big sync commits, the master db would sometimes not commit but the mappings _would_
-                        # hence there would be missing definitions
-                        # so, let's lock-in definitions here, while we can, before we add anything that could rely on them
-                        
-                        # this is an issue with WAL journalling, which isn't currently global-atomic with attached dbs, wew lad
-                        
-                        self._Commit()
-                        
-                        self._BeginImmediate()
-                        
-                    finally:
-                        
-                        report_speed_to_log( larger_precise_timestamp, total_definitions_rows, 'definitions' )
-                        
+                    inserts.append( ( service_hash_id, hash_id ) )
                     
                 
-                select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_CONTENT ) + ' AND hash_id IN {};'
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
                 
-                content_hash_ids = self._STL( self._SelectFromList( select_statement, hash_ids_i_can_process ) )
+                num_rows_processed += len( inserts )
                 
-                if len( content_hash_ids ) > 0:
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
                     
-                    precise_timestamp = HydrusData.GetNowPrecise()
-                    
-                    total_content_rows = 0
-                    transaction_rows = 0
-                    
-                    try:
-                        
-                        for hash_id in content_hash_ids:
-                            
-                            status = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
-                            
-                            job_key.SetVariable( 'popup_text_1', status )
-                            job_key.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
-                            
-                            update_hash = self._GetHash( hash_id )
-                            
-                            try:
-                                
-                                update_path = client_files_manager.LocklessGetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT )
-                                
-                            except HydrusExceptions.FileMissingException:
-                                
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                raise Exception( 'An unusual error has occured during repository processing: an update file was missing. Your repository should be paused, and all update files have been scheduled for a presence check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
-                                
-                            
-                            with open( update_path, 'rb' ) as f:
-                                
-                                update_network_bytes = f.read()
-                                
-                            
-                            try:
-                                
-                                content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
-                                
-                            except:
-                                
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                raise Exception( 'An unusual error has occured during repository processing: an update file was missing or invalid. Your repository should be paused, and all update files have been scheduled for an integrity check. Please permit file maintenance to check them, or tell it to do so manually, before unpausing your repository.' )
-                                
-                            
-                            if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
-                                
-                                self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                raise Exception( 'An unusual error has occured during repository processing: an update file has incorrect metadata. Your repository should be paused, and all update files have been scheduled for a metadata rescan. Please permit file maintenance to fix them, or tell it to do so manually, before unpausing your repository.' )
-                                
-                            
-                            did_whole_update = self._ProcessRepositoryContentUpdate( job_key, service_id, content_update )
-                            
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit or not did_whole_update:
-                                
-                                return ( True, False )
-                                
-                            
-                            self._c.execute( 'UPDATE ' + repository_updates_table_name + ' SET processed = ? WHERE hash_id = ?;', ( True, hash_id ) )
-                            
-                            num_updates_done += 1
-                            
-                            num_rows = content_update.GetNumRows()
-                            
-                            total_content_rows += num_rows
-                            transaction_rows += num_rows
-                            
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit:
-                                
-                                return ( True, False )
-                                
-                            
-                            been_a_minute = HydrusData.TimeHasPassed( self._transaction_started + 60 )
-                            been_a_million = transaction_rows > 1000000
-                            
-                            if been_a_minute or been_a_million:
-                                
-                                job_key.SetVariable( 'popup_text_1', 'committing' )
-                                
-                                self._Commit()
-                                
-                                self._BeginImmediate()
-                                
-                                transaction_rows = 0
-                                
-                                time.sleep( 0.5 )
-                                
-                            
-                        
-                    finally:
-                        
-                        report_speed_to_log( precise_timestamp, total_content_rows, 'content rows' )
-                        
+                    return num_rows_processed
                     
                 
-            finally:
+            
+            del definition_iterator_dict[ 'service_hash_ids_to_hashes' ]
+            
+        
+        if 'service_tag_ids_to_tags' in definition_iterator_dict:
+            
+            i = definition_iterator_dict[ 'service_tag_ids_to_tags' ]
+            
+            for chunk in HydrusData.SplitIteratorIntoChunks( i, 500 ):
                 
-                HG.client_controller.pub( 'splash_set_status_text', 'committing' )
+                inserts = []
                 
-                self._AnalyzeStaleBigTables()
+                for ( service_tag_id, tag ) in chunk:
+                    
+                    tag_id = self._GetTagId( tag )
+                    
+                    inserts.append( ( service_tag_id, tag_id ) )
+                    
                 
-                job_key.SetVariable( 'popup_text_1', 'finished' )
-                job_key.DeleteVariable( 'popup_gauge_1' )
-                job_key.DeleteVariable( 'popup_text_2' )
-                job_key.DeleteVariable( 'popup_gauge_2' )
+                self._c.executemany( 'INSERT OR IGNORE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
                 
-                job_key.Finish()
+                num_rows_processed += len( inserts )
                 
-                job_key.Delete( 5 )
+                if HydrusData.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                    
+                    return num_rows_processed
+                    
                 
             
-            return ( True, True )
+            del definition_iterator_dict[ 'service_tag_ids_to_tags' ]
             
-        else:
-            
-            return ( False, True )
-            
+        
+        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+        
+        update_hash_id = self._GetHashId( definition_hash )
+        
+        self._c.execute( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( True, update_hash_id ) )
+        
+        return num_rows_processed
         
     
     def _PushRecentTags( self, service_key, tags ):
@@ -10743,6 +10460,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'random_potential_duplicate_hashes': result = self._DuplicatesGetRandomPotentialDuplicateHashes( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'repository_progress': result = self._GetRepositoryProgress( *args, **kwargs )
+        elif action == 'repository_update_hashes_to_process': result = self._GetRepositoryUpdateHashesICanProcess( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
         elif action == 'serialisable_simple': result = self._GetJSONSimple( *args, **kwargs )
         elif action == 'serialisable_named': result = self._GetJSONDumpNamed( *args, **kwargs )
@@ -11153,6 +10871,13 @@ class DB( HydrusDB.HydrusDB ):
         update_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {};'.format( repository_updates_table_name ) ) )
         
         self._FileMaintenanceAddJobs( update_hash_ids, job_type )
+        
+    
+    def _ScheduleRepositoryUpdateFileMaintenanceFromServiceKey( self, service_key, job_type ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        self._ScheduleRepositoryUpdateFileMaintenance( service_id, job_type )
         
     
     def _SetIdealClientFilesLocations( self, locations_to_ideal_weights, ideal_thumbnail_override_location ):
@@ -13617,12 +13342,6 @@ class DB( HydrusDB.HydrusDB ):
         
         old_dictionary = HydrusSerialisable.CreateFromString( old_dictionary_string )
         
-        if service_type in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ):
-            
-            self.pub_after_job( 'restart_client_server_service', service_key )
-            self.pub_after_job( 'notify_new_upnp_mappings' )
-            
-        
         dictionary_string = dictionary.DumpToString()
         
         self._c.execute( 'UPDATE services SET name = ?, dictionary_string = ? WHERE service_id = ?;', ( name, dictionary_string, service_id ) )
@@ -13842,7 +13561,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'local_booru_share': self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'maintain_similar_files_search_for_potential_duplicates': self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self._PHashesMaintainTree( *args, **kwargs )
-        elif action == 'process_repository': result = self._ProcessRepositoryUpdates( *args, **kwargs )
+        elif action == 'process_repository_content': result = self._ProcessRepositoryContent( *args, **kwargs )
+        elif action == 'process_repository_definitions': result = self._ProcessRepositoryDefinitions( *args, **kwargs )
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
         elif action == 'regenerate_ac_cache': self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': self._PHashesRegenerateTree( *args, **kwargs )
@@ -13858,6 +13578,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisable': self._SetJSONDump( *args, **kwargs )
         elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )
         elif action == 'set_password': self._SetPassword( *args, **kwargs )
+        elif action == 'schedule_repository_update_file_maintenance': self._ScheduleRepositoryUpdateFileMaintenanceFromServiceKey( *args, **kwargs )
         elif action == 'sync_hashes_to_tag_archive': self._SyncHashesToTagArchive( *args, **kwargs )
         elif action == 'tag_censorship': self._SetTagCensorship( *args, **kwargs )
         elif action == 'update_server_services': self._UpdateServerServices( *args, **kwargs )

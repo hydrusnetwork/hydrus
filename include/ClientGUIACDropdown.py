@@ -8,6 +8,8 @@ from . import ClientGUIMenus
 from . import ClientGUIShortcuts
 from . import ClientSearch
 from . import ClientThreading
+from . import ClientGUIScrolledPanelsEdit
+from . import ClientGUITopLevelWindows
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -80,9 +82,9 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
                 
             else:
                 
-                ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
+                ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
                 
-                if namespace != '' and half_complete_subtag in ( '', '*' ):
+                if namespace != '' and subtag in ( '', '*' ):
                     
                     predicates.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive ) )
                     
@@ -116,7 +118,9 @@ def InsertStaticPredicatesForWrite( predicates, parsed_search_text, tag_service_
     
     ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = parsed_search_text
     
-    if search_text in ( '', ':', '*' ):
+    ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
+    
+    if search_text in ( '', ':', '*' ) or subtag == '':
         
         pass
         
@@ -156,9 +160,11 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
             
             input_just_changed = search_text_for_current_cache is not None
             
+            definitely_do_it = input_just_changed or not initial_matches_fetched
+            
             db_not_going_to_hang_if_we_hit_it = not HG.client_controller.DBCurrentlyDoingJob()
             
-            if input_just_changed or db_not_going_to_hang_if_we_hit_it or not initial_matches_fetched:
+            if definitely_do_it or db_not_going_to_hang_if_we_hit_it:
                 
                 if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                     
@@ -173,8 +179,16 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                 
                 cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key )
                 
-            
-            matches = cached_results
+                matches = cached_results
+                
+            elif ( search_text_for_current_cache is None or search_text_for_current_cache == '' ) and cached_results is not None: # if repeating query but busy, use same
+                
+                matches = cached_results
+                
+            else:
+                
+                matches = []
+                
             
         else:
             
@@ -187,7 +201,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
         
         siblings_manager = HG.client_controller.tag_siblings_manager
         
-        if False and half_complete_subtag == '':
+        if half_complete_subtag == '':
             
             search_text_for_current_cache = None
             
@@ -412,33 +426,44 @@ def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service
         
     else:
         
-        must_do_a_search = False
+        ( namespace, subtag ) = HydrusTags.SplitTag( search_text )
         
-        small_exact_match_search = ShouldDoExactSearch( cache_text )
-        
-        if small_exact_match_search:
+        if subtag == '':
             
-            predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = cache_text, exact_match = True, add_namespaceless = False, job_key = job_key, collapse_siblings = False )
+            search_text_for_current_cache = None
+            
+            matches = [] # a query like 'namespace:'
             
         else:
             
-            cache_valid = CacheCanBeUsedForInput( search_text_for_current_cache, cache_text )
+            must_do_a_search = False
             
-            if must_do_a_search or not cache_valid:
+            small_exact_match_search = ShouldDoExactSearch( cache_text )
+            
+            if small_exact_match_search:
                 
-                search_text_for_current_cache = cache_text
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = cache_text, exact_match = True, add_namespaceless = False, job_key = job_key, collapse_siblings = False )
                 
-                cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = search_text, add_namespaceless = False, job_key = job_key, collapse_siblings = False )
+            else:
+                
+                cache_valid = CacheCanBeUsedForInput( search_text_for_current_cache, cache_text )
+                
+                if must_do_a_search or not cache_valid:
+                    
+                    search_text_for_current_cache = cache_text
+                    
+                    cached_results = HG.client_controller.Read( 'autocomplete_predicates', file_service_key = file_service_key, tag_service_key = tag_service_key, search_text = search_text, add_namespaceless = False, job_key = job_key, collapse_siblings = False )
+                    
+                
+                predicates = cached_results
+                
+                next_search_is_probably_fast = True
                 
             
-            predicates = cached_results
+            matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, search_text, predicates )
             
-            next_search_is_probably_fast = True
+            matches = ClientSearch.SortPredicates( matches )
             
-        
-        matches = ClientSearch.FilterPredicatesBySearchText( tag_service_key, search_text, predicates )
-        
-        matches = ClientSearch.SortPredicates( matches )
         
     
     matches = InsertStaticPredicatesForWrite( matches, parsed_search_text, tag_service_key, expand_parents )
@@ -545,7 +570,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self.SetSizer( vbox )
         
-        self._last_fetched_search_text = ''
+        self._current_list_raw_entry = ''
         self._next_search_is_probably_fast = False
         
         self._search_text_for_current_cache = None
@@ -1154,8 +1179,6 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._CancelCurrentResultsFetchJob()
             
-            self._last_fetched_search_text = search_text
-            
             self._search_text_for_current_cache = search_text_for_cache
             self._cached_results = cached_results
             
@@ -1255,6 +1278,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _SetResultsToList( self, results ):
+        
+        self._current_list_raw_entry = self._text_ctrl.GetValue()
         
         self._search_results_list.SetPredicates( results )
         
@@ -1367,6 +1392,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._synchronised = ClientGUICommon.OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate', start_on = synchronised )
         self._synchronised.SetToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
         
+        self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'OR', self._AdvancedORInput )
+        self._or_advanced.SetToolTip( 'Advanced OR Search input.' )
+        
+        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            self._or_advanced.Hide()
+            
+        
         self._or_cancel = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.GlobalBMPs.delete, self._CancelORConstruction )
         self._or_cancel.SetToolTip( 'Cancel OR Predicate construction.' )
         self._or_cancel.Hide()
@@ -1385,6 +1418,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         sync_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         sync_button_hbox.Add( self._synchronised, CC.FLAGS_EXPAND_BOTH_WAYS )
+        sync_button_hbox.Add( self._or_advanced, CC.FLAGS_VCENTER )
         sync_button_hbox.Add( self._or_cancel, CC.FLAGS_VCENTER )
         sync_button_hbox.Add( self._or_rewind, CC.FLAGS_VCENTER )
         
@@ -1406,6 +1440,29 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         HG.client_controller.sub( self, 'IncludeCurrent', 'notify_include_current' )
         HG.client_controller.sub( self, 'IncludePending', 'notify_include_pending' )
+        
+    
+    def _AdvancedORInput( self ):
+        
+        title = 'enter advanced OR predicates'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditAdvancedORPredicates( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                predicates = panel.GetValue()
+                shift_down = False
+                
+                if len( predicates ) > 0:
+                    
+                    self._BroadcastChoices( predicates, shift_down )
+                    
+                
+            
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -1639,16 +1696,15 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
+        looking_at_search_results = self._dropdown_notebook.GetCurrentPage() == self._search_results_list
+        
         something_to_broadcast = cache_text != ''
         
-        current_page = self._dropdown_notebook.GetCurrentPage()
-        
-        # looking at empty or system results
-        nothing_to_select = current_page == self._search_results_list and ( self._last_fetched_search_text == '' or not self._search_results_list.HasValues() )
-        
+        # the list has results, but they are out of sync with what we have currently entered
         # when the user has quickly typed something in and the results are not yet in
+        results_desynced_with_text = raw_entry != self._current_list_raw_entry
         
-        p1 = something_to_broadcast and nothing_to_select
+        p1 = looking_at_search_results and something_to_broadcast and results_desynced_with_text
         
         return p1
         
@@ -1948,22 +2004,22 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
-        current_page = self._dropdown_notebook.GetCurrentPage()
+        looking_at_search_results = self._dropdown_notebook.GetCurrentPage() == self._search_results_list
         
         sitting_on_empty = raw_entry == ''
         
         something_to_broadcast = not sitting_on_empty
-        nothing_to_select = isinstance( current_page, ClientGUIListBoxes.ListBox ) and not current_page.HasValues()
         
+        # the list has results, but they are out of sync with what we have currently entered
         # when the user has quickly typed something in and the results are not yet in
+        results_desynced_with_text = raw_entry != self._current_list_raw_entry
         
-        p1 = something_to_broadcast and nothing_to_select
+        p1 = something_to_broadcast and results_desynced_with_text
         
-        # when the text ctrl is empty, we are looking at search results, and we want to push a None to the parent dialog
+        # when the text ctrl is empty and we want to push a None to the parent dialog
+        p2 = sitting_on_empty
         
-        p2 = sitting_on_empty and current_page == self._search_results_list
-        
-        return p1 or p2
+        return looking_at_search_results and ( p1 or p2 )
         
     
     def _StartResultsFetchJob( self, job_key ):

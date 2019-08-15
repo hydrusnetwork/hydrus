@@ -108,6 +108,15 @@ def ConvertQueryTextToDict( query_text ):
     
     # we generally do not want quote characters, %20 stuff, in our urls. we would prefer properly formatted unicode
     
+    # so, let's replace all keys and values with unquoted versions
+    # -but-
+    # we only replace if it is a completely reversable operation!
+    # odd situations like '6+girls+skirt', which comes here encoded as '6%2Bgirls+skirt', shouldn't turn into '6+girls+skirt'
+    # so if there are a mix of encoded and non-encoded, we won't touch it here m8
+    
+    # except these chars, which screw with GET arg syntax when unquoted
+    bad_chars = [ '&', '=', '/', '?' ]
+    
     query_dict = {}
     
     pairs = query_text.split( '&' )
@@ -120,23 +129,20 @@ def ConvertQueryTextToDict( query_text ):
         
         if len( result ) == 2:
             
-            # so, let's replace all keys and values with unquoted versions
-            # -but-
-            # we only replace if it is a completely reversable operation!
-            # odd situations like '6+girls+skirt', which comes here encoded as '6%2Bgirls+skirt', shouldn't turn into '6+girls+skirt'
-            # so if there are a mix of encoded and non-encoded, we won't touch it here m8
-            
             ( key, value ) = result
             
             try:
                 
                 unquoted_key = urllib.parse.unquote( key )
                 
-                requoted_key = urllib.parse.quote( unquoted_key )
-                
-                if requoted_key == key:
+                if True not in ( bad_char in unquoted_key for bad_char in bad_chars ):
                     
-                    key = unquoted_key
+                    requoted_key = urllib.parse.quote( unquoted_key )
+                    
+                    if requoted_key == key:
+                        
+                        key = unquoted_key
+                        
                     
                 
             except:
@@ -148,11 +154,14 @@ def ConvertQueryTextToDict( query_text ):
                 
                 unquoted_value = urllib.parse.unquote( value )
                 
-                requoted_value = urllib.parse.quote( unquoted_value )
-                
-                if requoted_value == value:
+                if True not in ( bad_char in unquoted_value for bad_char in bad_chars ):
                     
-                    value = unquoted_value
+                    requoted_value = urllib.parse.quote( unquoted_value )
+                    
+                    if requoted_value == value:
+                        
+                        value = unquoted_value
+                        
                     
                 
             except:
@@ -2260,7 +2269,9 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 # when the tags separator is '+' but the tags include '6+girls', we run into fun internet land
                 
-                if self._search_terms_separator in search_term:
+                bad_chars = [ self._search_terms_separator, '&', '=', '/', '?' ]
+                
+                if True in ( bad_char in search_term for bad_char in bad_chars ):
                     
                     search_term = urllib.parse.quote( search_term, safe = '' )
                     

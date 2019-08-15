@@ -33,6 +33,7 @@ from . import ClientTags
 from . import ClientThreading
 from . import HydrusData
 from . import HydrusGlobals as HG
+from . import HydrusTags
 from . import HydrusThreading
 import os
 import time
@@ -990,6 +991,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         new_options = self._controller.new_options
         
+        self._maintenance_numbers_dirty = True
+        self._dupe_count_numbers_dirty = True
+        
         self._currently_refreshing_maintenance_numbers = False
         self._currently_refreshing_dupe_count_numbers = False
         
@@ -1003,7 +1007,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         #
         
         self._refresh_maintenance_status = ClientGUICommon.BetterStaticText( self._main_left_panel )
-        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.GlobalBMPs.refresh, self._RefreshMaintenanceStatus )
+        self._refresh_maintenance_button = ClientGUICommon.BetterBitmapButton( self._main_left_panel, CC.GlobalBMPs.refresh, self.RefreshMaintenanceNumbers )
         
         menu_items = []
         
@@ -1075,7 +1079,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._both_files_match = wx.CheckBox( self._filtering_panel )
         
         self._num_potential_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.GlobalBMPs.refresh, self._RefreshDuplicateCounts )
+        self._refresh_dupe_counts_button = ClientGUICommon.BetterBitmapButton( self._filtering_panel, CC.GlobalBMPs.refresh, self.RefreshDuplicateNumbers )
         
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
         
@@ -1186,8 +1190,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
         
-        HG.client_controller.pub( 'refresh_dupe_page_numbers' )
-        
     
     def _EditMergeOptions( self, duplicate_type ):
         
@@ -1245,6 +1247,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._currently_refreshing_dupe_count_numbers = False
             
+            self._dupe_count_numbers_dirty = False
+            
             self._refresh_dupe_counts_button.Enable()
             
             self._UpdatePotentialDuplicatesCount( potential_duplicates_count )
@@ -1271,7 +1275,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _RefreshMaintenanceStatus( self ):
+    def _RefreshMaintenanceNumbers( self ):
         
         def wx_code( similar_files_maintenance_status ):
             
@@ -1281,6 +1285,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 
             
             self._currently_refreshing_maintenance_numbers = False
+            
+            self._maintenance_numbers_dirty = False
             
             self._refresh_maintenance_status.SetLabelText( '' )
             
@@ -1322,7 +1328,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 
                 self._controller.Write( 'delete_potential_duplicate_pairs' )
                 
-                self._RefreshMaintenanceStatus()
+                self._maintenance_numbers_dirty = True
                 
             
         
@@ -1338,7 +1344,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         if self._ac_read.IsSynchronised():
             
-            self._RefreshDuplicateCounts()
+            self._dupe_count_numbers_dirty = True
             
         
     
@@ -1365,7 +1371,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         if change_made:
             
-            self._RefreshDuplicateCounts()
+            self._dupe_count_numbers_dirty = True
             
             self._ShowRandomPotentialDupes()
             
@@ -1522,9 +1528,19 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def RefreshAllNumbers( self ):
         
-        self._RefreshMaintenanceStatus()
+        self.RefreshDuplicateNumbers()
         
-        self._RefreshDuplicateCounts()
+        self.RefreshMaintenanceNumbers
+        
+    
+    def RefreshDuplicateNumbers( self ):
+        
+        self._dupe_count_numbers_dirty = True
+        
+    
+    def RefreshMaintenanceNumbers( self ):
+        
+        self._maintenance_numbers_dirty = True
         
     
     def RefreshQuery( self, page_key ):
@@ -1532,6 +1548,19 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         if page_key == self._page_key:
             
             self._SearchDomainUpdated()
+            
+        
+    
+    def REPEATINGPageUpdate( self ):
+        
+        if self._maintenance_numbers_dirty:
+            
+            self._RefreshMaintenanceNumbers()
+            
+        
+        if self._dupe_count_numbers_dirty:
+            
+            self._RefreshDuplicateCounts()
             
         
     
@@ -3655,6 +3684,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._num_petition_info = None
         self._current_petition = None
         
+        self._last_petition_type_fetched = None
+        
         #
         
         self._petitions_info_panel = ClientGUICommon.StaticBox( self, 'petitions info' )
@@ -3712,6 +3743,12 @@ class ManagementPanelPetitions( ManagementPanel ):
         flip_selected = ClientGUICommon.BetterButton( self._petition_panel, 'flip selected', self._FlipSelected )
         check_none = ClientGUICommon.BetterButton( self._petition_panel, 'check none', self._CheckNone )
         
+        self._sort_by_left = ClientGUICommon.BetterButton( self._petition_panel, 'sort by left', self._SortBy, 'left' )
+        self._sort_by_right = ClientGUICommon.BetterButton( self._petition_panel, 'sort by right', self._SortBy, 'right' )
+        
+        self._sort_by_left.Disable()
+        self._sort_by_right.Disable()
+        
         self._contents = wx.CheckListBox( self._petition_panel, style = wx.LB_EXTENDED )
         self._contents.Bind( wx.EVT_LISTBOX_DCLICK, self.EventContentDoubleClick )
         
@@ -3740,10 +3777,16 @@ class ManagementPanelPetitions( ManagementPanel ):
         check_hbox.Add( flip_selected, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         check_hbox.Add( check_none, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         
+        sort_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        sort_hbox.Add( self._sort_by_left, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        sort_hbox.Add( self._sort_by_right, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        
         self._petition_panel.Add( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._petition_panel.Add( sort_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3789,6 +3832,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             self._contents.Clear()
             self._process.Disable()
             
+            self._sort_by_left.Disable()
+            self._sort_by_right.Disable()
+            
             if self._can_ban:
                 
                 self._modify_petitioner.Disable()
@@ -3807,42 +3853,22 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._reason_text.SetBackgroundColour( action_colour )
             
+            if self._last_petition_type_fetched[0] in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
+                
+                self._sort_by_left.Enable()
+                self._sort_by_right.Enable()
+                
+            else:
+                
+                self._sort_by_left.Disable()
+                self._sort_by_right.Disable()
+                
+            
             contents = self._current_petition.GetContents()
             
-            def key( c ):
-                
-                if c.GetContentType() in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
-                    
-                    ( part_two, part_one ) = c.GetContentData()
-                    
-                elif c.GetContentType() == HC.CONTENT_TYPE_MAPPINGS:
-                    
-                    ( tag, hashes ) = c.GetContentData()
-                    
-                    part_one = tag
-                    part_two = None
-                    
-                else:
-                    
-                    part_one = None
-                    part_two = None
-                    
-                
-                return ( -c.GetVirtualWeight(), part_one, part_two )
-                
+            contents_and_checks = [ ( c, True ) for c in contents ]
             
-            contents.sort( key = key )
-            
-            self._contents.Clear()
-            
-            for content in contents:
-                
-                content_string = self._contents.EscapeMnemonics( content.ToString() )
-                
-                self._contents.Append( content_string, content )
-                
-            
-            self._contents.SetCheckedItems( list( range( self._contents.GetCount() ) ) )
+            self._SetContentsAndChecks( contents_and_checks, 'right' )
             
             self._process.Enable()
             
@@ -3856,8 +3882,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         
     
     def _DrawNumPetitions( self ):
-        
-        new_petition_fetched = False
         
         for ( content_type, status, count ) in self._num_petition_info:
             
@@ -3873,18 +3897,45 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     button.Enable()
                     
-                    if self._current_petition is None and not new_petition_fetched:
-                        
-                        self._FetchPetition( content_type, status )
-                        
-                        new_petition_fetched = True
-                        
-                    
                 else:
                     
                     button.Disable()
                     
                 
+            
+        
+    
+    def _FetchBestPetition( self ):
+        
+        top_petition_type_with_count = None
+        
+        for ( content_type, status, count ) in self._num_petition_info:
+            
+            if count == 0:
+                
+                continue
+                
+            
+            petition_type = ( content_type, status )
+            
+            if top_petition_type_with_count is None:
+                
+                top_petition_type_with_count = petition_type
+                
+            
+            if self._last_petition_type_fetched is not None and self._last_petition_type_fetched == petition_type:
+                
+                self._FetchPetition( content_type, status )
+                
+                return
+                
+            
+        
+        if top_petition_type_with_count is not None:
+            
+            ( content_type, status ) = top_petition_type_with_count
+            
+            self._FetchPetition( content_type, status )
             
         
     
@@ -3902,6 +3953,11 @@ class ManagementPanelPetitions( ManagementPanel ):
                 self._num_petition_info = n_p_i
                 
                 self._DrawNumPetitions()
+                
+                if self._current_petition is None:
+                    
+                    self._FetchBestPetition()
+                    
                 
             
             def wx_reset():
@@ -3934,6 +3990,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         
     
     def _FetchPetition( self, content_type, status ):
+        
+        self._last_petition_type_fetched = ( content_type, status )
         
         ( st, button ) = self._petition_types_to_controls[ ( content_type, status ) ]
         
@@ -3997,6 +4055,77 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
     
+    def _GetContentsAndChecks( self ):
+        
+        contents_and_checks = []
+        
+        for i in range( self._contents.GetCount() ):
+            
+            content = self._contents.GetClientData( i )
+            check = self._contents.IsChecked( i )
+            
+            contents_and_checks.append( ( content, check ) )
+            
+        
+        return contents_and_checks
+        
+    
+    def _SetContentsAndChecks( self, contents_and_checks, sort_type ):
+        
+        def key( c_and_s ):
+            
+            ( c, s ) = c_and_s
+            
+            if c.GetContentType() in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
+                
+                ( left, right ) = c.GetContentData()
+                
+                if sort_type == 'left':
+                    
+                    ( part_one, part_two ) = ( HydrusTags.SplitTag( left ), HydrusTags.SplitTag( right ) )
+                    
+                elif sort_type == 'right':
+                    
+                    ( part_one, part_two ) = ( HydrusTags.SplitTag( right ), HydrusTags.SplitTag( left ) )
+                    
+                
+            elif c.GetContentType() == HC.CONTENT_TYPE_MAPPINGS:
+                
+                ( tag, hashes ) = c.GetContentData()
+                
+                part_one = HydrusTags.SplitTag( tag )
+                part_two = None
+                
+            else:
+                
+                part_one = None
+                part_two = None
+                
+            
+            return ( -c.GetVirtualWeight(), part_one, part_two )
+            
+        
+        contents_and_checks.sort( key = key )
+        
+        self._contents.Clear()
+        
+        to_check = []
+        
+        for ( i, ( content, check ) ) in enumerate( contents_and_checks ):
+            
+            content_string = self._contents.EscapeMnemonics( content.ToString() )
+            
+            self._contents.Append( content_string, content )
+            
+            if check:
+                
+                to_check.append( i )
+                
+            
+        
+        self._contents.SetCheckedItems( to_check )
+        
+    
     def _ShowHashes( self, hashes ):
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
@@ -4013,6 +4142,13 @@ class ManagementPanelPetitions( ManagementPanel ):
         panel.Sort( self._page_key, self._sort_by.GetSort() )
         
         self._page.SwapMediaPanel( panel )
+        
+    
+    def _SortBy( self, sort_type ):
+        
+        contents_and_checks = self._GetContentsAndChecks()
+        
+        self._SetContentsAndChecks( contents_and_checks, sort_type )
         
     
     def EventContentDoubleClick( self, event ):
