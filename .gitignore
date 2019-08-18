@@ -37,7 +37,7 @@ local.properties
 logs/
 crash.log
 # ffmpeg
-bin/ff*.exe
+hydrus/bin/ff*.exe
 /Pipfile
 /Pipfile.lock
 hydrus/db/client*
