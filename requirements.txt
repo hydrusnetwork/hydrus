@@ -1,0 +1,14 @@
+wxpython
+twisted
+pyyaml
+beautifulsoup4
+psutil
+send2trash
+numpy
+opencv-python
+urllib3
+requests
+lz4
+html5lib
+pyopenssl
+service_identity

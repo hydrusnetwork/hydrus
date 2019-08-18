@@ -1,0 +1,722 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.2 r9819"
+   sodipodi:docname="tag_parents.svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="231.77811"
+     inkscape:cy="465.57944"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1300"
+     inkscape:window-height="964"
+     inkscape:window-x="1327"
+     inkscape:window-y="858"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="color:#000000;fill:none;stroke:#001d00;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect2985"
+       width="374.87128"
+       height="264.81741"
+       x="15.099963"
+       y="17.913582"
+       inkscape:export-filename="C:\code\Hydrus\help\tag_parents_venn.png"
+       inkscape:export-xdpi="146.31"
+       inkscape:export-ydpi="146.31" />
+    <path
+       sodipodi:type="arc"
+       style="color:#000000;fill:#00ff00;fill-opacity:0.24705882;stroke:#001d00;stroke-width:2.64672065;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="path2987"
+       sodipodi:cx="194.95944"
+       sodipodi:cy="191.71222"
+       sodipodi:rx="147.48227"
+       sodipodi:ry="147.48227"
+       d="m 342.44171,191.71222 a 147.48227,147.48227 0 1 1 -294.964537,0 147.48227,147.48227 0 1 1 294.964537,0 z"
+       transform="matrix(0.75581183,0,0,0.75549245,107.86342,5.4851574)" />
+    <path
+       sodipodi:type="arc"
+       style="color:#000000;fill:#00ffff;fill-opacity:0.24705882;stroke:#001d00;stroke-width:2.64672065;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="path2989"
+       sodipodi:cx="167.68532"
+       sodipodi:cy="169.48886"
+       sodipodi:rx="69.700523"
+       sodipodi:ry="69.700523"
+       d="m 237.38584,169.48886 a 69.700523,69.700523 0 1 1 -139.401045,0 69.700523,69.700523 0 1 1 139.401045,0 z"
+       transform="matrix(0.75581183,0,0,0.75549245,93.738942,-7.8701796)" />
+    <path
+       sodipodi:type="arc"
+       style="color:#000000;fill:#ff00ff;fill-opacity:0.24705882;stroke:#001d00;stroke-width:2.64672065;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="path2991"
+       sodipodi:cx="148.9975"
+       sodipodi:cy="157.8721"
+       sodipodi:rx="24.748737"
+       sodipodi:ry="24.748737"
+       d="m 173.74623,157.8721 a 24.748737,24.748737 0 1 1 -49.49747,0 24.748737,24.748737 0 1 1 49.49747,0 z"
+       transform="matrix(0.75581183,0,0,0.75549245,95.265916,-9.3965047)" />
+    <text
+       xml:space="preserve"
+       style="font-size:13.60173798px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="43.33976"
+       y="107.22626"
+       id="text3761"
+       sodipodi:linespacing="125%"
+       transform="scale(1.0002113,0.9997887)"><tspan
+         sodipodi:role="line"
+         id="tspan3763"
+         x="43.33976"
+         y="107.22626">ak-47</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.60173798px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="26.546631"
+       y="144.62915"
+       id="text3765"
+       sodipodi:linespacing="125%"
+       transform="scale(1.0002113,0.9997887)"><tspan
+         sodipodi:role="line"
+         id="tspan3767"
+         x="26.546631"
+         y="144.62915">assault rifle</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.60173798px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="35.706516"
+       y="188.1386"
+       id="text3769"
+       sodipodi:linespacing="125%"
+       transform="scale(1.0002113,0.9997887)"><tspan
+         sodipodi:role="line"
+         id="tspan3771"
+         x="35.706516"
+         y="188.1386">firearm</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.60173798px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="20.440039"
+       y="256.0744"
+       id="text3773"
+       sodipodi:linespacing="125%"
+       transform="scale(1.0002113,0.9997887)"><tspan
+         sodipodi:role="line"
+         id="tspan3775"
+         x="20.440039"
+         y="256.0744">all ak-47s are assault rifles</tspan><tspan
+         sodipodi:role="line"
+         x="20.440039"
+         y="273.07657"
+         id="tspan3777">all assault rifles are firearms</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 202.15385,101.86147 -117.57673,0"
+       id="path3779"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 187.64763,140.78277 -87.03732,0"
+       id="path3781"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 175.43186,185.04619 -93.908681,0"
+       id="path3783"
+       inkscape:connector-curvature="0" />
+    <rect
+       style="color:#000000;fill:none;stroke:#001d00;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect3785"
+       width="413.79507"
+       height="256.16187"
+       x="16.270475"
+       y="500.10254"
+       inkscape:export-filename="C:\code\Hydrus\help\tag_parents_firearms.png"
+       inkscape:export-xdpi="146.31"
+       inkscape:export-ydpi="146.31" />
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="176.80841"
+       y="516.01611"
+       id="text3787"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990979,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3789"
+         x="176.80841"
+         y="516.01611">firearm</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="105.77372"
+       y="578.70276"
+       id="text3791"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3793"
+         x="105.77372"
+         y="578.70276">rifle</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="25.647068"
+       y="616.71912"
+       id="text3795"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3797"
+         x="25.647068"
+         y="616.71912">assault rifle</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="212.80423"
+       y="575.19354"
+       id="text3799"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3801"
+         x="212.80423"
+         y="575.19354">shotgun</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="308.13751"
+       y="585.72113"
+       id="text3803"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3805"
+         x="308.13751"
+         y="585.72113">handgun</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="23.307581"
+       y="675.79053"
+       id="text3815"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3817"
+         x="23.307581"
+         y="675.79053">ak-47</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="36.174656"
+       y="703.86414"
+       id="text3819"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3821"
+         x="36.174656"
+         y="703.86414">ak-74</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="76.530373"
+       y="710.88257"
+       id="text3823"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3825"
+         x="76.530373"
+         y="710.88257">m16</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="107.6714"
+       y="698.70959"
+       id="text3827"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3829"
+         x="107.6714"
+         y="698.70959">m4</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="191.16414"
+       y="708.54297"
+       id="text3831"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3833"
+         x="191.16414"
+         y="708.54297">remington model 870</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="116.88616"
+       y="669.94189"
+       id="text3835"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3837"
+         x="116.88616"
+         y="669.94189">ar-15</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="295.85522"
+       y="675.79053"
+       id="text3839"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3841"
+         x="295.85522"
+         y="675.79053">smith &amp; wesson model 10</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="250.23575"
+       y="598.5882"
+       id="text3843"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3845"
+         x="250.23575"
+         y="598.5882">remington</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="338.55051"
+       y="614.37964"
+       id="text3847"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3849"
+         x="338.55051"
+         y="614.37964">smith and wesson</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="293.51581"
+       y="636.60449"
+       id="text3851"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3853"
+         x="293.51581"
+         y="636.60449">m1911</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 54.885403,605.66122 51.463557,-21.642"
+       id="path3855"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 123.89337,568.2264 66.66874,-47.37844"
+       id="path3857"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 230.32944,564.13196 -38.59765,-43.284"
+       id="path3859"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 328.57808,575.83035 194.65588,521.43289"
+       id="path3861"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 310.44894,625.54846 325.65399,589.8684"
+       id="path3863"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 351.38583,663.56817 c 0,-2.92456 -25.147,-72.52993 -25.147,-72.52993"
+       id="path3865"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 374.19358,617.3596 -22.22291,45.62368"
+       id="path3867"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 239.68643,695.73873 c -1.16957,-2.33967 -9.35699,-116.39886 -9.35699,-116.39886"
+       id="path3869"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 276.52967,602.1517 -35.08872,94.17197"
+       id="path3871"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 125.64778,620.86911 C 125.06306,618.52944 113.3667,582.84937 113.3667,582.84937"
+       id="path3873"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 113.3667,689.3046 60.733545,621.45403"
+       id="path3875"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 85.880569,699.83317 56.055026,624.37862"
+       id="path3877"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 49.622089,692.22922 2.33926,-69.60535"
+       id="path3879"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 36.756192,664.15312 49.622089,621.45403"
+       id="path3881"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="134.43222"
+       y="684.56348"
+       id="text3883"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3885"
+         x="134.43222"
+         y="684.56348">winchester model 70</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 184.71405,606.83105 117.46047,582.26446"
+       id="path3887"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="75.360664"
+       y="632.51044"
+       id="text3889"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3891"
+         x="75.360664"
+         y="632.51044">semi-automatic rifle</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="153.14783"
+       y="617.88885"
+       id="text3893"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         id="tspan3895"
+         x="153.14783"
+         y="617.88885">bolt-action rifle</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 125.06306,636.66193 2.33924,23.98168"
+       id="path3897"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 187.0533,621.45403 -3.50893,52.05778"
+       id="path3899"
+       inkscape:connector-curvature="0" />
+    <rect
+       style="color:#000000;fill:none;stroke:#001d00;stroke-width:1.99999964;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect3901"
+       width="414.52017"
+       height="155.0789"
+       x="15.4862"
+       y="304.98154"
+       inkscape:export-filename="C:\code\Hydrus\help\tag_parents_got.png"
+       inkscape:export-xdpi="146.31"
+       inkscape:export-ydpi="146.31" />
+    <text
+       xml:space="preserve"
+       style="font-size:10.45069885px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="170.32401"
+       y="323.65546"
+       id="text3903"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3905"
+         x="170.32401"
+         y="323.65546">series:game of thrones</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.45069885px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="26.047758"
+       y="367.05563"
+       id="text3907"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3909"
+         x="26.047758"
+         y="367.05563">house stark</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.45069885px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="233.73761"
+       y="367.05563"
+       id="text3911"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3913"
+         x="233.73761"
+         y="367.05563">house lannister</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.45069885px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="118.00807"
+       y="367.05563"
+       id="text3915"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3917"
+         x="118.00807"
+         y="367.05563">house baratheon</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.45069885px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="342.75174"
+       y="366.01718"
+       id="text3919"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3921"
+         x="342.75174"
+         y="366.01718">house targaryen</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="332.19489"
+       y="414.56122"
+       id="text3923"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3925"
+         x="332.19489"
+         y="414.56122">character:daenerys targaryen</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="19.009895"
+       y="407.52341"
+       id="text3927"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3929"
+         x="19.009895"
+         y="407.52341">character:eddard stark</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="39.53701"
+       y="416.9072"
+       id="text3931"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3933"
+         x="39.53701"
+         y="416.9072">character:sansa stark</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="55.372204"
+       y="426.29102"
+       id="text3935"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3937"
+         x="55.372204"
+         y="426.29102">character:bran stark</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="220.17557"
+       y="408.10989"
+       id="text3939"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3941"
+         x="220.17557"
+         y="408.10989">character:cersei lannister</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="242.46216"
+       y="416.32071"
+       id="text3943"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3945"
+         x="242.46216"
+         y="416.32071">character:jaime lannister</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:6.96713257px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="117.53999"
+       y="407.52335"
+       id="text3947"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969264,1.0003075)"><tspan
+         sodipodi:role="line"
+         id="tspan3949"
+         x="117.53999"
+         y="407.52335">character:robert baratheon</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 54.768874,357.1951 C 59.459342,356.02176 220.6942,326.10165 220.6942,326.10165"
+       id="path3951"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 161.47703,355.43509 59.80348,-28.74678"
+       id="path3953"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 271.70305,357.78177 c -3.51785,-1.17333 -49.83623,-31.09346 -49.83623,-31.09346"
+       id="path3955"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 384.2743,357.78177 223.62575,326.10165"
+       id="path3957"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 41.870082,400.60863 55.355186,370.6885"
+       id="path3959"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 98.155705,409.99533 C 96.396789,407.06199 57.114114,370.10184 57.114114,370.10184"
+       id="path3961"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 112.22711,417.62203 c 0,-2.93335 -51.595154,-48.10688 -51.595154,-48.10688"
+       id="path3963"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 157.95918,399.43528 0,-28.16012"
+       id="path3965"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 255.87272,399.43528 c 0,-4.10667 9.96725,-27.57345 9.96725,-27.57345"
+       id="path3967"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 304.53633,407.06199 269.35782,371.86183"
+       id="path3969"
+       inkscape:connector-curvature="0" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.99999994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 381.34275,403.54197 3.51786,-31.68014"
+       id="path3971"
+       inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-size:9.28950977px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="224.76657"
+       y="445.36945"
+       id="text3973"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99969262,1.0003075)"><tspan
+         sodipodi:role="line"
+         x="224.76657"
+         y="445.36945"
+         id="tspan3977">e.g. cersei lannister is a member of house lannister, which occurs in the series game of thrones</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10.4217844px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="217.65623"
+       y="734.31873"
+       id="text3979"
+       sodipodi:linespacing="125%"
+       transform="scale(0.99990977,1.0000902)"><tspan
+         sodipodi:role="line"
+         x="217.65623"
+         y="734.31873"
+         id="tspan3999">searching for any term should generally return all the files tagged with anything below</tspan><tspan
+         sodipodi:role="line"
+         x="217.65623"
+         y="747.34595"
+         id="tspan3993">note that a tag can have more than one parent</tspan></text>
+  </g>
+</svg>

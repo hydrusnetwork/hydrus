@@ -36,3 +36,11 @@ local.properties
 ### Some rules to keep out installation-specific stuff that's generated when Hydrus is run from source
 logs/
 crash.log
+# ffmpeg
+bin/ff*.exe
+/Pipfile
+/Pipfile.lock
+hydrus/db/client*
+/build/
+/dist/
+/hydrus.egg-info/

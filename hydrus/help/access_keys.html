@@ -1,0 +1,26 @@
+<html>
+	<head>
+		<title>access keys</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>first off</h3>
+			<p>I have purposely not pre-baked this into the client's install. You have to put it in yourself. The client won't connect anywhere until you tell it to.</p>
+			<h3>access keys</h3>
+			<p><b><i>If you don't understand this, you can just go </i>help->i don't know what I am doing->just set up some repositories for me, please<i> and you _should_ be all set up automatically.</i></b></p>
+			<p>I run a public tag repository that <a href="tagging_schema.html">you are welcome to contribute</a> to. I also run a read-only file repository, which is mostly just an old thing for fun, but you are welcome to search and download from it to get a feel for the interface. The files on my file repo are appropriately tagged in my tag repo.</p>
+			<p>To add or edit a new repository, hit <i>services->manage services</i> and click the add or edit button:</p>
+			<p><img src="edit_repos_public_tag_repo.png" /></p>
+			<p>It is worth testing the address and access key just to make sure your firewall and key is all correct.</p>
+			<p>Here's the info so you can copy it:</p>
+			<ul>
+				<li>public tag repository: 4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f@<a href="https://hydrus.no-ip.org:45871">hydrus.no-ip.org:45871</a></li>
+				<li>read-only file repository: 8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5@<a href="https://hydrus.no-ip.org:45872">hydrus.no-ip.org:45872</a></li>
+			</ul>
+			<p><b>Tags are rich, cpu-intensive metadata. My repository has hundreds of millions of mappings, and your client will eventually download and index them all. It will take a few hundred MB and <i>hours</i> of total processing time to fully synchronise. It is best left to work on this in small pieces in the background, either during idle time or shutdown time, so unless you are an advanced user, just leave it to download and process on its own--it usually takes a couple of weeks to quietly catch up.</b></p>
+			<p>If you are an advanced user, you can manually export (<i>services->review services->export updates</i> if <i>advanced mode</i> is on) and import (<i>services->import repository update files</i>) the update files a repository gives your client to save you redownloading them elsewhere. If you want to set up a PTR client a bit quicker than usual (and you understand the processing routine and the delays it can expeience if it encounters thousands of new update files at once), check the update archive <a href="https://cuddlebear92.github.io/Quicksync/">here</a>.</p>
+		</div>
+	</body>
+</html>

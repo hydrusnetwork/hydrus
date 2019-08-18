@@ -1,9 +1,0 @@
-If your db is completely broken and you need to extract some important data, please check out the emergency extract scripts. To use them, put your old database, the sqlite3 executable, and the script in the same folder and feed the script into sqlite3, like so:
-
-sqlite3 < extract_subscriptions.sql
-
-This will connect to the database and copy your subscriptions to the new file my_subscriptions.sql, which you can then move and import to a new db folder in the same way:
-
-sqlite3 < my_subscriptions.sql
-
-Some things are difficult to copy over at this basic level. Your tag options and anything else service-specific will be lost or reset back to default.

@@ -1,0 +1,8 @@
+The databases are sqlite. You can look inside them with many programs. I like to use:
+
+SQLiteStudio from http://sqlitestudio.pl/.
+The SQLite command-line shell program from https://www.sqlite.org/download.html.
+
+I include the command-line shell with my normal frozen releases. I used to bundle SQLiteStudio as well, but they rewrote their gui and the program got too large to tuck in.
+
+Feel free to explore how hydrus works, and if you have any questions or comments, don't hesitate to contact me!

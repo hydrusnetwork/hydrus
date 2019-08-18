@@ -1,0 +1,4 @@
+include hydrus/static/*
+include hydrus/bin/*
+include hydrus/db/*
+include hydrus/help/*

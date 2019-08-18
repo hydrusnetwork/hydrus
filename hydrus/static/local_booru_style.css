@@ -1,0 +1,25 @@
+a { color: #222; text-decoration: none; font-weight: bold; }
+a:hover { color: #555 }
+body { font-family: "Calibri", Arial, sans-serif; color: #555; line-height: 1.5; }
+h3 { color: #222; }
+ul li { list-style: none; margin: 1.0em 0em; }
+ul.bulletpoint li { list-style: disc; margin: 1.0em 0em; }
+
+.dealwithit { color: #ff0000; text-shadow:
+1px 1px 0 #ff7f00,
+2px 2px 0 #ffff00,
+3px 3px 0 #00ff00,
+4px 4px 0 #0000ff,
+5px 5px 0 #6600ff,
+6px 6px 0 #8b00ff; }
+.warning { color: #d00 }
+.lololol { text-decoration: line-through; }
+.right { text-align: right; }
+.screenshot { float: right; clear: both; margin: 10px; }
+
+.footer { text-align: center; font-size: 80% }
+.media { clear: both; }
+.thumbnail { margin: 1px; border: 1px rgb( 223, 227, 230 ) solid; display: inline-block; }
+.thumbnail_container { text-align: center; display: table-cell; vertical-align: middle; }
+.thumbnail_container img { display: block; margin-left: auto; margin-right: auto; }
+.timeout { font-size: 80%; float: right; margin: 2px }
