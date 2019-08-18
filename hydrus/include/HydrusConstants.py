@@ -21,7 +21,6 @@ else:
     RUNNING_FROM_FROZEN_BUILD = False
 
     BASE_DIR = os.path.abspath(__file__ + "../../..")
-    print(BASE_DIR)
 
     if BASE_DIR == '':
 
