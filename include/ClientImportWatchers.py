@@ -254,6 +254,29 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        highlighted_watcher = self.GetHighlightedWatcher()
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'watcher_imports' ] = [ watcher_import.GetAPIInfoDict( simple ) for watcher_import in self._watchers ]
+            
+            if highlighted_watcher is None:
+                
+                d[ 'highlight' ] = None
+                
+            else:
+                
+                d[ 'highlight' ] = highlighted_watcher.GetWatcherKey().hex()
+                
+            
+            return d
+            
+        
+    
     def GetHighlightedWatcher( self ):
         
         with self._lock:
@@ -922,6 +945,28 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         if did_substantial_work:
             
             time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
+            
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'url' ] = self._url
+            d[ 'watcher_key' ] = self._watcher_key.hex()
+            d[ 'created' ] = self._creation_time
+            d[ 'last_check_time' ] = self._last_check_time
+            d[ 'next_check_time' ] = self._next_check_time
+            d[ 'files_paused' ] = self._files_paused
+            d[ 'checking_paused' ] = self._checking_paused
+            d[ 'checking_status' ] = self._checking_status
+            d[ 'subject' ] = self._subject
+            d[ 'imports' ] = self._file_seed_cache.GetAPIInfoDict( simple )
+            d[ 'gallery_log' ] = self._gallery_seed_log.GetAPIInfoDict( simple )
+            
+            return d
             
         
     

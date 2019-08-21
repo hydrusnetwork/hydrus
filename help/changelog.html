@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 365</h3></li>
+				<ul>
+					<li>new repo processing:</li>
+					<li>improved the new asynchronous repository processing system in several ways:</li>
+					<li>- it now uses the time it is allotted more accurately. when it has 0.45s to work, it hits this mark more often, especially on slower machines</li>
+					<li>- it is now politer to the ui if plenty of other work is going on--if the db is loading search results or you are viewing video, it should pause for milliseconds as needed</li>
+					<li>- it can now work up to 90% of the time during a manual 'process now' run</li>
+					<li>- when it is working faster than expected, it accelerates its load to operate more efficiently</li>
+					<li>as a result, the new system should now have faster rows/s and lag out the ui less</li>
+					<li>.</li>
+					<li>client api:</li>
+					<li>improved how parameters are fetched and tested against expected type and given default values if appropriate, and updated all client api code to use this new system</li>
+					<li>added /manage_pages/get_page_info, which gives simple or detailed info on a given page, found by page_key</li>
+					<li>added page info response to hdd importers, simple downloaders, url downloaders, gallery downloaders, watcher downloaders--they say their pause status and file/gallery import info as appropriate</li>
+					<li>added page info response to file import caches--they say their status and num_done/num_to_do, and in detailed mode report file import item info, which is url/path, created, modified, and source times, current status, and any note</li>
+					<li>added page info response to gallery logs--they say their status and num_done/num_to_do, and in detailed mode report gallery log info, which is url, created and modified times, current status, and any note</li>
+					<li>added page info response to thumbnail panes--they say their total num files, and in detailed mode list their ordered hashes</li>
+					<li>started some help for this expansion, but it will need some feedback and more work to finish</li>
+					<li>the client api now sorts /get-files/search_files results by import time, newest to oldest. this first hardcoded sort comes to help implement booru-like pagination, but will be expanded to support more types as I flesh out the ui side (as below) as well</li>
+					<li>hydrus services, including the client, should now be able to handle larger request header+path total size (16KB->1MB). this helps some larger GET queries in the client api. let's see how this goes</li>
+					<li>client api is now version 11</li>
+					<li>.</li>
+					<li>collect improvements:</li>
+					<li>the collect data attached to pages is updated to its own object. the default value and existing page settings should update. all ui now handles the new clean object, rather than the old messy list</li>
+					<li>the new collect object supports an option for whether to collect 'unmatched' thumbs or to leave them separate. this displays in the ui as a dropdown beside the collect-by checkboxlist</li>
+					<li>to better distinguish between unmatched singles and matched collections with just one item, all one-item collections will now act as collections, with the little '1' collection icon in their corner (previously, they were split into singles). if this is annoying, I will add another option to control whether this occurs</li>
+					<li>removed some old 'integrate media into existing collected structure code' that was complicated, never used, and now broken</li>
+					<li>misc sort/collect refactoring</li>
+					<li>deleted some old unused collection code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>entering tags in the filename tagging panel, either for all or just selected, now pushes those tags to the 'recent tags' list in later manage tags dialogs</li>
+					<li>added a framework to start sorting search results before the system:limit is applied--I will soon extend this to start catching the current ui sort (say, 'largest files first', and cut a system:limit appropriately, rather than the current random sample)</li>
+					<li>added a faster table size check on the analyze maintenance call that will recognise fast-growing tables (e.g. initially empty/tiny repository processing tables that may have seen a ton of recent work) and schedule them better (this was previously potentially hanging certain maintenance checks/shutdown by several minutes when hitting a surprisingly giant table)</li>
+					<li>reduced the analyze frequency for established tables</li>
+					<li>the client will now explicitly count as 'idle' and 'very idle' during shutdown maintenance time, in case any shutdown job is considering that for how greedy it should be with work time</li>
+					<li>fixed an issue where appending new media (thumbnails) to a page that already had that media but within a collection could create a duplicate media entry and invalidate some internal data links to the old media</li>
+					<li>subscriptions will no longer print full traceback information when a network error causes a sync fail</li>
+					<li>updated to yet another deviant art file page parser. title tags and embedded image links should be fixed again, post/source time is not fixed</li>
+					<li>the deviant current art login script is confirmed to work for some users. my guess is certain people are getting cloudflare blocked or aren't being shown the new login page all the time yet, please send in any more info you discover</li>
+					<li>the client will now recover from a missing options object by putting in a fresh one with default values, including a popup notifying you of the error and giving you a chance to bail out</li>
+					<li>added a warning and link to the quicksync to the access_keys help page</li>
+					<li>if the os commands the client to close due to a log off or system shut down, the client will kindly ask for a bit more time do to so if it is available</li>
+					<li>updated the WTFPL license to v3</li>
+				</ul>
 				<li><h3>version 364</h3></li>
 				<ul>
 					<li>repo processing makeover:</li>

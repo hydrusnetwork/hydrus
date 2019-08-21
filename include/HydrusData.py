@@ -1059,6 +1059,22 @@ def Profile( summary, code, g, l, min_duration_ms = 20 ):
     
     HG.controller.PrintProfile( summary, details )
     
+def PullNFromIterator( iterator, n ):
+    
+    chunk = []
+    
+    for item in iterator:
+        
+        chunk.append( item )
+        
+        if len( chunk ) == n:
+            
+            return chunk
+            
+        
+    
+    return chunk
+    
 def RandomPop( population ):
     
     random_index = random.randint( 0, len( population ) - 1 )
@@ -1138,7 +1154,41 @@ def SplitIteratorIntoChunks( iterator, n ):
         
         yield chunk
         
-
+    
+def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
+    
+    n = starting_n
+    
+    chunk = PullNFromIterator( iterator, n )
+    
+    while len( chunk ) > 0:
+        
+        time_work_started = GetNowPrecise()
+        
+        yield chunk
+        
+        work_time = GetNowPrecise() - time_work_started
+        
+        items_per_second = n / work_time
+        
+        time_remaining = precise_time_to_stop - GetNowPrecise()
+        
+        if TimeHasPassedPrecise( precise_time_to_stop ):
+            
+            n = 1
+            
+        else:
+            
+            expected_items_in_remaining_time = max( 1, int( time_remaining * items_per_second ) )
+            
+            quad_speed = n * 4
+            
+            n = min( quad_speed, expected_items_in_remaining_time )
+            
+        
+        chunk = PullNFromIterator( iterator, n )
+        
+    
 def SplitListIntoChunks( xs, n ):
     
     if isinstance( xs, set ):
@@ -1149,6 +1199,63 @@ def SplitListIntoChunks( xs, n ):
     for i in range( 0, len( xs ), n ):
         
         yield xs[ i : i + n ]
+        
+    
+def SplitMappingIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
+    
+    n = starting_n
+    
+    chunk_weight = 0
+    chunk = []
+    
+    for ( tag_item, hash_items ) in iterator:
+        
+        hash_item_iterator = iter( hash_items )
+        
+        chunk_of_hash_items = PullNFromIterator( hash_item_iterator, max( 1, n - chunk_weight ) )
+        
+        while len( chunk_of_hash_items ) > 0:
+            
+            chunk.append( ( tag_item, chunk_of_hash_items ) )
+            
+            chunk_weight += len( chunk_of_hash_items )
+            
+            if chunk_weight >= n:
+                
+                time_work_started = GetNowPrecise()
+                
+                yield chunk
+                
+                chunk_weight = 0
+                chunk = []
+                
+                work_time = GetNowPrecise() - time_work_started
+                
+                items_per_second = n / work_time
+                
+                time_remaining = precise_time_to_stop - GetNowPrecise()
+                
+                if TimeHasPassedPrecise( precise_time_to_stop ):
+                    
+                    n = 1
+                    
+                else:
+                    
+                    expected_items_in_remaining_time = max( 1, int( time_remaining * items_per_second ) )
+                    
+                    quad_speed = n * 4
+                    
+                    n = min( quad_speed, expected_items_in_remaining_time )
+                    
+                
+            
+            chunk_of_hash_items = PullNFromIterator( hash_item_iterator, max( 1, n - chunk_weight ) )
+            
+        
+    
+    if len( chunk ) > 0:
+        
+        yield chunk
         
     
 def SplitMappingIteratorIntoChunks( xs, n ):

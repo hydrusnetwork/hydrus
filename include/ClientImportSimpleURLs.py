@@ -406,6 +406,24 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'imports' ] = self._file_seed_cache.GetAPIInfoDict( simple )
+            
+            d[ 'gallery_log' ] = self._gallery_seed_log.GetAPIInfoDict( simple )
+            
+            d[ 'files_paused' ] = self._files_paused
+            
+            d[ 'gallery_paused' ] = self._queue_paused
+            
+            return d
+            
+        
+    
     def GetFileSeedCache( self ):
         
         with self._lock:
@@ -852,6 +870,22 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             finished = not self._file_seed_cache.WorkToDo()
             
             return not finished and not self._paused
+            
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'imports' ] = self._file_seed_cache.GetAPIInfoDict( simple )
+            
+            d[ 'gallery_log' ] = self._gallery_seed_log.GetAPIInfoDict( simple )
+            
+            d[ 'files_paused' ] = self._paused
+            
+            return d
             
         
     

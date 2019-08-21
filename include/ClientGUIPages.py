@@ -415,13 +415,13 @@ class Page( wx.SplitterWindow ):
         
         self._media_panel.ClearPageKey()
         
-        collect_by = self._management_panel.GetCollectBy()
+        media_collect = self._management_panel.GetMediaCollect()
         
-        if collect_by != []:
+        if media_collect.DoesACollect():
             
-            new_panel.Collect( self._page_key, collect_by )
+            new_panel.Collect( self._page_key, media_collect )
             
-            sort_by = self._management_panel.GetSortBy()
+            sort_by = self._management_panel.GetMediaSort()
             
             new_panel.Sort( self._page_key, sort_by )
             
@@ -468,6 +468,25 @@ class Page( wx.SplitterWindow ):
         self.Unsplit( self._search_preview_split )
         
         self._controller.pub( 'set_focus', self._page_key, None )
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        d = {}
+        
+        d[ 'name' ] = self._management_controller.GetPageName()
+        d[ 'page_key' ] = self._page_key.hex()
+        d[ 'page_type' ] = self._management_controller.GetType()
+        
+        management_info = self._management_controller.GetAPIInfoDict( simple )
+        
+        d[ 'management' ] = management_info
+        
+        media_info = self._media_panel.GetAPIInfoDict( simple )
+        
+        d[ 'media' ] = media_info
+        
+        return d
         
     
     def GetHashes( self ):
@@ -539,7 +558,7 @@ class Page( wx.SplitterWindow ):
         return { self._page_key }
         
     
-    def GetPageInfoDict( self, is_selected = False ):
+    def GetSessionAPIInfoDict( self, is_selected = False ):
         
         root = {}
         
@@ -1863,6 +1882,11 @@ class PagesNotebook( wx.Notebook ):
         self._controller.pub( 'notify_page_change' )
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        return {}
+        
+    
     def GetCurrentMediaPage( self ):
         
         page = self.GetCurrentPage()
@@ -2001,6 +2025,11 @@ class PagesNotebook( wx.Notebook ):
     
     def GetPageFromPageKey( self, page_key ):
         
+        if self._page_key == page_key:
+            
+            return self
+            
+        
         for page in self._GetPages():
             
             if page.GetPageKey() == page_key:
@@ -2037,7 +2066,7 @@ class PagesNotebook( wx.Notebook ):
         return page_keys
         
     
-    def GetPageInfoDict( self, is_selected = True ):
+    def GetSessionAPIInfoDict( self, is_selected = True ):
         
         current_page = self.GetCurrentPage()
         
@@ -2047,7 +2076,7 @@ class PagesNotebook( wx.Notebook ):
             
             page_is_focused = is_selected and page == current_page
             
-            page_info_dict = page.GetPageInfoDict( is_selected = is_selected )
+            page_info_dict = page.GetSessionAPIInfoDict( is_selected = is_selected )
             
             my_pages_list.append( page_info_dict )
             

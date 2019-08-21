@@ -57,27 +57,6 @@ Shift-LeftClick-Drag - Drag (in Filter)
 Ctrl + MouseWheel - Zoom
 Z - Zoom Full/Fit'''
 
-COLLECT_BY_S = 0
-COLLECT_BY_SV = 1
-COLLECT_BY_SVC = 2
-NO_COLLECTIONS = 3
-
-COLLECTION_CHOICES = [ 'collect by series', 'collect by series-volume', 'collect by series-volume-chapter', 'no collections' ]
-
-collection_enum_lookup = {}
-
-collection_enum_lookup[ 'collect by series' ] = COLLECT_BY_S
-collection_enum_lookup[ 'collect by series-volume' ] = COLLECT_BY_SV
-collection_enum_lookup[ 'collect by series-volume-chapter' ] = COLLECT_BY_SVC
-collection_enum_lookup[ 'no collections' ] = NO_COLLECTIONS
-
-collection_string_lookup = {}
-
-collection_string_lookup[ COLLECT_BY_S ] = 'collect by series'
-collection_string_lookup[ COLLECT_BY_SV ] = 'collect by series-volume'
-collection_string_lookup[ COLLECT_BY_SVC ] = 'collect by series-volume-chapter'
-collection_string_lookup[ NO_COLLECTIONS ] = 'no collections'
-
 if HC.PLATFORM_OSX:
     
     DELETE_KEYS = ( wx.WXK_BACK, wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE )

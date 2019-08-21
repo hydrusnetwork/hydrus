@@ -517,6 +517,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
         
+        self._dictionary[ 'default_collect' ] = ClientMedia.MediaCollect()
+        
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
@@ -668,6 +670,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultCollect( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_collect' ]
+            
+        
+    
     def GetColour( self, colour_type, colourset = None ):
         
         with self._lock:
@@ -691,14 +701,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultWatcherCheckerOptions( self ):
-        
-        with self._lock:
-            
-            return self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ]
-            
-        
-    
     def GetDefaultSort( self ):
         
         with self._lock:
@@ -712,6 +714,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ]
+            
+        
+    
+    def GetDefaultWatcherCheckerOptions( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ]
             
         
     
@@ -940,6 +950,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDefaultCollect( self, media_collect ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_collect' ] = media_collect
+            
+        
+    
     def SetColour( self, colour_type, colourset, colour ):
         
         with self._lock:
@@ -957,14 +975,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultWatcherCheckerOptions( self, checker_options ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = checker_options
-            
-        
-    
     def SetDefaultSort( self, media_sort ):
         
         with self._lock:
@@ -978,6 +988,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ] = checker_options
+            
+        
+    
+    def SetDefaultWatcherCheckerOptions( self, checker_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = checker_options
             
         
     

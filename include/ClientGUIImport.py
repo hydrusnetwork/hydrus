@@ -701,6 +701,8 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         def EnterTags( self, tags ):
             
+            HG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
+            
             tag_parents_manager = HG.client_controller.tag_parents_manager
             
             parents = set()
@@ -722,6 +724,8 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
         
         def EnterTagsSingle( self, tags ):
+            
+            HG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
             
             tag_parents_manager = HG.client_controller.tag_parents_manager
             

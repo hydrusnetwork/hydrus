@@ -71,6 +71,7 @@
 					<h4>Managing Pages</h4>
 					<ul>
 						<li><a href="#manage_pages_get_pages">GET /manage_pages/get_pages</a></li>
+						<li><a href="#manage_pages_get_page_info">GET /manage_pages/get_page_info</a></li>
 						<li><a href="#manage_pages_focus_page">POST /manage_pages/focus_page</a></li>
 					</ul>
 					<h4>Searching and Fetching Files</h4>
@@ -674,6 +675,100 @@
 					<p>The 'page_key' is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a client restart or other session reload.</p>
 				</ul>
 			</div>
+			<div class="apiborder" id="manage_pages_get_page_info">
+				<h3><b>GET /manage_pages/get_page_info</b></h3>
+				<p><i>Get information about a specific page.</i></p>
+				<p class="warning">This is under construction. The current call dumps a ton of info for different downloader pages. Please experiment in IRL situations and give feedback for now! I will flesh out this help with more enumeration info and examples as this gets nailed down. POST commands to alter pages (adding, removing, highlighting), will come later.</p>
+				<ul>
+					<li><p>Restricted access: YES. Manage Pages permission needed.</p></li>
+					<li><p>Required Headers: n/a</p></li>
+					<li>
+						<p>Arguments:</p>
+						<ul>
+							<li>page_key : (hexadecimal page_key as stated in <a href="#manage_pages_get_pages">/manage_pages/get_pages</a>)</li>
+							<li>simple : true or false (optional, defaulting to true)</li>
+						</ul>
+					</li>
+					<li>
+						<p>Example request:</p>
+						<ul>
+							<li><p>/manage_pages/get_page_info?page_key=aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da&simple=true</p></li>
+						</ul>
+					</li>
+					<p>Response description: A JSON Object of the page's information. At present, this mostly means downloader information.</p>
+					<li>
+						<p>Example response with simple = true:</p>
+						<ul>
+							<li>
+<pre>{
+	"name" : "threads",
+	"page_key" : "aebbf4b594e6986bddf1eeb0b5846a1e6bc4e07088e517aff166f1aeb1c3c9da",
+	"page_type" : 3,
+	"management" : {
+		"multiple_watcher_import" : {
+			"watcher_imports" : [
+				{
+					"url" : "https://someimageboard.net/m/123456",
+					"watcher_key" = "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85",
+					"created" = 1566164269,
+					"last_check_time" = 1566164272,
+					"next_check_time" = 1566174272,
+					"files_paused" = false,
+					"checking_paused" = false,
+					"checking_status" = 0,
+					"subject" = "gundam pictures",
+					"imports" : {
+						"status" : "4 successful (2 already in db)",
+						"simple_status" : "4",
+						"total_processed" : 4,
+						"total_to_process" : 4
+					},
+					"gallery_log" : {
+						"status" = "1 successful",
+						"simple_status" = "1",
+						"total_processed" = 1,
+						"total_to_process" = 1
+					}
+				},
+				{
+					"url" : "https://someimageboard.net/a/1234",
+					"watcher_key" = "6bc17555b76da5bde2dcceedc382cf7d23281aee6477c41b643cd144ec168510",
+					"created" = 1566063125,
+					"last_check_time" = 1566063133,
+					"next_check_time" = 1566104272,
+					"files_paused" = false,
+					"checking_paused" = true,
+					"checking_status" = 1,
+					"subject" = "anime pictures",
+					"imports" : {
+						"status" : "124 successful (22 already in db), 2 previously deleted",
+						"simple_status" : "124",
+						"total_processed" : 124,
+						"total_to_process" : 124
+					},
+					"gallery_log" : {
+						"status" = "3 successful",
+						"simple_status" = "3",
+						"total_processed" = 3,
+						"total_to_process" = 3
+					}
+				}
+				]
+			},
+			"highlight" : "cf8c3525c57a46b0e5c2625812964364a2e801f8c49841c216b8f8d7a4d06d85"
+		}
+	},
+	"media" : {
+		"num_files" : 4
+	}
+}</pre>
+							</li>
+						</ul>
+						<p>As you can see, even the 'simple' mode can get very large. Imagine that response for a page watching 100 threads! Turning simple mode off will display every import item, gallery log entry, and all hashes in the media (thumbnail) panel.</p>
+						<p>For this first version, the five importer pages--hdd import, simple downloader, url downloader, gallery page, and watcher page--all give rich info based on their specific variables. The first three only have one importer/gallery log combo, but the latter two of course can have multiple. The "imports" and "gallery_log" entries are all in the same data format.</p>
+					</li>
+				</ul>
+			</div>
 			<div class="apiborder" id="manage_pages_focus_page">
 				<h3><b>POST /manage_pages/focus_page</b></h3>
 				<p><i>'Show' a page in the main GUI, making it the current page in view. If it is already the current page, no change is made.</i></p>
@@ -740,7 +835,7 @@
 						</ul>
 					</li>
 					<p>File ids are internal and specific to an individual client. For a client, a file with hash H always has the same file id N, but two clients will have different ideas about which N goes with which H. They are a bit faster than hashes to retrieve and search with <i>en masse</i>, which is why they are exposed here.</p>
-					<p>The search will be performed on the 'local files' file domain and 'all known tags' tag domain.</p>
+					<p>The search will be performed on the 'local files' file domain and 'all known tags' tag domain. At current, they will be sorted in import time order, newest to oldest (if you would like to paginate them before fetching metadata), but sort options will expand in future.</p>
 					<p>Note that most clients will have an invisible system:limit of 10,000 files on all queries. I expect to add more system predicates to help searching for untagged files, but it is tricky to fetch all files under any circumstance. Large queries may take several seconds to respond.</p>
 				</ul>
 			</div>
@@ -807,6 +902,7 @@
 			"width" : 1920,
 			"height" : 1080,
 			"duration" : 4040,
+			"has_audio" : true,
 			"num_frames" : 102,
 			"num_words" : null,
 			"known_urls" : [

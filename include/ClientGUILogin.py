@@ -312,8 +312,10 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
+        warning += os.linesep * 2
+        warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus!'
         
-        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        warning_st = ClientGUICommon.BetterStaticText( self, warning, style = wx.ALIGN_CENTER )
         
         warning_st.SetForegroundColour( ( 128, 0, 0 ) )
         

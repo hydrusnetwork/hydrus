@@ -75,15 +75,7 @@ def CreateManagementController( page_name, management_type, file_service_key = N
     management_controller.SetType( management_type )
     management_controller.SetKey( 'file_service', file_service_key )
     management_controller.SetVariable( 'media_sort', new_options.GetDefaultSort() )
-    
-    collect_by = HC.options[ 'default_collect' ]
-    
-    if collect_by is None:
-        
-        collect_by = []
-        
-    
-    management_controller.SetVariable( 'media_collect', collect_by )
+    management_controller.SetVariable( 'media_collect', new_options.GetDefaultCollect() )
     
     return management_controller
     
@@ -528,7 +520,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 9
+    SERIALISABLE_VERSION = 10
     
     def __init__( self, page_name = 'page' ):
         
@@ -757,6 +749,80 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             return ( 9, new_serialisable_info )
             
         
+        if version == 9:
+            
+            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if 'media_collect' in serialisable_simples:
+                
+                try:
+                    
+                    old_collect = serialisable_simples[ 'media_collect' ]
+                    
+                    if old_collect is None:
+                        
+                        old_collect = []
+                        
+                    
+                    namespaces = [ n for ( t, n ) in old_collect if t == 'namespace' ]
+                    rating_service_keys = [ bytes.fromhex( r ) for ( t, r ) in old_collect if t == 'rating' ]
+                    
+                except:
+                    
+                    namespaces = []
+                    rating_service_keys = []
+                    
+                
+                media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys )
+                
+                serialisable_serialisables[ 'media_collect' ] = media_collect.GetSerialisableTuple()
+                
+                del serialisable_simples[ 'media_collect' ]
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 10, new_serialisable_info )
+            
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        d = {}
+        
+        if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+            
+            hdd_import = self._serialisables[ 'hdd_import' ]
+            
+            d[ 'hdd_import' ] = hdd_import.GetAPIInfoDict( simple )
+            
+        elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+            
+            simple_downloader_import = self._serialisables[ 'simple_downloader_import' ]
+            
+            d[ 'simple_downloader_import' ] = simple_downloader_import.GetAPIInfoDict( simple )
+            
+        elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+            
+            multiple_gallery_import = self._serialisables[ 'multiple_gallery_import' ]
+            
+            d[ 'multiple_gallery_import' ] = multiple_gallery_import.GetAPIInfoDict( simple )
+            
+        elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+            
+            multiple_watcher_import = self._serialisables[ 'multiple_watcher_import' ]
+            
+            d[ 'multiple_watcher_import' ] = multiple_watcher_import.GetAPIInfoDict( simple )
+            
+        elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+            
+            urls_import = self._serialisables[ 'urls_import' ]
+            
+            d[ 'urls_import' ] = urls_import.GetAPIInfoDict( simple )
+            
+        
+        return d
+        
     
     def GetKey( self, name ):
         
@@ -885,26 +951,26 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page = page
         self._page_key = self._management_controller.GetKey( 'page' )
         
-        self._sort_by = ClientGUICommon.ChoiceSort( self, management_controller = self._management_controller )
+        self._media_sort = ClientGUICommon.ChoiceSort( self, management_controller = self._management_controller )
         
-        self._collect_by = ClientGUICommon.CheckboxCollect( self, management_controller = self._management_controller )
+        self._media_collect = ClientGUICommon.CheckboxCollect( self, management_controller = self._management_controller )
         
     
-    def GetCollectBy( self ):
+    def GetMediaCollect( self ):
         
-        if self._collect_by.IsShown():
+        if self._media_collect.IsShown():
             
-            return self._collect_by.GetValue()
+            return self._media_collect.GetValue()
             
         else:
             
-            return []
+            return ClientMedia.MediaCollect()
             
         
     
-    def GetSortBy( self ):
+    def GetMediaSort( self ):
         
-        return self._sort_by.GetSort()
+        return self._media_sort.GetSort()
         
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
@@ -1110,8 +1176,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        self._sort_by.Hide()
-        self._collect_by.Hide()
+        self._media_sort.Hide()
+        self._media_collect.Hide()
         
         distance_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1604,7 +1670,7 @@ class ManagementPanelImporter( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._sort_by.BroadcastSort()
+            self._media_sort.BroadcastSort()
             
         
     
@@ -1637,9 +1703,9 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._collect_by.Hide()
+        self._media_collect.Hide()
         
         self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1808,9 +1874,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._collect_by.Hide()
+        self._media_collect.Hide()
         
         vbox.Add( self._gallery_downloader_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._highlighted_gallery_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2471,9 +2537,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._collect_by.Hide()
+        self._media_collect.Hide()
         
         vbox.Add( self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._highlighted_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3206,9 +3272,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._collect_by.Hide()
+        self._media_collect.Hide()
         
         vbox.Add( self._simple_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3574,9 +3640,9 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._collect_by.Hide()
+        self._media_collect.Hide()
         
         vbox.Add( self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3793,8 +3859,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.Add( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -4137,9 +4203,9 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         
-        panel.Collect( self._page_key, self._collect_by.GetValue() )
+        panel.Collect( self._page_key, self._media_collect.GetValue() )
         
-        panel.Sort( self._page_key, self._sort_by.GetSort() )
+        panel.Sort( self._page_key, self._media_sort.GetSort() )
         
         self._page.SwapMediaPanel( panel )
         
@@ -4381,8 +4447,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._media_collect, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if self._search_enabled:
             
@@ -4393,7 +4459,6 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        self._controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         self._controller.sub( self, 'ChangeFileServicePubsub', 'change_file_service' )
@@ -4468,7 +4533,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         else:
             
-            self._sort_by.BroadcastSort()
+            self._media_sort.BroadcastSort()
             
         
     
@@ -4509,14 +4574,6 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 self._searchbox.ForceSizeCalcNow()
                 
-            
-        
-    
-    def AddMediaResultsFromQuery( self, query_job_key, media_results ):
-        
-        if query_job_key == self._query_job_key:
-            
-            self._controller.pub( 'add_media_results', self._page_key, media_results, append = False )
             
         
     
@@ -4598,9 +4655,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
             
-            panel.Collect( self._page_key, self._collect_by.GetValue() )
+            panel.Collect( self._page_key, self._media_collect.GetValue() )
             
-            panel.Sort( self._page_key, self._sort_by.GetSort() )
+            panel.Sort( self._page_key, self._media_sort.GetSort() )
             
             self._page.SwapMediaPanel( panel )
             

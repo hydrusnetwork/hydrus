@@ -394,9 +394,9 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _AnalyzeStaleBigTables( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None, force_reanalyze = False ):
+    def _AnalyzeDueTables( self, maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None, force_reanalyze = False ):
         
-        names_to_analyze = self._GetBigTableNamesToAnalyze( force_reanalyze = force_reanalyze )
+        names_to_analyze = self._GetTableNamesDueAnalysis( force_reanalyze = force_reanalyze )
         
         if len( names_to_analyze ) > 0:
             
@@ -4271,7 +4271,7 @@ class DB( HydrusDB.HydrusDB ):
         return predicates
         
     
-    def _GetBigTableNamesToAnalyze( self, force_reanalyze = False ):
+    def _GetTableNamesDueAnalysis( self, force_reanalyze = False ):
         
         db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
         
@@ -4297,9 +4297,9 @@ class DB( HydrusDB.HydrusDB ):
             big_table_minimum = 10000
             huge_table_minimum = 1000000
             
-            small_table_stale_time_delta = 86400
-            big_table_stale_time_delta = 30 * 86400
-            huge_table_stale_time_delta = 30 * 86400 * 6
+            small_table_stale_time_delta = 3 * 86400
+            big_table_stale_time_delta = 30 * 86400 * 3
+            huge_table_stale_time_delta = 30 * 86400 * 18
             
             existing_names_to_info = { name : ( num_rows, timestamp ) for ( name, num_rows, timestamp ) in self._c.execute( 'SELECT name, num_rows, timestamp FROM analyze_timestamps;' ) }
             
@@ -4311,28 +4311,42 @@ class DB( HydrusDB.HydrusDB ):
                     
                     ( num_rows, timestamp ) = existing_names_to_info[ name ]
                     
-                    if num_rows > big_table_minimum:
+                    if num_rows < big_table_minimum:
                         
-                        if num_rows > huge_table_minimum:
+                        if HydrusData.TimeHasPassed( timestamp + small_table_stale_time_delta ):
                             
-                            due_time = timestamp + huge_table_stale_time_delta
+                            # how do we deal with a small table that just grew by 3 million rows?
+                            # we want this func to always be fast, so we'll just test small tables with fast rowcount test
+                            # if a table exceeds the next threshold or has doubled in size, we'll analyze it
+                            
+                            test_count_value = min( big_table_minimum, num_rows * 2 )
+                            
+                            if self._TableHasAtLeastRowCount( name, test_count_value ):
+                                
+                                names_to_analyze.append( name )
+                                
+                            else:
+                                
+                                # and we don't want to bother the user with analyze notifications for tiny tables all the time, so if they aren't large, just do them now
+                                
+                                self._AnalyzeTable( name )
+                                
+                            
+                        
+                    else:
+                        
+                        if num_rows < huge_table_minimum:
+                            
+                            due_time = timestamp + big_table_stale_time_delta
                             
                         else:
                             
-                            due_time = timestamp + big_table_stale_time_delta
+                            due_time = timestamp + huge_table_stale_time_delta
                             
                         
                         if HydrusData.TimeHasPassed( due_time ):
                             
                             names_to_analyze.append( name )
-                            
-                        
-                    else:
-                        
-                        # these usually take a couple of milliseconds, so just sneak them in here. no need to bother the user with a prompt
-                        if HydrusData.TimeHasPassed( timestamp + small_table_stale_time_delta ):
-                            
-                            self._AnalyzeTable( name )
                             
                         
                     
@@ -4964,7 +4978,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromQuery( self, search_context, job_key = None, query_hash_ids = None, apply_implicit_limit = True ):
+    def _GetHashIdsFromQuery( self, search_context, job_key = None, query_hash_ids = None, apply_implicit_limit = True, sort_by = None ):
         
         if job_key is None:
             
@@ -5773,15 +5787,51 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
+        query_hash_ids = list( query_hash_ids )
+        
+        if sort_by is not None:
+            
+            ( sort_metadata, sort_data ) = sort_by.sort_type
+            sort_asc = sort_by.sort_asc
+            
+            query = None
+            
+            if sort_metadata == 'system':
+                
+                if sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
+                    
+                    query = 'SELECT hash_id, timestamp FROM files_info NATURAL JOIN current_files WHERE hash_id IN {} AND service_id = {};'.format( '{}', self._local_file_service_id )
+                    
+                    key = lambda row: row[1]
+                    
+                    reverse = sort_asc == CC.SORT_DESC
+                    
+                
+            
+            if query is not None:
+                
+                query_hash_ids_and_other_data = list( self._SelectFromList( query, query_hash_ids ) )
+                
+                query_hash_ids_and_other_data.sort( key = key, reverse = reverse )
+                
+                query_hash_ids = [ row[0] for row in query_hash_ids_and_other_data ]
+                
+            
+        
+        #
+        
         limit = system_predicates.GetLimit( apply_implicit_limit = apply_implicit_limit )
         
         if limit is not None and limit <= len( query_hash_ids ):
             
-            query_hash_ids = random.sample( query_hash_ids, limit )
-            
-        else:
-            
-            query_hash_ids = list( query_hash_ids )
+            if sort_by is None:
+                
+                query_hash_ids = random.sample( query_hash_ids, limit )
+                
+            else:
+                
+                query_hash_ids = query_hash_ids[:limit]
+                
             
         
         return query_hash_ids
@@ -6397,7 +6447,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # analyze
         
-        names_to_analyze = self._GetBigTableNamesToAnalyze()
+        names_to_analyze = self._GetTableNamesDueAnalysis()
         
         if len( names_to_analyze ) > 0:
             
@@ -10049,10 +10099,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ProcessRepositoryContent( self, service_key, content_hash, content_iterator_dict, job_key, work_time ):
         
-        FILES_CHUNK_SIZE = 200
-        MAPPINGS_CHUNK_SIZE = 500
-        NEW_TAG_PARENTS_CHUNK_SIZE = 10
-        PAIR_ROWS_CHUNK_SIZE = 1000
+        FILES_INITIAL_CHUNK_SIZE = 20
+        MAPPINGS_INITIAL_CHUNK_SIZE = 50
+        NEW_TAG_PARENTS_INITIAL_CHUNK_SIZE = 1
+        PAIR_ROWS_INITIAL_CHUNK_SIZE = 100
         
         service_id = self._GetServiceId( service_key )
         
@@ -10066,7 +10116,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'new_files' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, FILES_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 files_info_rows = []
                 files_rows = []
@@ -10101,7 +10151,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'deleted_files' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, FILES_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, FILES_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 service_hash_ids = chunk
                 
@@ -10126,7 +10176,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'new_mappings' ]
             
-            for chunk in HydrusData.SplitMappingIteratorIntoChunks( i, MAPPINGS_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 mappings_ids = []
                 
@@ -10161,7 +10211,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'deleted_mappings' ]
             
-            for chunk in HydrusData.SplitMappingIteratorIntoChunks( i, MAPPINGS_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitMappingIteratorIntoAutothrottledChunks( i, MAPPINGS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 deleted_mappings_ids = []
                 
@@ -10196,7 +10246,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'new_parents' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, NEW_TAG_PARENTS_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, NEW_TAG_PARENTS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 parent_ids = []
                 
@@ -10227,7 +10277,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'deleted_parents' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, PAIR_ROWS_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 parent_ids = []
                 
@@ -10260,7 +10310,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'new_siblings' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, PAIR_ROWS_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 sibling_ids = []
                 
@@ -10293,7 +10343,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = content_iterator_dict[ 'deleted_siblings' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, PAIR_ROWS_CHUNK_SIZE ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, PAIR_ROWS_INITIAL_CHUNK_SIZE, precise_time_to_stop ):
                 
                 sibling_ids = []
                 
@@ -10341,7 +10391,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = definition_iterator_dict[ 'service_hash_ids_to_hashes' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, 500 ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
                 
                 inserts = []
                 
@@ -10369,7 +10419,7 @@ class DB( HydrusDB.HydrusDB ):
             
             i = definition_iterator_dict[ 'service_tag_ids_to_tags' ]
             
-            for chunk in HydrusData.SplitIteratorIntoChunks( i, 500 ):
+            for chunk in HydrusData.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
                 
                 inserts = []
                 
@@ -10767,6 +10817,27 @@ class DB( HydrusDB.HydrusDB ):
             self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
             
             self._RegenerateACCache()
+            
+        
+        #
+        
+        new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+        
+        if new_options is None:
+            
+            message = 'On boot, your main options object was missing!'
+            message += os.linesep * 2
+            message += 'If you wish, click ok on this message and the client will re-add fresh options with default values. But if you want to solve this problem otherwise, kill the hydrus process now.'
+            message += os.linesep * 2
+            message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
+            
+            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            
+            new_options = ClientOptions.ClientOptions()
+            
+            new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
+            
+            self._SetJSONDump( new_options )
             
         
     
@@ -11220,6 +11291,23 @@ class DB( HydrusDB.HydrusDB ):
             
             self._ProcessContentUpdates( service_keys_to_content_updates )
             
+        
+    
+    def _TableHasAtLeastRowCount( self, name, row_count ):
+        
+        cursor = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
+        
+        for i in range( row_count ):
+            
+            r = cursor.fetchone()
+            
+            if r is None:
+                
+                return False
+                
+            
+        
+        return True
         
     
     def _TagExists( self, tag ):
@@ -13009,6 +13097,67 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 364:
+            
+            try:
+                
+                ( options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                default_collect = options[ 'default_collect' ]
+                
+                if default_collect is None:
+                    
+                    default_collect = []
+                    
+                
+                namespaces = [ n for ( t, n ) in default_collect if t == 'namespace' ]
+                rating_service_keys = [ bytes.fromhex( r ) for ( t, r ) in default_collect if t == 'rating' ]
+                
+                default_media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys )
+                
+                new_options.SetDefaultCollect( default_media_collect )
+                
+                self._SetJSONDump( new_options )
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your default collection settings failed! Please check them in the options dialog.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'deviant art file page parser', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -13527,7 +13676,7 @@ class DB( HydrusDB.HydrusDB ):
         
         result = None
         
-        if action == 'analyze': self._AnalyzeStaleBigTables( *args, **kwargs )
+        if action == 'analyze': self._AnalyzeDueTables( *args, **kwargs )
         elif action == 'associate_repository_update_hashes': self._AssociateRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'backup': self._Backup( *args, **kwargs )
         elif action == 'clear_false_positive_relations': self._DuplicatesClearAllFalsePositiveRelationsFromHashes( *args, **kwargs )

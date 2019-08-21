@@ -3369,13 +3369,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._default_sort = ClientGUICommon.ChoiceSort( self )
+            self._default_media_sort = ClientGUICommon.ChoiceSort( self )
             
-            self._fallback_sort = ClientGUICommon.ChoiceSort( self )
+            self._fallback_media_sort = ClientGUICommon.ChoiceSort( self )
             
             self._save_page_sort_on_change = wx.CheckBox( self )
             
-            self._default_collect = ClientGUICommon.CheckboxCollect( self )
+            self._default_media_collect = ClientGUICommon.CheckboxCollect( self )
             
             self._sort_by = wx.ListBox( self )
             self._sort_by.Bind( wx.EVT_LEFT_DCLICK, self.EventRemoveSortBy )
@@ -3389,24 +3389,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             try:
                 
-                self._default_sort.SetSort( self._new_options.GetDefaultSort() )
+                self._default_media_sort.SetSort( self._new_options.GetDefaultSort() )
                 
             except:
                 
                 media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
                 
-                self._default_sort.SetSort( media_sort )
+                self._default_media_sort.SetSort( media_sort )
                 
             
             try:
                 
-                self._fallback_sort.SetSort( self._new_options.GetFallbackSort() )
+                self._fallback_media_sort.SetSort( self._new_options.GetFallbackSort() )
                 
             except:
                 
                 media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
                 
-                self._fallback_sort.SetSort( media_sort )
+                self._fallback_media_sort.SetSort( media_sort )
                 
             
             for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]:
@@ -3420,10 +3420,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Default sort: ', self._default_sort ) )
-            rows.append( ( 'Secondary sort (when primary gives two equal values): ', self._fallback_sort ) )
+            rows.append( ( 'Default sort: ', self._default_media_sort ) )
+            rows.append( ( 'Secondary sort (when primary gives two equal values): ', self._fallback_media_sort ) )
             rows.append( ( 'Update default sort every time a new sort is manually chosen: ', self._save_page_sort_on_change ) )
-            rows.append( ( 'Default collect: ', self._default_collect ) )
+            rows.append( ( 'Default collect: ', self._default_media_collect ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -3481,14 +3481,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetDefaultSort( self._default_sort.GetSort() )
-            self._new_options.SetFallbackSort( self._fallback_sort.GetSort() )
+            self._new_options.SetDefaultSort( self._default_media_sort.GetSort() )
+            self._new_options.SetFallbackSort( self._fallback_media_sort.GetSort() )
             self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.GetValue() )
-            HC.options[ 'default_collect' ] = self._default_collect.GetValue()
+            self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
             
             sort_by_choices = []
             
-            for sort_by in [ self._sort_by.GetClientData( i ) for i in range( self._sort_by.GetCount() ) ]: sort_by_choices.append( ( 'namespaces', sort_by ) )
+            for sort_by in [ self._sort_by.GetClientData( i ) for i in range( self._sort_by.GetCount() ) ]:
+                
+                sort_by_choices.append( ( 'namespaces', sort_by ) )
+                
             
             HC.options[ 'sort_by' ] = sort_by_choices
             

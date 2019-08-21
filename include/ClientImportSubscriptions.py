@@ -1339,7 +1339,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 delay = HG.client_controller.new_options.GetInteger( 'subscription_network_error_delay' )
                 
                 HydrusData.Print( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
-                HydrusData.PrintException( e )
+                
+                HydrusData.Print( e )
                 
                 job_key.SetVariable( 'popup_text_1', 'Encountered a network error, will retry again later' )
                 

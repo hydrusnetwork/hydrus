@@ -469,7 +469,7 @@ class Controller( object ):
         return False
         
     
-    def GetCurrentSessionPageInfoDict( self ):
+    def GetCurrentSessionPageAPIInfoDict( self ):
         
         return {
             "name" : "top pages notebook",
@@ -526,6 +526,11 @@ class Controller( object ):
     def GetManager( self, manager_type ):
         
         return self._managers[ manager_type ]
+        
+    
+    def GetPageAPIInfoDict( self, page_key, simple ):
+        
+        return {}
         
     
     def GetWrite( self, name ):

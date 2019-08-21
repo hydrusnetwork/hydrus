@@ -432,6 +432,24 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'query_text' ] = self._query
+            d[ 'source' ] = self._source_name
+            d[ 'gallery_key' ] = self._gallery_import_key.hex()
+            d[ 'files_paused' ] = self._files_paused
+            d[ 'gallery_paused' ] = self._gallery_paused
+            d[ 'imports' ] = self._file_seed_cache.GetAPIInfoDict( simple )
+            d[ 'gallery_log' ] = self._gallery_seed_log.GetAPIInfoDict( simple )
+            
+            return d
+            
+        
+    
     def GetCreationTime( self ):
         
         with self._lock:
@@ -1118,6 +1136,27 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return True in ( gallery_import.CurrentlyWorking() for gallery_import in self._gallery_imports )
+            
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'gallery_imports' ] = [ gallery_import.GetAPIInfoDict( simple ) for gallery_import in self._gallery_imports ]
+            
+            if self._highlighted_gallery_import_key is None:
+                
+                d[ 'highlight' ] = None
+                
+            else:
+                
+                d[ 'highlight' ] = self._highlighted_gallery_import_key.hex()
+                
+            
+            return d
             
         
     

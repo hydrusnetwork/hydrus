@@ -164,6 +164,19 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return gallery_seed
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        d = {}
+        
+        d[ 'url' ] = self.url
+        d[ 'created' ] = self.created
+        d[ 'modified' ] = self.modified
+        d[ 'status' ] = self.status
+        d[ 'note' ] = self.note
+        
+        return d
+        
+    
     def GetExampleNetworkJob( self, network_job_factory ):
         
         ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
@@ -739,6 +752,32 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
         
         return None
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            if self._status_dirty:
+                
+                self._GenerateStatus()
+                
+            
+            ( status, ( total_processed, total ) ) = self._status_cache
+            
+            d[ 'status' ] = status
+            d[ 'total_processed' ] = total_processed
+            d[ 'total_to_process' ] = total
+            
+            if not simple:
+                
+                d[ 'log_items' ] = [ gallery_seed.GetAPIInfoDict( simple ) for gallery_seed in self._gallery_seeds ]
+                
+            
+            return d
+            
         
     
     def GetGallerySeedLogKey( self ):

@@ -4680,9 +4680,23 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return self._notebook.GetCurrentMediaPage()
         
     
-    def GetCurrentSessionPageInfoDict( self ):
+    def GetCurrentSessionPageAPIInfoDict( self ):
         
-        return self._notebook.GetPageInfoDict( is_selected = True )
+        return self._notebook.GetSessionAPIInfoDict( is_selected = True )
+        
+    
+    def GetPageAPIInfoDict( self, page_key, simple ):
+        
+        page = self._notebook.GetPageFromPageKey( page_key )
+        
+        if page is None:
+            
+            return None
+            
+        else:
+            
+            return page.GetAPIInfoDict( simple )
+            
         
     
     def GetTotalPageCounts( self ):

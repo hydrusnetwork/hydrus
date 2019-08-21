@@ -176,6 +176,50 @@ class ParsedRequestArguments( dict ):
         raise HydrusExceptions.BadRequestException( 'It looks like the parameter "{}" was missing!'.format( key ) )
         
     
+    def GetValue( self, key, expected_type, default_value = None ):
+        
+        if key in self:
+            
+            value = self[ key ]
+            
+            if not isinstance( value, expected_type ):
+                
+                error_text_lookup = {}
+                
+                error_text_lookup[ int ] = 'integer'
+                error_text_lookup[ str ] = 'string'
+                error_text_lookup[ bytes ] = 'hex-encoded bytestring'
+                error_text_lookup[ bool ] = 'boolean'
+                error_text_lookup[ list ] = 'list'
+                error_text_lookup[ dict ] = 'object/dict'
+                
+                if expected_type in error_text_lookup:
+                    
+                    type_error_text = error_text_lookup[ expected_type ]
+                    
+                else:
+                    
+                    type_error_text = 'unknown!'
+                    
+                
+                raise HydrusExceptions.BadRequestException( 'The parameter "{}" was not the expected type: {}!'.format( key, type_error_text ) )
+                
+            
+            return value
+            
+        else:
+            
+            if default_value is None:
+                
+                raise HydrusExceptions.BadRequestException( 'The required parameter "{}" was missing!'.format( key ) )
+                
+            else:
+                
+                return default_value
+                
+            
+        
+    
 class BandwidthRules( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES

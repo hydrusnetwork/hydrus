@@ -73,12 +73,22 @@ class App( wx.App ):
         
         HG.client_controller.gui.Exit()
         
+        if event.CanVeto(): # if any more time is offered, take it
+            
+            event.Veto()
+            
+        
     
     def EventQueryEndSession( self, event ):
         
         HG.emergency_exit = True
         
         HG.client_controller.gui.Exit()
+        
+        if event.CanVeto(): # if any more time is offered, take it
+            
+            event.Veto()
+            
         
     
 class Controller( HydrusController.HydrusController ):
@@ -382,6 +392,11 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
+        if HG.program_is_shutting_down:
+            
+            return True
+            
+        
         if HG.force_idle_mode:
             
             self._idle_started = 0
@@ -444,6 +459,11 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyVeryIdle( self ):
         
+        if HG.program_is_shutting_down:
+            
+            return True
+            
+        
         if self._idle_started is not None and HydrusData.TimeHasPassed( self._idle_started + 3600 ):
             
             return True
@@ -482,6 +502,8 @@ class Controller( HydrusController.HydrusController ):
         
     
     def Exit( self ):
+        
+        HG.program_is_shutting_down = True
         
         if HG.emergency_exit:
             
@@ -1422,8 +1444,8 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-        
-        self.SetRunningTwistedServices( [] )
+            self.SetRunningTwistedServices( [] )
+            
         
         HydrusController.HydrusController.ShutdownView( self )
         

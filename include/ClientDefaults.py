@@ -13,7 +13,6 @@ def GetClientDefaultOptions():
     options = {}
     
     options[ 'play_dumper_noises' ] = True
-    options[ 'default_collect' ] = []
     options[ 'export_path' ] = None
     options[ 'hpos' ] = 400
     options[ 'vpos' ] = 700

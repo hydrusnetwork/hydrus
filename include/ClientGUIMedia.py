@@ -2239,13 +2239,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         
     
-    def AddMediaResults( self, page_key, media_results, append = True ):
+    def AddMediaResults( self, page_key, media_results ):
         
         if page_key == self._page_key:
             
             HG.client_controller.pub( 'refresh_page_name', self._page_key )
             
-            return ClientMedia.ListeningMediaList.AddMediaResults( self, media_results, append = append )
+            return ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
             
         
     
@@ -2254,13 +2254,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         self._page_key = 'dead media panel page key'
         
     
-    def Collect( self, page_key, collect_by = None ):
+    def Collect( self, page_key, media_collect = None ):
         
         if page_key == self._page_key:
             
             self._Select( 'none' )
             
-            ClientMedia.ListeningMediaList.Collect( self, collect_by )
+            ClientMedia.ListeningMediaList.Collect( self, media_collect )
             
             self._RecalculateVirtualSize()
             
@@ -3333,11 +3333,11 @@ class MediaPanelThumbnails( MediaPanel ):
         self.Refresh()
         
     
-    def AddMediaResults( self, page_key, media_results, append = True ):
+    def AddMediaResults( self, page_key, media_results ):
         
         if page_key == self._page_key:
             
-            thumbnails = MediaPanel.AddMediaResults( self, page_key, media_results, append = append )
+            thumbnails = MediaPanel.AddMediaResults( self, page_key, media_results )
             
             self._RecalculateVirtualSize()
             

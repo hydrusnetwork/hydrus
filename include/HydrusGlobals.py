@@ -42,6 +42,7 @@ currently_uploading_pending = False
 shutting_down_due_to_already_running = False
 
 do_idle_shutdown_work = False
+program_is_shutting_down = False
 shutdown_complete = False
 restart = False
 emergency_exit = False

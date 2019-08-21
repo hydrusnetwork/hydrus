@@ -1540,13 +1540,13 @@ class ServiceRepository( ServiceRestricted ):
                             
                         elif HG.client_controller.CurrentlyIdle():
                             
-                            work_time = 9.0
-                            break_time = 1.0
+                            work_time = 9.5
+                            break_time = 0.5
                             
                         else:
                             
-                            work_time = 0.5
-                            break_time = 0.5
+                            work_time = 0.45
+                            break_time = 0.05
                             
                         
                         num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_definitions', self._service_key, definition_hash, iterator_dict, job_key, work_time )
@@ -1556,7 +1556,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         work_done = True
                         
-                        if this_is_first_definitions_work and total_definition_rows_completed > 10000 and not did_definition_analyze:
+                        if this_is_first_definitions_work and total_definition_rows_completed > 1000 and not did_definition_analyze:
                             
                             HG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
                             
@@ -1571,6 +1571,8 @@ class ServiceRepository( ServiceRestricted ):
                         if HydrusData.TimeHasPassedPrecise( this_work_start_time + work_time ):
                             
                             time.sleep( break_time )
+                            
+                            HG.client_controller.WaitUntilViewFree()
                             
                         
                         self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'definitions' )
@@ -1672,13 +1674,13 @@ class ServiceRepository( ServiceRestricted ):
                             
                         elif HG.client_controller.CurrentlyIdle():
                             
-                            work_time = 9.0
-                            break_time = 1.0
+                            work_time = 9.5
+                            break_time = 0.5
                             
                         else:
                             
-                            work_time = 0.5
-                            break_time = 0.2
+                            work_time = 0.45
+                            break_time = 0.05
                             
                         
                         num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_content', self._service_key, content_hash, iterator_dict, job_key, work_time )
@@ -1688,7 +1690,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         work_done = True
                         
-                        if this_is_first_content_work and total_content_rows_completed > 10000 and not did_content_analyze:
+                        if this_is_first_content_work and total_content_rows_completed > 1000 and not did_content_analyze:
                             
                             HG.client_controller.WriteSynchronous( 'analyze', maintenance_mode = maintenance_mode, stop_time = stop_time )
                             
@@ -1703,6 +1705,8 @@ class ServiceRepository( ServiceRestricted ):
                         if HydrusData.TimeHasPassedPrecise( this_work_start_time + work_time ):
                             
                             time.sleep( break_time )
+                            
+                            HG.client_controller.WaitUntilViewFree()
                             
                         
                         self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'content rows' )

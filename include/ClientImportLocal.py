@@ -202,6 +202,20 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            d[ 'imports' ] = self._file_seed_cache.GetAPIInfoDict( simple )
+            
+            d[ 'files_paused' ] = self._paused
+            
+            return d
+            
+        
+    
     def GetFileImportOptions( self ):
         
         with self._lock:

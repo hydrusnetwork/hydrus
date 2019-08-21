@@ -674,6 +674,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         pass
         
     
+    def GetAPIInfoDict( self, simple ):
+        
+        d = {}
+        
+        d[ 'import_data' ] = self.file_seed_data
+        d[ 'created' ] = self.created
+        d[ 'modified' ] = self.modified
+        d[ 'source_time' ] = self.source_time
+        d[ 'status' ] = self.status
+        d[ 'note' ] = self.note
+        
+        return d
+        
+    
     def GetExampleNetworkJob( self, network_job_factory ):
         
         if self.IsAPostURL():
@@ -1920,6 +1934,33 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         self.NotifyFileSeedsUpdated( ( file_seed, ) )
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        with self._lock:
+            
+            d = {}
+            
+            if self._status_dirty:
+                
+                self._GenerateStatus()
+                
+            
+            ( status, simple_status, ( total_processed, total ) ) = self._status_cache
+            
+            d[ 'status' ] = status
+            d[ 'simple_status' ] = status
+            d[ 'total_processed' ] = total_processed
+            d[ 'total_to_process' ] = total
+            
+            if not simple:
+                
+                d[ 'import_items' ] = [ file_seed.GetAPIInfoDict( simple ) for file_seed in self._file_seeds ]
+                
+            
+            return d
+            
         
     
     def GetEarliestSourceTime( self ):

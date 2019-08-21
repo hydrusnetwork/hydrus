@@ -3153,7 +3153,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             elif result == wx.ID_YES:
                 
-                self._CommitProcessed()
+                self._CommitProcessed( blocking = False )
                 
             
         
@@ -3165,7 +3165,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         CanvasWithHovers._Close( self )
         
     
-    def _CommitProcessed( self ):
+    def _CommitProcessed( self, blocking = True ):
         
         pair_info = []
         
@@ -3184,7 +3184,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if len( pair_info ) > 0:
             
-            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
+            if blocking:
+                
+                HG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
+                
+            else:
+                
+                HG.client_controller.Write( 'duplicate_pair_status', pair_info )
+                
             
         
         self._processed_pairs = []
@@ -3550,7 +3557,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if result == wx.ID_YES:
                 
-                self._CommitProcessed()
+                self._CommitProcessed( blocking = True )
                 
             else:
                 
@@ -3647,7 +3654,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 wx.MessageBox( 'At least one of the potential files in this pair was not in this client. Likely it was very recently deleted through a different process. Your decisions until now will be saved, and then the duplicate filter will close.' )
                 
-                self._CommitProcessed()
+                self._CommitProcessed( blocking = True )
                 
                 self._Close()
                 

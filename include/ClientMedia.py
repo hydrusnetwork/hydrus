@@ -881,6 +881,55 @@ class Media( object ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
+class MediaCollect( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT
+    SERIALISABLE_NAME = 'Media Collect'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, namespaces = None, rating_service_keys = None, collect_unmatched = None ):
+        
+        if namespaces is None:
+            
+            namespaces = []
+            
+        
+        if rating_service_keys is None:
+            
+            rating_service_keys = []
+            
+        
+        if collect_unmatched is None:
+            
+            collect_unmatched = True
+            
+        
+        self.namespaces = namespaces
+        self.rating_service_keys = rating_service_keys
+        self.collect_unmatched = collect_unmatched
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_rating_service_keys = [ key.hex() for key in self.rating_service_keys ]
+        
+        return ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched ) = serialisable_info
+        
+        self.rating_service_keys = [ bytes.fromhex( serialisable_key ) for serialisable_key in serialisable_rating_service_keys ]
+        
+    
+    def DoesACollect( self ):
+        
+        return len( self.namespaces ) > 0 or len( self.rating_service_keys ) > 0
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT ] = MediaCollect
+
 class MediaList( object ):
     
     def __init__( self, file_service_key, media_results ):
@@ -893,10 +942,7 @@ class MediaList( object ):
         self._hashes_to_collected_media = {}
         
         self._media_sort = MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-        self._collect_by = []
-        
-        self._collect_map_singletons = {}
-        self._collect_map_collected = {}
+        self._media_collect = MediaCollect()
         
         self._sorted_media = SortedList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
         
@@ -911,12 +957,12 @@ class MediaList( object ):
         return len( self._singleton_media ) + sum( map( len, self._collected_media ) )
         
     
-    def _CalculateCollectionKeysToMedias( self, collect_by, medias ):
+    def _CalculateCollectionKeysToMedias( self, media_collect, medias ):
         
         keys_to_medias = collections.defaultdict( list )
         
-        namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
-        ratings_to_collect_by = [ bytes.fromhex( data ) for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
+        namespaces_to_collect_by = list( media_collect.namespaces )
+        ratings_to_collect_by = list( media_collect.rating_service_keys )
         
         services_manager = HG.client_controller.services_manager
         
@@ -928,7 +974,7 @@ class MediaList( object ):
                 
             else:
                 
-                namespace_key = None
+                namespace_key = frozenset()
                 
             
             if len( ratings_to_collect_by ) > 0:
@@ -937,7 +983,7 @@ class MediaList( object ):
                 
             else:
                 
-                rating_key = None
+                rating_key = frozenset()
                 
             
             keys_to_medias[ ( namespace_key, rating_key ) ].append( media )
@@ -1093,139 +1139,84 @@ class MediaList( object ):
         self._singleton_media.difference_update( singleton_media )
         self._collected_media.difference_update( collected_media )
         
-        keys_to_remove = [ key for ( key, media ) in self._collect_map_singletons if media in singleton_media ]
-        
-        for key in keys_to_remove:
-            
-            del self._collect_map_singletons[ key ]
-            
-        
-        keys_to_remove = [ key for ( key, media ) in self._collect_map_collected if media in collected_media ]
-        
-        for key in keys_to_remove:
-            
-            del self._collect_map_collected[ key ]
-            
-        
         self._sorted_media.remove_items( singleton_media.union( collected_media ) )
         
         self._RecalcHashes()
         
     
-    def AddMedia( self, new_media, append = True ):
+    def AddMedia( self, new_media ):
         
-        if append:
+        new_media = FlattenMedia( new_media )
+        
+        addable_media = []
+        
+        for media in new_media:
             
-            for media in new_media:
-                
-                hash = media.GetHash()
-                
-                self._hashes.add( hash )
-                
-                self._hashes_to_singleton_media[ hash ] = media
-                
+            hash = media.GetHash()
             
-            self._singleton_media.update( new_media )
-            self._sorted_media.append_items( new_media )
-            
-        else:
-            
-            if self._collect_by is not None:
+            if hash in self._hashes:
                 
-                keys_to_medias = self._CalculateCollectionKeysToMedias( self._collect_by, new_media )
-                
-                new_media = []
-                
-                for ( key, medias ) in list(keys_to_medias.items()):
-                    
-                    if key in self._collect_map_singletons:
-                        
-                        singleton_media = self._collect_map_singletons[ key ]
-                        
-                        self._sorted_media.remove_items( singleton_media )
-                        self._singleton_media.discard( singleton_media )
-                        del self._collect_map_singletons[ key ]
-                        
-                        medias.append( singleton_media )
-                        
-                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
-                        
-                        collected_media.Sort( self._media_sort )
-                        
-                        self._collected_media.add( collected_media )
-                        self._collect_map_collected[ key ] = collected_media
-                        
-                        new_media.append( collected_media )
-                        
-                    elif key in self._collect_map_collected:
-                        
-                        collected_media = self._collect_map_collected[ key ]
-                        
-                        self._sorted_media.remove_items( collected_media )
-                        
-                        collected_media.AddMedia( medias )
-                        
-                        collected_media.Sort( self._media_sort )
-                        
-                        new_media.append( collected_media )
-                        
-                    elif len( medias ) == 1:
-                        
-                        ( singleton_media, ) = medias
-                        
-                        self._singleton_media.add( singleton_media )
-                        self._collect_map_singletons[ key ] = singleton_media
-                        
-                    else:
-                        
-                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
-                        
-                        collected_media.Sort( self._media_sort )
-                        
-                        self._collected_media.add( collected_media )
-                        self._collect_map_collected[ key ] = collected_media
-                        
-                        new_media.append( collected_media )
-                        
-                    
+                continue
                 
             
-            self._sorted_media.insert_items( new_media )
+            addable_media.append( media )
             
-            self._RecalcHashes()
+            self._hashes.add( hash )
             
+            self._hashes_to_singleton_media[ hash ] = media
+            
+        
+        self._singleton_media.update( addable_media )
+        self._sorted_media.append_items( addable_media )
         
         return new_media
         
     
-    def Collect( self, collect_by = None ):
+    def Collect( self, media_collect = None ):
         
-        if collect_by == None:
+        if media_collect == None:
             
-            collect_by = self._collect_by
+            media_collect = self._media_collect
             
         
-        self._collect_by = collect_by
+        self._media_collect = media_collect
+        
+        flat_media = list( self._singleton_media )
         
         for media in self._collected_media:
             
-            self._singleton_media.update( [ self._GenerateMediaSingleton( media_result ) for media_result in media.GenerateMediaResults() ] )
+            flat_media.extend( [ self._GenerateMediaSingleton( media_result ) for media_result in media.GenerateMediaResults() ] )
             
         
-        self._collected_media = set()
-        
-        self._collect_map_singletons = {}
-        self._collect_map_collected = {}
-        
-        if len( collect_by ) > 0:
+        if self._media_collect.DoesACollect():
             
-            keys_to_medias = self._CalculateCollectionKeysToMedias( collect_by, self._singleton_media )
+            keys_to_medias = self._CalculateCollectionKeysToMedias( media_collect, flat_media )
             
-            self._collect_map_singletons = { key : medias[0] for ( key, medias ) in list(keys_to_medias.items()) if len( medias ) == 1 }
-            self._collect_map_collected = { key : self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for ( key, medias ) in list(keys_to_medias.items()) if len( medias ) > 1 }
+            # add an option here I think, to media_collect to say if collections with one item should be singletons or not
             
-            self._singleton_media = set( self._collect_map_singletons.values() )
-            self._collected_media = set( self._collect_map_collected.values() )
+            self._singleton_media = set()#{ medias[0] for ( key, medias ) in keys_to_medias.items() if len( medias ) == 1 }
+            
+            if not self._media_collect.collect_unmatched:
+                
+                unmatched_key = ( frozenset(), frozenset() )
+                
+                if unmatched_key in keys_to_medias:
+                    
+                    unmatched_medias = keys_to_medias[ unmatched_key ]
+                    
+                    self._singleton_media.update( unmatched_medias )
+                    
+                    del keys_to_medias[ unmatched_key ]
+                    
+                
+            
+            self._collected_media = { self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for ( key, medias ) in keys_to_medias.items() }# if len( medias ) > 1 }
+            
+        else:
+            
+            self._singleton_media = set( flat_media )
+            
+            self._collected_media = set()
             
         
         self._sorted_media = SortedList( list( self._singleton_media ) + list( self._collected_media ) )
@@ -1332,6 +1323,22 @@ class MediaList( object ):
             
         
         return media_results
+        
+    
+    def GetAPIInfoDict( self, simple ):
+        
+        d = {}
+        
+        d[ 'num_files' ] = self.GetNumFiles()
+        
+        if not simple:
+            
+            hashes = self.GetHashes( ordered = True )
+            
+            d[ 'hashes' ] = [ hash.hex() for hash in hashes ]
+            
+        
+        return d
         
     
     def GetFirst( self ):
@@ -1572,7 +1579,7 @@ class ListeningMediaList( MediaList ):
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
-    def AddMediaResults( self, media_results, append = True ):
+    def AddMediaResults( self, media_results ):
         
         new_media = []
         
@@ -1588,7 +1595,7 @@ class ListeningMediaList( MediaList ):
             new_media.append( self._GenerateMediaSingleton( media_result ) )
             
         
-        self.AddMedia( new_media, append = append )
+        self.AddMedia( new_media )
         
         return new_media
         
@@ -1674,9 +1681,9 @@ class MediaCollection( MediaList, Media ):
         self._file_viewing_stats_manager = FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime )
         
     
-    def AddMedia( self, new_media, append = True ):
+    def AddMedia( self, new_media ):
         
-        MediaList.AddMedia( self, new_media, append = True )
+        MediaList.AddMedia( self, new_media )
         
         self._RecalcInternals()
         
