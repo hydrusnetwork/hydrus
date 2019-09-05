@@ -3,6 +3,7 @@ from . import ClientConstants as CC
 from . import ClientGUIAPI
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanelsReview
 from . import ClientGUITopLevelWindows
@@ -573,16 +574,15 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Delete( self ):
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    access_keys = [ api_permissions.GetAccessKey() for api_permissions in self._permissions_list.GetData( only_selected = True ) ]
-                    
-                    HG.client_controller.client_api_manager.DeleteAccess( access_keys )
-                    
-                    self._Refresh()
-                    
+                access_keys = [ api_permissions.GetAccessKey() for api_permissions in self._permissions_list.GetData( only_selected = True ) ]
+                
+                HG.client_controller.client_api_manager.DeleteAccess( access_keys )
+                
+                self._Refresh()
                 
             
         
@@ -724,22 +724,19 @@ class ReviewServicePanel( wx.Panel ):
             
             message = 'This will instruct your database to forget its entire record of locally deleted files, meaning that if it ever encounters any of those files again, it will assume they are new and reimport them. This operation cannot be undone.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result == wx.ID_YES:
                 
-                result = dlg_add.ShowModal()
+                hashes = None
                 
-                if result == wx.ID_YES:
-                    
-                    hashes = None
-                    
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', hashes ) )
-                    
-                    service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
-                    
-                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                    
-                    HG.client_controller.pub( 'service_updated', self._service )
-                    
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', hashes ) )
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
+                HG.client_controller.pub( 'service_updated', self._service )
                 
             
         
@@ -1278,19 +1275,17 @@ class ReviewServicePanel( wx.Panel ):
             
             message = 'This will remove all the processed information for ' + name + ' from the database, setting the \'processed\' gauge back to 0.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything that has been downloaded over again. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                message = 'Seriously, are you absolutely sure?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result == wx.ID_YES:
                     
-                    message = 'Seriously, are you absolutely sure?'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg2:
-                        
-                        if dlg2.ShowModal() == wx.ID_YES:
-                            
-                            self._service.Reset()
-                            
-                        
+                    self._service.Reset()
                     
                 
             
@@ -1301,21 +1296,20 @@ class ReviewServicePanel( wx.Panel ):
             message += os.linesep * 2
             message += 'You can still use the client while it runs, but it may make some things like autocomplete lookup a bit juddery.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                def do_it():
                     
-                    def do_it():
-                        
-                        self._service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_FORCED )
-                        
-                        self._my_updater.Update()
-                        
+                    self._service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_FORCED )
                     
-                    self._sync_now_button.Disable()
+                    self._my_updater.Update()
                     
-                    HG.client_controller.CallToThread( do_it )
-                    
+                
+                self._sync_now_button.Disable()
+                
+                HG.client_controller.CallToThread( do_it )
                 
             
         
@@ -1569,16 +1563,15 @@ class ReviewServicePanel( wx.Panel ):
                     
                 
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Unpin (remove) all selected?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Unpin (remove) all selected?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData( only_selected = True ) ]
-                    
-                    self._ipfs_shares_panel.Disable()
-                    
-                    HG.client_controller.CallToThread( do_it, self._service, multihashes )
-                    
+                multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData( only_selected = True ) ]
+                
+                self._ipfs_shares_panel.Disable()
+                
+                HG.client_controller.CallToThread( do_it, self._service, multihashes )
                 
             
         
@@ -1753,17 +1746,16 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Delete( self ):
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                for share_key in self._booru_shares.GetData( only_selected = True ):
                     
-                    for share_key in self._booru_shares.GetData( only_selected = True ):
-                        
-                        HG.client_controller.Write( 'delete_local_booru_share', share_key )
-                        
+                    HG.client_controller.Write( 'delete_local_booru_share', share_key )
                     
-                    self._booru_shares.DeleteSelected()
-                    
+                
+                self._booru_shares.DeleteSelected()
                 
             
         
@@ -1917,20 +1909,17 @@ class ReviewServicePanel( wx.Panel ):
             message += os.linesep * 2
             message += 'Please note a client restart is needed to see the ratings disappear in media views.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result == wx.ID_YES:
                 
-                result = dlg_add.ShowModal()
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
                 
-                if result == wx.ID_YES:
-                    
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
-                    
-                    service_keys_to_content_updates = { self._service.GetServiceKey() : [ content_update ] }
-                    
-                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates, do_pubsubs = False )
-                    
-                    HG.client_controller.pub( 'service_updated', self._service )
-                    
+                service_keys_to_content_updates = { self._service.GetServiceKey() : [ content_update ] }
+                
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates, do_pubsubs = False )
+                
+                HG.client_controller.pub( 'service_updated', self._service )
                 
             
         
@@ -1983,39 +1972,27 @@ class ReviewServicePanel( wx.Panel ):
             
             self._tag_info_st = ClientGUICommon.BetterStaticText( self )
             
-            self._advanced_content_update = ClientGUICommon.BetterButton( self, 'advanced service-wide update', self._AdvancedContentUpdate )
+            self._tag_migration = ClientGUICommon.BetterButton( self, 'migrate tags', self._MigrateTags )
             
             #
-            
-            new_options = HG.client_controller.new_options
-            
-            advanced_mode = new_options.GetBoolean( 'advanced_mode' )
-            
-            if not advanced_mode:
-                
-                self._advanced_content_update.Hide()
-                
             
             self._Refresh()
             
             #
             
             self.Add( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.Add( self._advanced_content_update, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._tag_migration, CC.FLAGS_LONE_BUTTON )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
-        def _AdvancedContentUpdate( self ):
+        def _MigrateTags( self ):
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'advanced content update' ) as dlg:
-                
-                panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._service.GetServiceKey() )
-                
-                dlg.SetPanel( panel )
-                
-                dlg.ShowModal()
-                
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'migrate tags' )
+            
+            panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._service.GetServiceKey() )
+            
+            frame.SetPanel( panel )
             
         
         def _Refresh( self ):
@@ -2085,27 +2062,24 @@ class ReviewServicePanel( wx.Panel ):
             message += os.linesep * 2
             message += 'If you have many files in your trash, it will take some time to complete and for all the files to eventually be deleted.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result == wx.ID_YES:
                 
-                result = dlg_add.ShowModal()
+                def do_it():
+                    
+                    hashes = HG.client_controller.Read( 'trash_hashes' )
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+                    
+                    service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                    HG.client_controller.pub( 'service_updated', self._service )
+                    
                 
-                if result == wx.ID_YES:
-                    
-                    def do_it():
-                        
-                        hashes = HG.client_controller.Read( 'trash_hashes' )
-                        
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
-                        
-                        service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
-                        
-                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                        
-                        HG.client_controller.pub( 'service_updated', self._service )
-                        
-                    
-                    HG.client_controller.CallToThread( do_it )
-                    
+                HG.client_controller.CallToThread( do_it )
                 
             
         

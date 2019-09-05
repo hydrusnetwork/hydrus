@@ -160,6 +160,8 @@ class HydrusDB( object ):
         
         self._db_filenames[ 'main' ] = main_db_filename
         
+        self._durable_temp_db_filename = db_name + '.temp.db'
+        
         self._InitExternalDatabases()
         
         if distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0' ):
@@ -283,10 +285,14 @@ class HydrusDB( object ):
                 continue
                 
             
-            db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+            db_path = os.path.join( self._db_dir, filename )
             
             self._c.execute( 'ATTACH ? AS ' + name + ';', ( db_path, ) )
             
+        
+        db_path = os.path.join( self._db_dir, self._durable_temp_db_filename )
+        
+        self._c.execute( 'ATTACH ? AS durable_temp;', ( db_path, ) )
         
     
     def _BeginImmediate( self ):
@@ -466,7 +472,7 @@ class HydrusDB( object ):
         
         self._AttachExternalDatabases()
         
-        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         
         for db_name in db_names:
             
@@ -732,6 +738,30 @@ class HydrusDB( object ):
         return { item for ( item, ) in iterable_cursor }
         
     
+    def _TableHasAtLeastRowCount( self, name, row_count ):
+        
+        cursor = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
+        
+        for i in range( row_count ):
+            
+            r = cursor.fetchone()
+            
+            if r is None:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def _TableIsEmpty( self, name ):
+        
+        result = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
+        
+        return result is None
+        
+    
     def _UpdateDB( self, version ):
         
         raise NotImplementedError()
@@ -902,6 +932,10 @@ class HydrusDB( object ):
         self._CleanUpCaches()
         
         self._CloseDBCursor()
+        
+        temp_path = os.path.join( self._db_dir, self._durable_temp_db_filename )
+        
+        HydrusPaths.DeletePath( temp_path )
         
         self._loop_finished = True
         

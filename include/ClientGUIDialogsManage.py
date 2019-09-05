@@ -37,7 +37,6 @@ from . import HydrusNATPunch
 from . import HydrusNetwork
 from . import HydrusPaths
 from . import HydrusSerialisable
-from . import HydrusTagArchive
 from . import HydrusTags
 from . import HydrusText
 import itertools

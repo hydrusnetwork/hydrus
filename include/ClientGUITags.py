@@ -16,6 +16,7 @@ from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
 from . import ClientGUITagSuggestions
 from . import ClientMedia
+from . import ClientMigration
 from . import ClientTags
 import collections
 from . import HydrusConstants as HC
@@ -25,7 +26,6 @@ from . import HydrusGlobals as HG
 from . import HydrusNetwork
 from . import HydrusSerialisable
 from . import HydrusTags
-from . import HydrusTagArchive
 from . import HydrusText
 import itertools
 import os
@@ -219,12 +219,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( selected_tag_slices ) > 0:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._advanced_blacklist.RemoveTags( selected_tag_slices )
-                    
+                self._advanced_blacklist.RemoveTags( selected_tag_slices )
                 
             
         
@@ -237,12 +236,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( selected_tag_slices ) > 0:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._advanced_whitelist.RemoveTags( selected_tag_slices )
-                    
+                self._advanced_whitelist.RemoveTags( selected_tag_slices )
                 
             
         
@@ -786,195 +784,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         return tag_filter
         
     
-def ExportToHTA( parent, service_key, hashes ):
-    
-    with wx.FileDialog( parent, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
-        
-        if dlg.ShowModal() == wx.ID_OK:
-            
-            path = dlg.GetPath()
-            
-        else:
-            
-            return
-            
-        
-    
-    message = 'Would you like to use hydrus\'s normal hash type, or an alternative?'
-    message += os.linesep * 2
-    message += 'Hydrus uses SHA256 to identify files, but other services use different standards. MD5, SHA1 and SHA512 are available, but only for local files, which may limit your export.'
-    message += os.linesep * 2
-    message += 'If you do not know what this stuff means, click \'normal\'.'
-    
-    with ClientGUIDialogs.DialogYesNo( parent, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
-        
-        result = dlg.ShowModal()
-        
-        if result in ( wx.ID_YES, wx.ID_NO ):
-            
-            if result == wx.ID_YES:
-                
-                hash_type = HydrusTagArchive.HASH_TYPE_SHA256
-                
-            else:
-                
-                choice_tuples = []
-                
-                choice_tuples.append( ( 'md5', HydrusTagArchive.HASH_TYPE_MD5 ) )
-                choice_tuples.append( ( 'sha1', HydrusTagArchive.HASH_TYPE_SHA1 ) )
-                choice_tuples.append( ( 'sha512', HydrusTagArchive.HASH_TYPE_SHA512 ) )
-                
-                try:
-                    
-                    hash_type = ClientGUIDialogsQuick.SelectFromList( parent, 'select the hash type', choice_tuples )
-                    
-                except HydrusExceptions.CancelledException:
-                    
-                    return
-                    
-                
-            
-        
-    
-    if hash_type is not None:
-        
-        HG.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
-        
-    
-def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
-    
-    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-    
-    potential_namespaces = list( hta.GetNamespaces() )
-    
-    potential_namespaces.sort()
-    
-    hash_type = hta.GetHashType() # this tests if the hta can produce a hashtype
-    
-    del hta
-    
-    service = HG.client_controller.services_manager.GetService( tag_service_key )
-    
-    service_type = service.GetServiceType()
-    
-    can_delete = True
-    
-    if service_type == HC.TAG_REPOSITORY:
-        
-        if service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            can_delete = False
-            
-        
-    
-    if can_delete:
-        
-        text = 'Would you like to add or delete the archive\'s tags?'
-        
-        with ClientGUIDialogs.DialogYesNo( parent, text, title = 'Add or delete?', yes_label = 'add', no_label = 'delete' ) as dlg_add:
-            
-            result = dlg_add.ShowModal()
-            
-            if result == wx.ID_YES: adding = True
-            elif result == wx.ID_NO: adding = False
-            else: return
-            
-        
-    else:
-        
-        text = 'You cannot quickly delete tags from this service, so I will assume you want to add tags.'
-        
-        wx.MessageBox( text )
-        
-        adding = True
-        
-    
-    text = 'Choose which namespaces to '
-    
-    if adding: text += 'add.'
-    else: text += 'delete.'
-    
-    choice_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in potential_namespaces ]
-    
-    with ClientGUITopLevelWindows.DialogEdit( parent, text ) as dlg:
-        
-        panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
-        
-        dlg.SetPanel( panel )
-        
-        if dlg.ShowModal() == wx.ID_OK:
-            
-            namespaces = panel.GetValue()
-            
-            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
-                
-                text = 'This tag archive can be fully merged into your database, but this may be more than you want.'
-                text += os.linesep * 2
-                text += 'Would you like to import the tags only for files you actually have, or do you want absolutely everything?'
-                
-                with ClientGUIDialogs.DialogYesNo( parent, text, title = 'How much do you want?', yes_label = 'just for my local files', no_label = 'everything' ) as dlg_add:
-                    
-                    result = dlg_add.ShowModal()
-                    
-                    if result == wx.ID_YES:
-                        
-                        file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                        
-                    elif result == wx.ID_NO:
-                        
-                        file_service_key = CC.COMBINED_FILE_SERVICE_KEY
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            else:
-                
-                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            
-            text = 'Are you absolutely sure you want to '
-            
-            if adding: text += 'add'
-            else: text += 'delete'
-            
-            text += ' the namespaces:'
-            text += os.linesep * 2
-            text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
-            text += os.linesep * 2
-            
-            file_service = HG.client_controller.services_manager.GetService( file_service_key )
-            
-            text += 'For '
-            
-            if hashes is None:
-                
-                text += 'all'
-                
-            else:
-                
-                text += HydrusData.ToHumanInt( len( hashes ) )
-                
-            
-            text += ' files in \'' + file_service.GetName() + '\''
-            
-            if adding: text += ' to '
-            else: text += ' from '
-            
-            text += '\'' + service.GetName() + '\'?'
-            
-            with ClientGUIDialogs.DialogYesNo( parent, text ) as dlg_final:
-                
-                if dlg_final.ShowModal() == wx.ID_YES:
-                    
-                    HG.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
-                    
-                
-            
-        
-    
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, file_service_key, media, immediate_commit = False, canvas_key = None ):
@@ -1099,12 +908,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return False
-                    
+                return False
                 
             
         
@@ -1319,12 +1127,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items.append( ( 'check', 'show deleted', 'Show deleted tags, if any.', check_manager ) )
             
-            if self._new_options.GetBoolean( 'advanced_mode' ):
-                
-                menu_items.append( ( 'separator', 0, 0, 0 ) )
-                
-                menu_items.append( ( 'normal', 'advanced operation', 'Perform an advanced tag operation on the files used to launch this manage tags panel.', self._AdvancedOperation ) )
-                
+            menu_items.append( ( 'separator', 0, 0, 0 ) )
+            
+            menu_items.append( ( 'normal', 'migrate tags for these files', 'Migrate the tags for the files used to launch this manage tags panel.', self._MigrateTags ) )
             
             if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
                 
@@ -1685,7 +1490,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
-        def _AdvancedOperation( self ):
+        def _MigrateTags( self ):
             
             hashes = set()
             
@@ -1694,22 +1499,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 hashes.update( m.GetHashes() )
                 
             
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( HG.client_controller.gui, 'tag migration' )
+            
+            panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
+            
+            frame.SetPanel( panel )
+            
             self.OK()
-            
-            # do this because of the OK() call, which doesn't want to happen in the dialog event loop
-            def do_it():
-                
-                with ClientGUITopLevelWindows.DialogNullipotent( HG.client_controller.gui, 'advanced content update' ) as dlg:
-                    
-                    panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._tag_service_key, hashes )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    dlg.ShowModal()
-                    
-                
-            
-            HG.client_controller.CallLaterWXSafe( HG.client_controller.gui, 0.5, do_it )
             
         
         def _Copy( self ):
@@ -1821,12 +1617,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     summary_message += 'ADD: ' + ', '.join( addee_tag_statements )
                     
                 
-                with ClientGUIDialogs.DialogYesNo( self, summary_message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, summary_message, yes_label = 'do it', no_label = 'forget it' )
+                
+                if result != wx.ID_YES:
                     
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return
-                        
+                    return
                     
                 
                 if self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY:
@@ -2096,12 +1891,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         message = 'Are you sure you want to remove these ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags?'
                         
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != wx.ID_YES:
                         
-                        if dlg.ShowModal() != wx.ID_YES:
-                            
-                            return
-                            
+                        return
                         
                     
                 
@@ -2325,12 +2119,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
-                    
+                raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
                 
             
         
@@ -2589,44 +2382,49 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
                             
                         
-                        if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
-                        else: message = 'The pair ' + pair_strings + ' already exists.'
-                        
-                        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                        if len( current_pairs ) > 1:
                             
-                            if dlg.ShowModal() == wx.ID_YES:
+                            message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                            
+                        else:
+                            
+                            message = 'The pair ' + pair_strings + ' already exists.'
+                            
+                        
+                        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' )
+                        
+                        if result == wx.ID_YES:
+                            
+                            if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
                                 
-                                if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
-                                    
-                                    reason = 'admin'
-                                    
-                                else:
-                                    
-                                    message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
-                                    
-                                    with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                                        
-                                        if dlg.ShowModal() == wx.ID_OK:
-                                            
-                                            reason = dlg.GetValue()
-                                            
-                                        else:
-                                            
-                                            do_it = False
-                                            
-                                        
-                                    
-                                
-                                if do_it:
-                                    
-                                    for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
-                                    
-                                
+                                reason = 'admin'
                                 
                             else:
                                 
-                                do_it = False
+                                message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
                                 
+                                with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
+                                    
+                                    if dlg.ShowModal() == wx.ID_OK:
+                                        
+                                        reason = dlg.GetValue()
+                                        
+                                    else:
+                                        
+                                        do_it = False
+                                        
+                                    
+                                
+                            
+                            if do_it:
+                                
+                                for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
+                                
+                            
+                            
+                        else:
+                            
+                            do_it = False
                             
                         
                     
@@ -2649,17 +2447,22 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
                         
                     
-                    if len( pending_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
-                    else: message = 'The pair ' + pair_strings + ' is pending.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                    if len( pending_pairs ) > 1:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
-                            
-                            affected_pairs.extend( pending_pairs )
-                            
+                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                        
+                    else:
+                        
+                        message = 'The pair ' + pair_strings + ' is pending.'
+                        
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
+                    
+                    if result == wx.ID_YES:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                        
+                        affected_pairs.extend( pending_pairs )
                         
                     
                 
@@ -2674,17 +2477,22 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
                         
                     
-                    if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
-                    else: message = 'The pair ' + pair_strings + ' is petitioned.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                    if len( petitioned_pairs ) > 1:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
-                            
-                            affected_pairs.extend( petitioned_pairs )
-                            
+                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                        
+                    else:
+                        
+                        message = 'The pair ' + pair_strings + ' is petitioned.'
+                        
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
+                    
+                    if result == wx.ID_YES:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
+                        
+                        affected_pairs.extend( petitioned_pairs )
                         
                     
                 
@@ -3154,12 +2962,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
-                    
+                raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
                 
             
         
@@ -3498,12 +3305,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         message = 'The pair ' + pair_strings + ' is pending.'
                         
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
+                    
+                    if result == wx.ID_YES:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
-                            
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
                         
                     
                 
@@ -3518,15 +3324,20 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
                         
                     
-                    if len( petitioned_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
-                    else: message = 'The pair ' + pair_strings + ' is petitioned.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                    if len( petitioned_pairs ) > 1:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
-                            
+                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                        
+                    else:
+                        
+                        message = 'The pair ' + pair_strings + ' is petitioned.'
+                        
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
+                    
+                    if result == wx.ID_YES:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
                         
                     
                 

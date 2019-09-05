@@ -57,7 +57,7 @@ def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_pare
         
         children_to_parents = service_keys_to_children_to_parents[ service_key ]
         
-        for ( child, parents ) in list(simple_children_to_parents.items()):
+        for ( child, parents ) in list( simple_children_to_parents.items() ):
             
             this_childs_parents = children_to_parents[ child ]
             
@@ -161,7 +161,7 @@ def CollapseTagSiblingPairs( groups_of_pairs ):
     
     siblings = {}
     
-    for ( bad, good ) in list(valid_chains.items()):
+    for ( bad, good ) in list( valid_chains.items() ):
         
         # given a->b, want to find f
         
@@ -465,7 +465,7 @@ class DataCache( object ):
     
     def _RecalcMemoryUsage( self ):
         
-        self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in list(self._keys_to_data.values()) ) )
+        self._total_estimated_memory_footprint = sum( ( data.GetEstimatedMemoryFootprint() for data in self._keys_to_data.values() ) )
         
     
     def _TouchKey( self, key ):
@@ -570,7 +570,7 @@ class DataCache( object ):
                     
                 else:
                     
-                    ( key, last_access_time ) = next( iter(self._keys_fifo.items()) )
+                    ( key, last_access_time ) = next( iter( self._keys_fifo.items() ) )
                     
                     if HydrusData.TimeHasPassed( last_access_time + self._timeout ):
                         
@@ -953,7 +953,7 @@ class MediaResultCache( object ):
     
     def NewForceRefreshTags( self ):
         
-        # repo sync or advanced content update occurred, so we need complete refresh
+        # repo sync or tag migration occurred, so we need complete refresh
         
         def do_it( hash_ids ):
             
@@ -993,7 +993,7 @@ class MediaResultCache( object ):
         
         with self._lock:
             
-            for media_result in list(self._hash_ids_to_media_results.values()):
+            for media_result in self._hash_ids_to_media_results.values():
                 
                 media_result.GetTagsManager().NewSiblings()
                 
@@ -1168,7 +1168,7 @@ class ParsingCache( object ):
                 
                 dead_datas = set()
                 
-                for ( data, ( last_accessed, parsed_object ) ) in list(cache.items()):
+                for ( data, ( last_accessed, parsed_object ) ) in cache.items():
                     
                     if HydrusData.TimeHasPassed( last_accessed + 10 ):
                         
@@ -1413,7 +1413,7 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            filtered_service_keys = [ service_key for ( service_key, service ) in list(self._keys_to_services.items()) if service.GetServiceType() in desired_types ]
+            filtered_service_keys = [ service_key for ( service_key, service ) in self._keys_to_services.items() if service.GetServiceType() in desired_types ]
             
             return filtered_service_keys
             
@@ -1518,7 +1518,7 @@ class TagCensorshipManager( object ):
                 
                 new_statuses_to_pairs = HydrusData.default_dict_set()
                 
-                for ( status, pairs ) in list(statuses_to_pairs.items()):
+                for ( status, pairs ) in statuses_to_pairs.items():
                     
                     new_statuses_to_pairs[ status ] = { ( one, two ) for ( one, two ) in pairs if self._CensorshipMatches( one, blacklist, censorships ) and self._CensorshipMatches( two, blacklist, censorships ) }
                     
@@ -1536,24 +1536,18 @@ class TagCensorshipManager( object ):
             
             ( blacklist, censorships ) = self._service_keys_to_info[ CC.COMBINED_TAG_SERVICE_KEY ]
             
-            service_keys = list(service_keys_to_statuses_to_tags.keys())
-            
-            for service_key in service_keys:
+            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
                 
-                statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
+                statuses = list( statuses_to_tags.keys() )
                 
-                statuses = list(statuses_to_tags.keys())
-                
-                for status in statuses:
-                    
-                    tags = statuses_to_tags[ status ]
+                for ( status, tags ) in list( statuses_to_tags.items() ):
                     
                     statuses_to_tags[ status ] = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
                     
                 
             
         
-        for ( service_key, ( blacklist, censorships ) ) in list(self._service_keys_to_info.items()):
+        for ( service_key, ( blacklist, censorships ) ) in self._service_keys_to_info.items():
             
             if service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
@@ -1564,11 +1558,7 @@ class TagCensorshipManager( object ):
                 
                 statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
                 
-                statuses = list(statuses_to_tags.keys())
-                
-                for status in statuses:
-                    
-                    tags = statuses_to_tags[ status ]
+                for ( status, tags ) in list( statuses_to_tags.items() ):
                     
                     statuses_to_tags[ status ] = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
                     
@@ -1640,7 +1630,7 @@ class TagParentsManager( object ):
         
         service_keys_to_pairs_flat = HydrusData.default_dict_set()
         
-        for ( service_key, statuses_to_pairs ) in list(collapsed_service_keys_to_statuses_to_pairs.items()):
+        for ( service_key, statuses_to_pairs ) in collapsed_service_keys_to_statuses_to_pairs.items():
             
             pairs_flat = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
@@ -1797,7 +1787,7 @@ class TagSiblingsManager( object ):
         
         service_keys_to_statuses_to_pairs = self._controller.Read( 'tag_siblings' )
         
-        for ( service_key, statuses_to_pairs ) in list(service_keys_to_statuses_to_pairs.items()):
+        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
             
             all_pairs = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
@@ -1816,7 +1806,7 @@ class TagSiblingsManager( object ):
             
             reverse_lookup = collections.defaultdict( list )
             
-            for ( bad, good ) in list(siblings.items()):
+            for ( bad, good ) in siblings.items():
                 
                 reverse_lookup[ good ].append( bad )
                 
@@ -1830,7 +1820,7 @@ class TagSiblingsManager( object ):
         
         combined_reverse_lookup = collections.defaultdict( list )
         
-        for ( bad, good ) in list(combined_siblings.items()):
+        for ( bad, good ) in combined_siblings.items():
             
             combined_reverse_lookup[ good ].append( bad )
             
@@ -1857,7 +1847,7 @@ class TagSiblingsManager( object ):
             
             tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG }
             
-            tags = list(tags_to_predicates.keys())
+            tags = list( tags_to_predicates.keys() )
             
             tags_to_include_in_results = set()
             
@@ -1938,13 +1928,11 @@ class TagSiblingsManager( object ):
         
         with self._lock:
             
-            statuses = list(statuses_to_tags.keys())
-            
             new_statuses_to_tags = HydrusData.default_dict_set()
             
-            for status in statuses:
+            for ( status, tags ) in statuses_to_tags.items():
                 
-                new_statuses_to_tags[ status ] = self._CollapseTags( service_key, statuses_to_tags[ status ] )
+                new_statuses_to_tags[ status ] = self._CollapseTags( service_key, tags )
                 
             
             return new_statuses_to_tags
@@ -1999,7 +1987,7 @@ class TagSiblingsManager( object ):
             
             results = collections.Counter()
             
-            for ( tag, count ) in list(tags_to_count.items()):
+            for ( tag, count ) in tags_to_count.items():
                 
                 if tag in siblings:
                     
@@ -2717,7 +2705,7 @@ class UndoManager( object ):
         
         filtered_service_keys_to_content_updates = {}
         
-        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             filtered_content_updates = []
             
@@ -2762,7 +2750,7 @@ class UndoManager( object ):
         
         inverted_service_keys_to_content_updates = {}
         
-        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             inverted_content_updates = []
             

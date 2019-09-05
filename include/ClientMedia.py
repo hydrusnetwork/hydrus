@@ -1411,9 +1411,23 @@ class MediaList( object ):
         return self._GetNext( media )
         
     
+    def GetNumArchive( self ):
+        
+        num_archive = sum( ( 1 for m in self._singleton_media if not m.HasInbox() ) ) + sum( ( m.GetNumArchive() for m in self._collected_media ) )
+        
+        return num_archive
+        
+    
     def GetNumFiles( self ):
         
         return len( self._hashes )
+        
+    
+    def GetNumInbox( self ):
+        
+        num_inbox = sum( ( 1 for m in self._singleton_media if m.HasInbox() ) ) + sum( ( m.GetNumInbox() for m in self._collected_media ) )
+        
+        return num_inbox
         
     
     def GetPrevious( self, media ):

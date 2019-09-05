@@ -56,7 +56,7 @@ def GetInterstitialFilteringAnswer( win, label ):
         return dlg.ShowModal()
         
     
-def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None ):
+def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None ):
     
     with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, title ) as dlg:
         
@@ -64,13 +64,20 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
         
         dlg.SetPanel( panel )
         
-        if auto_yes_time is None:
+        if auto_yes_time is None and auto_no_time is None:
             
             return dlg.ShowModal()
             
         else:
             
-            job = HG.client_controller.CallLaterWXSafe( dlg, auto_yes_time, dlg.EndModal, wx.ID_YES )
+            if auto_yes_time is not None:
+                
+                job = HG.client_controller.CallLaterWXSafe( dlg, auto_yes_time, dlg.EndModal, wx.ID_YES )
+                
+            elif auto_no_time is None:
+                
+                job = HG.client_controller.CallLaterWXSafe( dlg, auto_no_time, dlg.EndModal, wx.ID_NO )
+                
             
             try:
                 

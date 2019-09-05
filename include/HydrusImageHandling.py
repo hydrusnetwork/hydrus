@@ -5,6 +5,18 @@ import hashlib
 import io
 import numpy
 import numpy.core.multiarray # important this comes before cv!
+
+try:
+    
+    import numpy.random.common # more hidden imports for pyinstaller
+    import numpy.random.bounded_integers # more hidden imports for pyinstaller
+    import numpy.random.entropy # more hidden imports for pyinstaller
+    
+except:
+    
+    pass # old version of numpy, screw it
+    
+
 import os
 from PIL import _imaging
 from PIL import ImageFile as PILImageFile

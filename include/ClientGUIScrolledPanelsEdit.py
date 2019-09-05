@@ -193,7 +193,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        summary = 'Enter a complicated tag search here, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and prkc\'s code will turn it into hydrus-compatible search predicates.'
+        summary = 'Enter a complicated tag search here as text, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and this should turn it into hydrus-compatible search predicates.'
         summary += os.linesep * 2
         summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor.'
         summary += os.linesep
@@ -552,24 +552,23 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Clear( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Clear default tag import options for all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear default tag import options for all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            url_classes_to_clear = self._list_ctrl.GetData( only_selected = True )
+            
+            for url_class in url_classes_to_clear:
                 
-                url_classes_to_clear = self._list_ctrl.GetData( only_selected = True )
+                url_class_key = url_class.GetMatchKey()
                 
-                for url_class in url_classes_to_clear:
+                if url_class_key in self._url_class_keys_to_tag_import_options:
                     
-                    url_class_key = url_class.GetMatchKey()
-                    
-                    if url_class_key in self._url_class_keys_to_tag_import_options:
-                        
-                        del self._url_class_keys_to_tag_import_options[ url_class_key ]
-                        
+                    del self._url_class_keys_to_tag_import_options[ url_class_key ]
                     
                 
-                self._list_ctrl.UpdateDatas( url_classes_to_clear )
-                
+            
+            self._list_ctrl.UpdateDatas( url_classes_to_clear )
             
         
     
@@ -1192,26 +1191,23 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             
             name = self._gug_keys_to_gugs[ gug_key ].GetName()
             
-            message = 'Show ' + name + ' in the main selector list?'
+            message = 'Show "{}" in the main selector list?'.format( name )
             
-            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Show in the first list?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the first list?' )
+            
+            if result in ( wx.ID_YES, wx.ID_NO ):
                 
-                result = dlg.ShowModal()
+                display = result == wx.ID_YES
                 
-                if result in ( wx.ID_YES, wx.ID_NO ):
-                    
-                    display = result == wx.ID_YES
-                    
-                    self._gug_display_list_ctrl.DeleteDatas( ( data, ) )
-                    
-                    new_data = ( gug_key, display )
-                    
-                    self._gug_display_list_ctrl.AddDatas( ( new_data, ) )
-                    
-                else:
-                    
-                    break
-                    
+                self._gug_display_list_ctrl.DeleteDatas( ( data, ) )
+                
+                new_data = ( gug_key, display )
+                
+                self._gug_display_list_ctrl.AddDatas( ( new_data, ) )
+                
+            else:
+                
+                break
                 
             
         
@@ -1228,24 +1224,21 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Show ' + url_class_name + ' in the media viewer?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Show in the media viewer?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the media viewer?' )
+            
+            if result in ( wx.ID_YES, wx.ID_NO ):
                 
-                result = dlg.ShowModal()
+                display = result == wx.ID_YES
                 
-                if result in ( wx.ID_YES, wx.ID_NO ):
-                    
-                    display = result == wx.ID_YES
-                    
-                    self._url_display_list_ctrl.DeleteDatas( ( data, ) )
-                    
-                    new_data = ( url_class_key, display )
-                    
-                    self._url_display_list_ctrl.AddDatas( ( new_data, ) )
-                    
-                else:
-                    
-                    break
-                    
+                self._url_display_list_ctrl.DeleteDatas( ( data, ) )
+                
+                new_data = ( url_class_key, display )
+                
+                self._url_display_list_ctrl.AddDatas( ( new_data, ) )
+                
+            else:
+                
+                break
                 
             
         
@@ -1564,33 +1557,31 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _DeleteRating( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            for service_key in self._rating_service_actions.GetData( only_selected = True ):
                 
-                for service_key in self._rating_service_actions.GetData( only_selected = True ):
-                    
-                    del self._service_keys_to_rating_options[ service_key ]
-                    
+                del self._service_keys_to_rating_options[ service_key ]
                 
-                self._rating_service_actions.DeleteSelected()
-                
+            
+            self._rating_service_actions.DeleteSelected()
             
         
     
     def _DeleteTag( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            for service_key in self._tag_service_actions.GetData( only_selected = True ):
                 
-                for service_key in self._tag_service_actions.GetData( only_selected = True ):
-                    
-                    del self._service_keys_to_tag_options[ service_key ]
-                    
+                del self._service_keys_to_tag_options[ service_key ]
                 
-                self._tag_service_actions.DeleteSelected()
-                
+            
+            self._tag_service_actions.DeleteSelected()
             
         
     
@@ -2514,45 +2505,43 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         deletees = self._gug_list_ctrl.GetData( only_selected = True )
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            for deletee in deletees:
                 
-                for deletee in deletees:
+                deletee_ngug_key = deletee.GetGUGKey()
+                
+                affected_ngug_names = []
+                
+                for ngug in ngugs:
                     
-                    deletee_ngug_key = deletee.GetGUGKey()
-                    
-                    affected_ngug_names = []
-                    
-                    for ngug in ngugs:
+                    if deletee_ngug_key in ngug.GetGUGKeys():
                         
-                        if deletee_ngug_key in ngug.GetGUGKeys():
-                            
-                            affected_ngug_names.append( ngug.GetName() )
-                            
+                        affected_ngug_names.append( ngug.GetName() )
                         
                     
-                    if len( affected_ngug_names ) > 0:
+                
+                if len( affected_ngug_names ) > 0:
+                    
+                    affected_ngug_names.sort()
+                    
+                    message = 'The GUG "' + deletee.GetName() + '" is in the NGUGs:'
+                    message += os.linesep * 2
+                    message += os.linesep.join( affected_ngug_names )
+                    message += os.linesep * 2
+                    message += 'Deleting this GUG will ultimately remove it from those NGUGs--are you sure that is ok?'
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != wx.ID_YES:
                         
-                        affected_ngug_names.sort()
-                        
-                        message = 'The GUG "' + deletee.GetName() + '" is in the NGUGs:'
-                        message += os.linesep * 2
-                        message += os.linesep.join( affected_ngug_names )
-                        message += os.linesep * 2
-                        message += 'Deleting this GUG will ultimately remove it from those NGUGs--are you sure that is ok?'
-                        
-                        with ClientGUIDialogs.DialogYesNo( self, message ) as ngug_dlg:
-                            
-                            if ngug_dlg.ShowModal() != wx.ID_YES:
-                                
-                                break
-                                
-                            
+                        break
                         
                     
-                    self._gug_list_ctrl.DeleteDatas( ( deletee, ) )
-                    
+                
+                self._gug_list_ctrl.DeleteDatas( ( deletee, ) )
                 
             
         
@@ -4081,12 +4070,11 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Is that ok?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != wx.ID_YES:
             
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
+            return
             
         
         try:
@@ -4157,21 +4145,20 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
     
     def _ResetCache( self ):
         
-        message = '''Resetting these queries will delete all their cached urls, meaning when the subscription next runs, they will have to download all those links over again. This may be expensive in time and data. Only do this if you know what it means. Do you want to do it?'''
+        message = 'Resetting these queries will delete all their cached urls, meaning when the subscription next runs, they will have to download all those links over again. This may be expensive in time and data. Only do this if you know what it means. Do you want to do it?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            selected_queries = self._queries.GetData( only_selected = True )
+            
+            for query in selected_queries:
                 
-                selected_queries = self._queries.GetData( only_selected = True )
+                query.Reset()
                 
-                for query in selected_queries:
-                    
-                    query.Reset()
-                    
-                
-                self._queries.UpdateDatas( selected_queries )
-                
+            
+            self._queries.UpdateDatas( selected_queries )
             
         
     
@@ -4828,101 +4815,100 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += os.linesep * 2
         message += 'Please note that all other subscription settings settings (like paused status and file limits and tag options) will be merged as well, so double-check your merged subs\' settings afterwards.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            original_subs = self._subscriptions.GetData( only_selected = True )
+            
+            potential_mergees = [ sub.Duplicate() for sub in original_subs ]
+            
+            mergeable_groups = []
+            merged_subs = []
+            unmergeable_subs = []
+            
+            while len( potential_mergees ) > 0:
                 
-                original_subs = self._subscriptions.GetData( only_selected = True )
+                potential_primary = potential_mergees.pop()
                 
-                potential_mergees = [ sub.Duplicate() for sub in original_subs ]
+                ( mergeables_with_our_primary, not_mergeable_with_our_primary ) = potential_primary.GetMergeable( potential_mergees )
                 
-                mergeable_groups = []
-                merged_subs = []
-                unmergeable_subs = []
-                
-                while len( potential_mergees ) > 0:
+                if len( mergeables_with_our_primary ) > 0:
                     
-                    potential_primary = potential_mergees.pop()
+                    mergeable_group = []
                     
-                    ( mergeables_with_our_primary, not_mergeable_with_our_primary ) = potential_primary.GetMergeable( potential_mergees )
+                    mergeable_group.append( potential_primary )
+                    mergeable_group.extend( mergeables_with_our_primary )
                     
-                    if len( mergeables_with_our_primary ) > 0:
-                        
-                        mergeable_group = []
-                        
-                        mergeable_group.append( potential_primary )
-                        mergeable_group.extend( mergeables_with_our_primary )
-                        
-                        mergeable_groups.append( mergeable_group )
-                        
-                    else:
-                        
-                        unmergeable_subs.append( potential_primary )
-                        
+                    mergeable_groups.append( mergeable_group )
                     
-                    potential_mergees = not_mergeable_with_our_primary
+                else:
+                    
+                    unmergeable_subs.append( potential_primary )
                     
                 
-                if len( mergeable_groups ) == 0:
+                potential_mergees = not_mergeable_with_our_primary
+                
+            
+            if len( mergeable_groups ) == 0:
+                
+                wx.MessageBox( 'Unfortunately, none of those subscriptions appear to be mergeable!' )
+                
+                return
+                
+            
+            for mergeable_group in mergeable_groups:
+                
+                mergeable_group.sort( key = lambda sub: sub.GetName() )
+                
+                choice_tuples = [ ( sub.GetName(), sub ) for sub in mergeable_group ]
+                
+                try:
                     
-                    wx.MessageBox( 'Unfortunately, none of those subscriptions appear to be mergeable!' )
+                    primary_sub = ClientGUIDialogsQuick.SelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples )
+                    
+                except HydrusExceptions.CancelledException:
                     
                     return
                     
                 
-                for mergeable_group in mergeable_groups:
+                mergeable_group.remove( primary_sub )
+                
+                primary_sub.Merge( mergeable_group )
+                
+                primary_sub_name = primary_sub.GetName()
+                
+                message = primary_sub_name + ' was able to merge ' + HydrusData.ToHumanInt( len( mergeable_group ) ) + ' other subscriptions. If you wish to change its name, do so here.'
+                
+                with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
                     
-                    mergeable_group.sort( key = lambda sub: sub.GetName() )
-                    
-                    choice_tuples = [ ( sub.GetName(), sub ) for sub in mergeable_group ]
-                    
-                    try:
+                    if dlg.ShowModal() == wx.ID_OK:
                         
-                        primary_sub = ClientGUIDialogsQuick.SelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples )
+                        name = dlg.GetValue()
                         
-                    except HydrusExceptions.CancelledException:
-                        
-                        return
-                        
-                    
-                    mergeable_group.remove( primary_sub )
-                    
-                    primary_sub.Merge( mergeable_group )
-                    
-                    primary_sub_name = primary_sub.GetName()
-                    
-                    message = primary_sub_name + ' was able to merge ' + HydrusData.ToHumanInt( len( mergeable_group ) ) + ' other subscriptions. If you wish to change its name, do so here.'
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            name = dlg.GetValue()
-                            
-                            primary_sub.SetName( name )
-                            
-                        
-                        # don't care about a cancel here--we'll take that as 'I didn't want to change its name', not 'abort'
+                        primary_sub.SetName( name )
                         
                     
-                    merged_subs.append( primary_sub )
+                    # don't care about a cancel here--we'll take that as 'I didn't want to change its name', not 'abort'
                     
                 
-                # we are ready to do it
+                merged_subs.append( primary_sub )
                 
-                self._subscriptions.DeleteDatas( original_subs )
+            
+            # we are ready to do it
+            
+            self._subscriptions.DeleteDatas( original_subs )
+            
+            self._subscriptions.AddDatas( unmergeable_subs )
+            
+            for merged_sub in merged_subs:
                 
-                self._subscriptions.AddDatas( unmergeable_subs )
+                merged_sub.SetNonDupeName( self._GetExistingNames() )
                 
-                for merged_sub in merged_subs:
-                    
-                    merged_sub.SetNonDupeName( self._GetExistingNames() )
-                    
-                    self._subscriptions.AddDatas( ( merged_sub, ) )
-                    
+                self._subscriptions.AddDatas( ( merged_sub, ) )
                 
-                self._subscriptions.Sort()
-                
+            
+            self._subscriptions.Sort()
             
         
     
@@ -4940,21 +4926,20 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Reset( self ):
         
-        message = '''Resetting these subscriptions will delete all their remembered urls, meaning when they next run, they will try to download them all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+        message = 'Resetting these subscriptions will delete all their remembered urls, meaning when they next run, they will try to download them all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            subscriptions = self._subscriptions.GetData( only_selected = True )
+            
+            for subscription in subscriptions:
                 
-                subscriptions = self._subscriptions.GetData( only_selected = True )
+                subscription.Reset()
                 
-                for subscription in subscriptions:
-                    
-                    subscription.Reset()
-                    
-                
-                self._subscriptions.UpdateDatas( subscriptions )
-                
+            
+            self._subscriptions.UpdateDatas( subscriptions )
             
         
     
@@ -7069,23 +7054,22 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ClearParser( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Clear all the selected linked parsers?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear all the selected linked parsers?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            for data in self._parser_list_ctrl.GetData( only_selected = True ):
                 
-                for data in self._parser_list_ctrl.GetData( only_selected = True ):
-                    
-                    self._parser_list_ctrl.DeleteDatas( ( data, ) )
-                    
-                    ( url_class_key, parser_key ) = data
-                    
-                    new_data = ( url_class_key, None )
-                    
-                    self._parser_list_ctrl.AddDatas( ( new_data, ) )
-                    
+                self._parser_list_ctrl.DeleteDatas( ( data, ) )
                 
-                self._parser_list_ctrl.Sort()
+                ( url_class_key, parser_key ) = data
                 
+                new_data = ( url_class_key, None )
+                
+                self._parser_list_ctrl.AddDatas( ( new_data, ) )
+                
+            
+            self._parser_list_ctrl.Sort()
             
         
     

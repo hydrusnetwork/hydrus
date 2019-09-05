@@ -8,6 +8,7 @@ from . import ClientGUICanvas
 from . import ClientGUICommon
 from . import ClientGUIControls
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIImport
 from . import ClientGUIListBoxes
@@ -1388,14 +1389,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         text += os.linesep * 2
         text += 'This can be useful if you have accidentally searched too broadly and are now swamped with too many false positives.'
         
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.Write( 'delete_potential_duplicate_pairs' )
-                
-                self._maintenance_numbers_dirty = True
-                
+            self._controller.Write( 'delete_potential_duplicate_pairs' )
+            
+            self._maintenance_numbers_dirty = True
             
         
     
@@ -1596,7 +1596,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self.RefreshDuplicateNumbers()
         
-        self.RefreshMaintenanceNumbers
+        self.RefreshMaintenanceNumbers()
         
     
     def RefreshDuplicateNumbers( self ):
@@ -2201,26 +2201,25 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             message += 'The currently highlighted query will be removed, and the media panel cleared.'
             
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            highlight_was_included = False
+            
+            for gallery_import in removees:
                 
-                highlight_was_included = False
-                
-                for gallery_import in removees:
+                if self._highlighted_gallery_import is not None and gallery_import == self._highlighted_gallery_import:
                     
-                    if self._highlighted_gallery_import is not None and gallery_import == self._highlighted_gallery_import:
-                        
-                        highlight_was_included = True
-                        
-                    
-                    self._multiple_gallery_import.RemoveGalleryImport( gallery_import.GetGalleryImportKey() )
+                    highlight_was_included = True
                     
                 
-                if highlight_was_included:
-                    
-                    self._ClearExistingHighlightAndPanel()
-                    
+                self._multiple_gallery_import.RemoveGalleryImport( gallery_import.GetGalleryImportKey() )
+                
+            
+            if highlight_was_included:
+                
+                self._ClearExistingHighlightAndPanel()
                 
             
         
@@ -2264,20 +2263,19 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         message = 'Set the current file limit, file import, and tag import options to all the selected queries? (by default, these options are only applied to new queries)'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            file_limit = self._file_limit.GetValue()
+            file_import_options = self._file_import_options.GetValue()
+            tag_import_options = self._tag_import_options.GetValue()
+            
+            for gallery_import in gallery_imports:
                 
-                file_limit = self._file_limit.GetValue()
-                file_import_options = self._file_import_options.GetValue()
-                tag_import_options = self._tag_import_options.GetValue()
-                
-                for gallery_import in gallery_imports:
-                    
-                    gallery_import.SetFileLimit( file_limit )
-                    gallery_import.SetFileImportOptions( file_import_options )
-                    gallery_import.SetTagImportOptions( tag_import_options )
-                    
+                gallery_import.SetFileLimit( file_limit )
+                gallery_import.SetFileImportOptions( file_import_options )
+                gallery_import.SetTagImportOptions( tag_import_options )
                 
             
         
@@ -2835,12 +2833,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 message = 'You have many watchers selected--are you sure you want to open them all?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != wx.ID_YES:
                     
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return
-                        
+                    return
                     
                 
             
@@ -2921,26 +2918,25 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             message += 'The currently highlighted watcher will be removed, and the media panel cleared.'
             
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            highlight_was_included = False
+            
+            for watcher in removees:
                 
-                highlight_was_included = False
-                
-                for watcher in removees:
+                if self._highlighted_watcher is not None and watcher == self._highlighted_watcher:
                     
-                    if self._highlighted_watcher is not None and watcher == self._highlighted_watcher:
-                        
-                        highlight_was_included = True
-                        
-                    
-                    self._multiple_watcher_import.RemoveWatcher( watcher.GetWatcherKey() )
+                    highlight_was_included = True
                     
                 
-                if highlight_was_included:
-                    
-                    self._ClearExistingHighlightAndPanel()
-                    
+                self._multiple_watcher_import.RemoveWatcher( watcher.GetWatcherKey() )
+                
+            
+            if highlight_was_included:
+                
+                self._ClearExistingHighlightAndPanel()
                 
             
         
@@ -2966,20 +2962,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         message = 'Set the current checker, file import, and tag import options to all the selected watchers? (by default, these options are only applied to new watchers)'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            checker_options = self._checker_options.GetValue()
+            file_import_options = self._file_import_options.GetValue()
+            tag_import_options = self._tag_import_options.GetValue()
+            
+            for watcher in watchers:
                 
-                checker_options = self._checker_options.GetValue()
-                file_import_options = self._file_import_options.GetValue()
-                tag_import_options = self._tag_import_options.GetValue()
-                
-                for watcher in watchers:
-                    
-                    watcher.SetCheckerOptions( checker_options )
-                    watcher.SetFileImportOptions( file_import_options )
-                    watcher.SetTagImportOptions( tag_import_options )
-                    
+                watcher.SetCheckerOptions( checker_options )
+                watcher.SetFileImportOptions( file_import_options )
+                watcher.SetTagImportOptions( tag_import_options )
                 
             
         

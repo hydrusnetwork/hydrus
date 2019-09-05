@@ -1,11 +1,6 @@
 import os
 import sqlite3
 
-HASH_TYPE_MD5 = 0 # 16 bytes long
-HASH_TYPE_SHA1 = 1 # 20 bytes long
-HASH_TYPE_SHA256 = 2 # 32 bytes long
-HASH_TYPE_SHA512 = 3 # 64 bytes long
-
 # Please feel free to use this file however you wish.
 # None of this is thread-safe, though, so don't try to do anything clever.
 
@@ -20,6 +15,8 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
   # -or-
 # for ( hash, tag ) in my_simple_mapping_generator: hta.AddMapping( hash, tag )
 # hta.CommitBigJob()
+# hta.Optimise() # if you made a lot of changes and want to complete your archive for sharing
+# hta.Close()
 # del hta
 
 
@@ -46,6 +43,25 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
 
 
 # And also feel free to contact me directly at hydrus.admin@gmail.com if you need help.
+
+HASH_TYPE_MD5 = 0 # 16 bytes long
+HASH_TYPE_SHA1 = 1 # 20 bytes long
+HASH_TYPE_SHA256 = 2 # 32 bytes long
+HASH_TYPE_SHA512 = 3 # 64 bytes long
+
+hash_type_to_str_lookup = {}
+
+hash_type_to_str_lookup[ HASH_TYPE_MD5 ] = 'md5'
+hash_type_to_str_lookup[ HASH_TYPE_SHA1 ] = 'sha1'
+hash_type_to_str_lookup[ HASH_TYPE_SHA256 ] = 'sha256'
+hash_type_to_str_lookup[ HASH_TYPE_SHA512 ] = 'sha512'
+
+hash_str_to_type_lookup = {}
+
+hash_str_to_type_lookup[ 'md5' ] = HASH_TYPE_MD5
+hash_str_to_type_lookup[ 'sha1' ] = HASH_TYPE_SHA1
+hash_str_to_type_lookup[ 'sha256' ] = HASH_TYPE_SHA256
+hash_str_to_type_lookup[ 'sha512' ] = HASH_TYPE_SHA512
 
 class HydrusTagArchive( object ):
     
@@ -150,7 +166,6 @@ class HydrusTagArchive( object ):
     def CommitBigJob( self ):
         
         self._c.execute( 'COMMIT;' )
-        self._c.execute( 'VACUUM;' )
         
     
     def AddMapping( self, hash, tag ):
@@ -168,6 +183,15 @@ class HydrusTagArchive( object ):
         tag_ids = [ self._GetTagId( tag ) for tag in tags ]
         
         self._AddMappings( hash_id, tag_ids )
+        
+    
+    def Close( self ):
+        
+        self._c.close()
+        self._db.close()
+        
+        self._db = None
+        self._c = None
         
     
     def DeleteMapping( self, hash, tag ):
@@ -257,8 +281,14 @@ class HydrusTagArchive( object ):
     
     def GetTags( self, hash ):
         
-        try: hash_id = self._GetHashId( hash, read_only = True )
-        except: return []
+        try:
+            
+            hash_id = self._GetHashId( hash, read_only = True )
+            
+        except:
+            
+            return set()
+            
         
         result = { tag for ( tag, ) in self._c.execute( 'SELECT tag FROM mappings NATURAL JOIN tags WHERE hash_id = ?;', ( hash_id, ) ) }
         
@@ -301,8 +331,17 @@ class HydrusTagArchive( object ):
             
             tags = self.GetTags( hash )
             
-            if len( tags ) > 0: yield ( hash, tags )
+            if len( tags ) > 0:
+                
+                yield ( hash, tags )
+                
             
+        
+    
+    def Optimise( self ):
+        
+        self._c.execute( 'VACUUM;' )
+        self._c.execute( 'ANALYZE;' )
         
     
     def RebuildNamespaces( self, namespaces_to_exclude = set() ):
@@ -344,5 +383,191 @@ class HydrusTagArchive( object ):
         tag_ids = [ self._GetTagId( tag ) for tag in tags ]
         
         self._AddMappings( hash_id, tag_ids )
+        
+
+TAG_PAIR_TYPE_SIBLINGS = 0
+TAG_PAIR_TYPE_PARENTS = 1
+
+# This is similar, but it only has pairs of tags. Do something like:
+
+# import HydrusTagArchive
+# hta = HydrusTagArchive.HydrusTagPairArchive( 'my_little_archive.db' )
+# hta.SetPairType( HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS )
+# hta.BeginBigJob()
+# for ( bad_tag, better_tag ) in my_tag_pairs_generator: hta.AddPair( bad_tag, better_tag )
+  # -or-
+# hta.AddPairs( my_tag_pairs_generator )
+# hta.CommitBigJob()
+# hta.Optimise() # if you made a lot of changes and want to complete your archive for sharing
+# hta.Close()
+# del hta
+
+# It does not enforce hydrus sibling or parent rules, so you can add loops here.
+
+class HydrusTagPairArchive( object ):
+    
+    def __init__( self, path ):
+        
+        self._path = path
+        
+        is_new_db = not os.path.exists( self._path )
+        
+        self._InitDBCursor()
+        
+        if is_new_db:
+            
+            self._InitDB()
+            
+        
+        result = self._c.execute( 'SELECT pair_type FROM pair_type;' ).fetchone()
+        
+        if result is None:
+            
+            self._pair_type = None
+            
+        else:
+            
+            ( self._pair_type, ) = result
+            
+        
+    
+    def _InitDB( self ):
+        
+        self._c.execute( 'CREATE TABLE pair_type ( pair_type INTEGER );', )
+        
+        self._c.execute( 'CREATE TABLE pairs ( tag_id_1 INTEGER, tag_id_2 INTEGER, PRIMARY KEY ( tag_id_1, tag_id_2 ) );' )
+        
+        self._c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
+        self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
+        
+    
+    def _InitDBCursor( self ):
+        
+        self._db = sqlite3.connect( self._path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        
+        self._c = self._db.cursor()
+        
+    
+    def _GetTagId( self, tag ):
+        
+        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
+            
+            tag_id = self._c.lastrowid
+            
+        else:
+            
+            ( tag_id, ) = result
+            
+        
+        return tag_id
+        
+    
+    def BeginBigJob( self ):
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
+    
+    def Close( self ):
+        
+        self._c.close()
+        self._db.close()
+        
+        self._db = None
+        self._c = None
+        
+    
+    def CommitBigJob( self ):
+        
+        self._c.execute( 'COMMIT;' )
+        
+    
+    def AddPair( self, tag_1, tag_2 ):
+        
+        self.AddPairs( [ ( tag_1, tag_2 ) ] )
+        
+    
+    def AddPairs( self, pairs ):
+        
+        if self._pair_type is None:
+            
+            raise Exception( 'Please set the pair type first before you start populating the database!' )
+            
+        
+        pair_id_inserts = [ ( self._GetTagId( tag_1 ), self._GetTagId( tag_2 ) ) for ( tag_1, tag_2 ) in pairs ]
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO pairs ( tag_id_1, tag_id_2 ) VALUES ( ?, ? );', pair_id_inserts )
+        
+    
+    def DeletePair( self, tag_1, tag_2 ):
+        
+        self.DeletePairs( [ ( tag_1, tag_2 ) ] )
+        
+    
+    def DeletePairs( self, pairs ):
+        
+        pair_id_deletees = [ ( self._GetTagId( tag_1 ), self._GetTagId( tag_2 ) ) for ( tag_1, tag_2 ) in pairs ]
+        
+        self._c.executemany( 'DELETE FROM pairs WHERE tag_id_1 = ? AND tag_id_2 = ?;', pair_id_deletees )
+        
+    
+    def GetPairType( self ):
+        
+        return self._pair_type
+        
+    
+    def GetName( self ):
+        
+        filename = os.path.basename( self._path )
+        
+        if '.' in filename:
+            
+            filename = filename.split( '.', 1 )[0]
+            
+        
+        return filename
+        
+    
+    def HasPair( self, tag_1, tag_2 ):
+        
+        tag_id_1 = self._GetTagId( tag_1 )
+        tag_id_2 = self._GetTagId( tag_2 )
+        
+        result  = self._c.execute( 'SELECT 1 FROM pairs WHERE tag_id_1 = ? AND tag_id_2 = ?;', ( tag_id_1, tag_id_2 ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def HasPairTypeSet( self ):
+        
+        return self._pair_type is not None
+        
+    
+    def IteratePairs( self ):
+        
+        query = 'SELECT t1.tag, t2.tag FROM pairs, tags AS t1, tags as t2 ON ( pairs.tag_id_1 = t1.tag_id AND pairs.tag_id_2 = t2.tag_id );'
+        
+        for pair in self._c.execute( query ):
+            
+            yield pair
+            
+        
+    
+    def Optimise( self ):
+        
+        self._c.execute( 'VACUUM;' )
+        self._c.execute( 'ANALYZE;' )
+        
+    
+    def SetPairType( self, pair_type ):
+        
+        self._c.execute( 'DELETE FROM pair_type;' )
+        
+        self._c.execute( 'INSERT INTO pair_type ( pair_type ) VALUES ( ? );', ( pair_type, ) )
+        
+        self._pair_type = pair_type
         
     

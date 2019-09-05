@@ -11,15 +11,18 @@ from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
 from . import ClientGUIFrames
 from . import ClientGUIFunctions
+from . import ClientGUIImport
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIPanels
 from . import ClientGUIPopupMessages
+from . import ClientGUIShortcuts
 from . import ClientGUITags
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
+from . import ClientMigration
 from . import ClientNetworking
 from . import ClientNetworkingContexts
 from . import ClientNetworkingDomain
@@ -36,11 +39,14 @@ import http.cookiejar
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
+from . import HydrusFileHandling
 from . import HydrusGlobals as HG
 from . import HydrusNATPunch
 from . import HydrusPaths
 from . import HydrusSerialisable
+from . import HydrusTagArchive
 import os
+import queue
 import stat
 import sys
 import threading
@@ -59,295 +65,6 @@ except:
     MATPLOTLIB_OK = False
     
 
-class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
-    
-    COPY = 0
-    DELETE = 1
-    DELETE_DELETED = 2
-    DELETE_FOR_DELETED_FILES = 3
-    
-    ALL_MAPPINGS = 0
-    SPECIFIC_MAPPINGS = 1
-    SPECIFIC_NAMESPACE = 2
-    NAMESPACED = 3
-    UNNAMESPACED = 4
-    
-    def __init__( self, parent, service_key, hashes = None ):
-        
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
-        
-        self._service_key = service_key
-        self._hashes = hashes
-        
-        service = HG.client_controller.services_manager.GetService( self._service_key )
-        
-        self._service_name = service.GetName()
-        
-        self._command_panel = ClientGUICommon.StaticBox( self, 'database commands' )
-        
-        self._action_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
-        self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
-        self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
-        self._action_text = wx.StaticText( self._command_panel, label = 'initialising' )
-        self._service_key_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
-        
-        self._go = ClientGUICommon.BetterButton( self._command_panel, 'Go!', self.Go )
-        
-        #
-        
-        self._hta_panel = ClientGUICommon.StaticBox( self, 'hydrus tag archives' )
-        
-        self._import_from_hta = ClientGUICommon.BetterButton( self._hta_panel, 'one-time mass import or delete using a hydrus tag archive', self.ImportFromHTA )
-        self._export_to_hta = ClientGUICommon.BetterButton( self._hta_panel, 'export to hydrus tag archive', self.ExportToHTA )
-        
-        #
-        
-        services = [ service for service in HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
-        
-        if len( services ) > 0:
-            
-            self._action_dropdown.Append( 'copy current and pending mappings', self.COPY )
-            
-        
-        if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
-            
-            self._action_dropdown.Append( 'delete current mappings', self.DELETE )
-            self._action_dropdown.Append( 'clear deleted mappings record', self.DELETE_DELETED )
-            self._action_dropdown.Append( 'delete current mappings from deleted files', self.DELETE_FOR_DELETED_FILES )
-            
-        
-        self._action_dropdown.Select( 0 )
-        
-        #
-        
-        self._tag_type_dropdown.Append( 'all', self.ALL_MAPPINGS )
-        self._tag_type_dropdown.Append( 'all namespaced', self.NAMESPACED )
-        self._tag_type_dropdown.Append( 'all unnamespaced', self.UNNAMESPACED )
-        self._tag_type_dropdown.Append( 'specific tag', self.SPECIFIC_MAPPINGS )
-        self._tag_type_dropdown.Append( 'specific namespace', self.SPECIFIC_NAMESPACE )
-        
-        self._tag_type_dropdown.Select( 0 )
-        
-        #
-        
-        for service in services:
-            
-            self._service_key_dropdown.Append( service.GetName(), service.GetServiceKey() )
-            
-        
-        self._service_key_dropdown.Select( 0 )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._action_dropdown, CC.FLAGS_VCENTER )
-        hbox.Add( self._tag_type_dropdown, CC.FLAGS_VCENTER )
-        hbox.Add( self._action_text, CC.FLAGS_VCENTER )
-        hbox.Add( self._service_key_dropdown, CC.FLAGS_VCENTER )
-        hbox.Add( self._go, CC.FLAGS_VCENTER )
-        
-        self._command_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #
-        
-        self._hta_panel.Add( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
-        self._hta_panel.Add( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        message = 'Regarding '
-        
-        if self._hashes is None:
-            
-            message += 'all'
-            
-        else:
-            
-            message += HydrusData.ToHumanInt( len( self._hashes ) )
-            
-        
-        message += ' files on ' + self._service_name
-        
-        title_st = ClientGUICommon.BetterStaticText( self, message )
-        
-        title_st.SetWrapWidth( 540 )
-        
-        message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable.'
-        message += os.linesep * 2
-        message += 'You may need to restart your client to see their effect.' 
-        
-        st = ClientGUICommon.BetterStaticText( self, message )
-        
-        st.SetWrapWidth( 540 )
-        
-        vbox.Add( title_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._command_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._hta_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        self.EventChoice( None )
-        
-    
-    def EventChoice( self, event ):
-        
-        data = self._action_dropdown.GetValue()
-        
-        if data in ( self.DELETE, self.DELETE_DELETED, self.DELETE_FOR_DELETED_FILES ):
-            
-            self._action_text.SetLabelText( 'from ' + self._service_name )
-            
-            self._service_key_dropdown.Hide()
-            
-        else:
-            
-            self._action_text.SetLabelText( 'from ' + self._service_name + ' to')
-            
-            self._service_key_dropdown.Show()
-            
-        
-        self.Layout()
-        
-    
-    def ExportToHTA( self ):
-        
-        ClientGUITags.ExportToHTA( self, self._service_key, self._hashes )
-        
-    
-    def Go( self ):
-        
-        # at some point, rewrite this to cope with multiple tags. setsometag is ready to go on that front
-        # this should prob be with a listbox so people can enter their new multiple tags in several separate goes, rather than overwriting every time
-        
-        action = self._action_dropdown.GetValue()
-        
-        tag_type = self._tag_type_dropdown.GetValue()
-        
-        if tag_type == self.ALL_MAPPINGS:
-            
-            tag = None
-            
-        elif tag_type == self.SPECIFIC_MAPPINGS:
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Enter tag' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    entry = dlg.GetValue()
-                    
-                    tag = ( 'tag', entry )
-                    
-                else:
-                    
-                    return
-                    
-                
-            
-        elif tag_type == self.SPECIFIC_NAMESPACE:
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Enter namespace' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    entry = dlg.GetValue()
-                    
-                    if entry.endswith( ':' ): entry = entry[:-1]
-                    
-                    tag = ( 'namespace', entry )
-                    
-                else:
-                    
-                    return
-                    
-                
-            
-        elif tag_type == self.NAMESPACED:
-            
-            tag = ( 'namespaced', None )
-            
-        elif tag_type == self.UNNAMESPACED:
-            
-            tag = ( 'unnamespaced', None )
-            
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure?' ) as dlg:
-            
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
-            
-        
-        if action == self.COPY:
-            
-            service_key_target = self._service_key_dropdown.GetValue()
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
-            
-        elif action == self.DELETE:
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
-            
-        elif action == self.DELETE_DELETED:
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
-            
-        elif action == self.DELETE_FOR_DELETED_FILES:
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_for_deleted_files', ( tag, self._hashes ) ) )
-            
-        
-        service_keys_to_content_updates = { self._service_key : [ content_update ] }
-        
-        def do_it( job_key ):
-            
-            try:
-                
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                
-            finally:
-                
-                job_key.Finish()
-                
-            
-        
-        job_key = ClientThreading.JobKey()
-        
-        job_key.SetVariable( 'popup_title', 'Processing advanced content update' )
-        
-        HG.client_controller.CallToThread( do_it, job_key )
-        
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'Working\u2026' ) as dlg:
-            
-            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.ShowModal()
-            
-        
-        job_key.Delete()
-        
-    
-    def ImportFromHTA( self ):
-        
-        text = 'Select the Hydrus Tag Archive\'s location.'
-        
-        with wx.FileDialog( self, message = text, style = wx.FD_OPEN ) as dlg_file:
-            
-            if dlg_file.ShowModal() == wx.ID_OK:
-                
-                path = dlg_file.GetPath()
-                
-                ClientGUITags.ImportFromHTA( self, path, self._service_key, self._hashes )
-                
-            
-        
-    
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
@@ -826,79 +543,77 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         message += os.linesep * 2
         message += 'If you have not read the database migration help or otherwise do not know what is going on here, turn back now!'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_1:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
             
-            if dlg_1.ShowModal() == wx.ID_YES:
+            source = self._controller.GetDBDir()
+            
+            with wx.DirDialog( self, message = 'Choose new database location.' ) as dlg:
                 
-                source = self._controller.GetDBDir()
+                dlg.SetPath( source )
                 
-                with wx.DirDialog( self, message = 'Choose new database location.' ) as dlg_2:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    dlg_2.SetPath( source )
+                    dest = dlg.GetPath()
                     
-                    if dlg_2.ShowModal() == wx.ID_OK:
+                    if source == dest:
                         
-                        dest = dlg_2.GetPath()
+                        wx.MessageBox( 'That is the same location!' )
                         
-                        if source == dest:
-                            
-                            wx.MessageBox( 'That is the same location!' )
+                        return
+                        
+                    
+                    if len( os.listdir( dest ) ) > 0:
+                        
+                        message = '"{}" is not empty! Please select an empty destination--if your situation is more complicated, please do this move manually! Feel free to ask hydrus dev for help.'.format( dest )
+                        
+                        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                        
+                        if result != wx.ID_YES:
                             
                             return
                             
                         
-                        if len( os.listdir( dest ) ) > 0:
-                            
-                            message = dest + ' is not empty! Please select an empty destination--if your situation is more complicated, please do this move manually! Feel free to ask hydrus dev for help.'
-                            
-                            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg_not_empty:
-                                
-                                if dlg_not_empty.ShowModal() != wx.ID_YES:
-                                    
-                                    return
-                                    
-                                
-                            
+                    
+                    message = 'Here is the client\'s best guess at your new launch command. Make sure it looks correct and copy it to your clipboard. Update your program shortcut when the transfer is complete.'
+                    message += os.linesep * 2
+                    message += 'Hit ok to close the client and start the transfer, cancel to back out.'
+                    
+                    me = sys.argv[0]
+                    
+                    shortcut = '"' + me + '" -d="' + dest + '"'
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, message, default = shortcut ) as dlg_3:
                         
-                        message = 'Here is the client\'s best guess at your new launch command. Make sure it looks correct and copy it to your clipboard. Update your program shortcut when the transfer is complete.'
-                        message += os.linesep * 2
-                        message += 'Hit ok to close the client and start the transfer, cancel to back out.'
-                        
-                        me = sys.argv[0]
-                        
-                        shortcut = '"' + me + '" -d="' + dest + '"'
-                        
-                        with ClientGUIDialogs.DialogTextEntry( self, message, default = shortcut ) as dlg_3:
+                        if dlg_3.ShowModal() == wx.ID_OK:
                             
-                            if dlg_3.ShowModal() == wx.ID_OK:
+                            # careful with this stuff!
+                            # the app's mainloop didn't want to exit for me, for a while, because this dialog didn't have time to exit before the thread's dialog laid a new event loop on top
+                            # the confused event loops lead to problems at a C++ level in ShowModal not being able to do the Destroy because parent stuff had already died
+                            # this works, so leave it alone if you can
+                            
+                            wx.CallAfter( self.GetParent().Close )
+                            
+                            portable_locations = []
+                            
+                            for location in set( self._prefixes_to_locations.values() ):
                                 
-                                # careful with this stuff!
-                                # the app's mainloop didn't want to exit for me, for a while, because this dialog didn't have time to exit before the thread's dialog laid a new event loop on top
-                                # the confused event loops lead to problems at a C++ level in ShowModal not being able to do the Destroy because parent stuff had already died
-                                # this works, so leave it alone if you can
-                                
-                                wx.CallAfter( self.GetParent().Close )
-                                
-                                portable_locations = []
-                                
-                                for location in set( self._prefixes_to_locations.values() ):
+                                if not os.path.exists( location ):
                                     
-                                    if not os.path.exists( location ):
-                                        
-                                        continue
-                                        
-                                    
-                                    portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
-                                    portable = not os.path.isabs( portable_location )
-                                    
-                                    if portable:
-                                        
-                                        portable_locations.append( portable_location )
-                                        
+                                    continue
                                     
                                 
-                                HG.client_controller.CallToThreadLongRunning( THREADMigrateDatabase, self._controller, source, portable_locations, dest )
+                                portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+                                portable = not os.path.isabs( portable_location )
                                 
+                                if portable:
+                                    
+                                    portable_locations.append( portable_location )
+                                    
+                                
+                            
+                            HG.client_controller.CallToThreadLongRunning( THREADMigrateDatabase, self._controller, source, portable_locations, dest )
                             
                         
                     
@@ -983,16 +698,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             message = 'Are you sure you want to remove this location? The files it would be responsible for will be shared amongst the other file locations.'
             
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                del self._locations_to_ideal_weights[ location ]
-                
-                self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
-                
-                self._Update()
-                
+            del self._locations_to_ideal_weights[ location ]
+            
+            self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
+            
+            self._Update()
             
         
     
@@ -1181,6 +895,748 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
         job_key.Finish()
         
     
+class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    COPY = 0
+    DELETE = 1
+    DELETE_DELETED = 2
+    DELETE_FOR_DELETED_FILES = 3
+    
+    ALL_MAPPINGS = 0
+    SPECIFIC_MAPPINGS = 1
+    SPECIFIC_NAMESPACE = 2
+    NAMESPACED = 3
+    UNNAMESPACED = 4
+    
+    HTA_SERVICE_KEY = b'hydrus tag archive'
+    HTPA_SERVICE_KEY = b'hydrus tag pair archive'
+    HASHES_SERVICE_KEY = b'hashes'
+    
+    def __init__( self, parent, service_key, hashes = None ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._service_key = service_key
+        self._hashes = hashes
+        
+        self._source_archive_path = None
+        self._source_archive_hash_type = None
+        self._dest_archive_path = None
+        self._dest_archive_hash_type_override = None
+        
+        service = HG.client_controller.services_manager.GetService( self._service_key )
+        
+        #
+        
+        self._migration_panel = ClientGUICommon.StaticBox( self, 'migration' )
+        
+        self._migration_content_type = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        for content_type in ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+            
+            self._migration_content_type.Append( HC.content_type_string_lookup[ content_type ], content_type )
+            
+        
+        self._migration_content_type.SetToolTip( 'Sets what will be migrated.' )
+        
+        self._migration_source = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        self._migration_source_archive_path_button = ClientGUICommon.BetterButton( self._migration_panel, 'no path set', self._SetSourceArchivePath )
+        
+        self._migration_source_hash_type_st = ClientGUICommon.BetterStaticText( self._migration_panel, 'hash type: unknown' )
+        
+        self._migration_source_hash_type_st.SetToolTip( 'If this is something other than sha256, this will only work for files the client has ever previously imported.' )
+        
+        self._migration_source_content_status_filter = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        self._migration_source_content_status_filter.SetToolTip( 'This filters which status of tags will be migrated.' )
+        
+        self._migration_source_file_filter = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        for service_key in ( CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY ):
+            
+            service = HG.client_controller.services_manager.GetService( service_key )
+            
+            self._migration_source_file_filter.Append( service.GetName(), service_key )
+            
+        
+        if self._hashes is not None:
+            
+            self._migration_source_file_filter.Append( '{} hashes'.format( HydrusData.ToHumanInt( len( self._hashes ) ) ), self.HASHES_SERVICE_KEY )
+            
+            self._migration_source_file_filter.SetValue( self.HASHES_SERVICE_KEY )
+            
+        
+        self._migration_source_file_filter.SetToolTip( 'This filters the files for which tags can be migrated.' )
+        
+        message = 'The tags that pass this filter will be included in the migration.'
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        self._migration_source_tag_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter )
+        
+        self._migration_source_tag_filter.SetToolTip( 'This filters the tags that can be migrated.' )
+        
+        message = 'The left side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        self._migration_source_left_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter )
+        
+        self._migration_source_left_tag_pair_filter.SetToolTip( 'This filters the tags on the left side of the pair that can be migrated.' )
+        
+        message = 'The right side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        self._migration_source_right_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter )
+        
+        self._migration_source_right_tag_pair_filter.SetToolTip( 'This filters the tags on the right side of the pair that can be migrated.' )
+        
+        self._migration_destination = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        self._migration_destination_archive_path_button = ClientGUICommon.BetterButton( self._migration_panel, 'no path set', self._SetDestinationArchivePath )
+        
+        self._migration_destination_hash_type_choice_st = ClientGUICommon.BetterStaticText( self._migration_panel, 'hash type: ' )
+        
+        self._migration_destination_hash_type_choice = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        for hash_type in ( 'sha256', 'md5', 'sha1', 'sha512' ):
+            
+            self._migration_destination_hash_type_choice.Append( hash_type, hash_type )
+            
+        
+        self._migration_destination_hash_type_choice.SetToolTip( 'If you set something other than sha256, this will only work for files the client has ever previously imported.' )
+        
+        self._migration_action = ClientGUICommon.BetterChoice( self._migration_panel )
+        
+        self._migration_go = ClientGUICommon.BetterButton( self._migration_panel, 'Go!', self._MigrationGo )
+        
+        #
+        
+        file_left_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        file_left_vbox.Add( self._migration_source_file_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        file_left_vbox.Add( self._migration_source_left_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        tag_right_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        tag_right_vbox.Add( self._migration_source_tag_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        tag_right_vbox.Add( self._migration_source_right_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        dest_hash_type_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        dest_hash_type_hbox.Add( self._migration_destination_hash_type_choice_st, CC.FLAGS_VCENTER )
+        dest_hash_type_hbox.Add( self._migration_destination_hash_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        gridbox = wx.FlexGridSizer( 6 )
+        
+        gridbox.AddGrowableCol( 0, 1 )
+        gridbox.AddGrowableCol( 1, 1 )
+        gridbox.AddGrowableCol( 2, 1 )
+        gridbox.AddGrowableCol( 3, 1 )
+        
+        gridbox.Add( ClientGUICommon.BetterStaticText( self._migration_panel, 'content' ), CC.FLAGS_CENTER )
+        gridbox.Add( ClientGUICommon.BetterStaticText( self._migration_panel, 'source' ), CC.FLAGS_CENTER )
+        gridbox.Add( ClientGUICommon.BetterStaticText( self._migration_panel, 'filter' ), CC.FLAGS_CENTER )
+        gridbox.Add( ClientGUICommon.BetterStaticText( self._migration_panel, 'destination' ), CC.FLAGS_CENTER )
+        gridbox.Add( ClientGUICommon.BetterStaticText( self._migration_panel, 'action' ), CC.FLAGS_CENTER )
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        
+        gridbox.Add( self._migration_content_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._migration_source, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._migration_source_content_status_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._migration_destination, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._migration_action, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._migration_go, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        gridbox.Add( self._migration_source_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( file_left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        gridbox.Add( self._migration_destination_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        gridbox.Add( self._migration_source_hash_type_st, CC.FLAGS_VCENTER )
+        gridbox.Add( tag_right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        gridbox.Add( dest_hash_type_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        gridbox.Add( ( 20, 20 ), CC.FLAGS_CENTER )
+        
+        self._migration_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        message = 'Regarding '
+        
+        if self._hashes is None:
+            
+            message += 'all'
+            
+        else:
+            
+            message += HydrusData.ToHumanInt( len( self._hashes ) )
+            
+        
+        message = 'These migrations can be powerful, so be very careful that you understand what you are doing and choose what you want. Large jobs may have a significant initial setup time, during which case the client may hang briefly, but once they start they are pausable or cancellable. If you do want to perform a large action, it is a good idea to back up your database first, just in case you get a result you did not intend.'
+        message += os.linesep * 2
+        message += 'You may need to restart your client to see their effect.' 
+        
+        st = ClientGUICommon.BetterStaticText( self, message )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( st, 96 )
+        
+        st.SetWrapWidth( width )
+        
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._migration_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._migration_content_type.SetValue( HC.CONTENT_TYPE_MAPPINGS )
+        
+        self._UpdateMigrationControlsNewType()
+        
+        self._migration_content_type.Bind( wx.EVT_CHOICE, self.EventMigrationNewType )
+        self._migration_source.Bind( wx.EVT_CHOICE, self.EventMigrationNewSource )
+        self._migration_destination.Bind( wx.EVT_CHOICE, self.EventMigrationNewDestination )
+        self._migration_source_content_status_filter.Bind( wx.EVT_CHOICE, self.EventMigrationNewTagStatus )
+        
+    
+    def _MigrationGo( self ):
+        
+        extra_info = ''
+        
+        source_content_statuses_strings = {}
+        
+        source_content_statuses_strings[ ( HC.CONTENT_STATUS_CURRENT, ) ] = 'current'
+        source_content_statuses_strings[ ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ] = 'current and pending'
+        source_content_statuses_strings[ ( HC.CONTENT_STATUS_DELETED, ) ] = 'deleted'
+        
+        destination_action_strings = {}
+        
+        destination_action_strings[ HC.CONTENT_UPDATE_ADD ] = 'adding them to'
+        destination_action_strings[ HC.CONTENT_UPDATE_DELETE ] = 'deleting them from'
+        destination_action_strings[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clearing their deletion record from'
+        destination_action_strings[ HC.CONTENT_UPDATE_PEND ] = 'pending them to'
+        destination_action_strings[ HC.CONTENT_UPDATE_PETITION ] = 'petitioning them from'
+        
+        content_type = self._migration_content_type.GetValue()
+        
+        if content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            destination_service_key = self._migration_destination.GetValue()
+            
+            if destination_service_key == self.HTA_SERVICE_KEY:
+                
+                if self._dest_archive_path is None:
+                    
+                    wx.MessageBox( 'Please set a path for the destination Hydrus Tag Archive.' )
+                    
+                    return
+                    
+                
+                content_action = HC.CONTENT_UPDATE_ADD
+                
+                desired_hash_type = self._migration_destination_hash_type_choice.GetValue()
+                
+                destination = ClientMigration.MigrationDestinationHTA( HG.client_controller, self._dest_archive_path, desired_hash_type )
+                
+            else:
+                
+                content_action = self._migration_action.GetValue()
+                
+                desired_hash_type = 'sha256'
+                
+                destination = ClientMigration.MigrationDestinationTagServiceMappings( HG.client_controller, destination_service_key, content_action )
+                
+            
+            content_statuses = self._migration_source_content_status_filter.GetValue()
+            
+            file_service_key = self._migration_source_file_filter.GetValue()
+            
+            if file_service_key == self.HASHES_SERVICE_KEY:
+                
+                file_service_key = CC.COMBINED_FILE_SERVICE_KEY
+                hashes = self._hashes
+                
+                extra_info = ' for {} files'.format( HydrusData.ToHumanInt( len( hashes ) ) )
+                
+            else:
+                
+                hashes = None
+                
+                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    extra_info = ' for all known files'
+                    
+                else:
+                    
+                    file_service_name = HG.client_controller.services_manager.GetName( file_service_key )
+                    
+                    extra_info = ' for files in "{}"'.format( file_service_name )
+                    
+                
+            
+            tag_filter = self._migration_source_tag_filter.GetValue()
+            
+            source_service_key = self._migration_source.GetValue()
+            
+            if source_service_key == self.HTA_SERVICE_KEY:
+                
+                if self._source_archive_path is None:
+                    
+                    wx.MessageBox( 'Please set a path for the source Hydrus Tag Archive.' )
+                    
+                    return
+                    
+                
+                source = ClientMigration.MigrationSourceHTA( HG.client_controller, self._source_archive_path, file_service_key, desired_hash_type, hashes, tag_filter )
+                
+            else:
+                
+                source = ClientMigration.MigrationSourceTagServiceMappings( HG.client_controller, source_service_key, file_service_key, desired_hash_type, hashes, tag_filter, content_statuses )
+                
+            
+        
+        title = 'taking {} {} from "{}"{} and {} "{}"'.format( source_content_statuses_strings[ content_statuses ], HC.content_type_string_lookup[ content_type ], source.GetName(), extra_info, destination_action_strings[ content_action ], destination.GetName() )
+        
+        message = 'Migrations can make huge changes. They can be cancelled early, but any work they do cannot always be undone. Please check that this summary looks correct:'
+        message += os.linesep * 2
+        message += title
+        message += os.linesep * 2
+        message += 'If you plan to make a very big change (especially a mass delete), I recommend making a backup of your database before going ahead, just in case something unexpected happens.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'looks good', no_label = 'go back' )
+        
+        if result == wx.ID_YES:
+            
+            message = 'Are you absolutely sure you set up the filters and everything how you wanted? Last chance to turn back.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
+                
+                migration_job = ClientMigration.MigrationJob( HG.client_controller, title, source, destination )
+                
+                HG.client_controller.CallToThread( migration_job.Run )
+                
+            
+        
+    
+    def _SetDestinationArchivePath( self ):
+        
+        message = 'Select the destination location for the Archive. Existing Archives are also ok, and will be appended to.'
+        
+        with wx.FileDialog( self, message = message, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                if os.path.exists( path ):
+                    
+                    content_type = self._migration_content_type.GetValue()
+                    
+                    if content_type == HC.CONTENT_TYPE_MAPPINGS:
+                        
+                        try:
+                            
+                            hta = HydrusTagArchive.HydrusTagArchive( path )
+                            
+                        except Exception as e:
+                            
+                            wx.MessageBox( 'Could not load that path as an Archive! {}'.format( str( e ) ) )
+                            
+                        
+                        try:
+                            
+                            hash_type = hta.GetHashType()
+                            
+                            self._dest_archive_hash_type_override = hash_type
+                            
+                            self._migration_destination_hash_type_choice.SetValue( hash_type )
+                            
+                            self._migration_destination_hash_type_choice.Disable()
+                            
+                        except:
+                            
+                            pass
+                            
+                        
+                    else:
+                        
+                        try:
+                            
+                            hta = HydrusTagArchive.HydrusTagPairArchive( path )
+                            
+                            pair_type = hta.GetPairType()
+                            
+                        except Exception as e:
+                            
+                            wx.MessageBox( 'Could not load that file as a Hydrus Tag Pair Archive! {}'.format( str( e ) ) )
+                            
+                            return
+                            
+                        
+                        if content_type == HC.CONTENT_TYPE_TAG_PARENTS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_PARENTS:
+                            
+                            wx.MessageBox( 'This Hydrus Tag Pair Archive is not a tag parents archive!' )
+                            
+                            return
+                            
+                        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS:
+                            
+                            wx.MessageBox( 'This Hydrus Tag Pair Archive is not a tag siblings archive!' )
+                            
+                            return
+                            
+                        
+                        
+                    
+                else:
+                    
+                    self._migration_destination_hash_type_choice.Enable()
+                    
+                
+                self._dest_archive_path = path
+                
+                filename = os.path.basename( self._dest_archive_path )
+                
+                self._migration_destination_archive_path_button.SetLabel( filename )
+                
+                self._migration_destination_archive_path_button.SetToolTip( path )
+                
+            
+        
+    
+    def _SetSourceArchivePath( self ):
+        
+        message = 'Select the Archive to pull data from.'
+        
+        with wx.FileDialog( self, message = message, style = wx.FD_OPEN ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                content_type = self._migration_content_type.GetValue()
+                
+                if content_type == HC.CONTENT_TYPE_MAPPINGS:
+                    
+                    try:
+                        
+                        hta = HydrusTagArchive.HydrusTagArchive( path )
+                        
+                        hash_type = hta.GetHashType()
+                        
+                    except Exception as e:
+                        
+                        wx.MessageBox( 'Could not load that file as a Hydrus Tag Archive! {}'.format( str( e ) ) )
+                        
+                        return
+                        
+                    
+                    hash_type_str = HydrusTagArchive.hash_type_to_str_lookup[ hash_type ]
+                    
+                    self._migration_source_hash_type_st.SetLabel( 'hash type: {}'.format( hash_type_str ) )
+                    
+                else:
+                    
+                    try:
+                        
+                        hta = HydrusTagArchive.HydrusTagPairArchive( path )
+                        
+                        pair_type = hta.GetPairType()
+                        
+                    except Exception as e:
+                        
+                        wx.MessageBox( 'Could not load that file as a Hydrus Tag Pair Archive! {}'.format( str( e ) ) )
+                        
+                        return
+                        
+                    
+                    if pair_type is None:
+                        
+                        wx.MessageBox( 'This Hydrus Tag Pair Archive does not have a pair type set!' )
+                        
+                        return
+                        
+                    
+                    if content_type == HC.CONTENT_TYPE_TAG_PARENTS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_PARENTS:
+                        
+                        wx.MessageBox( 'This Hydrus Tag Pair Archive is not a tag parents archive!' )
+                        
+                        return
+                        
+                    elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS:
+                        
+                        wx.MessageBox( 'This Hydrus Tag Pair Archive is not a tag siblings archive!' )
+                        
+                        return
+                        
+                    
+                
+                self._source_archive_path = path
+                
+                filename = os.path.basename( self._source_archive_path )
+                
+                self._migration_source_archive_path_button.SetLabel( filename )
+                
+                self._migration_source_archive_path_button.SetToolTip( path )
+                
+            
+        
+    
+    def _UpdateMigrationControlsActions( self ):
+        
+        self._migration_action.Clear()
+        
+        source = self._migration_source.GetValue()
+        destination = self._migration_destination.GetValue()
+        
+        tag_status = self._migration_source_content_status_filter.GetValue()
+        
+        source_and_destination_the_same = source == destination
+        
+        pulling_and_pushing_existing = source_and_destination_the_same and HC.CONTENT_STATUS_CURRENT in tag_status
+        pulling_and_pushing_deleted = source_and_destination_the_same and HC.CONTENT_STATUS_DELETED in tag_status
+        
+        actions = []
+        
+        if destination in ( self.HTA_SERVICE_KEY, self.HTPA_SERVICE_KEY ):
+            
+            actions.append( HC.CONTENT_UPDATE_ADD )
+            
+        else:
+            
+            destination_service = HG.client_controller.services_manager.GetService( destination )
+            
+            destination_service_type = destination_service.GetServiceType()
+            
+            if destination_service_type == HC.LOCAL_TAG:
+                
+                if not pulling_and_pushing_existing:
+                    
+                    actions.append( HC.CONTENT_UPDATE_ADD )
+                    
+                
+                if not pulling_and_pushing_deleted:
+                    
+                    actions.append( HC.CONTENT_UPDATE_DELETE )
+                    
+                
+                if not pulling_and_pushing_existing:
+                    
+                    actions.append( HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD )
+                    
+                
+            elif destination_service_type == HC.TAG_REPOSITORY:
+                
+                if not pulling_and_pushing_existing:
+                    
+                    actions.append( HC.CONTENT_UPDATE_PEND )
+                    
+                
+                if not pulling_and_pushing_deleted:
+                    
+                    actions.append( HC.CONTENT_UPDATE_PETITION )
+                    
+                
+            
+        
+        for action in actions:
+            
+            self._migration_action.Append( HC.content_update_string_lookup[ action ], action )
+            
+        
+        if len( actions ) > 1:
+            
+            self._migration_action.Enable()
+            
+        else:
+            
+            self._migration_action.Disable()
+            
+        
+    
+    def _UpdateMigrationControlsNewDestination( self ):
+        
+        destination = self._migration_destination.GetValue()
+        
+        if destination in ( self.HTA_SERVICE_KEY, self.HTPA_SERVICE_KEY ):
+            
+            self._migration_destination_archive_path_button.Show()
+            
+            if destination == self.HTA_SERVICE_KEY:
+                
+                self._migration_destination_hash_type_choice_st.Show()
+                self._migration_destination_hash_type_choice.Show()
+                
+            else:
+                
+                self._migration_destination_hash_type_choice_st.Hide()
+                self._migration_destination_hash_type_choice.Hide()
+                
+            
+        else:
+            
+            self._migration_destination_archive_path_button.Hide()
+            self._migration_destination_hash_type_choice_st.Hide()
+            self._migration_destination_hash_type_choice.Hide()
+            
+        
+        self.Layout()
+        
+        self._UpdateMigrationControlsActions()
+        
+    
+    def _UpdateMigrationControlsNewSource( self ):
+        
+        source = self._migration_source.GetValue()
+        
+        self._migration_source_content_status_filter.Clear()
+        
+        if source in ( self.HTA_SERVICE_KEY, self.HTPA_SERVICE_KEY ):
+            
+            self._migration_source_archive_path_button.Show()
+            
+            if source == self.HTA_SERVICE_KEY:
+                
+                self._migration_source_hash_type_st.Show()
+                
+            else:
+                
+                self._migration_source_hash_type_st.Hide()
+                
+            
+            self._migration_source_content_status_filter.Append( 'current', ( HC.CONTENT_STATUS_CURRENT, ) )
+            
+            self._migration_source_content_status_filter.Disable()
+            
+        else:
+            
+            self._migration_source_archive_path_button.Hide()
+            self._migration_source_hash_type_st.Hide()
+            
+            source_service = HG.client_controller.services_manager.GetService( source )
+            
+            source_service_type = source_service.GetServiceType()
+            
+            if source_service_type == HC.LOCAL_TAG:
+                
+                self._migration_source_content_status_filter.Append( 'current', ( HC.CONTENT_STATUS_CURRENT, ) )
+                self._migration_source_content_status_filter.Append( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )
+                
+            elif source_service_type == HC.TAG_REPOSITORY:
+                
+                self._migration_source_content_status_filter.Append( 'current', ( HC.CONTENT_STATUS_CURRENT, ) )
+                self._migration_source_content_status_filter.Append( 'current and pending', ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+                self._migration_source_content_status_filter.Append( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )
+                
+            
+            self._migration_source_content_status_filter.Enable()
+            
+        
+        self.Layout()
+        
+        self._UpdateMigrationControlsActions()
+        
+    
+    def _UpdateMigrationControlsNewType( self ):
+        
+        content_type = self._migration_content_type.GetValue()
+        
+        if content_type != HC.CONTENT_TYPE_MAPPINGS:
+            
+            wx.MessageBox( 'Tag parents and siblings are coming soon, but not yet supported!' )
+            
+            self._migration_content_type.SetValue( HC.CONTENT_TYPE_MAPPINGS )
+            
+            return
+            
+        
+        self._migration_source.Clear()
+        self._migration_destination.Clear()
+        
+        for service in HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ):
+            
+            self._migration_source.Append( service.GetName(), service.GetServiceKey() )
+            self._migration_destination.Append( service.GetName(), service.GetServiceKey() )
+            
+        
+        self._source_archive_path = None
+        self._source_archive_hash_type = None
+        self._dest_archive_path = None
+        self._dest_archive_hash_type_override = None
+        
+        self._migration_source_hash_type_st.SetLabel( 'hash type: unknown' )
+        self._migration_destination_hash_type_choice.SetValue( 'sha256' )
+        self._migration_destination_hash_type_choice.Enable()
+        
+        self._migration_source_archive_path_button.SetLabel( 'no path set' )
+        self._migration_source_archive_path_button.SetToolTip( '' )
+        
+        self._migration_destination_archive_path_button.SetLabel( 'no path set' )
+        self._migration_destination_archive_path_button.SetToolTip( '' )
+        
+        if content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            self._migration_source.Append( 'Hydrus Tag Archive', self.HTA_SERVICE_KEY )
+            self._migration_destination.Append( 'Hydrus Tag Archive', self.HTA_SERVICE_KEY )
+            
+            self._migration_source_file_filter.Show()
+            self._migration_source_tag_filter.Show()
+            self._migration_source_left_tag_pair_filter.Hide()
+            self._migration_source_right_tag_pair_filter.Hide()
+            
+        elif content_type in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
+            
+            self._migration_source.Append( 'Hydrus Tag Pair Archive', self.HTPA_SERVICE_KEY )
+            self._migration_destination.Append( 'Hydrus Tag Pair Archive', self.HTPA_SERVICE_KEY )
+            
+            self._migration_source_file_filter.Hide()
+            self._migration_source_tag_filter.Hide()
+            self._migration_source_left_tag_pair_filter.Show()
+            self._migration_source_right_tag_pair_filter.Show()
+            
+        
+        self._migration_source.SetValue( self._service_key )
+        self._migration_destination.SetValue( self._service_key )
+        
+        self.Layout()
+        
+        self._UpdateMigrationControlsNewSource()
+        self._UpdateMigrationControlsNewDestination()
+        
+    
+    def EventMigrationNewDestination( self, event ):
+        
+        self._UpdateMigrationControlsNewDestination()
+        
+    
+    def EventMigrationNewSource( self, event ):
+        
+        self._UpdateMigrationControlsNewSource()
+        
+    
+    def EventMigrationNewTagStatus( self, event ):
+        
+        self._UpdateMigrationControlsActions()
+        
+    
+    def EventMigrationNewType( self, event ):
+        
+        self._UpdateMigrationControlsNewType()
+        
+    
 class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
@@ -1336,15 +1792,15 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( selected_network_contexts ) > 0:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Are you sure? This will delete all bandwidth record for the selected network contexts.' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Are you sure? This will delete all bandwidth record for the selected network contexts.' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._controller.network_engine.bandwidth_manager.DeleteHistory( selected_network_contexts )
-                    
-                    self._update_job.Wake()
-                    
+                self._controller.network_engine.bandwidth_manager.DeleteHistory( selected_network_contexts )
                 
+                self._update_job.Wake()
+                
+            
         
     
     def _EditDefaultBandwidthRules( self ):
@@ -1383,12 +1839,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Reset your \'default\' and \'global\' bandwidth rules to default?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                ClientDefaults.SetDefaultBandwidthManagerRules( self._controller.network_engine.bandwidth_manager )
-                
+            ClientDefaults.SetDefaultBandwidthManagerRules( self._controller.network_engine.bandwidth_manager )
             
         
     
@@ -1854,12 +2309,11 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         message += os.linesep * 2
         message += 'Does that sound good?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != wx.ID_YES:
             
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
+            return
             
         
         # ok, do it
@@ -2066,12 +2520,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             message = 'Are you sure you want to schedule "{}" on {} files?'.format( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], HydrusData.ToHumanInt( len( hash_ids ) ) )
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return
-                    
+                return
                 
             
         
@@ -2126,12 +2579,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Clear all the selected scheduled work?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != wx.ID_YES:
             
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
+            return
             
         
         job_types = self._jobs_listctrl.GetData( only_selected = True )
@@ -2376,6 +2828,569 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         self.SetSizer( vbox )
+        
+    
+class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, paths = None ):
+        
+        if paths is None:
+            
+            paths = []
+            
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self._AddPathsToList ) )
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( '#', 4 ), ( 'path', -1 ), ( 'guessed mime', 16 ), ( 'size', 10 ) ]
+        
+        self._paths_list = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'input_local_files', 12, 98, columns, self._ConvertListCtrlDataToTuple, delete_key_callback = self.RemovePaths )
+        
+        listctrl_panel.SetListCtrl( self._paths_list )
+        
+        listctrl_panel.AddButton( 'add files', self.AddPaths )
+        listctrl_panel.AddButton( 'add folder', self.AddFolder )
+        listctrl_panel.AddButton( 'remove files', self.RemovePaths, enabled_only_on_selection = True )
+        
+        self._progress = ClientGUICommon.TextAndGauge( self )
+        
+        self._progress_pause = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.pause, self.PauseProgress )
+        self._progress_pause.Disable()
+        
+        self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.StopProgress )
+        self._progress_cancel.Disable()
+        
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        show_downloader_options = False
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options, show_downloader_options )
+        
+        menu_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'do_human_sort_on_hdd_file_import_paths' )
+        
+        menu_items.append( ( 'check', 'sort paths as they are added', 'If checked, paths will be sorted in a numerically human-friendly (e.g. "page 9.jpg" comes before "page 10.jpg") way.', check_manager ) )
+        
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        
+        self._delete_after_success_st = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE )
+        self._delete_after_success_st.SetForegroundColour( ( 127, 0, 0 ) )
+        
+        self._delete_after_success = wx.CheckBox( self, label = 'delete original files after successful import' )
+        self._delete_after_success.Bind( wx.EVT_CHECKBOX, self.EventDeleteAfterSuccessCheck )
+        
+        self._add_button = ClientGUICommon.BetterButton( self, 'import now', self._DoImport )
+        self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        self._tag_button = ClientGUICommon.BetterButton( self, 'add tags based on filename', self._AddTags )
+        self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
+        
+        gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        
+        gauge_sizer.Add( self._progress, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        gauge_sizer.Add( self._progress_pause, CC.FLAGS_VCENTER )
+        gauge_sizer.Add( self._progress_cancel, CC.FLAGS_VCENTER )
+        
+        delete_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        delete_hbox.Add( self._delete_after_success_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        delete_hbox.Add( self._delete_after_success, CC.FLAGS_VCENTER )
+        
+        import_options_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        import_options_buttons.Add( self._file_import_options, CC.FLAGS_SIZER_VCENTER )
+        import_options_buttons.Add( self._cog_button, CC.FLAGS_SIZER_VCENTER )
+        
+        buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons.Add( self._add_button, CC.FLAGS_VCENTER )
+        buttons.Add( self._tag_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( delete_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( import_options_buttons, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        self._lock = threading.Lock()
+        
+        self._current_path_data = {}
+        
+        self._job_key = ClientThreading.JobKey()
+        
+        self._unparsed_paths_queue = queue.Queue()
+        self._currently_parsing = threading.Event()
+        self._work_to_do = threading.Event()
+        self._parsed_path_queue = queue.Queue()
+        self._pause_event = threading.Event()
+        self._cancel_event = threading.Event()
+        
+        self._progress_updater = ClientGUICommon.ThreadToGUIUpdater( self._progress, self._progress.SetValue )
+        
+        if len( paths ) > 0:
+            
+            self._AddPathsToList( paths )
+            
+        
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        
+        HG.client_controller.CallToThreadLongRunning( self.THREADParseImportablePaths, self._unparsed_paths_queue, self._currently_parsing, self._work_to_do, self._parsed_path_queue, self._progress_updater, self._pause_event, self._cancel_event )
+        
+    
+    def _AddPathsToList( self, paths ):
+        
+        if self._cancel_event.is_set():
+            
+            message = 'Please wait for the cancel to clear.'
+            
+            wx.MessageBox( message )
+            
+            return
+            
+        
+        self._unparsed_paths_queue.put( paths )
+        
+    
+    def _AddTags( self ):
+        
+        paths = self._paths_list.GetData()
+        
+        if len( paths ) > 0:
+            
+            file_import_options = self._file_import_options.GetValue()
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
+                
+                panel = ClientGUIImport.EditLocalImportFilenameTaggingPanel( dlg, paths )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    paths_to_service_keys_to_tags = panel.GetValue()
+                    
+                    delete_after_success = self._delete_after_success.GetValue()
+                    
+                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+                    
+                    self._OKParent()
+                    
+                
+            
+        
+    
+    def _ConvertListCtrlDataToTuple( self, path ):
+        
+        ( index, mime, size ) = self._current_path_data[ path ]
+        
+        pretty_index = HydrusData.ToHumanInt( index )
+        pretty_mime = HC.mime_string_lookup[ mime ]
+        pretty_size = HydrusData.ToHumanBytes( size )
+        
+        display_tuple = ( pretty_index, path, pretty_mime, pretty_size )
+        sort_tuple = ( index, path, pretty_mime, size )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DoImport( self ):
+        
+        paths = self._paths_list.GetData()
+        
+        if len( paths ) > 0:
+            
+            file_import_options = self._file_import_options.GetValue()
+            
+            paths_to_service_keys_to_tags = collections.defaultdict( ClientTags.ServiceKeysToTags )
+            
+            delete_after_success = self._delete_after_success.GetValue()
+            
+            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, paths_to_service_keys_to_tags, delete_after_success )
+            
+        
+        self._OKParent()
+        
+    
+    def _TidyUp( self ):
+        
+        self._pause_event.set()
+        
+    
+    def AddFolder( self ):
+        
+        with wx.DirDialog( self, 'Select a folder to add.', style = wx.DD_DIR_MUST_EXIST ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                self._AddPathsToList( ( path, ) )
+                
+            
+        
+    
+    def AddPaths( self ):
+        
+        with wx.FileDialog( self, 'Select the files to add.', style = wx.FD_MULTIPLE ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                paths = dlg.GetPaths()
+                
+                self._AddPathsToList( paths )
+                
+            
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.CleanBeforeDestroy( self )
+        
+        self._TidyUp()
+        
+    
+    def EventDeleteAfterSuccessCheck( self, event ):
+        
+        if self._delete_after_success.GetValue():
+            
+            self._delete_after_success_st.SetLabelText( 'YOUR ORIGINAL FILES WILL BE DELETED' )
+            
+        else:
+            
+            self._delete_after_success_st.SetLabelText( '' )
+            
+        
+    
+    def PauseProgress( self ):
+        
+        if self._pause_event.is_set():
+            
+            self._pause_event.clear()
+            
+        else:
+            
+            self._pause_event.set()
+            
+        
+    
+    def StopProgress( self ):
+        
+        self._cancel_event.set()
+        
+    
+    def RemovePaths( self ):
+        
+        text = 'Remove all selected?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == wx.ID_YES:
+            
+            paths_to_delete = self._paths_list.GetData( only_selected = True )
+            
+            self._paths_list.DeleteSelected()
+            
+            for path in paths_to_delete:
+                
+                del self._current_path_data[ path ]
+                
+            
+            flat_path_data = [ ( index, path, mime, size ) for ( path, ( index, mime, size ) ) in self._current_path_data.items() ]
+            
+            flat_path_data.sort()
+            
+            new_index = 1
+            
+            for ( old_index, path, mime, size ) in flat_path_data:
+                
+                self._current_path_data[ path ] = ( new_index, mime, size )
+                
+                new_index += 1
+                
+            
+            self._paths_list.UpdateDatas()
+            
+        
+    
+    def THREADParseImportablePaths( self, unparsed_paths_queue, currently_parsing, work_to_do, parsed_path_queue, progress_updater, pause_event, cancel_event ):
+        
+        unparsed_paths = collections.deque()
+        
+        num_files_done = 0
+        num_good_files = 0
+        
+        num_empty_files = 0
+        num_unimportable_mime_files = 0
+        num_occupied_files = 0
+        
+        while not HG.view_shutdown:
+            
+            if not self:
+                
+                return
+                
+            
+            if len( unparsed_paths ) > 0:
+                
+                work_to_do.set()
+                
+            else:
+                
+                work_to_do.clear()
+                
+            
+            currently_parsing.clear()
+            
+            # ready to start, let's update ui on status
+            
+            total_paths = num_files_done + len( unparsed_paths )
+            
+            if num_good_files == 0:
+                
+                if num_files_done == 0:
+                    
+                    message = 'waiting for paths to parse'
+                    
+                else:
+                    
+                    message = 'none of the ' + HydrusData.ToHumanInt( total_paths ) + ' files parsed successfully'
+                    
+                
+            else:
+                
+                message = HydrusData.ConvertValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
+                
+            
+            if num_empty_files > 0 or num_unimportable_mime_files > 0 or num_occupied_files > 0:
+                
+                if num_good_files == 0:
+                    
+                    message += ': '
+                    
+                else:
+                    
+                    message += ', but '
+                    
+                
+                bad_comments = []
+                
+                if num_empty_files > 0:
+                    
+                    bad_comments.append( HydrusData.ToHumanInt( num_empty_files ) + ' were empty' )
+                    
+                
+                if num_unimportable_mime_files > 0:
+                    
+                    bad_comments.append( HydrusData.ToHumanInt( num_unimportable_mime_files ) + ' had unsupported file types' )
+                    
+                
+                if num_occupied_files > 0:
+                    
+                    bad_comments.append( HydrusData.ToHumanInt( num_occupied_files ) + ' were inaccessible (maybe in use by another process)' )
+                    
+                
+                message += ' and '.join( bad_comments )
+                
+            
+            message += '.'
+            
+            progress_updater.Update( message, num_files_done, total_paths )
+            
+            # status updated, lets see what work there is to do
+            
+            if cancel_event.is_set():
+                
+                while not unparsed_paths_queue.empty():
+                    
+                    try:
+                        
+                        unparsed_paths_queue.get( block = False )
+                        
+                    except queue.Empty:
+                        
+                        pass
+                        
+                    
+                
+                unparsed_paths = collections.deque()
+                
+                cancel_event.clear()
+                pause_event.clear()
+                
+                continue
+                
+            
+            if pause_event.is_set():
+                
+                time.sleep( 1 )
+                
+                continue
+                
+            
+            # let's see if there is anything to parse
+            
+            # first we'll flesh out unparsed_paths with anything new to look at
+            
+            do_human_sort = HG.client_controller.new_options.GetBoolean( 'do_human_sort_on_hdd_file_import_paths' )
+            
+            while not unparsed_paths_queue.empty():
+                
+                try:
+                    
+                    raw_paths = unparsed_paths_queue.get( block = False )
+                    
+                    paths = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
+                    
+                    unparsed_paths.extend( paths )
+                    
+                except queue.Empty:
+                    
+                    pass
+                    
+                
+            
+            # if unparsed_paths still has nothing, we'll nonetheless sleep on new paths
+            
+            if len( unparsed_paths ) == 0:
+                
+                try:
+                    
+                    raw_paths = unparsed_paths_queue.get( timeout = 5 )
+                    
+                    paths = ClientFiles.GetAllFilePaths( raw_paths, do_human_sort = do_human_sort ) # convert any dirs to subpaths
+                    
+                    unparsed_paths.extend( paths )
+                    
+                except queue.Empty:
+                    
+                    pass
+                    
+                
+                continue # either we added some or didn't--in any case, restart the cycle
+                
+            
+            path = unparsed_paths.popleft()
+            
+            currently_parsing.set()
+            
+            # we are now dealing with a file. let's clear out quick no-gos
+            
+            num_files_done += 1
+            
+            if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
+                
+                num_unimportable_mime_files += 1
+                
+                continue
+                
+            
+            if not HydrusPaths.PathIsFree( path ):
+                
+                num_occupied_files += 1
+                
+                continue
+                
+            
+            size = os.path.getsize( path )
+            
+            if size == 0:
+                
+                HydrusData.Print( 'Empty file: ' + path )
+                
+                num_empty_files += 1
+                
+                continue
+                
+            
+            # looks good, let's burn some CPU
+            
+            mime = HydrusFileHandling.GetMime( path )
+            
+            if mime in HC.ALLOWED_MIMES:
+                
+                num_good_files += 1
+                
+                parsed_path_queue.put( ( path, mime, size ) )
+                
+            else:
+                
+                HydrusData.Print( 'Unparsable file: ' + path )
+                
+                num_unimportable_mime_files += 1
+                
+            
+        
+    
+    def TIMERUIUpdate( self ):
+        
+        good_paths = list()
+        
+        while not self._parsed_path_queue.empty():
+            
+            ( path, mime, size ) = self._parsed_path_queue.get()
+            
+            if not self._paths_list.HasData( path ):
+                
+                good_paths.append( path )
+                
+                index = len( self._current_path_data ) + 1
+                
+                self._current_path_data[ path ] = ( index, mime, size )
+                
+            
+        
+        if len( good_paths ) > 0:
+            
+            self._paths_list.AddDatas( good_paths )
+            
+        
+        #
+        
+        files_in_list = len( self._current_path_data ) > 0
+        
+        paused = self._pause_event.is_set()
+        no_work_in_queue = not self._work_to_do.is_set()
+        working_on_a_file_now = self._currently_parsing.is_set()
+        
+        can_import = files_in_list and ( no_work_in_queue or paused ) and not working_on_a_file_now
+        
+        if no_work_in_queue:
+            
+            self._progress_pause.Disable()
+            self._progress_cancel.Disable()
+            
+        else:
+            
+            self._progress_pause.Enable()
+            self._progress_cancel.Enable()
+            
+        
+        if can_import:
+            
+            self._add_button.Enable()
+            self._tag_button.Enable()
+            
+        else:
+            
+            self._add_button.Disable()
+            self._tag_button.Disable()
+            
+        
+        if paused:
+            
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.play )
+            
+        else:
+            
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.pause )
+            
         
     
 class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -2626,14 +3641,13 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _UseDefaultRules( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to revert to using the default rules for this context?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Are you sure you want to revert to using the default rules for this context?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.network_engine.bandwidth_manager.DeleteRules( self._network_context )
-                
-                self._rules_job.Wake()
-                
+            self._controller.network_engine.bandwidth_manager.DeleteRules( self._network_context )
+            
+            self._rules_job.Wake()
             
         
     
@@ -2777,12 +3791,11 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Clear( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Clear these sessions? This will delete them completely.' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear these sessions? This will delete them completely.' )
+        
+        if result != wx.ID_YES:
             
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
+            return
             
         
         for network_context in self._listctrl.GetData( only_selected = True ):
@@ -2837,7 +3850,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    # this method is thanks to user prkc on the discord!
+    # this method is thanks to a user's contribution!
     def _ImportCookiesTXT( self ):
         
         with wx.FileDialog( self, 'select cookies.txt', style = wx.FD_OPEN ) as f_dlg:
@@ -3045,21 +4058,20 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Delete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected cookies?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete all selected cookies?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            for cookie in self._listctrl.GetData( only_selected = True ):
                 
-                for cookie in self._listctrl.GetData( only_selected = True ):
-                    
-                    domain = cookie.domain
-                    path = cookie.path
-                    name = cookie.name
-                    
-                    self._session.cookies.clear( domain, path, name )
-                    
+                domain = cookie.domain
+                path = cookie.path
+                name = cookie.name
                 
-                self._Update()
+                self._session.cookies.clear( domain, path, name )
                 
+            
+            self._Update()
             
         
     
@@ -3095,7 +4107,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    # these methods are thanks to user prkc on the discord!
+    # these methods are thanks to user's contribution!
     def _ImportCookiesTXT( self ):
         
         with wx.FileDialog( self, 'select cookies.txt', style = wx.FD_OPEN ) as f_dlg:

@@ -56,12 +56,11 @@ def ClearFalsePositives( win, hashes ):
         message += 'All affected files will be queued up for another potential duplicates search, so you will likely see some of them again in the duplicate filter.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'clear_false_positive_relations', hashes )
-            
+        HG.client_controller.Write( 'clear_false_positive_relations', hashes )
         
     
 def DissolveAlternateGroup( win, hashes ):
@@ -83,12 +82,11 @@ def DissolveAlternateGroup( win, hashes ):
         message += 'This is a potentially huge change that throws away many previous decisions and cannot be undone. If you can achieve your result just by removing some alternate members, do that instead.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'dissolve_alternates_group', hashes )
-            
+        HG.client_controller.Write( 'dissolve_alternates_group', hashes )
         
     
 def DissolveDuplicateGroup( win, hashes ):
@@ -110,12 +108,11 @@ def DissolveDuplicateGroup( win, hashes ):
         message += 'This could be a huge change that throws away many previous decisions and cannot be undone. If you can achieve your result just by removing some members, do that instead.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'dissolve_duplicates_group', hashes )
-            
+        HG.client_controller.Write( 'dissolve_duplicates_group', hashes )
         
     
 def RemoveFromAlternateGroup( win, hashes ):
@@ -137,12 +134,11 @@ def RemoveFromAlternateGroup( win, hashes ):
         message += 'The removed files (and any duplicates) will be queued up for another potential duplicates search, so you will likely see some again in the duplicate filter.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'remove_alternates_member', hashes )
-            
+        HG.client_controller.Write( 'remove_alternates_member', hashes )
         
     
 def RemoveFromDuplicateGroup( win, hashes ):
@@ -164,12 +160,11 @@ def RemoveFromDuplicateGroup( win, hashes ):
         message += 'The removed files will be queued up for another potential duplicates search, so you will likely see them again in the duplicate filter.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'remove_duplicates_member', hashes )
-            
+        HG.client_controller.Write( 'remove_duplicates_member', hashes )
         
     
 def RemovePotentials( win, hashes ):
@@ -187,12 +182,11 @@ def RemovePotentials( win, hashes ):
         message += 'This will mean they (or any of their duplicates) will not appear in the duplicate filter unless new potentials are found with new files. Use this command if the files have accidentally received many false positive potential relationships.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'remove_potential_pairs', hashes )
-            
+        HG.client_controller.Write( 'remove_potential_pairs', hashes )
         
     
 def ResetPotentialSearch( win, hashes ):
@@ -210,11 +204,10 @@ def ResetPotentialSearch( win, hashes ):
         message += 'This will not remove any existing potential pairs, and will typically not find any new relationships unless an error has occured.'
         
     
-    with ClientGUIDialogs.DialogYesNo( win, message ) as dlg:
+    result = ClientGUIDialogsQuick.GetYesNo( win, message )
+    
+    if result == wx.ID_YES:
         
-        if dlg.ShowModal() == wx.ID_YES:
-            
-            HG.client_controller.Write( 'reset_potential_search_status', hashes )
-            
+        HG.client_controller.Write( 'reset_potential_search_status', hashes )
         
     

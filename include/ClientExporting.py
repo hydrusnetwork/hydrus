@@ -12,9 +12,9 @@ import os
 import re
 import stat
 
-MAX_PATH_LENGTH = 245 # bit of padding from 255 for .txt neigbouring and other surprises
+MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
 
-def GenerateExportFilename( destination_directory, media, terms ):
+def GenerateExportFilename( destination_directory, media, terms, append_number = None ):
     
     def clean_tag_text( t ):
         
@@ -130,7 +130,12 @@ def GenerateExportFilename( destination_directory, media, terms ):
         filename = filename[ : - excess_chars ]
         
     
-    filename = filename + ext
+    if append_number is not None:
+        
+        filename += ' ({})'.format( append_number )
+        
+    
+    filename += ext
     
     return filename
     

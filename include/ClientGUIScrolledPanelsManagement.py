@@ -128,55 +128,54 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Delete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            indices = self._account_types_listctrl.GetAllSelected()
+            
+            account_types_about_to_delete = { self._account_types_listctrl.GetObject( index ) for index in indices }
+            
+            all_account_types = set( self._account_types_listctrl.GetObjects() )
+            
+            account_types_can_move_to = list( all_account_types - account_types_about_to_delete )
+            
+            if len( account_types_can_move_to ) == 0:
                 
-                indices = self._account_types_listctrl.GetAllSelected()
+                wx.MessageBox( 'You cannot delete every account type!' )
                 
-                account_types_about_to_delete = { self._account_types_listctrl.GetObject( index ) for index in indices }
+                return
                 
-                all_account_types = set( self._account_types_listctrl.GetObjects() )
+            
+            for deletee_account_type in account_types_about_to_delete:
                 
-                account_types_can_move_to = list( all_account_types - account_types_about_to_delete )
-                
-                if len( account_types_can_move_to ) == 0:
+                if len( account_types_can_move_to ) > 1:
                     
-                    wx.MessageBox( 'You cannot delete every account type!' )
+                    deletee_title = deletee_account_type.GetTitle()
                     
-                    return
+                    choice_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
                     
-                
-                for deletee_account_type in account_types_about_to_delete:
-                    
-                    if len( account_types_can_move_to ) > 1:
+                    try:
                         
-                        deletee_title = deletee_account_type.GetTitle()
+                        new_account_type = ClientGUIDialogsQuick.SelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', choice_tuples )
                         
-                        choice_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
+                    except HydrusExceptions.CancelledException:
                         
-                        try:
-                            
-                            new_account_type = ClientGUIDialogsQuick.SelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', choice_tuples )
-                            
-                        except HydrusExceptions.CancelledException:
-                            
-                            return
-                            
-                        
-                    else:
-                        
-                        ( new_account_type, ) = account_types_can_move_to
+                        return
                         
                     
-                    deletee_account_type_key = deletee_account_type.GetAccountTypeKey()
-                    new_account_type_key = new_account_type.GetAccountTypeKey()
+                else:
                     
-                    self._deletee_account_type_keys_to_new_account_type_keys[ deletee_account_type_key ] = new_account_type_key
+                    ( new_account_type, ) = account_types_can_move_to
                     
                 
-                self._account_types_listctrl.RemoveAllSelected()
+                deletee_account_type_key = deletee_account_type.GetAccountTypeKey()
+                new_account_type_key = new_account_type.GetAccountTypeKey()
                 
+                self._deletee_account_type_keys_to_new_account_type_keys[ deletee_account_type_key ] = new_account_type_key
+                
+            
+            self._account_types_listctrl.RemoveAllSelected()
             
         
     
@@ -356,12 +355,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if len( deletable_services ) > 0:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Delete the selected services?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete the selected services?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._listctrl.DeleteDatas( deletable_services )
-                    
+                self._listctrl.DeleteDatas( deletable_services )
                 
             
         
@@ -419,12 +417,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             message += os.linesep * 2
             message += 'Are you absolutely sure this is correct?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    raise HydrusExceptions.VetoException( 'Commit cancelled by user! If you do not believe you meant to delete any services (i.e the code accidentally intended to delete them all by itself), please inform hydrus dev immediately.' )
-                    
+                raise HydrusExceptions.VetoException( 'Commit cancelled by user! If you do not believe you meant to delete any services (i.e the code accidentally intended to delete them all by itself), please inform hydrus dev immediately.' )
                 
             
             
@@ -4597,17 +4594,16 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Delete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            for service in self._services_listctrl.GetObjects( only_selected = True ):
                 
-                for service in self._services_listctrl.GetObjects( only_selected = True ):
-                    
-                    self._deletee_service_keys.append( service.GetServiceKey() )
-                    
+                self._deletee_service_keys.append( service.GetServiceKey() )
                 
-                self._services_listctrl.RemoveAllSelected()
-                
+            
+            self._services_listctrl.RemoveAllSelected()
             
         
     
@@ -4824,12 +4820,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Delete( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._custom_shortcuts.RemoveAllSelected()
-                
+            self._custom_shortcuts.RemoveAllSelected()
             
         
     
@@ -5109,12 +5104,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def RemoveShortcuts( self ):
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._shortcuts.RemoveAllSelected()
-                    
+                self._shortcuts.RemoveAllSelected()
                 
             
         
@@ -6140,12 +6134,11 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             message += os.linesep * 2
             message += 'You can run database->regenerate->thumbnails to fill them up again.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+                raise HydrusExceptions.VetoException()
                 
             
         

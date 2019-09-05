@@ -155,12 +155,11 @@ def OpenURLs( urls ):
             message += ' This will take some time.'
             
         
-        with ClientGUIDialogs.DialogYesNo( HG.client_controller.gui, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( HG.client_controller.gui, message )
+        
+        if result != wx.ID_YES:
             
-            if dlg.ShowModal() != wx.ID_YES:
-                
-                return
-                
+            return
             
         
     
@@ -476,6 +475,41 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
         
     
+def AddRemoveMenu( win, menu, num_files, num_selected, num_inbox, num_archive ):
+    
+    if num_files > 0:
+        
+        do_files = num_files > 0 and num_selected < num_files
+        do_selected = num_selected > 0
+        do_archive_and_inbox = num_inbox > 0 and num_archive > 0
+        do_not_selected = ( num_files - num_selected ) > 0 and num_selected > 0
+        
+        remove_menu = wx.Menu()
+        
+        if do_selected:
+            
+            ClientGUIMenus.AppendMenuItem( win, remove_menu, 'selected ({})'.format( HydrusData.ToHumanInt( num_selected ) ), 'Remove all the selected files from the current view.', win._Remove )
+            
+        
+        if do_files:
+            
+            ClientGUIMenus.AppendMenuItem( win, remove_menu, 'all ({})'.format( HydrusData.ToHumanInt( num_files ) ), 'Remove all the files from the current view.', win._Remove, 'all' )
+            
+        
+        if do_archive_and_inbox:
+            
+            ClientGUIMenus.AppendMenuItem( win, remove_menu, 'inbox ({})'.format( HydrusData.ToHumanInt( num_inbox ) ), 'Remove all the inbox files from the current view.', win._Remove, 'inbox' )
+            ClientGUIMenus.AppendMenuItem( win, remove_menu, 'archived ({})'.format( HydrusData.ToHumanInt( num_archive ) ), 'Remove all the archived files from the current view.', win._Remove, 'archive' )
+            
+        
+        if do_not_selected:
+            
+            ClientGUIMenus.AppendMenuItem( win, remove_menu, 'not selected ({})'.format( HydrusData.ToHumanInt( num_files - num_selected ) ), 'Remove all the not selected files from the current view.', win._Remove, 'not selected' )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, remove_menu, 'remove' )
+        
+    
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
     services_manager = HG.client_controller.services_manager
@@ -579,12 +613,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     
                     message = 'Archive ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files?'
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != wx.ID_YES:
                         
-                        if dlg.ShowModal() != wx.ID_YES:
-                            
-                            return
-                            
+                        return
                         
                     
                 
@@ -902,25 +935,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             panel = ClientGUIExport.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
             
             frame.SetPanel( panel )
-            
-        
-    
-    def _ExportTags( self ):
-        
-        if len( self._selected_media ) > 0:
-            
-            services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
-            
-            service_keys = [ service.GetServiceKey() for service in services ]
-            
-            service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
-            
-            hashes = self._GetSelectedHashes()
-            
-            if service_key is not None:
-                
-                ClientGUITags.ExportToHTA( self, service_key, hashes )
-                
             
         
     
@@ -1296,11 +1310,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 if len( hashes ) > 1:
                     
-                    message = 'Send ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files to inbox?'
+                    message = 'Send {} files to inbox?'.format( HydrusData.ToHumanInt( len( hashes ) ) )
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != wx.ID_YES:
                         
-                        if dlg.ShowModal() != wx.ID_YES: return
+                        return
                         
                     
                 
@@ -1625,13 +1641,43 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
     
     def _RedrawMedia( self, media ): pass
     
-    def _Remove( self ):
+    def _Remove( self, remove_type = None ):
         
-        singletons = [ media for media in self._selected_media if not media.IsCollection() ]
-        
-        collections = [ media for media in self._selected_media if media.IsCollection() ]
-        
-        self._RemoveMediaDirectly( singletons, collections )
+        if remove_type is None:
+            
+            singletons = [ media for media in self._selected_media if not media.IsCollection() ]
+            
+            collections = [ media for media in self._selected_media if media.IsCollection() ]
+            
+            self._RemoveMediaDirectly( singletons, collections )
+            
+        elif remove_type == 'not selected':
+            
+            singletons = [ media for media in self._sorted_media if media not in self._selected_media and not media.IsCollection() ]
+            
+            collections = [ media for media in self._sorted_media if media not in self._selected_media and media.IsCollection() ]
+            
+            self._RemoveMediaDirectly( singletons, collections )
+            
+        else:
+            
+            flat_media = ClientMedia.FlattenMedia( self._sorted_media )
+            
+            if remove_type == 'all':
+                
+                hashes = list( self._hashes )
+                
+            if remove_type == 'inbox':
+                
+                hashes = [ m.GetHash() for m in flat_media if m.HasInbox() ]
+                
+            elif remove_type == 'archive':
+                
+                hashes = [ m.GetHash() for m in flat_media if not m.HasInbox() ]
+                
+            
+            self._RemoveMediaByHashes( hashes )
+            
         
     
     def _RegenerateFileData( self, job_type ):
@@ -1696,12 +1742,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
             else:
                 
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                
+                if result != wx.ID_YES:
                     
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return
-                        
+                    return
                     
                 
             
@@ -1757,7 +1802,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             
         else:
             
-            if select_type == 'invert':
+            if select_type == 'not selected':
                 
                 ( media_to_deselect, media_to_select ) = ( self._selected_media, { m for m in self._sorted_media if m not in self._selected_media } )
                 
@@ -1842,16 +1887,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             message += os.linesep * 2
             message += 'Be careful applying this to large groups--any more than a few dozen files, and the client could hang a long time.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                for collection in collections:
                     
-                    for collection in collections:
-                        
-                        media_group = collection.GetFlatMedia()
-                        
-                        self._SetDuplicates( HC.DUPLICATE_ALTERNATE, media_group = media_group, silent = True )
-                        
+                    media_group = collection.GetFlatMedia()
+                    
+                    self._SetDuplicates( HC.DUPLICATE_ALTERNATE, media_group = media_group, silent = True )
                     
                 
             
@@ -1920,6 +1964,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         if not silent:
             
+            yes_label = 'yes'
+            no_label = 'no'
+            
             if len( media_pairs ) > 100 and duplicate_type in ( HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_ALTERNATE ):
                 
                 if duplicate_type == HC.DUPLICATE_FALSE_POSITIVE:
@@ -1941,25 +1988,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                     no_label = 'some may be duplicates'
                     
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = yes_label, no_label = no_label ) as dlg:
-                    
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return False
-                        
-                    
-                
             else:
                 
                 message = 'Are you sure you want to ' + yes_no_text + ' for the selected files?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                    
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return False
-                        
-                    
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = yes_label, no_label = no_label )
+            
+            if result != wx.ID_YES:
+                
+                return False
                 
             
         
@@ -2185,15 +2223,20 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
             else:
                 
-                if num_to_undelete == 1: text = 'Are you sure you want to undelete this file?'
-                else: text = 'Are you sure you want to undelete these ' + HydrusData.ToHumanInt( num_to_undelete ) + ' files?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                if num_to_undelete == 1:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        do_it = True
-                        
+                    message = 'Are you sure you want to undelete this file?'
+                    
+                else:
+                    
+                    message = 'Are you sure you want to undelete these ' + HydrusData.ToHumanInt( num_to_undelete ) + ' files?'
+                    
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result == wx.ID_YES:
+                    
+                    do_it = True
                     
                 
             
@@ -3627,8 +3670,10 @@ class MediaPanelThumbnails( MediaPanel ):
         has_local = True in ( locations_manager.IsLocal() for locations_manager in all_locations_managers )
         has_remote = True in ( locations_manager.IsRemote() for locations_manager in all_locations_managers )
         
-        num_inbox = sum( ( media.GetNumFiles() for media in self._sorted_media if media.HasInbox() ) )
-        num_archive = sum( ( media.GetNumFiles() for media in self._sorted_media if media.HasArchive() ) )
+        num_files = self.GetNumFiles()
+        num_selected = self._GetNumSelected()
+        num_inbox = self.GetNumInbox()
+        num_archive = self.GetNumArchive()
         
         media_has_inbox = num_inbox > 0
         media_has_archive = num_archive > 0
@@ -3638,8 +3683,6 @@ class MediaPanelThumbnails( MediaPanel ):
         if self._focused_media is not None:
             
             # variables
-            
-            num_selected = self._GetNumSelected()
             
             multiple_selected = num_selected > 1
             
@@ -3692,17 +3735,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 unpin_phrase = 'unpin all from'
                 rescind_unpin_phrase = 'rescind unpin from'
                 
-                manage_tags_phrase = 'selected files\' tags'
-                manage_urls_phrase = 'selected files\' urls'
-                manage_ratings_phrase = 'selected files\' ratings'
-                
                 archive_phrase = 'archive selected'
                 inbox_phrase = 'return selected to inbox'
-                remove_phrase = 'remove selected from view'
                 local_delete_phrase = 'delete selected'
                 trash_delete_phrase = 'delete selected from trash now'
                 undelete_phrase = 'undelete selected'
-                dump_phrase = 'dump selected to 4chan'
                 export_phrase = 'files'
                 copy_phrase = 'files'
                 
@@ -3722,17 +3759,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 unpin_phrase = 'unpin from'
                 rescind_unpin_phrase = 'rescind unpin from'
                 
-                manage_tags_phrase = 'file\'s tags'
-                manage_urls_phrase = 'file\'s urls'
-                manage_ratings_phrase = 'file\'s ratings'
-                
                 archive_phrase = 'archive'
                 inbox_phrase = 'return to inbox'
-                remove_phrase = 'remove from view'
                 local_delete_phrase = 'delete'
                 trash_delete_phrase = 'delete from trash now'
                 undelete_phrase = 'undelete'
-                dump_phrase = 'dump to 4chan'
                 export_phrase = 'file'
                 copy_phrase = 'file'
                 
@@ -3934,9 +3965,134 @@ class MediaPanelThumbnails( MediaPanel ):
                 AddServiceKeyLabelsToMenu( menu, common_petitioned_ipfs_service_keys, unpin_phrase )
                 
             
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HG.client_controller.pub, 'refresh_query', self._page_key )
+        
+        if len( self._sorted_media ) > 0:
+            
             ClientGUIMenus.AppendSeparator( menu )
             
+            select_menu = wx.Menu()
+            
+            if num_selected < num_files:
+                
+                all_label = 'all (' + HydrusData.ToHumanInt( num_files ) + ')'
+                
+                if media_has_archive and not media_has_inbox:
+                    
+                    all_label += ' (all in archive)'
+                    
+                elif media_has_inbox and not media_has_archive:
+                    
+                    all_label += ' (all in inbox)'
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, all_label, 'Select everything.', self._Select, 'all' )
+                
+            
+            if media_has_archive and media_has_inbox:
+                
+                inbox_label = 'inbox (' + HydrusData.ToHumanInt( num_inbox ) + ')'
+                archive_label = 'archive (' + HydrusData.ToHumanInt( num_archive ) + ')'
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, inbox_label, 'Select everything in the inbox.', self._Select, 'inbox' )
+                ClientGUIMenus.AppendMenuItem( self, select_menu, archive_label, 'Select everything that is archived.', self._Select, 'archive' )
+                
+            
+            if len( all_specific_file_domains ) > 1:
+                
+                selectable_file_domains = list( all_local_file_domains )
+                
+                if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
+                    
+                    selectable_file_domains.append( CC.TRASH_SERVICE_KEY )
+                    
+                
+                selectable_file_domains.extend( all_file_repos )
+                
+                for service_key in selectable_file_domains:
+                    
+                    name = services_manager.GetName( service_key )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
+                    
+                
+            
+            if has_local and has_remote:
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'local', 'Select everything in the client.', self._Select, 'local' )
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'remote', 'Select everything that is not in the client.', self._Select, 'remote' )
+                
+            
+            if len( self._selected_media ) > 0:
+                
+                if num_selected < num_files:
+                
+                    invert_label = 'not selected (' + HydrusData.ToHumanInt( num_files - num_selected ) + ')'
+                    
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, invert_label, 'Swap what is and is not selected.', self._Select, 'not selected' )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'none (0)', 'Deselect everything.', self._Select, 'none' )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+            
+        
+        AddRemoveMenu( self, menu, num_files, num_selected, num_inbox, num_archive )
+        
+        if self._focused_media is not None:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if selection_has_local:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'archive/delete filter', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._ArchiveDeleteFilter )
+                
+            
+            if selection_has_inbox:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, archive_phrase, 'Archive the selected files.', self._Archive )
+                
+            
+            if selection_has_archive:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, inbox_phrase, 'Put the selected files back in the inbox.', self._Inbox )
+                
+            
+        
+        if self._focused_media is not None:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if selection_has_local_file_domain:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self._Delete )
+                
+            
+            if selection_has_trash:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, trash_delete_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self._Delete, CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
+                
+            
             #
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            manage_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage tags for the selected files.', self._ManageTags )
+            
+            if i_can_post_ratings:
+                
+                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage ratings for the selected files.', self._ManageRatings )
+                
+            
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'urls', 'Manage urls for the selected files.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'notes', 'Manage notes for the focused file.', self._ManageNotes )
             
             len_interesting_remote_service_keys = 0
             
@@ -4026,285 +4182,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     AddServiceKeysToMenu( self, remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
                     
                 
-                ClientGUIMenus.AppendMenu( menu, remote_action_menu, 'remote services' )
+                ClientGUIMenus.AppendMenu( manage_menu, remote_action_menu, 'remote services' )
                 
-            
-            #
-            
-            manage_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_tags_phrase, 'Manage tags for the selected files.', self._ManageTags )
-            
-            if i_can_post_ratings:
-                
-                ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_ratings_phrase, 'Manage ratings for the selected files.', self._ManageRatings )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_urls_phrase, 'Manage urls for the selected files.', self._ManageURLs )
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'file\'s notes', 'Manage notes for the focused file.', self._ManageNotes )
-            
-            ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
-            
-            #
-            
-            if selection_has_local:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'archive/delete filter', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._ArchiveDeleteFilter )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if selection_has_inbox:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, archive_phrase, 'Archive the selected files.', self._Archive )
-                
-            
-            if selection_has_archive:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, inbox_phrase, 'Put the selected files back in the inbox.', self._Inbox )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, remove_phrase, 'Remove the selected files from the current view.', self._Remove )
-            
-            if selection_has_local_file_domain:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self._Delete )
-                
-            
-            if selection_has_trash:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, trash_delete_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self._Delete, CC.TRASH_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( self, menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
-                
-            
-            #
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if focused_is_local:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self._OpenExternally )
-                
-            
-            #
-            
-            AddKnownURLsViewCopyMenu( self, menu, self._focused_media, selected_media = self._selected_media )
-            
-            # share
-            
-            share_menu = wx.Menu()
-            
-            #
-            
-            if focused_is_local:
-                
-                show_open_in_web = True
-                show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
-                
-                if show_open_in_web or show_open_in_explorer:
-                    
-                    open_menu = wx.Menu()
-                    
-                    if show_open_in_web:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
-                        
-                    
-                    if show_open_in_explorer:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
-                    
-                
-            
-            copy_menu = wx.Menu()
-            
-            if selection_has_local:
-                
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, copy_phrase, 'Copy the selected files to the clipboard.', self._CopyFilesToClipboard )
-                
-                if advanced_mode:
-                    
-                    copy_hash_menu = wx.Menu()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
-                    
-                    ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
-                    
-                    if multiple_selected:
-                        
-                        copy_hash_menu = wx.Menu()
-                        
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
-                        
-                        ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
-                        
-                    
-                
-            else:
-                
-                if advanced_mode:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
-                    
-                    if multiple_selected:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
-                        
-                    
-                
-            
-            for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
-                
-                name = service_keys_to_names[ ipfs_service_key ]
-                
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, name + ' multihash', 'Copy the selected file\'s multihash to the clipboard.', self._CopyServiceFilenameToClipboard, ipfs_service_key )
-                
-            
-            if multiple_selected:
-                
-                for ipfs_service_key in disparate_current_ipfs_service_keys.union( common_current_ipfs_service_keys ):
-                    
-                    name = service_keys_to_names[ ipfs_service_key ]
-                    
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, name + ' multihashes', 'Copy the selected files\' multihashes to the clipboard.', self._CopyServiceFilenamesToClipboard, ipfs_service_key )
-                    
-                
-            
-            if focused_is_local:
-                
-                if self._focused_media.GetMime() in HC.IMAGES and self._focused_media.GetDuration() is None:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
-                    
-                
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy the selected file\'s path to the clipboard.', self._CopyPathToClipboard )
-                
-            
-            if multiple_selected and selection_has_local:
-                
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'paths', 'Copy the selected files\' paths to the clipboard.', self._CopyPathsToClipboard )
-                
-            
-            ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
-            
-            #
-            
-            export_menu  = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, export_menu, export_phrase, 'Export the selected files to an external folder.', self._ExportFiles )
-            
-            if advanced_mode:
-                
-                ClientGUIMenus.AppendMenuItem( self, export_menu, 'tags', 'Export the selected files\' tags to an external database.', self._ExportTags )
-                
-            
-            ClientGUIMenus.AppendMenu( share_menu, export_menu, 'export' )
-            
-            #
-            
-            if local_booru_is_running:
-                
-                ClientGUIMenus.AppendMenuItem( self, share_menu, 'on local booru', 'Share the selected files on your client\'s local booru.', self._ShareOnLocalBooru )
-                
-            
-            #
-            
-            ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
-            
-            #
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HG.client_controller.pub, 'refresh_query', self._page_key )
-        
-        if len( self._sorted_media ) > 0:
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            select_menu = wx.Menu()
-            
-            if len( self._selected_media ) < len( self._sorted_media ):
-                
-                all_label = 'all (' + HydrusData.ToHumanInt( len( self._sorted_media ) ) + ')'
-                
-                if media_has_archive and not media_has_inbox:
-                    
-                    all_label += ' (all in archive)'
-                    
-                elif media_has_inbox and not media_has_archive:
-                    
-                    all_label += ' (all in inbox)'
-                    
-                
-                ClientGUIMenus.AppendMenuItem( self, select_menu, all_label, 'Select everything.', self._Select, 'all' )
-                
-            
-            if media_has_archive and media_has_inbox:
-                
-                inbox_label = 'inbox (' + HydrusData.ToHumanInt( num_inbox ) + ')'
-                archive_label = 'archive (' + HydrusData.ToHumanInt( num_archive ) + ')'
-                
-                ClientGUIMenus.AppendMenuItem( self, select_menu, inbox_label, 'Select everything in the inbox.', self._Select, 'inbox' )
-                ClientGUIMenus.AppendMenuItem( self, select_menu, archive_label, 'Select everything that is archived.', self._Select, 'archive' )
-                
-            
-            if len( all_specific_file_domains ) > 1:
-                
-                selectable_file_domains = list( all_local_file_domains )
-                
-                if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                    
-                    selectable_file_domains.append( CC.TRASH_SERVICE_KEY )
-                    
-                
-                selectable_file_domains.extend( all_file_repos )
-                
-                for service_key in selectable_file_domains:
-                    
-                    name = services_manager.GetName( service_key )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
-                    
-                
-            
-            if has_local and has_remote:
-                
-                ClientGUIMenus.AppendMenuItem( self, select_menu, 'local', 'Select everything in the client.', self._Select, 'local' )
-                ClientGUIMenus.AppendMenuItem( self, select_menu, 'remote', 'Select everything that is not in the client.', self._Select, 'remote' )
-                
-            
-            if len( self._selected_media ) > 0:
-                
-                if len( self._selected_media ) < len( self._sorted_media ):
-                
-                    invert_label = 'invert (' + HydrusData.ToHumanInt( len( self._sorted_media ) - len( self._selected_media ) ) + ')'
-                    
-                    ClientGUIMenus.AppendMenuItem( self, select_menu, invert_label, 'Swap what is and is not selected.', self._Select, 'invert' )
-                    
-                
-                ClientGUIMenus.AppendMenuItem( self, select_menu, 'none (0)', 'Deselect everything.', self._Select, 'none' )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
-            
-        
-        if self._focused_media is not None:
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open selection in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewPage )
-            
-            ClientGUIMenus.AppendSeparator( menu )
             
             duplicates_menu = wx.Menu()
             
@@ -4456,9 +4335,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_focused_better' ) )
                     
-                    num_files = self._GetNumSelected()
-                    
-                    num_pairs = num_files * ( num_files - 1 ) / 2 # com // ations -- n!/2(n-2)!
+                    num_pairs = num_selected * ( num_selected - 1 ) / 2 # com // ations -- n!/2(n-2)!
                     
                     num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
                     
@@ -4533,9 +4410,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'no file relationships or actions available for this file at present' )
                 
             
-            ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'file relationships' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendMenu( manage_menu, duplicates_menu, 'file relationships' )
             
             regen_menu = wx.Menu()
             
@@ -4543,7 +4418,135 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenuItem( self, regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
             ClientGUIMenus.AppendMenuItem( self, regen_menu, 'file metadata', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
             
-            ClientGUIMenus.AppendMenu( menu, regen_menu, 'regenerate' )
+            ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'regenerate' )
+            
+            ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
+            
+            #
+            
+            AddKnownURLsViewCopyMenu( self, menu, self._focused_media, selected_media = self._selected_media )
+            
+            #
+            
+            open_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in external program', 'Launch this file with your OS\'s default program for it.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewPage )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+            
+            if focused_is_local:
+                
+                show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
+                
+                if show_open_in_explorer:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                    
+                
+            
+            ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
+            
+            # share
+            
+            share_menu = wx.Menu()
+            
+            #
+            
+            copy_menu = wx.Menu()
+            
+            if selection_has_local:
+                
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, copy_phrase, 'Copy the selected files to the clipboard.', self._CopyFilesToClipboard )
+                
+                if advanced_mode:
+                    
+                    copy_hash_menu = wx.Menu()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
+                    
+                    ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
+                    
+                    if multiple_selected:
+                        
+                        copy_hash_menu = wx.Menu()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
+                        
+                        ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
+                        
+                    
+                
+            else:
+                
+                if advanced_mode:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                    
+                    if multiple_selected:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                        
+                    
+                
+            
+            for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
+                
+                name = service_keys_to_names[ ipfs_service_key ]
+                
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, name + ' multihash', 'Copy the selected file\'s multihash to the clipboard.', self._CopyServiceFilenameToClipboard, ipfs_service_key )
+                
+            
+            if multiple_selected:
+                
+                for ipfs_service_key in disparate_current_ipfs_service_keys.union( common_current_ipfs_service_keys ):
+                    
+                    name = service_keys_to_names[ ipfs_service_key ]
+                    
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, name + ' multihashes', 'Copy the selected files\' multihashes to the clipboard.', self._CopyServiceFilenamesToClipboard, ipfs_service_key )
+                    
+                
+            
+            if focused_is_local:
+                
+                if self._focused_media.GetMime() in HC.IMAGES and self._focused_media.GetDuration() is None:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy the selected file\'s path to the clipboard.', self._CopyPathToClipboard )
+                
+            
+            if multiple_selected and selection_has_local:
+                
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'paths', 'Copy the selected files\' paths to the clipboard.', self._CopyPathsToClipboard )
+                
+            
+            ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
+            
+            #
+            
+            export_menu  = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, export_menu, export_phrase, 'Export the selected files to an external folder.', self._ExportFiles )
+            
+            ClientGUIMenus.AppendMenu( share_menu, export_menu, 'export' )
+            
+            #
+            
+            if local_booru_is_running:
+                
+                ClientGUIMenus.AppendMenuItem( self, share_menu, 'on local booru', 'Share the selected files on your client\'s local booru.', self._ShareOnLocalBooru )
+                
+            
+            #
+            
+            ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
         
         HG.client_controller.PopupMenu( self, menu )

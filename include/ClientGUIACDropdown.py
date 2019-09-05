@@ -106,10 +106,10 @@ def InsertStaticPredicatesForRead( predicates, parsed_search_text, include_unusu
             pass
             
         
-        if under_construction_or_predicate is not None:
-            
-            predicates.insert( 0, under_construction_or_predicate )
-            
+    
+    if under_construction_or_predicate is not None:
+        
+        predicates.insert( 0, under_construction_or_predicate )
         
     
     return predicates

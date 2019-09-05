@@ -5,7 +5,21 @@ class HydrusException( Exception ):
     
     def __str__( self ):
         
-        return os.linesep.join( self.args )
+        s = []
+        
+        for arg in self.args:
+            
+            try:
+                
+                s.append( str( arg ) )
+                
+            except:
+                
+                s.append( repr( arg ) )
+                
+            
+        
+        return os.linesep.join( s )
         
     
 class CantRenderWithCVException( HydrusException ): pass

@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
@@ -151,12 +152,11 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Are you sure you want to delete all the selected entries?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._file_seed_cache.RemoveFileSeeds( file_seeds_to_delete )
-                    
+                self._file_seed_cache.RemoveFileSeeds( file_seeds_to_delete )
                 
             
         
@@ -207,12 +207,11 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = 'You have many objects selected--are you sure you want to open them all?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != wx.ID_YES:
                     
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return
-                        
+                    return
                     
                 
             
@@ -252,19 +251,18 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = 'One or more of these files did not import due to being previously deleted. They will likely fail again unless you erase those deletion records. Would you like to do this now?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result == wx.ID_YES:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
-                        
-                        content_update_erase_record = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', deletee_hashes ) )
-                        content_update_undelete_from_trash = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, deletee_hashes )
-                        
-                        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update_erase_record, content_update_undelete_from_trash ] }
-                        
-                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                        
+                    deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
+                    
+                    content_update_erase_record = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', deletee_hashes ) )
+                    content_update_undelete_from_trash = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, deletee_hashes )
+                    
+                    service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update_erase_record, content_update_undelete_from_trash ] }
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
             
@@ -381,14 +379,13 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' file import items? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit or what watcher/subscription may be using for future check time calculations.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                file_seed_cache = self._file_seed_cache_get_callable()
-                
-                file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
-                
+            file_seed_cache = self._file_seed_cache_get_callable()
+            
+            file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
             
         
     
@@ -506,14 +503,13 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         message = 'Are you sure you want to retry all the files that encountered errors?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                file_seed_cache = self._file_seed_cache_get_callable()
-                
-                file_seed_cache.RetryFailures()
-                
+            file_seed_cache = self._file_seed_cache_get_callable()
+            
+            file_seed_cache.RetryFailures()
             
         
     
@@ -521,14 +517,13 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         message = 'Are you sure you want to retry all the files that were ignored/vetoed?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                file_seed_cache = self._file_seed_cache_get_callable()
-                
-                file_seed_cache.RetryIgnored()
-                
+            file_seed_cache = self._file_seed_cache_get_callable()
+            
+            file_seed_cache.RetryIgnored()
             
         
     

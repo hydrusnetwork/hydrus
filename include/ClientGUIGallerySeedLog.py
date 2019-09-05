@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIListCtrl
 from . import ClientGUIMenus
@@ -10,12 +11,10 @@ from . import ClientGUITopLevelWindows
 from . import ClientImportGallerySeeds
 from . import ClientPaths
 from . import ClientSerialisable
-from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-from . import HydrusPaths
 from . import HydrusText
 import os
 import wx
@@ -174,12 +173,11 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = 'You have many objects selected--are you sure you want to open them all?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != wx.ID_YES:
                     
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        return
-                        
+                    return
                     
                 
             
@@ -305,14 +303,13 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' gallery log entries? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                gallery_seed_log = self._gallery_seed_log_get_callable()
-                
-                gallery_seed_log.RemoveGallerySeedsByStatus( statuses_to_remove )
-                
+            gallery_seed_log = self._gallery_seed_log_get_callable()
+            
+            gallery_seed_log.RemoveGallerySeedsByStatus( statuses_to_remove )
             
         
     
@@ -402,18 +399,15 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             message = 'Of the ' + HydrusData.ToHumanInt( num_urls ) + ' URLs you mean to add, ' + HydrusData.ToHumanInt( num_removed ) + ' are already in the gallery log. Would you like to only add new URLs or add everything (which will force a re-check of the duplicates)?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates' )
+            
+            if result == wx.ID_YES:
                 
-                result = dlg.ShowModal()
+                urls_to_add = filtered_urls
                 
-                if result == wx.ID_YES:
-                    
-                    urls_to_add = filtered_urls
-                    
-                elif result == wx.ID_CANCEL:
-                    
-                    return
-                    
+            elif result == wx.ID_CANCEL:
+                
+                return
                 
             
         
@@ -423,17 +417,14 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             message = 'Would you like these urls to only check for new files, or would you like them to also generate subsequent gallery pages, like a regular search would?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' )
+            
+            if result == wx.ID_CANCEL:
                 
-                result = dlg.ShowModal()
+                return
                 
-                if result == wx.ID_CANCEL:
-                    
-                    return
-                    
-                
-                can_generate_more_pages = result == wx.ID_NO
-                
+            
+            can_generate_more_pages = result == wx.ID_NO
             
         
         gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages ) for url in urls_to_add ]
@@ -466,14 +457,13 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         message = 'Are you sure you want to retry all the files that encountered errors?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                gallery_seed_log = self._gallery_seed_log_get_callable()
-                
-                gallery_seed_log.RetryFailures()
-                
+            gallery_seed_log = self._gallery_seed_log_get_callable()
+            
+            gallery_seed_log.RetryFailures()
             
         
     

@@ -547,32 +547,24 @@ class Controller( HydrusController.HydrusController ):
                         
                         if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
                             
+                            from . import ClientGUIDialogsQuick
+                            
                             text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
                             text += os.linesep * 2
                             text += 'The outstanding jobs appear to be:'
                             text += os.linesep * 2
                             text += os.linesep.join( work_to_do )
                             
-                            with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
+                            result = ClientGUIDialogsQuick.GetYesNo( self._splash, text, title = 'Maintenance is due', auto_no_time = 15 )
+                            
+                            if result == wx.ID_YES:
                                 
-                                job = self.CallLaterWXSafe( dlg_yn, 15, dlg_yn.EndModal, wx.ID_NO )
+                                HG.do_idle_shutdown_work = True
                                 
-                                try:
-                                    
-                                    if dlg_yn.ShowModal() == wx.ID_YES:
-                                        
-                                        HG.do_idle_shutdown_work = True
-                                        
-                                    else:
-                                        
-                                        # if they said no, don't keep asking
-                                        self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
-                                        
-                                    
-                                finally:
-                                    
-                                    job.Cancel()
-                                    
+                            else:
+                                
+                                # if they said no, don't keep asking
+                                self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
                                 
                             
                         else:
@@ -1189,7 +1181,7 @@ class Controller( HydrusController.HydrusController ):
     
     def RestoreDatabase( self ):
         
-        restore_intro = ''
+        from . import ClientGUIDialogsQuick
         
         with wx.DirDialog( self.gui, 'Select backup location.' ) as dlg:
             
@@ -1203,31 +1195,30 @@ class Controller( HydrusController.HydrusController ):
                 text += os.linesep * 2
                 text += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
                 
-                with ClientGUIDialogs.DialogYesNo( self.gui, text ) as dlg_yn:
+                result = ClientGUIDialogsQuick.GetYesNo( self.gui, text )
+                
+                if result == wx.ID_YES:
                     
-                    if dlg_yn.ShowModal() == wx.ID_YES:
+                    def THREADRestart():
                         
-                        def THREADRestart():
+                        while not self.db.LoopIsFinished():
                             
-                            while not self.db.LoopIsFinished():
-                                
-                                time.sleep( 0.1 )
-                                
-                            
-                            self.db.RestoreBackup( path )
-                            
-                            while not HG.shutdown_complete:
-                                
-                                time.sleep( 0.1 )
-                                
-                            
-                            HydrusData.RestartProcess()
+                            time.sleep( 0.1 )
                             
                         
-                        self.CallToThreadLongRunning( THREADRestart )
+                        self.db.RestoreBackup( path )
                         
-                        wx.CallAfter( self.gui.Exit )
+                        while not HG.shutdown_complete:
+                            
+                            time.sleep( 0.1 )
+                            
                         
+                        HydrusData.RestartProcess()
+                        
+                    
+                    self.CallToThreadLongRunning( THREADRestart )
+                    
+                    wx.CallAfter( self.gui.Exit )
                     
                 
             

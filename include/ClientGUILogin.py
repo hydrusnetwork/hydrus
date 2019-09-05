@@ -173,12 +173,11 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += os.linesep * 2
             message += os.linesep.join( veto_errors )
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return False
-                    
+                return False
                 
             
         
@@ -468,25 +467,18 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             creds_are_good = False
             
         
+        active = False
+        
         if creds_are_good:
             
             message = 'Activate this login script for this domain?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, title = message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    active = True
-                    
-                else:
-                    
-                    active = False
-                    
-                
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-        else:
-            
-            active = False
+            if result == wx.ID_YES:
+                
+                active = True
+                
             
         
         login_script_key_and_name = login_script.GetLoginScriptKeyAndName()
@@ -611,12 +603,11 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Are you sure you want to clear these domains\' sessions? This will delete all their existing cookies and cannot be undone.'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return
-                    
+                return
                 
             
             for domain_and_login_info in domain_and_login_infos:
@@ -784,12 +775,11 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += os.linesep * 2
             message += 'The dialog will ok and the login attempts will start. Is this ok?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return
-                    
+                return
                 
             
             self._domains_to_login_after_ok = domains_to_login
@@ -870,12 +860,11 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     message = 'Activate this login script for this domain?'
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message, title = message ) as dlg:
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result == wx.ID_YES:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            active = True
-                            
+                        active = True
                         
                     
                 
@@ -1881,12 +1870,11 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             message += os.linesep * 2
             message += 'Do you want to proceed with this invalid script, or go back and fix it?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'ok as invalid', no_label = 'go back' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'ok as invalid', no_label = 'go back' )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    raise HydrusExceptions.VetoException( 'The ok event has been cancelled!' )
-                    
+                raise HydrusExceptions.VetoException( 'The ok event has been cancelled!' )
                 
             
         

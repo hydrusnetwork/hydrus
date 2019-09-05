@@ -1000,14 +1000,13 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def ShowDeleteSelectedDialog( self ):
         
-        from . import ClientGUIDialogs
+        from . import ClientGUIDialogsQuick
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self.DeleteSelected()
-                
+            self.DeleteSelected()
             
         
     
@@ -1490,18 +1489,17 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def ImportFromDragDrop( self, paths ):
         
-        from . import ClientGUIDialogs
+        from . import ClientGUIDialogsQuick
         
         message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._ImportPngs( paths )
-                
-                self._listctrl.Sort()
-                
+            self._ImportPngs( paths )
+            
+            self._listctrl.Sort()
             
         
     

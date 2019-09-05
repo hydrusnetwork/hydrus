@@ -48,7 +48,6 @@ from . import HydrusGlobals as HG
 from . import HydrusNetwork
 from . import HydrusNetworking
 from . import HydrusSerialisable
-from . import HydrusTagArchive
 from . import HydrusText
 from . import HydrusVideoHandling
 import os
@@ -316,7 +315,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
         self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
-        self._controller.sub( self, 'SyncToTagArchive', 'sync_to_tag_archive' )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1797,7 +1795,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             submenu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search metadata', 'Delete and recreate the similar files search phashes.', self._RegenerateSimilarFilesPhashes )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
@@ -2320,7 +2317,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             paths = []
             
         
-        ClientGUIDialogs.FrameInputLocalFiles( self, paths )
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'importing files' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewLocalFileImports( frame, paths )
+        
+        frame.SetPanel( panel )
         
     
     def _ImportUpdateFiles( self ):
@@ -3441,22 +3442,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _RegenerateSimilarFilesPhashes( self ):
-        
-        message = 'This will schedule all similar files \'phash\' metadata to be regenerated. This is a very expensive operation that will occur in future idle time.'
-        message += os.linesep * 2
-        message += 'This ultimately requires a full read for all valid files. It is a large investment of CPU and HDD time.'
-        message += os.linesep * 2
-        message += 'Do not run this unless you know your phashes need to be regenerated.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
-        
-        if result == wx.ID_YES:
-            
-            self._controller.Write( 'schedule_full_phash_regen' )
-            
-        
-    
     def _RegenerateSimilarFilesTree( self ):
         
         message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
@@ -4135,121 +4120,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif result == wx.ID_NO:
             
             self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED, force_vacuum = True )
-            
-        
-    
-    def _THREADSyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes = None ):
-        
-        if hashes is not None:
-            
-            hashes = set( hashes )
-            
-        
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
-        
-        try:
-            
-            hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-            
-            job_key.SetVariable( 'popup_title', 'syncing to tag archive ' + hta.GetName() )
-            job_key.SetVariable( 'popup_text_1', 'preparing' )
-            
-            self._controller.pub( 'message', job_key )
-            
-            hydrus_hashes = []
-            
-            hash_type = hta.GetHashType()
-            
-            total_num_hta_hashes = 0
-            
-            for chunk_of_hta_hashes in HydrusData.SplitIteratorIntoChunks( hta.IterateHashes(), 1000 ):
-                
-                while job_key.IsPaused() or job_key.IsCancelled():
-                    
-                    time.sleep( 0.1 )
-                    
-                    if job_key.IsCancelled():
-                        
-                        job_key.SetVariable( 'popup_text_1', 'cancelled' )
-                        
-                        HydrusData.Print( job_key.ToString() )
-                        
-                        return
-                        
-                    
-                
-                if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
-                    
-                    chunk_of_hydrus_hashes = chunk_of_hta_hashes
-                    
-                else:
-                    
-                    if hash_type == HydrusTagArchive.HASH_TYPE_MD5: given_hash_type = 'md5'
-                    elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: given_hash_type = 'sha1'
-                    elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: given_hash_type = 'sha512'
-                    
-                    chunk_of_hydrus_hashes = self._controller.Read( 'file_hashes', chunk_of_hta_hashes, given_hash_type, 'sha256' )
-                    
-                
-                if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    chunk_of_hydrus_hashes = self._controller.Read( 'filter_hashes', chunk_of_hydrus_hashes, file_service_key )
-                    
-                
-                if hashes is not None:
-                    
-                    chunk_of_hydrus_hashes = [ hash for hash in chunk_of_hydrus_hashes if hash in hashes ]
-                    
-                
-                hydrus_hashes.extend( chunk_of_hydrus_hashes )
-                
-                total_num_hta_hashes += len( chunk_of_hta_hashes )
-                
-                job_key.SetVariable( 'popup_text_1', 'matched ' + HydrusData.ConvertValueRangeToPrettyString( len( hydrus_hashes ), total_num_hta_hashes ) + ' files' )
-                
-                HG.client_controller.WaitUntilViewFree()
-                
-            
-            del hta
-            
-            total_num_processed = 0
-            
-            for chunk_of_hydrus_hashes in HydrusData.SplitListIntoChunks( hydrus_hashes, 50 ):
-        
-                while job_key.IsPaused() or job_key.IsCancelled():
-                    
-                    time.sleep( 0.1 )
-                    
-                    if job_key.IsCancelled():
-                        
-                        job_key.SetVariable( 'popup_text_1', 'cancelled' )
-                        
-                        HydrusData.Print( job_key.ToString() )
-                        
-                        return
-                        
-                    
-                
-                self._controller.WriteSynchronous( 'sync_hashes_to_tag_archive', chunk_of_hydrus_hashes, hta_path, tag_service_key, adding, namespaces )
-                
-                total_num_processed += len( chunk_of_hydrus_hashes )
-                
-                job_key.SetVariable( 'popup_text_1', 'synced ' + HydrusData.ConvertValueRangeToPrettyString( total_num_processed, len( hydrus_hashes ) ) + ' files' )
-                job_key.SetVariable( 'popup_gauge_1', ( total_num_processed, len( hydrus_hashes ) ) )
-                
-                HG.client_controller.WaitUntilViewFree()
-                
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            
-            job_key.Finish()
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            job_key.Cancel()
             
         
     
@@ -4942,6 +4812,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._Refresh()
                 
+            elif action == 'refresh_all_pages':
+                
+                self._notebook.RefreshAllPages()
+                
+            elif action == 'refresh_page_of_pages_pages':
+                
+                page = self._notebook.GetCurrentMediaPage()
+                
+                if page is not None:
+                    
+                    parent = page.GetParent()
+                    
+                    parent.RefreshAllPages()
+                    
+                
             elif action == 'new_page':
                 
                 self._notebook.ChooseNewPageForDeepestNotebook()
@@ -5341,11 +5226,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._notebook.ShowPage( page )
-        
-    
-    def SyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes = None ):
-        
-        self._controller.CallToThread( self._THREADSyncToTagArchive, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
         
     
     def UnregisterAnimationUpdateWindow( self, window ):

@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 366</h3></li>
+				<ul>
+					<li>tag migration:</li>
+					<li>wrote a unified mass-migrate pipeline to make moving large amounts of data in and out of the client more powerful and more pleasant like other recent non-interrupting changes</li>
+					<li>the advanced content update dialog is now renamed to 'migrate tags', both on the review service panel and the manage tags dialog, and has been completely revamped to reflect the new migration pipeline, which works on a location-agnostic (content type, source, filtering, destination, action) model</li>
+					<li>the advanced content update dialog is now a non-modal frame--you can keep using the client while it is open, and it will not prohibit the popup from appearing while it works</li>
+					<li>added hta and tag service mapping sources to the new migration pipeline, with hash conversion, content status filtering, file domain filtering, specific hash filtering, and tag filtering</li>
+					<li>added mappings clear deletion record action to the normal content update pipeline</li>
+					<li>added hta and tag service mapping destinations to the new migration pipeline, with appropriate choosable content action (add for HTAs, add, delete, clear deletion record for local tags, and pend, petition for tag repositories)</li>
+					<li>added stub list sources and destinations for testing the new migration pipeline</li>
+					<li>wrote comprehensive unit tests to test mappings migrations with hta source and destination, including tests for file domain, hash type conversion, and tag filtering</li>
+					<li>wrote comprehensive unit tests to test mappings migrations with local tags or tag repository service source and destination, including tests for file domain, hash type conversion, tag filtering, and content status</li>
+					<li>adjusted the tag archives to have an optimise call separate from the commit call, so you can do several big jobs in a row faster, or pre-optimise, or top up a well-optimised db without wasting time re-optimising every commit</li>
+					<li>added a Close method to Tag Archives just for a nicer explicit exit</li>
+					<li>wrote a HydrusTagPairArchive to store sibling and parent tag pairs</li>
+					<li>deleted old tag db migration and archive syncing code, which is no longer used</li>
+					<li>deleted some related old hta import/export code</li>
+					<li>removed the 'tags' export option from the thumbnail share->export menu</li>
+					<li>accessing 'migrate tags' is no longer gated by advanced mode on the manage tags dialog cog menu</li>
+					<li>the hydrus database now creates a name.temp.db database while it is running to support long-term temp jobs such as the new migration. this file is otherwise unimportant and is deleted on a clean exit</li>
+					<li>.</li>
+					<li>thumbnail menu rework:</li>
+					<li>shifted the thumbnail menu around to group 'view' vs 'action' commands together more sensibly and bury less frequent commands away from the top list</li>
+					<li>the 'remove' menu command is now a submenu with filters for 'selected/not selected/ all/inbox/archive'. it also displays on a right-click with no focused file</li>
+					<li>'delete' now has separator on both sides to reduce accidental clicks</li>
+					<li>'share->open' is now moved up a level and inherits 'open in new page' and 'open externally'</li>
+					<li>the 'remote services', 'file relationships' and 'regenerate' submenus are moved to the 'manage' submenu</li>
+					<li>made similar changes to the media viewer menus, including grouping the zoom/fullscreen/slideshow commands together and making the zoom commands a submenu</li>
+					<li>misc wording and count changes to this menu</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added 'main_gui' shortcuts for 'refresh_all_pages' and 'refresh_page_of_pages'. the second shortcut refreshes all pages under the most immediate page of pages parent</li>
+					<li>fixed an issue where under-construction OR predicates were not displaying with the system predicate list</li>
+					<li>the 'import local files' frame, which pops up when you drop some paths on the client, is now on the new panel system and sizes and cleans itself up more sensibly as a result</li>
+					<li>refactored the remaining 100-odd yesno dialogs to the one that works on the new panel system</li>
+					<li>misc yesno dialog message and logic cleanup</li>
+					<li>fixed an issue where the export files dialog could hang indefinitely if the filename phrase involved long shared tags that resulted in duplicate paths for the first 245 characters in length. now, the long-filename truncation is done before the de-duping ' (n)' text is appended, and the length limit is reduced to 240</li>
+					<li>removed the now-defunct 'regen similar files metadata' command under the database menu--this is now handled in the new file maintenance processing system</li>
+					<li>improved database optimisation code to better check if empty/small tables have suddenly grown and improved quality of optimisation data for frequently emptying tables</li>
+					<li>fixed the 'clear orphan file records' maintenance task, which was not performing the final clear on the correct domain</li>
+					<li>fixed some bad error presentation</li>
+					<li>fixed the duplicate page not refreshing maintenance numbers after maintenance job completion</li>
+					<li>cleared out a bunch of old py2to3 safety code, maybe sped up some sibling/parent/mappings stuff</li>
+					<li>misc ui cleanup and small fixes</li>
+				</ul>
 				<li><h3>version 365</h3></li>
 				<ul>
 					<li>new repo processing:</li>

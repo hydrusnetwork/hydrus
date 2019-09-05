@@ -2,6 +2,7 @@ from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIManagement
 from . import ClientGUIMedia
@@ -757,12 +758,13 @@ class Page( wx.SplitterWindow ):
             
             reason = str( e )
             
-            with ClientGUIDialogs.DialogYesNo( self, reason + ' Are you sure you want to close it?' ) as dlg:
+            message = '{} Are you sure you want to close it?'.format( str( e ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_NO:
                 
-                if dlg.ShowModal() == wx.ID_NO:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+                raise HydrusExceptions.VetoException()
                 
             
         
@@ -890,14 +892,13 @@ class PagesNotebook( wx.Notebook ):
         
         message = 'Close all pages to the left?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                closees = [ index for index in range( self.GetPageCount() ) if index < from_index ]
-                
-                self._ClosePages( closees )
-                
+            closees = [ index for index in range( self.GetPageCount() ) if index < from_index ]
+            
+            self._ClosePages( closees )
             
         
     
@@ -905,14 +906,13 @@ class PagesNotebook( wx.Notebook ):
         
         message = 'Close all other pages?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                closees = [ index for index in range( self.GetPageCount() ) if index != except_index ]
-                
-                self._ClosePages( closees )
-                
+            closees = [ index for index in range( self.GetPageCount() ) if index != except_index ]
+            
+            self._ClosePages( closees )
             
         
     
@@ -984,14 +984,13 @@ class PagesNotebook( wx.Notebook ):
         
         message = 'Close all pages to the right?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                closees = [ index for index in range( self.GetPageCount() ) if index > from_index ]
-                
-                self._ClosePages( closees )
-                
+            closees = [ index for index in range( self.GetPageCount() ) if index > from_index ]
+            
+            self._ClosePages( closees )
             
         
     
@@ -1296,24 +1295,23 @@ class PagesNotebook( wx.Notebook ):
         
         message = 'Send all pages to the right to a new page of pages?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == wx.ID_YES:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            pages_index = self.GetPageCount()
+            
+            dest_notebook = self.NewPagesNotebook( forced_insertion_index = pages_index, give_it_a_blank_page = False )
+            
+            movees = list( range( from_index + 1, pages_index ) )
+            
+            movees.reverse()
+            
+            for index in movees:
                 
-                pages_index = self.GetPageCount()
+                page = self.GetPage( index )
                 
-                dest_notebook = self.NewPagesNotebook( forced_insertion_index = pages_index, give_it_a_blank_page = False )
-                
-                movees = list( range( from_index + 1, pages_index ) )
-                
-                movees.reverse()
-                
-                for index in movees:
-                    
-                    page = self.GetPage( index )
-                    
-                    self._MovePage( page, dest_notebook, 0 )
-                    
+                self._MovePage( page, dest_notebook, 0 )
                 
             
         
@@ -2259,14 +2257,13 @@ class PagesNotebook( wx.Notebook ):
         
         if self.GetPageCount() > 0:
             
-            message = 'Close the current pages and load session "' + name + '"?'
+            message = 'Close the current pages and load session "{}"?'.format( name )
             
-            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Clear and load session?' ) as yn_dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Clear and load session?' )
+            
+            if result != wx.ID_YES:
                 
-                if yn_dlg.ShowModal() != wx.ID_YES:
-                    
-                    return
-                    
+                return
                 
             
             try:
@@ -2399,18 +2396,17 @@ class PagesNotebook( wx.Notebook ):
                 
                 message = 'The client should not have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open, as it leads to program instability! Are you sure you want to open more pages?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Too many pages!', yes_label = 'yes, and do not tell me again', no_label = 'no' ) as dlg:
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Too many pages!', yes_label = 'yes, and do not tell me again', no_label = 'no' )
+                
+                if result == wx.ID_YES:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        HG.no_page_limit_mode = True
-                        
-                        self._controller.pub( 'notify_new_options' )
-                        
-                    else:
-                        
-                        return None
-                        
+                    HG.no_page_limit_mode = True
+                    
+                    self._controller.pub( 'notify_new_options' )
+                    
+                else:
+                    
+                    return None
                     
                 
             
@@ -2859,14 +2855,17 @@ class PagesNotebook( wx.Notebook ):
                             
                             if name in existing_session_names:
                                 
-                                message = 'Session \'' + name + '\' already exists! Do you want to overwrite it?'
+                                message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
                                 
-                                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' ) as yn_dlg:
+                                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' )
+                                
+                                if result == wx.ID_NO:
                                     
-                                    if yn_dlg.ShowModal() != wx.ID_YES:
-                                        
-                                        continue
-                                        
+                                    continue
+                                    
+                                elif result == wx.ID_CANCEL:
+                                    
+                                    return
                                     
                                 
                             
@@ -2884,12 +2883,11 @@ class PagesNotebook( wx.Notebook ):
             
             message = 'Overwrite this session?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' ) as yn_dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' )
+            
+            if result != wx.ID_YES:
                 
-                if yn_dlg.ShowModal() != wx.ID_YES:
-                    
-                    return
-                    
+                return
                 
             
         
@@ -2957,12 +2955,11 @@ class PagesNotebook( wx.Notebook ):
             message += os.linesep * 2
             message += statement
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_NO:
                 
-                if dlg.ShowModal() == wx.ID_NO:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
+                raise HydrusExceptions.VetoException()
                 
             
         

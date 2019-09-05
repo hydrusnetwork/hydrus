@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 365
+SOFTWARE_VERSION = 366
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -173,6 +173,7 @@ CONTENT_UPDATE_ADVANCED = 13
 CONTENT_UPDATE_UNDELETE = 14
 CONTENT_UPDATE_SET = 15
 CONTENT_UPDATE_FLIP = 16
+CONTENT_UPDATE_CLEAR_DELETE_RECORD = 17
 
 content_update_string_lookup = {}
 
@@ -191,6 +192,7 @@ content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
 content_update_string_lookup[ CONTENT_UPDATE_UNDELETE ] = 'undelete'
 content_update_string_lookup[ CONTENT_UPDATE_SET ] = 'set'
 content_update_string_lookup[ CONTENT_UPDATE_FLIP ] = 'flip on/off'
+content_update_string_lookup[ CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clear deletion record'
 
 DEFINITIONS_TYPE_HASHES = 0
 DEFINITIONS_TYPE_TAGS = 1

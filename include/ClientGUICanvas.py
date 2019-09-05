@@ -2537,6 +2537,30 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
+            if self._current_media.HasInbox():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file.', self._Archive )
+                
+            
+            if self._current_media.HasArchive():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'inbox', 'Send this files back to the inbox.', self._Inbox )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete this file.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+                
+            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             manage_menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
@@ -2552,55 +2576,23 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if self._current_media.HasInbox():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file.', self._Archive )
-                
-            
-            if self._current_media.HasArchive():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'inbox', 'Send this files back to the inbox.', self._Inbox )
-                
-            
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete this file.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
-                
-            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open this file in your OS\'s default program.', self._OpenExternally )
-            
             ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            share_menu = wx.Menu()
+            open_menu = wx.Menu()
             
-            show_open_in_web = True
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'open in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+            
             show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
             
-            if show_open_in_web or show_open_in_explorer:
+            if show_open_in_explorer:
                 
-                open_menu = wx.Menu()
+                ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
                 
-                if show_open_in_web:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
-                    
-                
-                if show_open_in_explorer:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
-                    
-                
-                ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
-                
+            
+            ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
+            
+            share_menu = wx.Menu()
             
             copy_menu = wx.Menu()
             
@@ -4928,25 +4920,80 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._IsZoomable():
                 
-                ClientGUIMenus.AppendMenuLabel( menu, 'current zoom: ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) )
+                zoom_menu = wx.Menu()
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'zoom in', 'Zoom the media in.', self._ZoomIn )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'zoom out', 'Zoom the media out.', self._ZoomOut )
+                ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom in', 'Zoom the media in.', self._ZoomIn )
+                ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom out', 'Zoom the media out.', self._ZoomOut )
                 
                 if self._current_media.GetMime() != HC.APPLICATION_FLASH:
                     
                     if self._current_zoom != 1.0:
                         
-                        ClientGUIMenus.AppendMenuItem( self, menu, 'zoom to 100%', 'Set the zoom to 100%.', self._ZoomSwitch )
+                        ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom to 100%', 'Set the zoom to 100%.', self._ZoomSwitch )
                         
                     elif self._current_zoom != self._canvas_zoom:
                         
-                        ClientGUIMenus.AppendMenuItem( self, menu, 'zoom fit', 'Set the zoom so the media fits the canvas.', self._ZoomSwitch )
+                        ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom fit', 'Set the zoom so the media fits the canvas.', self._ZoomSwitch )
                         
                     
                 
-                ClientGUIMenus.AppendSeparator( menu )
+                ClientGUIMenus.AppendMenu( menu, zoom_menu, 'current zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._current_zoom ) ) )
                 
+            
+            if self.GetParent().IsFullScreen():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.GetParent().FullscreenSwitch )
+                
+            else:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.GetParent().FullscreenSwitch )
+                
+            
+            slideshow = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
+            
+            ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
+            
+            if self._timer_slideshow_job is not None:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'remove from view', 'Remove this file from the list you are viewing.', self._Remove )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if self._current_media.HasInbox():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file, taking it out of the inbox.', self._Archive )
+                
+            elif self._current_media.HasArchive():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Send this file to the trash.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+                
+            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
             
             manage_menu = wx.Menu()
             
@@ -4962,56 +5009,23 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if self._current_media.HasInbox():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file, taking it out of the inbox.', self._Archive )
-                
-            elif self._current_media.HasArchive():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'remove from view', 'Remove this file from the list you are viewing.', self._Remove )
-            
-            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Send this file to the trash.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
-                
-            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open this file in the default external program.', self._OpenExternally )
-            
             ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            share_menu = wx.Menu()
+            open_menu = wx.Menu()
             
-            show_open_in_web = True
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'open in external program', 'Open this file in the default external program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+            
             show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
             
-            if show_open_in_web or show_open_in_explorer:
+            if show_open_in_explorer:
                 
-                open_menu = wx.Menu()
+                ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
                 
-                if show_open_in_web:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
-                    
-                
-                if show_open_in_explorer:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
-                    
-                
-                ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
-                
+            
+            ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
+            
+            share_menu = wx.Menu()
             
             copy_menu = wx.Menu()
             
@@ -5036,36 +5050,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
             
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            slideshow = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
-            
-            ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
-            
-            if self._timer_slideshow_job is not None:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if self.GetParent().IsFullScreen():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.GetParent().FullscreenSwitch )
-                
-            else:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.GetParent().FullscreenSwitch )
-                
             
             HG.client_controller.PopupMenu( self, menu )
             

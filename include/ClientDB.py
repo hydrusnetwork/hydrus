@@ -32,7 +32,6 @@ from . import HydrusNetwork
 from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusSerialisable
-from . import HydrusTagArchive
 from . import HydrusTags
 from . import HydrusVideoHandling
 from . import ClientConstants as CC
@@ -454,9 +453,28 @@ class DB( HydrusDB.HydrusDB ):
     
     def _AnalyzeTable( self, name ):
         
-        self._c.execute( 'ANALYZE ' + name + ';' )
+        do_it = True
         
-        ( num_rows, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + name + ';' ).fetchone()
+        result = self._c.execute( 'SELECT num_rows FROM analyze_timestamps WHERE name = ?;', ( name, ) ).fetchone()
+        
+        if result is not None:
+            
+            ( num_rows, ) = result
+            
+            # if we have previously analyzed a table with some data but the table is now empty, we do not want a new analyze
+            
+            if num_rows > 0 and self._TableIsEmpty( name ):
+                
+                do_it = False
+                
+            
+        
+        if do_it:
+            
+            self._c.execute( 'ANALYZE ' + name + ';' )
+            
+            ( num_rows, ) = self._c.execute( 'SELECT COUNT( * ) FROM ' + name + ';' ).fetchone()
+            
         
         self._c.execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
         
@@ -520,7 +538,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusPaths.MakeSureDirectoryExists( path )
             
-            for filename in list(self._db_filenames.values()):
+            for filename in self._db_filenames.values():
                 
                 if job_key.IsCancelled():
                     
@@ -621,7 +639,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 all_ids_seen = set( current_counter.keys() )
-                all_ids_seen.update( list(pending_counter.keys()) )
+                all_ids_seen.update( pending_counter.keys() )
                 
                 count_ids = [ ( tag_id, current_counter[ tag_id ], pending_counter[ tag_id ] ) for tag_id in all_ids_seen ]
                 
@@ -790,8 +808,8 @@ class DB( HydrusDB.HydrusDB ):
             pending_mapping_ids_dict = HydrusData.BuildKeyToSetDict( pending_mapping_ids_raw )
             
             all_ids_seen = set( current_mapping_ids_dict.keys() )
-            all_ids_seen.update( list(deleted_mapping_ids_dict.keys()) )
-            all_ids_seen.update( list(pending_mapping_ids_dict.keys()) )
+            all_ids_seen.update( deleted_mapping_ids_dict.keys() )
+            all_ids_seen.update( pending_mapping_ids_dict.keys() )
             
             for tag_id in all_ids_seen:
                 
@@ -940,8 +958,8 @@ class DB( HydrusDB.HydrusDB ):
             pending_mapping_ids_dict = HydrusData.BuildKeyToSetDict( pending_mapping_ids_raw )
             
             all_ids_seen = set( current_mapping_ids_dict.keys() )
-            all_ids_seen.update( list(deleted_mapping_ids_dict.keys()) )
-            all_ids_seen.update( list(pending_mapping_ids_dict.keys()) )
+            all_ids_seen.update( deleted_mapping_ids_dict.keys() )
+            all_ids_seen.update( pending_mapping_ids_dict.keys() )
             
             for tag_id in all_ids_seen:
                 
@@ -1147,7 +1165,7 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_title', prefix_string + 'running' )
             job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
             
-            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
             
             for db_name in db_names:
                 
@@ -1232,7 +1250,7 @@ class DB( HydrusDB.HydrusDB ):
                 # they are most likely deleted from disk
                 # pushing the 'delete combined' call will flush from the local services as well
                 
-                self._DeleteFiles( self._combined_file_service_id, in_local_not_in_combined )
+                self._DeleteFiles( self._combined_local_file_service_id, in_local_not_in_combined )
                 
                 for hash_id in in_local_not_in_combined:
                     
@@ -1253,7 +1271,7 @@ class DB( HydrusDB.HydrusDB ):
                 # I have only ever seen one example of this and am not sure how it happened
                 # in any case, the same 'delete combined' call will do the job
                 
-                self._DeleteFiles( self._combined_file_service_id, in_combined_not_in_local )
+                self._DeleteFiles( self._combined_local_file_service_id, in_combined_not_in_local )
                 
                 for hash_id in in_combined_not_in_local:
                     
@@ -1745,9 +1763,9 @@ class DB( HydrusDB.HydrusDB ):
             
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
             
-            pending_rescinded_mappings_ids = list(HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ';' ) ).items())
+            pending_rescinded_mappings_ids = list( HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ';' ) ).items() )
             
-            petitioned_rescinded_mappings_ids = list(HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + petitioned_mappings_table_name + ';' ) ).items())
+            petitioned_rescinded_mappings_ids = list( HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT tag_id, hash_id FROM ' + petitioned_mappings_table_name + ';' ) ).items() )
             
             self._UpdateMappings( service_id, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
             
@@ -3551,120 +3569,6 @@ class DB( HydrusDB.HydrusDB ):
         self._DuplicatesSetKing( hash_id, media_id )
         
     
-    def _ExportToTagArchive( self, path, service_key, hash_type, hashes = None ):
-        
-        # This could nicely take a whitelist or a blacklist for namespace filtering
-        
-        prefix_string = 'exporting to tag archive: '
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-        
-        try:
-            
-            job_key.SetVariable( 'popup_text_1', prefix_string + 'preparing' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            service_id = self._GetServiceId( service_key )
-            
-            hta_exists = os.path.exists( path )
-            
-            hta = HydrusTagArchive.HydrusTagArchive( path )
-            
-            if hta_exists and hta.HasHashTypeSet() and hta.GetHashType() != hash_type:
-                
-                raise Exception( 'This tag archive does not use the expected hash type, so it cannot be exported to!' )
-                
-            
-            if hashes is None:
-                
-                include_current = True
-                include_pending = False
-                
-                hash_ids = self._GetHashIdsThatHaveTags( service_key, include_current, include_pending )
-                
-            else:
-                
-                hash_ids = self._GetHashIds( hashes )
-                
-            
-            service_ids_to_export_from = []
-            
-            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                service_ids_to_export_from = self._GetServiceIds( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
-                
-            else:
-                
-                service_ids_to_export_from = [ service_id ]
-                
-            
-            hta.BeginBigJob()
-            
-            for service_id in service_ids_to_export_from:
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
-                
-                for ( i, hash_id ) in enumerate( hash_ids ):
-                    
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    if i % 100 == 0:
-                        
-                        job_key.SetVariable( 'popup_text_1', prefix_string + HydrusData.ConvertValueRangeToPrettyString( i, len( hash_ids ) ) )
-                        job_key.SetVariable( 'popup_gauge_1', ( i, len( hash_ids ) ) )
-                        
-                    
-                    if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
-                        
-                        archive_hash = self._GetHash( hash_id )
-                        
-                    else:
-                        
-                        if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
-                        elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
-                        elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
-                        
-                        result = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                        
-                        if result is None:
-                            
-                            continue
-                            
-                        
-                        ( archive_hash, ) = result
-                        
-                    
-                    tag_ids = self._STL( self._c.execute( 'SELECT tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id = ?;', ( hash_id, ) ) )
-                    
-                    self._PopulateTagIdsToTagsCache( tag_ids )
-                    
-                    tags = [ self._tag_ids_to_tags_cache[ tag_id ] for tag_id in tag_ids ]
-                    
-                    hta.AddMappings( archive_hash, tags )
-                    
-                
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.SetVariable( 'popup_text_1', prefix_string + 'committing the change and vacuuming the archive' )
-            
-            hta.CommitBigJob()
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', prefix_string + 'done!' )
-            
-            HydrusData.Print( job_key.ToString() )
-            
-            job_key.Finish()
-            
-        
-    
     def _FileMaintenanceAddJobs( self, hash_ids, job_type, time_can_start = 0 ):
         
         deletee_job_types =  ClientFiles.regen_file_enum_to_overruled_jobs[ job_type ]
@@ -4273,7 +4177,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetTableNamesDueAnalysis( self, force_reanalyze = False ):
         
-        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         
         all_names = set()
         
@@ -4290,16 +4194,16 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            # The idea here is that some tables get huge faster than the normal maintenance cycle (usually after syncing to big repo)
-            # They then search real slow for like 14 days. And then after that they don't need new analyzes tbh
-            # Analyze on a small table takes ~1ms, so let's instead frequently do smaller tables and then catch them and throttle down as they grow
+            # Some tables get huge real fast (usually after syncing to big repo)
+            # If they have only ever been analyzed with incomplete or empty data, they work slow
+            # Analyze on a small table takes ~1ms, so let's instead do smaller tables more frequently and try to catch them as they grow
             
-            big_table_minimum = 10000
-            huge_table_minimum = 1000000
+            boundaries = []
             
-            small_table_stale_time_delta = 3 * 86400
-            big_table_stale_time_delta = 30 * 86400 * 3
-            huge_table_stale_time_delta = 30 * 86400 * 18
+            boundaries.append( ( 100, True, 6 * 3600 ) )
+            boundaries.append( ( 10000, True, 3 * 86400 ) )
+            boundaries.append( ( 1000000, False, 3 * 30 * 86400 ) )
+            boundaries.append( ( None, False, 18 * 30 * 86400 ) )
             
             existing_names_to_info = { name : ( num_rows, timestamp ) for ( name, num_rows, timestamp ) in self._c.execute( 'SELECT name, num_rows, timestamp FROM analyze_timestamps;' ) }
             
@@ -4309,44 +4213,33 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if name in existing_names_to_info:
                     
-                    ( num_rows, timestamp ) = existing_names_to_info[ name ]
-                    
-                    if num_rows < big_table_minimum:
+                    for ( row_limit_for_this_boundary, can_analyze_now, period ) in boundaries:
                         
-                        if HydrusData.TimeHasPassed( timestamp + small_table_stale_time_delta ):
+                        ( num_rows, timestamp ) = existing_names_to_info[ name ]
+                        
+                        if row_limit_for_this_boundary is not None and num_rows > row_limit_for_this_boundary:
                             
-                            # how do we deal with a small table that just grew by 3 million rows?
-                            # we want this func to always be fast, so we'll just test small tables with fast rowcount test
-                            # if a table exceeds the next threshold or has doubled in size, we'll analyze it
+                            continue
                             
-                            test_count_value = min( big_table_minimum, num_rows * 2 )
+                        
+                        if HydrusData.TimeHasPassed( timestamp + period ):
                             
-                            if self._TableHasAtLeastRowCount( name, test_count_value ):
+                            if can_analyze_now:
                                 
-                                names_to_analyze.append( name )
+                                # if it has grown, send up to user, as it could be huge. else do it now
+                                if self._TableHasAtLeastRowCount( name, row_limit_for_this_boundary ):
+                                    
+                                    names_to_analyze.append( name )
+                                    
+                                else:
+                                    
+                                    self._AnalyzeTable( name )
+                                    
                                 
                             else:
                                 
-                                # and we don't want to bother the user with analyze notifications for tiny tables all the time, so if they aren't large, just do them now
+                                names_to_analyze.append( name )
                                 
-                                self._AnalyzeTable( name )
-                                
-                            
-                        
-                    else:
-                        
-                        if num_rows < huge_table_minimum:
-                            
-                            due_time = timestamp + big_table_stale_time_delta
-                            
-                        else:
-                            
-                            due_time = timestamp + huge_table_stale_time_delta
-                            
-                        
-                        if HydrusData.TimeHasPassed( due_time ):
-                            
-                            names_to_analyze.append( name )
                             
                         
                     
@@ -6407,7 +6300,7 @@ class DB( HydrusDB.HydrusDB ):
             
             existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
             
-            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
             
             due_names = { name for name in db_names if name not in existing_names_to_timestamps or HydrusData.TimeHasPassed( existing_names_to_timestamps[ name ] + stale_time_delta ) }
             
@@ -7451,11 +7344,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetServiceInfoSpecific( self, service_id, service_type, info_types ):
         
+        info_types = set( info_types )
+        
         results = { info_type : info for ( info_type, info ) in self._c.execute( 'SELECT info_type, info FROM service_info WHERE service_id = ? AND info_type IN ' + HydrusData.SplayListForDB( info_types ) + ';', ( service_id, ) ) }
         
         if len( results ) != len( info_types ):
             
-            info_types_hit = list(results.keys())
+            info_types_hit = list( results.keys() )
             
             info_types_missed = info_types.difference( info_types_hit )
             
@@ -8430,6 +8325,172 @@ class DB( HydrusDB.HydrusDB ):
         else:
             
             HydrusData.ShowException( e )
+            
+        
+    
+    def _MigrationClearJob( self, database_temp_job_name ):
+        
+        self._c.execute( 'DROP TABLE {};'.format( database_temp_job_name ) )
+        
+    
+    def _MigrationGetMappings( self, database_temp_job_name, file_service_key, tag_service_key, hash_type, tag_filter, content_statuses ):
+        
+        time_started_precise = HydrusData.GetNowPrecise()
+        
+        data = []
+        
+        tag_service_id = self._GetServiceId( tag_service_key )
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+        
+        statuses_to_tables = {}
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+            
+            statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = current_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = deleted_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = pending_mappings_table_name
+            
+        else:
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = cache_current_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = cache_deleted_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = cache_pending_mappings_table_name
+            
+        
+        select_queries = []
+        
+        for content_status in content_statuses:
+            
+            table_name = statuses_to_tables[ content_status ]
+            
+            select_query = 'SELECT tag_id FROM {} WHERE hash_id = ?;'.format( table_name )
+            
+            select_queries.append( select_query )
+            
+        
+        we_should_stop = False
+        
+        while not we_should_stop:
+            
+            result = self._c.execute( 'SELECT hash_id FROM {};'.format( database_temp_job_name ) ).fetchone()
+            
+            if result is None:
+                
+                break
+                
+            
+            ( hash_id, ) = result
+            
+            self._c.execute( 'DELETE FROM {} WHERE hash_id = ?;'.format( database_temp_job_name ), ( hash_id, ) )
+            
+            if hash_type == 'sha256':
+                
+                desired_hash = self._GetHash( hash_id )
+                
+            else:
+                
+                result = self._c.execute( 'SELECT ' + hash_type + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                
+                if result is None:
+                    
+                    continue
+                    
+                
+                ( desired_hash, ) = result
+                
+            
+            tags = set()
+            
+            for select_query in select_queries:
+                
+                tag_ids = self._STL( self._c.execute( select_query, ( hash_id, ) ) )
+                
+                self._PopulateTagIdsToTagsCache( tag_ids )
+                
+                tags.update( ( self._tag_ids_to_tags_cache[ tag_id ] for tag_id in tag_ids ) )
+                
+            
+            if not tag_filter.AllowsEverything():
+                
+                tags = tag_filter.Filter( tags )
+                
+            
+            if len( tags ) > 0:
+                
+                data.append( ( desired_hash, tags ) )
+                
+            
+            we_should_stop = len( data ) >= 256 or ( len( data ) > 0 and HydrusData.TimeHasPassedPrecise( time_started_precise + 1.0 ) )
+            
+        
+        return data
+        
+    
+    def _MigrationStartMappingsJob( self, database_temp_job_name, file_service_key, tag_service_key, hashes, content_statuses ):
+        
+        self._c.execute( 'CREATE TABLE durable_temp.{} ( hash_id INTEGER PRIMARY KEY );'.format( database_temp_job_name ) )
+        
+        tag_service_id = self._GetServiceId( tag_service_key )
+        
+        statuses_to_tables = {}
+        
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+            
+            statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = current_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = deleted_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = pending_mappings_table_name
+            
+        else:
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = cache_current_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = cache_deleted_mappings_table_name
+            statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = cache_pending_mappings_table_name
+            
+        
+        select_subqueries = []
+        
+        for content_status in content_statuses:
+            
+            table_name = statuses_to_tables[ content_status ]
+            
+            select_subquery = 'SELECT DISTINCT hash_id FROM {}'.format( table_name )
+            
+            select_subqueries.append( select_subquery )
+            
+        
+        if hashes is not None:
+            
+            hash_ids = self._GetHashIds( hashes )
+            
+            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_table_name:
+                
+                for select_subquery in select_subqueries:
+                    
+                    select_subquery = 'SELECT hash_id FROM {} INTERSECT {}'.format( temp_table_name, select_subquery )
+                    
+                    self._c.execute( 'INSERT INTO {} ( hash_id ) {};'.format( database_temp_job_name, select_subquery ) )
+                    
+                
+            
+        else:
+            
+            for select_subquery in select_subqueries:
+                
+                self._c.execute( 'INSERT INTO {} ( hash_id ) {};'.format( database_temp_job_name, select_subquery ) )
+                
             
         
     
@@ -9600,205 +9661,54 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if data_type == HC.CONTENT_TYPE_MAPPINGS:
                         
-                        if action == HC.CONTENT_UPDATE_ADVANCED:
+                        ( tag, hashes ) = row
+                        
+                        try:
                             
-                            notify_new_force_refresh_tags = True
+                            tag_id = self._GetTagId( tag )
                             
-                            ( sub_action, sub_row ) = row
+                        except HydrusExceptions.SizeException:
                             
-                            if sub_action in ( 'copy', 'delete', 'delete_deleted', 'delete_for_deleted_files' ):
-                                
-                                self._c.execute( 'CREATE TEMPORARY TABLE temp_operation ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, tag_id INTEGER, hash_id INTEGER );' )
-                                
-                                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
-                                
-                                predicates = []
-                                
-                                if sub_action == 'copy':
-                                    
-                                    ( tag, hashes, service_key_target ) = sub_row
-                                    
-                                    source_table_names = [ current_mappings_table_name, pending_mappings_table_name ]
-                                    
-                                elif sub_action == 'delete':
-                                    
-                                    ( tag, hashes ) = sub_row
-                                    
-                                    source_table_names = [ current_mappings_table_name ]
-                                    
-                                elif sub_action == 'delete_deleted':
-                                    
-                                    ( tag, hashes ) = sub_row
-                                    
-                                    source_table_names = [ deleted_mappings_table_name ]
-                                    
-                                elif sub_action == 'delete_for_deleted_files':
-                                    
-                                    ( tag, hashes ) = sub_row
-                                    
-                                    source_table_names = [ current_mappings_table_name + ' NATURAL JOIN deleted_files' ]
-                                    
-                                    predicates.append( 'deleted_files.service_id = ' + str( self._combined_local_file_service_id ) )
-                                    
-                                
-                                do_namespace_join = False
-                                
-                                if tag is not None:
-                                    
-                                    ( tag_type, tag ) = tag
-                                    
-                                    if tag_type == 'tag':
-                                        
-                                        tag_id = self._GetTagId( tag )
-                                        
-                                        predicates.append( 'tag_id = ' + str( tag_id ) )
-                                        
-                                    elif tag_type == 'namespace':
-                                        
-                                        do_namespace_join = True
-                                        
-                                        namespace = tag
-                                        
-                                        namespace_id = self._GetNamespaceId( namespace )
-                                        
-                                        predicates.append( 'namespace_id = ' + str( namespace_id ) )
-                                        
-                                    elif tag_type == 'namespaced':
-                                        
-                                        do_namespace_join = True
-                                        
-                                        predicates.append( 'namespace_id != ' + str( self._null_namespace_id ) )
-                                        
-                                    elif tag_type == 'unnamespaced':
-                                        
-                                        do_namespace_join = True
-                                        
-                                        predicates.append( 'namespace_id = ' + str( self._null_namespace_id ) )
-                                        
-                                    
-                                
-                                num_to_do = 0
-                                
-                                for source_table_name in source_table_names:
-                                    
-                                    if do_namespace_join:
-                                        
-                                        source_table_name = source_table_name + ' NATURAL JOIN tags NATURAL JOIN namespaces'
-                                        
-                                    
-                                    if hashes is not None:
-                                        
-                                        hash_ids = self._GetHashIds( hashes )
-                                        
-                                        predicates.append( 'hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) )
-                                        
-                                    
-                                    if len( predicates ) == 0:
-                                        
-                                        self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ';' )
-                                        
-                                    else:
-                                        
-                                        self._c.execute( 'INSERT INTO temp_operation ( tag_id, hash_id ) SELECT tag_id, hash_id FROM ' + source_table_name + ' WHERE ' + ' AND '.join( predicates ) + ';' )
-                                        
-                                    
-                                    num_to_do += self._GetRowCount()
-                                    
-                                
-                                i = 0
-                                
-                                block_size = 1000
-                                
-                                while i < num_to_do:
-                                    
-                                    advanced_mappings_ids_flat = self._c.execute( 'SELECT tag_id, hash_id FROM temp_operation WHERE job_id BETWEEN ? AND ?;', ( i, i + block_size - 1 ) )
-                                    
-                                    advanced_mappings_ids = list(HydrusData.BuildKeyToListDict( advanced_mappings_ids_flat ).items())
-                                    
-                                    if sub_action == 'copy':
-                                        
-                                        service_id_target = self._GetServiceId( service_key_target )
-                                        
-                                        service_target = self._GetService( service_id_target )
-                                        
-                                        if service_target.GetServiceType() == HC.LOCAL_TAG:
-                                            
-                                            kwarg = 'mappings_ids'
-                                            
-                                        else:
-                                            
-                                            kwarg = 'pending_mappings_ids'
-                                            
-                                        
-                                        kwargs = { kwarg : advanced_mappings_ids }
-                                        
-                                        self._UpdateMappings( service_id_target, **kwargs )
-                                        
-                                    elif sub_action in ( 'delete', 'delete_for_deleted_files' ):
-                                        
-                                        self._UpdateMappings( service_id, deleted_mappings_ids = advanced_mappings_ids )
-                                        
-                                    elif sub_action == 'delete_deleted':
-                                        
-                                        for ( tag_id, hash_ids ) in advanced_mappings_ids:
-                                            
-                                            self._c.execute( 'DELETE FROM ' + deleted_mappings_table_name + ' WHERE tag_id = ? AND hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';', ( tag_id, ) )
-                                            
-                                        
-                                        self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
-                                        
-                                    
-                                    i += block_size
-                                    
-                                
-                                self._c.execute( 'DROP TABLE temp_operation;' )
-                                
-                                self.pub_after_job( 'notify_new_pending' )
-                                
+                            continue
                             
-                        else:
+                        
+                        hash_ids = self._GetHashIds( hashes )
+                        
+                        if action == HC.CONTENT_UPDATE_ADD:
                             
-                            ( tag, hashes ) = row
+                            ultimate_mappings_ids.append( ( tag_id, hash_ids ) )
                             
-                            try:
-                                
-                                tag_id = self._GetTagId( tag )
-                                
-                            except HydrusExceptions.SizeException:
-                                
-                                continue
-                                
+                        elif action == HC.CONTENT_UPDATE_DELETE:
                             
-                            hash_ids = self._GetHashIds( hashes )
+                            ultimate_deleted_mappings_ids.append( ( tag_id, hash_ids ) )
                             
-                            if action == HC.CONTENT_UPDATE_ADD:
-                                
-                                ultimate_mappings_ids.append( ( tag_id, hash_ids ) )
-                                
-                            elif action == HC.CONTENT_UPDATE_DELETE:
-                                
-                                ultimate_deleted_mappings_ids.append( ( tag_id, hash_ids ) )
-                                
-                            elif action == HC.CONTENT_UPDATE_PEND:
-                                
-                                ultimate_pending_mappings_ids.append( ( tag_id, hash_ids ) )
-                                
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
-                                
-                                ultimate_pending_rescinded_mappings_ids.append( ( tag_id, hash_ids ) )
-                                
-                            elif action == HC.CONTENT_UPDATE_PETITION:
-                                
-                                reason = content_update.GetReason()
-                                
-                                reason_id = self._GetTextId( reason )
-                                
-                                ultimate_petitioned_mappings_ids.append( ( tag_id, hash_ids, reason_id ) )
-                                
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                                
-                                ultimate_petitioned_rescinded_mappings_ids.append( ( tag_id, hash_ids ) )
-                                
+                        elif action == HC.CONTENT_UPDATE_PEND:
+                            
+                            ultimate_pending_mappings_ids.append( ( tag_id, hash_ids ) )
+                            
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                            
+                            ultimate_pending_rescinded_mappings_ids.append( ( tag_id, hash_ids ) )
+                            
+                        elif action == HC.CONTENT_UPDATE_PETITION:
+                            
+                            reason = content_update.GetReason()
+                            
+                            reason_id = self._GetTextId( reason )
+                            
+                            ultimate_petitioned_mappings_ids.append( ( tag_id, hash_ids, reason_id ) )
+                            
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                            
+                            ultimate_petitioned_rescinded_mappings_ids.append( ( tag_id, hash_ids ) )
+                            
+                        elif action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
+                            
+                            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+                            
+                            self._c.executemany( 'DELETE FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( deleted_mappings_table_name ), ( ( tag_id, hash_id ) for hash_id in hash_ids ) )
+                            
+                            self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ) )
                             
                         
                     elif data_type == HC.CONTENT_TYPE_TAG_PARENTS:
@@ -10501,6 +10411,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'maintenance_due': result = self._GetMaintenanceDue( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
+        elif action == 'migration_get_mappings': result = self._MigrationGetMappings( *args, **kwargs )
         elif action == 'missing_repository_update_hashes': result = self._GetRepositoryUpdateHashesIDoNotHave( *args, **kwargs )
         elif action == 'missing_thumbnail_hashes': result = self._GetRepositoryThumbnailHashesIDoNotHave( *args, **kwargs )
         elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
@@ -11221,93 +11132,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return True
             
-        
-    
-    def _SyncHashesToTagArchive( self, hashes, hta_path, tag_service_key, adding, namespaces ):
-        
-        hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-        
-        hash_type = hta.GetHashType()
-        
-        content_updates = []
-        
-        for hash in hashes:
-            
-            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = hash
-            else:
-                
-                hash_id = self._GetHashId( hash )
-                
-                if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
-                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
-                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
-                
-                try: ( archive_hash, ) = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-                except: return
-                
-            
-            tags = HydrusTags.CleanTags( hta.GetTags( archive_hash ) )
-            
-            desired_tags = HydrusTags.FilterNamespaces( tags, namespaces )
-            
-            if len( desired_tags ) > 0:
-                
-                reason = None
-                
-                if tag_service_key != CC.LOCAL_TAG_SERVICE_KEY and not adding:
-                    
-                    action = HC.CONTENT_UPDATE_PETITION
-                    
-                    reason = 'admin: tag archive desync'
-                    
-                else:
-                    
-                    if adding:
-                        
-                        if tag_service_key == CC.LOCAL_TAG_SERVICE_KEY:
-                            
-                            action = HC.CONTENT_UPDATE_ADD
-                            
-                        else:
-                            
-                            action = HC.CONTENT_UPDATE_PEND
-                            
-                        
-                    else:
-                        
-                        action = HC.CONTENT_UPDATE_DELETE
-                        
-                    
-                
-                rows = [ ( tag, ( hash, ) ) for tag in desired_tags ]
-                
-                content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, row, reason = reason ) for row in rows ] )
-                
-            
-        
-        if len( content_updates ) > 0:
-        
-            service_keys_to_content_updates = { tag_service_key : content_updates }
-            
-            self._ProcessContentUpdates( service_keys_to_content_updates )
-            
-        
-    
-    def _TableHasAtLeastRowCount( self, name, row_count ):
-        
-        cursor = self._c.execute( 'SELECT 1 FROM {};'.format( name ) )
-        
-        for i in range( row_count ):
-            
-            r = cursor.fetchone()
-            
-            if r is None:
-                
-                return False
-                
-            
-        
-        return True
         
     
     def _TagExists( self, tag ):
@@ -13158,6 +12982,13 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 365:
+            
+            self._controller.pub( 'splash_set_status_subtext', 'doing some db optimisation' )
+            
+            self._c.execute( 'ANALYZE main;' )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -13564,7 +13395,7 @@ class DB( HydrusDB.HydrusDB ):
         
         existing_names_to_timestamps = dict( self._c.execute( 'SELECT name, timestamp FROM vacuum_timestamps;' ).fetchall() )
         
-        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         
         if force_vacuum:
             
@@ -13592,6 +13423,11 @@ class DB( HydrusDB.HydrusDB ):
                 names_done = []
                 
                 for name in due_names:
+                    
+                    if name not in self._db_filenames:
+                        
+                        continue
+                        
                     
                     if self._controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
                         
@@ -13697,7 +13533,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'dissolve_duplicates_group': self._DuplicatesDissolveMediaIdFromHashes( *args, **kwargs )
         elif action == 'duplicate_pair_status': self._DuplicatesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'duplicate_set_king': self._DuplicatesSetKingFromHash( *args, **kwargs )
-        elif action == 'export_mappings': self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_maintenance_add_jobs': self._FileMaintenanceAddJobs( *args, **kwargs )
         elif action == 'file_maintenance_add_jobs_hashes': self._FileMaintenanceAddJobsHashes( *args, **kwargs )
         elif action == 'file_maintenance_cancel_jobs': self._FileMaintenanceCancelJobs( *args, **kwargs )
@@ -13710,6 +13545,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'local_booru_share': self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'maintain_similar_files_search_for_potential_duplicates': self._PHashesSearchForPotentialDuplicates( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self._PHashesMaintainTree( *args, **kwargs )
+        elif action == 'migration_clear_job': self._MigrationClearJob( *args, **kwargs )
+        elif action == 'migration_start_mappings_job': self._MigrationStartMappingsJob( *args, **kwargs )
         elif action == 'process_repository_content': result = self._ProcessRepositoryContent( *args, **kwargs )
         elif action == 'process_repository_definitions': result = self._ProcessRepositoryDefinitions( *args, **kwargs )
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )
@@ -13728,7 +13565,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )
         elif action == 'set_password': self._SetPassword( *args, **kwargs )
         elif action == 'schedule_repository_update_file_maintenance': self._ScheduleRepositoryUpdateFileMaintenanceFromServiceKey( *args, **kwargs )
-        elif action == 'sync_hashes_to_tag_archive': self._SyncHashesToTagArchive( *args, **kwargs )
         elif action == 'tag_censorship': self._SetTagCensorship( *args, **kwargs )
         elif action == 'update_server_services': self._UpdateServerServices( *args, **kwargs )
         elif action == 'update_services': self._UpdateServices( *args, **kwargs )

@@ -143,16 +143,15 @@ class AddEditDeleteListBox( wx.Panel ):
         
         indices.sort( reverse = True )
         
-        from . import ClientGUIDialogs
+        from . import ClientGUIDialogsQuick
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg_yn:
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == wx.ID_YES:
             
-            if dlg_yn.ShowModal() == wx.ID_YES:
+            for i in indices:
                 
-                for i in indices:
-                    
-                    self._listbox.Delete( i )
-                    
+                self._listbox.Delete( i )
                 
             
         
@@ -635,20 +634,19 @@ class QueueListBox( wx.Panel ):
         
         indices.sort( reverse = True )
         
-        from . import ClientGUIDialogs
+        from . import ClientGUIDialogsQuick
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg_yn:
-            
-            if dlg_yn.ShowModal() == wx.ID_YES:
-                
-                for i in indices:
-                    
-                    self._listbox.Delete( i )
-                    
-                
-            
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        if result == wx.ID_YES:
+            
+            for i in indices:
+                
+                self._listbox.Delete( i )
+                
+            
+            wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+            
         
     
     def _Down( self ):
@@ -2518,14 +2516,13 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         if len( namespaces ) > 0:
             
-            from . import ClientGUIDialogs
+            from . import ClientGUIDialogsQuick
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected colours?' ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete all selected colours?' )
+            
+            if result == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._RemoveNamespaces( namespaces )
-                    
+                self._RemoveNamespaces( namespaces )
                 
             
         

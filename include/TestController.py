@@ -38,6 +38,7 @@ from . import TestClientImageHandling
 from . import TestClientImportOptions
 from . import TestClientImportSubscriptions
 from . import TestClientListBoxes
+from . import TestClientMigration
 from . import TestClientNetworking
 from . import TestClientThreading
 from . import TestDialogs
@@ -678,6 +679,10 @@ class Controller( object ):
         if run_all or self.only_run == 'image':
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
+            
+        if run_all or self.only_run == 'migration':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientMigration ) )
             
         if run_all or self.only_run == 'nat':
             

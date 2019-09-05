@@ -3,6 +3,7 @@ from . import ClientExporting
 from . import ClientGUIACDropdown
 from . import ClientGUICommon
 from . import ClientGUIDialogs
+from . import ClientGUIDialogsQuick
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
 from . import ClientGUIScrolledPanels
@@ -354,12 +355,11 @@ If you select synchronise, be careful!'''
             
             message = 'You have set this export folder to delete the files from the client after export! Are you absolutely sure this is what you want?'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return False
-                    
+                return False
                 
             
         
@@ -610,26 +610,24 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 message += 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
                 
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    self.GetParent().Close()
-                    
-                    return
-                    
+                self.GetParent().Close()
+                
+                return
                 
             
         elif delete_afterwards:
             
             message = 'THE FILES WILL BE DELETED FROM THE CLIENT AFTERWARDS'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
                 
-                if dlg.ShowModal() != wx.ID_YES:
-                    
-                    return
-                    
+                return
                 
             
         
@@ -824,7 +822,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         while filename in self._existing_filenames:
             
-            filename = ClientExporting.GenerateExportFilename( directory, media, terms + [ ( 'string', ' (' + str( i ) + ')' ) ] )
+            filename = ClientExporting.GenerateExportFilename( directory, media, terms, append_number = i )
             
             i += 1
             
