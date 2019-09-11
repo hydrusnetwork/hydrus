@@ -1712,6 +1712,28 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetEarliestTimestampForTheseHashes( self, hashes ):
+        
+        hashes = set( hashes )
+        
+        with self._lock:
+            
+            data = list( self._metadata.items() )
+            
+            data.sort()
+            
+            for ( update_index, ( update_hashes, begin, end ) ) in data:
+                
+                if len( hashes.intersection( update_hashes ) ) > 0:
+                    
+                    return end
+                    
+                
+            
+        
+        return 0
+        
+    
     def GetNextUpdateIndex( self ):
         
         with self._lock:
@@ -1762,7 +1784,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in list(self._metadata.values()) ) )
+            num_update_hashes = sum( ( len( update_hashes ) for ( update_hashes, begin, end ) in self._metadata.values() ) )
             
             return num_update_hashes
             
@@ -1853,16 +1875,6 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
             
             return ( num_update_hashes, status )
-            
-        
-    
-    def GetUpdateTimestamps( self, update_index ):
-        
-        with self._lock:
-            
-            update_timestamps = [ ( update_index, begin, end ) for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()) ]
-            
-            return update_timestamps
             
         
     

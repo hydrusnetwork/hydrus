@@ -45,10 +45,12 @@ try:
     argparser = argparse.ArgumentParser( description = 'hydrus network client (console)' )
     
     argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
+    argparser.add_argument( '--temp_dir', help = 'override the program\'s temporary directory' )
     argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'run without WAL db journalling' )
-    argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run the db entirely in memory' )
-    argparser.add_argument( '--temp_dir', help = 'override the program\'s temporary directory' )
+    argparser.add_argument( '--db_memory_journalling', action='store_true', help = 'run db journalling entirely in memory (DANGEROUS)' )
+    argparser.add_argument( '--db_synchronous_override', help = 'override SQLite Synchronous PRAGMA (range 0-3, default=2)' )
+    argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     
     result = argparser.parse_args()
     
@@ -89,6 +91,25 @@ try:
     
     HG.no_daemons = result.no_daemons
     HG.no_wal = result.no_wal
+    HG.db_memory_journalling = result.db_memory_journalling
+    
+    if result.db_synchronous_override is not None:
+        
+        try:
+            
+            db_synchronous_override = int( result.db_synchronous_override )
+            
+        except ValueError:
+            
+            raise Exception( 'db_synchronous_override must be an integer in the range 0-3' )
+            
+        
+        if db_synchronous_override not in range( 4 ):
+            
+            raise Exception( 'db_synchronous_override must be in the range 0-3' )
+            
+        
+    
     HG.no_db_temp_files = result.no_db_temp_files
     
     if result.temp_dir is not None:

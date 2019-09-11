@@ -2526,12 +2526,22 @@ class CanvasPanel( Canvas ):
             
             menu = wx.Menu()
             
-            for line in self._current_media.GetPrettyInfoLines():
+            #
+            
+            info_lines = self._current_media.GetPrettyInfoLines()
+            
+            top_line = info_lines.pop(0)
+            
+            info_menu = wx.Menu()
+            
+            for line in info_lines:
                 
-                ClientGUIMenus.AppendMenuLabel( menu, line, line )
+                ClientGUIMenus.AppendMenuLabel( info_menu, line, line )
                 
             
-            ClientGUIMedia.AddFileViewingStatsMenu( menu, self._current_media )
+            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, self._current_media )
+            
+            ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
             
             #
             
@@ -3420,12 +3430,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
+        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None and not was_auto_skipped ] )
         
     
     def _GoBack( self ):
         
-        if len( self._processed_pairs ) > 0:
+        if len( self._processed_pairs ) > 0 and self._GetNumCommittableDecisions() > 0:
             
             self._unprocessed_pairs.append( self._current_pair )
             
@@ -3434,6 +3444,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._unprocessed_pairs.append( hash_pair )
             
             while was_auto_skipped:
+                
+                if len( self._processed_pairs ) == 0:
+                    
+                    wx.MessageBox( 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
+                    
+                    self._Close()
+                    
+                    return
+                    
                 
                 ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                 
@@ -3559,6 +3578,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 while was_auto_skipped:
                     
+                    if len( self._processed_pairs ) == 0:
+                        
+                        wx.MessageBox( 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
+                        
+                        self._Close()
+                        
+                        return
+                        
+                    
                     ( hash_pair, duplicate_type, first_media, second_media, service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
                     
                     self._unprocessed_pairs.append( hash_pair )
@@ -3621,7 +3649,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     if len( self._processed_pairs ) == 0:
                         
-                        wx.MessageBox( 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close. Please inform hydrus dev of this.' )
+                        wx.MessageBox( 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
                         
                         self._Close()
                         
@@ -4909,12 +4937,24 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             menu = wx.Menu()
             
-            for line in self._current_media.GetPrettyInfoLines():
+            #
+            
+            info_lines = self._current_media.GetPrettyInfoLines()
+            
+            top_line = info_lines.pop(0)
+            
+            info_menu = wx.Menu()
+            
+            for line in info_lines:
                 
-                ClientGUIMenus.AppendMenuLabel( menu, line, line )
+                ClientGUIMenus.AppendMenuLabel( info_menu, line, line )
                 
             
-            ClientGUIMedia.AddFileViewingStatsMenu( menu, self._current_media )
+            ClientGUIMedia.AddFileViewingStatsMenu( info_menu, self._current_media )
+            
+            ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
+            
+            #
             
             ClientGUIMenus.AppendSeparator( menu )
             

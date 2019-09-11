@@ -4719,9 +4719,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         help_button.SetToolTip( 'Show help regarding editing shortcuts.' )
         
-        reserved_panel = ClientGUICommon.StaticBox( self, 'reserved' )
+        reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
-        self._reserved_shortcuts = ClientGUIListCtrl.SaneListCtrlForSingleObject( reserved_panel, 180, [ ( 'name', -1 ), ( 'size', 100 ) ], activation_callback = self._EditReserved )
+        self._reserved_shortcuts = ClientGUIListCtrl.SaneListCtrlForSingleObject( reserved_panel, 180, [ ( 'name', -1 ), ( 'number of shortcuts', 150 ) ], activation_callback = self._EditReserved )
         
         self._reserved_shortcuts.SetMinSize( ( 320, 200 ) )
         
@@ -4729,9 +4729,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        custom_panel = ClientGUICommon.StaticBox( self, 'custom' )
+        custom_panel = ClientGUICommon.StaticBox( self, 'custom user sets' )
         
-        self._custom_shortcuts = ClientGUIListCtrl.SaneListCtrlForSingleObject( custom_panel, 120, [ ( 'name', -1 ), ( 'size', 100 ) ], delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        self._custom_shortcuts = ClientGUIListCtrl.SaneListCtrlForSingleObject( custom_panel, 120, [ ( 'name', -1 ), ( 'number of shortcuts', 150 ) ], delete_key_callback = self._Delete, activation_callback = self._EditCustom )
         
         self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
@@ -4907,13 +4907,13 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         message += os.linesep * 2
         message += 'In hydrus, shortcuts are split into different sets that are active in different contexts. Depending on where the program focus is, multiple sets can be active at the same time. On a keyboard or mouse event, the active sets will be consulted one after another (typically from the smallest and most precise focus to the largest and broadest parent) until an action match is found.'
         message += os.linesep * 2
-        message += 'There are two kinds--\'reserved\' and \'custom\':'
+        message += 'There are two kinds--ones built-in to hydrus, and custom sets that you turn on and off:'
         message += os.linesep * 2
-        message += 'Reserved shortcuts are always active in their contexts--the \'main_gui\' one is always consulted when you hit a key on the main gui window, for instance. They have limited actions to choose from, appropriate to their context. If you would prefer to, say, open the manage tags dialog with Ctrl+F3, edit or add that entry in the \'media\' set and that new shortcut will apply anywhere you are focused on some particular media.'
+        message += 'The built-in shortcut sets are always active in their contexts--the \'main_gui\' one is always consulted when you hit a key on the main gui window, for instance. They have limited actions to choose from, appropriate to their context. If you would prefer to, say, open the manage tags dialog with Ctrl+F3, edit or add that entry in the \'media\' set and that new shortcut will apply anywhere you are focused on some particular media.'
         message += os.linesep * 2
         message += 'Custom shortcuts sets are those you can create and rename at will. They are only ever active in the media viewer window, and only when you set them so from the top hover-window\'s keyboard icon. They are primarily meant for setting tags and ratings with shortcuts, and are intended to be turned on and off as you perform different \'filtering\' jobs--for instance, you might like to set the 1-5 keys to the different values of a five-star rating system, or assign a few simple keystrokes to a number of common tags.'
         message += os.linesep * 2
-        message += 'The reserved \'media\' set also supports tag and rating actions, if you would like some of those to always be active.'
+        message += 'The built-in \'media\' set also supports tag and rating actions, if you would like some of those to always be active.'
         
         wx.MessageBox( message )
         
@@ -5116,6 +5116,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def __init__( self, parent, shortcut, command, shortcuts_name ):
                 
+                # rewrite this to dynamic layout etc... after the switchover to qt
+                # get rid of the 'set command' button nonsense
+                
                 ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
                 
                 self._final_command = 'simple'
@@ -5131,7 +5134,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._none_panel = ClientGUICommon.StaticBox( self, 'simple actions' )
+                self._simple_action_panel = ClientGUICommon.StaticBox( self, 'simple actions' )
                 
                 if shortcuts_name in CC.SHORTCUTS_RESERVED_NAMES:
                     
@@ -5146,9 +5149,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 choices.sort()
                 
-                self._simple_actions = wx.Choice( self._none_panel, choices = choices )
+                self._simple_actions = wx.Choice( self._simple_action_panel, choices = choices )
                 
-                self._set_simple = ClientGUICommon.BetterButton( self._none_panel, 'set command', self._SetSimple )
+                self._set_simple = ClientGUICommon.BetterButton( self._simple_action_panel, 'set command', self._SetSimple )
                 
                 #
                 
@@ -5197,17 +5200,41 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
+                self._ratings_numerical_incdec_panel = ClientGUICommon.StaticBox( self, 'numerical ratings increment/decrement service actions' )
+                
+                self._ratings_numerical_incdec_service_keys = wx.Choice( self._ratings_numerical_incdec_panel )
+                
+                self._ratings_numerical_incdec = ClientGUICommon.BetterChoice( self._ratings_numerical_incdec_panel )
+                
+                self._ratings_numerical_incdec.Append( HC.content_update_string_lookup[ HC.CONTENT_UPDATE_INCREMENT ], HC.CONTENT_UPDATE_INCREMENT )
+                self._ratings_numerical_incdec.Append( HC.content_update_string_lookup[ HC.CONTENT_UPDATE_DECREMENT ], HC.CONTENT_UPDATE_DECREMENT )
+                
+                self._set_ratings_numerical_incdec = ClientGUICommon.BetterButton( self._ratings_numerical_incdec_panel, 'set command', self._SetRatingsNumericalIncDec )
+                
+                #
+                
                 services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
                 
                 for service in services:
                     
+                    service_name = service.GetName()
+                    service_key = service.GetServiceKey()
+                    
                     service_type = service.GetServiceType()
                     
-                    if service_type in HC.TAG_SERVICES: choice = self._tag_service_keys
-                    elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
-                    
-                    choice.Append( service.GetName(), service.GetServiceKey() )
+                    if service_type in HC.TAG_SERVICES:
+                        
+                        self._tag_service_keys.Append( service_name, service_key )
+                        
+                    elif service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        self._ratings_like_service_keys.Append( service_name, service_key )
+                        
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        self._ratings_numerical_service_keys.Append( service_name, service_key )
+                        self._ratings_numerical_incdec_service_keys.Append( service_name, service_key )
+                        
                     
                 
                 self._SetActions()
@@ -5269,24 +5296,35 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     elif service_type == HC.LOCAL_RATING_NUMERICAL:
                         
-                        self._ratings_numerical_service_keys.SetStringSelection( service_name )
-                        
-                        self._SetActions()
-                        
-                        if value is None:
+                        if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
                             
-                            self._ratings_numerical_remove.SetValue( True )
+                            self._ratings_numerical_service_keys.SetStringSelection( service_name )
                             
-                        else:
+                            self._SetActions()
                             
-                            num_stars = self._current_ratings_numerical_service.GetNumStars()
+                            if value is None:
+                                
+                                self._ratings_numerical_remove.SetValue( True )
+                                
+                            else:
+                                
+                                num_stars = self._current_ratings_numerical_service.GetNumStars()
+                                
+                                slider_value = int( round( value * num_stars ) )
+                                
+                                self._ratings_numerical_slider.SetValue( slider_value )
+                                
                             
-                            slider_value = int( round( value * num_stars ) )
+                            self._SetRatingsNumerical()
                             
-                            self._ratings_numerical_slider.SetValue( slider_value )
+                        elif action in ( HC.CONTENT_UPDATE_INCREMENT, HC.CONTENT_UPDATE_DECREMENT ):
                             
-                        
-                        self._SetRatingsNumerical()
+                            self._ratings_numerical_incdec_service_keys.SetStringSelection( service_name )
+                            
+                            self._ratings_numerical_incdec.SetValue( action )
+                            
+                            self._SetRatingsNumericalIncDec()
+                            
                         
                     
                     if self._final_command is None:
@@ -5304,7 +5342,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 none_hbox.Add( self._simple_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
                 none_hbox.Add( self._set_simple, CC.FLAGS_VCENTER )
                 
-                self._none_panel.Add( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._simple_action_panel.Add( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
                 
@@ -5338,6 +5376,14 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._ratings_numerical_panel.Add( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.Add( self._ratings_numerical_incdec_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                hbox.Add( self._ratings_numerical_incdec, CC.FLAGS_VCENTER )
+                hbox.Add( self._set_ratings_numerical_incdec, CC.FLAGS_VCENTER )
+                
+                self._ratings_numerical_incdec_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
                 self._content_panel.Add( self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._content_panel.Add( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self._content_panel.Add( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -5345,8 +5391,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                vbox.Add( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( self._simple_action_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 vbox.Add( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( self._ratings_numerical_incdec_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 is_custom_or_media = shortcuts_name not in CC.SHORTCUTS_RESERVED_NAMES or shortcuts_name == 'media'
                 
@@ -5384,11 +5431,15 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     return self._GetRatingsLike()
                     
-                if self._final_command == 'ratings_numerical':
+                elif self._final_command == 'ratings_numerical':
                     
                     return self._GetRatingsNumerical()
                     
-                if self._final_command == 'tag':
+                elif self._final_command == 'ratings_numerical_incdec':
+                    
+                    return self._GetRatingsNumericalIncDec()
+                    
+                elif self._final_command == 'tag':
                     
                     return self._GetTag()
                     
@@ -5469,6 +5520,26 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             value = ( value - 1 ) / ( num_stars - 1 )
                             
                         
+                    
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, action, value ) )
+                    
+                else:
+                    
+                    raise HydrusExceptions.VetoException( 'Please select a rating service!' )
+                    
+                
+            
+            def _GetRatingsNumericalIncDec( self ):
+                
+                selection = self._ratings_numerical_incdec_service_keys.GetSelection()
+                
+                if selection != wx.NOT_FOUND:
+                    
+                    service_key = self._ratings_numerical_incdec_service_keys.GetClientData( selection )
+                    
+                    action = self._ratings_numerical_incdec.GetValue()
+                    
+                    value = 1
                     
                     return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, action, value ) )
                     
@@ -5574,6 +5645,15 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._set_ratings_numerical.Disable()
                 
                 self._final_command = 'ratings_numerical'
+                
+            
+            def _SetRatingsNumericalIncDec( self ):
+                
+                self._EnableButtons()
+                
+                self._set_ratings_numerical_incdec.Disable()
+                
+                self._final_command = 'ratings_numerical_incdec'
                 
             
             def _SetTag( self ):

@@ -1106,6 +1106,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._download_progress = ClientGUICommon.TextAndGauge( self )
             self._processing_progress = ClientGUICommon.TextAndGauge( self )
+            self._is_mostly_caught_up_st = ClientGUICommon.BetterStaticText( self )
             
             self._sync_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncNow )
             self._pause_play_button = ClientGUICommon.BetterButton( self, 'pause', self._PausePlay )
@@ -1136,6 +1137,7 @@ class ReviewServicePanel( wx.Panel ):
             self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._is_mostly_caught_up_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
@@ -1325,7 +1327,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( download_text, download_value, processing_text, processing_value, range ):
+            def wx_code( download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up ):
                 
                 if not self:
                     
@@ -1334,6 +1336,17 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._download_progress.SetValue( download_text, download_value, range )
                 self._processing_progress.SetValue( processing_text, processing_value, range )
+                
+                if is_mostly_caught_up:
+                    
+                    caught_up_text = 'Client is caught up to service and can upload content.'
+                    
+                else:
+                    
+                    caught_up_text = 'Still some processing to do until the client is caught up.'
+                    
+                
+                self._is_mostly_caught_up_st.SetLabel( caught_up_text )
                 
                 if processing_value == download_value:
                     
@@ -1376,11 +1389,13 @@ class ReviewServicePanel( wx.Panel ):
             
             ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', service.GetServiceKey() )
             
+            is_mostly_caught_up = service.IsMostlyCaughtUp()
+            
             download_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
             
             processing_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( processing_value, range )
             
-            wx.CallAfter( wx_code, download_text, download_value, processing_text, processing_value, range )
+            wx.CallAfter( wx_code, download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up )
             
         
     

@@ -493,7 +493,14 @@ def AddRemoveMenu( win, menu, num_files, num_selected, num_inbox, num_archive ):
         
         if do_files:
             
+            ClientGUIMenus.AppendSeparator( remove_menu )
+            
             ClientGUIMenus.AppendMenuItem( win, remove_menu, 'all ({})'.format( HydrusData.ToHumanInt( num_files ) ), 'Remove all the files from the current view.', win._Remove, 'all' )
+            
+        
+        if do_archive_and_inbox or do_not_selected:
+            
+            ClientGUIMenus.AppendSeparator( remove_menu )
             
         
         if do_archive_and_inbox:
@@ -3878,91 +3885,111 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # do the actual menu
             
+            selection_info_menu = wx.Menu()
+            
             if multiple_selected:
                 
-                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ToHumanInt( num_selected ) + ' files, ' + self._GetPrettyTotalSize( only_selected = True ) )
+                selection_info_menu_label = '{} files, {}'.format( HydrusData.ToHumanInt( num_selected ), self._GetPrettyTotalSize( only_selected = True ) )
                 
             else:
                 
-                for line in self._focused_media.GetPrettyInfoLines():
+                pretty_info_lines = self._focused_media.GetPrettyInfoLines()
+                
+                top_line = pretty_info_lines.pop( 0 )
+                
+                selection_info_menu_label = top_line
+                
+                for line in pretty_info_lines:
                     
-                    ClientGUIMenus.AppendMenuLabel( menu, line, line )
+                    ClientGUIMenus.AppendMenuLabel( selection_info_menu, line, line )
                     
                 
             
             if len( self._selected_media ) == 1:
                 
-                AddFileViewingStatsMenu( menu, self._focused_media )
+                AddFileViewingStatsMenu( selection_info_menu, self._focused_media )
                 
             
             if len( disparate_current_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_current_file_service_keys, 'some uploaded to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_file_service_keys, 'some uploaded to' )
                 
             
             if multiple_selected and len( common_current_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_current_file_service_keys, 'selected uploaded to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_current_file_service_keys, 'selected uploaded to' )
                 
             
             if len( disparate_pending_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_pending_file_service_keys, 'some pending to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_file_service_keys, 'some pending to' )
                 
             
             if len( common_pending_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_pending_file_service_keys, 'pending to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_file_service_keys, 'pending to' )
                 
             
             if len( disparate_petitioned_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_petitioned_file_service_keys, 'some petitioned from' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_file_service_keys, 'some petitioned from' )
                 
             
             if len( common_petitioned_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_petitioned_file_service_keys, 'petitioned from' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_file_service_keys, 'petitioned from' )
                 
             
             if len( disparate_deleted_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_deleted_file_service_keys, 'some deleted from' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_deleted_file_service_keys, 'some deleted from' )
                 
             
             if len( common_deleted_file_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_deleted_file_service_keys, 'deleted from' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_deleted_file_service_keys, 'deleted from' )
                 
             
             if len( disparate_current_ipfs_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_current_ipfs_service_keys, 'some pinned to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_current_ipfs_service_keys, 'some pinned to' )
                 
             
             if multiple_selected and len( common_current_ipfs_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_current_ipfs_service_keys, 'selected pinned to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_current_ipfs_service_keys, 'selected pinned to' )
                 
             
             if len( disparate_pending_ipfs_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_pending_ipfs_service_keys, 'some to be pinned to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_pending_ipfs_service_keys, 'some to be pinned to' )
                 
             
             if len( common_pending_ipfs_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_pending_ipfs_service_keys, 'to be pinned to' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_pending_ipfs_service_keys, 'to be pinned to' )
                 
             
             if len( disparate_petitioned_ipfs_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from' )
+                AddServiceKeyLabelsToMenu( selection_info_menu, disparate_petitioned_ipfs_service_keys, 'some to be unpinned from' )
                 
             
             if len( common_petitioned_ipfs_service_keys ) > 0:
                 
-                AddServiceKeyLabelsToMenu( menu, common_petitioned_ipfs_service_keys, unpin_phrase )
+                AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_ipfs_service_keys, unpin_phrase )
+                
+            
+            
+            if selection_info_menu.GetMenuItemCount() == 0:
+                
+                selection_info_menu.Destroy()
+                
+                ClientGUIMenus.AppendMenuLabel( menu, selection_info_menu_label )
+                
+            else:
+                
+                ClientGUIMenus.AppendMenu( menu, selection_info_menu, selection_info_menu_label )
                 
             
         
@@ -5007,12 +5034,12 @@ class Thumbnail( Selectable ):
                     
                     gc.SetPen( wx.TRANSPARENT_PEN )
                     
-                    ( text_x, text_y ) = gc.GetTextExtent( upper_summary )
+                    ( text_width, text_height ) = gc.GetTextExtent( upper_summary )
                     
-                    top_left_x = int( ( width - text_x ) // 2 )
+                    top_left_x = int( ( width - text_width ) // 2 )
                     top_left_y = thumbnail_border
                     
-                    gc.DrawRectangle( thumbnail_border, top_left_y, width - ( thumbnail_border * 2 ), text_y + 1 )
+                    gc.DrawRectangle( thumbnail_border, top_left_y, width - ( thumbnail_border * 2 ), text_height + 1 )
                     
                     gc.DrawText( upper_summary, top_left_x, top_left_y )
                     
@@ -5029,12 +5056,12 @@ class Thumbnail( Selectable ):
                     
                     gc.SetPen( wx.TRANSPARENT_PEN )
                     
-                    ( text_x, text_y ) = gc.GetTextExtent( lower_summary )
+                    ( text_width, text_height ) = gc.GetTextExtent( lower_summary )
                     
-                    top_left_x = width - text_x - thumbnail_border
-                    top_left_y = height - text_y - thumbnail_border
+                    top_left_x = width - text_width - thumbnail_border
+                    top_left_y = height - text_height - thumbnail_border
                     
-                    gc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 1, text_y + 1 )
+                    gc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_width + 1, text_height + 1 )
                     
                     gc.DrawText( lower_summary, top_left_x, top_left_y )
                     
@@ -5113,19 +5140,15 @@ class Thumbnail( Selectable ):
         
         if len( icons_to_draw ) > 0:
             
-            icon_x = 0
+            icon_x = -thumbnail_border
             
             for icon in icons_to_draw:
                 
-                dc.DrawBitmap( icon, width + icon_x - 18, 0 )
+                dc.DrawBitmap( icon, width + icon_x - 18, thumbnail_border )
                 
                 icon_x -= 18
                 
             
-        
-        if self._dump_status == CC.DUMPER_DUMPED_OK: dc.DrawBitmap( CC.GlobalBMPs.dump_ok, width - 18, 18 )
-        elif self._dump_status == CC.DUMPER_RECOVERABLE_ERROR: dc.DrawBitmap( CC.GlobalBMPs.dump_recoverable, width - 18, 18 )
-        elif self._dump_status == CC.DUMPER_UNRECOVERABLE_ERROR: dc.DrawBitmap( CC.GlobalBMPs.dump_fail, width - 18, 18 )
         
         if self.IsCollection():
             
@@ -5135,7 +5158,7 @@ class Thumbnail( Selectable ):
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             
-            ( text_x, text_y ) = dc.GetTextExtent( num_files_str )
+            ( text_width, text_height ) = dc.GetTextExtent( num_files_str )
             
             dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
             
@@ -5143,16 +5166,40 @@ class Thumbnail( Selectable ):
             
             dc.SetPen( wx.TRANSPARENT_PEN )
             
-            dc.DrawRectangle( 17, height - text_y - 3, text_x + 2, text_y + 2 )
+            dc.DrawRectangle( 17, height - text_height - 3, text_width + 2, text_height + 2 )
             
-            dc.DrawText( num_files_str, 18, height - text_y - 2 )
+            dc.DrawText( num_files_str, 18, height - text_height - 2 )
             
         
-        # repo icons
+        # top left icons
+        
+        top_left_x = 0
+        
+        if self.HasAudio():
+            
+            has_audio_string = new_options.GetString( 'has_audio_label' )
+            
+            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+            
+            ( text_width, text_height ) = dc.GetTextExtent( has_audio_string )
+            
+            dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
+            
+            dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
+            
+            dc.SetPen( wx.TRANSPARENT_PEN )
+            
+            box_x = thumbnail_border
+            box_y = thumbnail_border
+            
+            dc.DrawRectangle( box_x, box_y, text_width + 2, text_height + 2 )
+            
+            dc.DrawText( has_audio_string, box_x + 1, box_y + 1 )
+            
+            top_left_x += text_height + 2
+            
         
         services_manager = HG.client_controller.services_manager
-        
-        repo_icon_x = 0
         
         current = locations_manager.GetCurrentRemote()
         pending = locations_manager.GetPendingRemote()
@@ -5166,16 +5213,16 @@ class Thumbnail( Selectable ):
         
         if HC.FILE_REPOSITORY in service_types:
             
-            dc.DrawBitmap( CC.GlobalBMPs.file_repository, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository, top_left_x, thumbnail_border )
             
-            repo_icon_x += 20
+            top_left_x += 20
             
         
         if HC.IPFS in service_types:
             
-            dc.DrawBitmap( CC.GlobalBMPs.ipfs, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.ipfs, top_left_x, thumbnail_border )
             
-            repo_icon_x += 20
+            top_left_x += 20
             
         
         #
@@ -5184,16 +5231,16 @@ class Thumbnail( Selectable ):
         
         if HC.FILE_REPOSITORY in service_types:
             
-            dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_pending, top_left_x, thumbnail_border )
             
-            repo_icon_x += 20
+            top_left_x += 20
             
         
         if HC.IPFS in service_types:
             
-            dc.DrawBitmap( CC.GlobalBMPs.ipfs_pending, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.ipfs_pending, top_left_x, thumbnail_border )
             
-            repo_icon_x += 20
+            top_left_x += 20
             
         
         #
@@ -5202,16 +5249,16 @@ class Thumbnail( Selectable ):
         
         if HC.FILE_REPOSITORY in service_types:
             
-            dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.file_repository_petitioned, top_left_x, thumbnail_border )
             
-            repo_icon_x += 20
+            top_left_x += 20
             
         
         if HC.IPFS in service_types:
             
-            dc.DrawBitmap( CC.GlobalBMPs.ipfs_petitioned, repo_icon_x, 0 )
+            dc.DrawBitmap( CC.GlobalBMPs.ipfs_petitioned, top_left_x, thumbnail_border )
             
-            repo_icon_x += 20
+            top_left_x += 20
             
         
         return bmp

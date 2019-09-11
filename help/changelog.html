@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 367</h3></li>
+				<ul>
+					<li>tag migration:</li>
+					<li>added htpa and tag service sources for parents/siblings migration that support filtering for the left and right tag of each pair</li>
+					<li>added htpa and tag service destinations for parents/siblings migration</li>
+					<li>added unit tests for all parent/siblings migration scenarios</li>
+					<li>misc improvements to mappings migration code</li>
+					<li>reworded some of the tooltip/tag filter message text to more clearly explain how the filter applies to migrations</li>
+					<li>the tag filter edit panel now has a 'test' area where you can put in an example tag to see if it passes or is blocked by the current filter</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed an issue with auto-no-ing yes/no dialogs throwing errors on exit. I am sorry for the inconvenience!</li>
+					<li>thumbnails now show the 'has audio' string on their thumbnails</li>
+					<li>'sort by file: has audio' added!</li>
+					<li>icons drawn on thumbnails are now adjusted to sit inside the border</li>
+					<li>added increment/decrement numerical ratings actions for media shortcuts! if a file hit by this action has no rating, it will initialise with 0/1 stars or max stars. please forgive the ugly expanding ui in the shortcuts panel here--I'll rewrite this to layout more dynamically in future</li>
+					<li>client repository services now track whether they are 'caught up' to their repos, which for now means processed up until at least two weeks ago, and will prohibit uploading new content until the client is caught up</li>
+					<li>repository review services panels will now display the 'caught up' status below the 'processed' progress gauge</li>
+					<li>repository review services panels will no longer duplicate 'account' status problems in the 'this client's network use' status line--both lines now refer to service/account functionality separately</li>
+					<li>repositories will now put in 'unknown error' when an empty error reason slips through the 'no requests until x time' reporting process</li>
+					<li>the new thumbnail and media viewer right-click menus now collapse the selection info lines at the top to just the top line and places all the rest (and in complicated file domain situations, this can be a long list) in a submenu off that line</li>
+					<li>the new thumbnail 'remove' submenu has separators after 'selected' and 'all' to reduce misclicks</li>
+					<li>reworded a couple of things in the manage shortcuts panel to be more clear</li>
+					<li>added wildcard support ('eva*lion') and namespace wildcards (like 'character:*') to the advanced OR text input parsing</li>
+					<li>fixed a rare issue with the duplicate filter being unable to go back or retreat from an interstitial confirm/forget/cancel dialog when every pair in the current batch cannot be displayed (such as if at least one of the pair has been physically deleted). the filter now catches this situation, informs the user, and closes itself gracefully</li>
+					<li>added two extremely advanced and dangerous launch parameters for database access testing</li>
+					<li>couple of misc fixes and cleanup</li>
+				</ul>
 				<li><h3>version 366</h3></li>
 				<ul>
 					<li>tag migration:</li>

@@ -74,7 +74,7 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
                 
                 job = HG.client_controller.CallLaterWXSafe( dlg, auto_yes_time, dlg.EndModal, wx.ID_YES )
                 
-            elif auto_no_time is None:
+            elif auto_no_time is not None:
                 
                 job = HG.client_controller.CallLaterWXSafe( dlg, auto_no_time, dlg.EndModal, wx.ID_NO )
                 

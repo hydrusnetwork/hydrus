@@ -2,6 +2,8 @@ from . import ClientConstants as CC
 from . import ClientData
 from . import ClientGUICommon
 from . import ClientGUIFunctions
+from . import ClientGUIScrolledPanels
+from . import ClientGUITopLevelWindows
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -694,19 +696,19 @@ class ShortcutsHandler( object ):
         event.Skip()
         
     
-    def AddShortcuts( self, shortcuts_name ):
+    def AddShortcuts( self, shortcut_set_name ):
         
-        if shortcuts_name not in self._shortcuts_names:
+        if shortcut_set_name not in self._shortcuts_names:
             
-            self._shortcuts_names.append( shortcuts_name )
+            self._shortcuts_names.append( shortcut_set_name )
             
         
     
-    def RemoveShortcuts( self, shortcuts_name ):
+    def RemoveShortcuts( self, shortcut_set_name ):
         
-        if shortcuts_name in self._shortcuts_names:
+        if shortcut_set_name in self._shortcuts_names:
             
-            self._shortcuts_names.remove( shortcuts_name )
+            self._shortcuts_names.remove( shortcut_set_name )
             
         
     

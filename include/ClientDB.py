@@ -7188,6 +7188,19 @@ class DB( HydrusDB.HydrusDB ):
         return needed_hashes
         
     
+    def _GetRepositoryUpdateHashesUnprocessed( self, service_key ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+        
+        unprocessed_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} WHERE processed = ?;'.format( repository_updates_table_name ), ( False, ) ) )
+        
+        hashes = self._GetHashes( unprocessed_hash_ids )
+        
+        return hashes
+        
+    
     def _GetService( self, service_id ):
         
         if service_id in self._service_cache:
@@ -8433,6 +8446,49 @@ class DB( HydrusDB.HydrusDB ):
         return data
         
     
+    def _MigrationGetPairs( self, database_temp_job_name, left_tag_filter, right_tag_filter ):
+        
+        time_started_precise = HydrusData.GetNowPrecise()
+        
+        data = []
+        
+        we_should_stop = False
+        
+        while not we_should_stop:
+            
+            result = self._c.execute( 'SELECT left_tag_id, right_tag_id FROM {};'.format( database_temp_job_name ) ).fetchone()
+            
+            if result is None:
+                
+                break
+                
+            
+            ( left_tag_id, right_tag_id ) = result
+            
+            self._c.execute( 'DELETE FROM {} WHERE left_tag_id = ? AND right_tag_id = ?;'.format( database_temp_job_name ), ( left_tag_id, right_tag_id ) )
+            
+            left_tag = self._GetTag( left_tag_id )
+            
+            if not left_tag_filter.TagOK( left_tag ):
+                
+                continue
+                
+            
+            right_tag = self._GetTag( right_tag_id )
+            
+            if not right_tag_filter.TagOK( right_tag ):
+                
+                continue
+                
+            
+            data.append( ( left_tag, right_tag ) )
+            
+            we_should_stop = len( data ) >= 256 or ( len( data ) > 0 and HydrusData.TimeHasPassedPrecise( time_started_precise + 1.0 ) )
+            
+        
+        return data
+        
+    
     def _MigrationStartMappingsJob( self, database_temp_job_name, file_service_key, tag_service_key, hashes, content_statuses ):
         
         self._c.execute( 'CREATE TABLE durable_temp.{} ( hash_id INTEGER PRIMARY KEY );'.format( database_temp_job_name ) )
@@ -8489,8 +8545,33 @@ class DB( HydrusDB.HydrusDB ):
             
             for select_subquery in select_subqueries:
                 
-                self._c.execute( 'INSERT INTO {} ( hash_id ) {};'.format( database_temp_job_name, select_subquery ) )
+                self._c.execute( 'INSERT OR IGNORE INTO {} ( hash_id ) {};'.format( database_temp_job_name, select_subquery ) )
                 
+            
+        
+    
+    def _MigrationStartPairsJob( self, database_temp_job_name, tag_service_key, content_type, content_statuses ):
+        
+        self._c.execute( 'CREATE TABLE durable_temp.{} ( left_tag_id INTEGER, right_tag_id INTEGER, PRIMARY KEY ( left_tag_id, right_tag_id ) );'.format( database_temp_job_name ) )
+        
+        tag_service_id = self._GetServiceId( tag_service_key )
+        
+        if content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            source_table_names = [ 'tag_parents', 'tag_parent_petitions' ]
+            left_column_name = 'child_tag_id'
+            right_column_name = 'parent_tag_id'
+            
+        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            source_table_names = [ 'tag_siblings', 'tag_sibling_petitions' ]
+            left_column_name = 'bad_tag_id'
+            right_column_name = 'good_tag_id'
+            
+        
+        for source_table_name in source_table_names:
+            
+            self._c.execute( 'INSERT OR IGNORE INTO {} ( left_tag_id, right_tag_id ) SELECT {}, {} FROM {} WHERE service_id = ? AND status IN {};'.format( database_temp_job_name, left_column_name, right_column_name, source_table_name, HydrusData.SplayListForDB( content_statuses ) ), ( tag_service_id, ) )
             
         
     
@@ -9428,7 +9509,7 @@ class DB( HydrusDB.HydrusDB ):
         notify_new_siblings = False
         notify_new_force_refresh_tags = False
         
-        for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             try:
                 
@@ -9923,8 +10004,6 @@ class DB( HydrusDB.HydrusDB ):
                             
                             self._c.execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILES ) )
                             
-                            # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
-                            
                         
                     elif action == HC.CONTENT_UPDATE_ADVANCED:
                         
@@ -10412,6 +10491,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
         elif action == 'migration_get_mappings': result = self._MigrationGetMappings( *args, **kwargs )
+        elif action == 'migration_get_pairs': result = self._MigrationGetPairs( *args, **kwargs )
         elif action == 'missing_repository_update_hashes': result = self._GetRepositoryUpdateHashesIDoNotHave( *args, **kwargs )
         elif action == 'missing_thumbnail_hashes': result = self._GetRepositoryThumbnailHashesIDoNotHave( *args, **kwargs )
         elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
@@ -10421,6 +10501,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'random_potential_duplicate_hashes': result = self._DuplicatesGetRandomPotentialDuplicateHashes( *args, **kwargs )
         elif action == 'recent_tags': result = self._GetRecentTags( *args, **kwargs )
         elif action == 'repository_progress': result = self._GetRepositoryProgress( *args, **kwargs )
+        elif action == 'repository_unprocessed_hashes': result = self._GetRepositoryUpdateHashesUnprocessed( *args, **kwargs )
         elif action == 'repository_update_hashes_to_process': result = self._GetRepositoryUpdateHashesICanProcess( *args, **kwargs )
         elif action == 'serialisable': result = self._GetJSONDump( *args, **kwargs )
         elif action == 'serialisable_simple': result = self._GetJSONSimple( *args, **kwargs )
@@ -13547,6 +13628,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'maintain_similar_files_tree': self._PHashesMaintainTree( *args, **kwargs )
         elif action == 'migration_clear_job': self._MigrationClearJob( *args, **kwargs )
         elif action == 'migration_start_mappings_job': self._MigrationStartMappingsJob( *args, **kwargs )
+        elif action == 'migration_start_pairs_job': self._MigrationStartPairsJob( *args, **kwargs )
         elif action == 'process_repository_content': result = self._ProcessRepositoryContent( *args, **kwargs )
         elif action == 'process_repository_definitions': result = self._ProcessRepositoryDefinitions( *args, **kwargs )
         elif action == 'push_recent_tags': self._PushRecentTags( *args, **kwargs )

@@ -4091,6 +4091,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 service.CheckFunctional()
                 
             
+            if isinstance( service, ClientServices.ServiceRepository ):
+                
+                if not service.IsMostlyCaughtUp():
+                    
+                    raise Exception( 'Repository processing is not caught up--please process more before you upload new content.' )
+                    
+                
+            
         except Exception as e:
             
             wx.MessageBox( 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )

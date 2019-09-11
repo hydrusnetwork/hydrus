@@ -466,49 +466,63 @@ class HydrusDB( object ):
             self._c.execute( 'PRAGMA temp_store = 2;' ) # use memory for temp store exclusively
             
         
-        self._c.execute( 'PRAGMA main.cache_size = -10000;' )
-        
         self._c.execute( 'ATTACH ":memory:" AS mem;' )
         
         self._AttachExternalDatabases()
         
-        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
+        # if this is set to 1, transactions are not immediately synced to the journal so multiple can be undone following a power-loss
+        # if set to 2, all transactions are synced, so once a new one starts you know the last one is on disk
+        # corruption cannot occur either way, but since we have multiple ATTACH dbs with diff journals, let's not mess around when power-cut during heavy file import or w/e
+        synchronous = 2
+        
+        if HG.db_synchronous_override is not None:
+            
+            synchronous = HG.db_synchronous_override
+            
+        
+        # durable_temp is not excluded here
+        db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
         
         for db_name in db_names:
             
-            self._c.execute( 'PRAGMA ' + db_name + '.cache_size = -10000;' )
+            self._c.execute( 'PRAGMA {}.cache_size = -10000;'.format( db_name ) )
             
-            if HG.no_wal:
+            if HG.db_memory_journalling:
                 
-                self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = TRUNCATE;' )
+                self._c.execute( 'PRAGMA {}.journal_mode = MEMORY;'.format( db_name ) )
                 
-                self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
+            elif HG.no_wal:
                 
-                self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
+                self._c.execute( 'PRAGMA {}.journal_mode = TRUNCATE;'.format( db_name ) )
                 
             else:
                 
-                self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = WAL;' )
+                self._c.execute( 'PRAGMA {}.journal_mode = WAL;'.format( db_name ) )
                 
-                # if this is set to 1, transactions are not immediately synced to the journal and can be undone following a power-loss
-                # if set to 2, all transactions are synced
-                # either way, transactions are atomically consistent, but let's not mess around when power-cut during heavy file import or w/e
-                self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
+            
+            self._c.execute( 'PRAGMA {}.synchronous = {};'.format( db_name, synchronous ) )
+            
+            try:
                 
-                try:
+                self._c.execute( 'SELECT * FROM {}.sqlite_master;'.format( db_name ) ).fetchone()
+                
+            except sqlite3.OperationalError as e:
+                
+                if HG.no_wal:
                     
-                    self._c.execute( 'SELECT * FROM ' + db_name + '.sqlite_master;' ).fetchone()
+                    message = 'The database failed to read any data. Please check your hard drive and perhaps \'help my db is broke.txt\' in the db directory. Full error information:'
                     
-                except sqlite3.OperationalError as e:
+                else:
                     
                     message = 'The database failed to read some data. You may need to run the program in no-wal mode using the --no_wal command parameter. Full error information:'
-                    message += os.linesep * 2
-                    message += str( e )
                     
-                    HydrusData.DebugPrint( message )
-                    
-                    raise HydrusExceptions.DBAccessException( message )
-                    
+                
+                message += os.linesep * 2
+                message += str( e )
+                
+                HydrusData.DebugPrint( message )
+                
+                raise HydrusExceptions.DBAccessException( message )
                 
             
         

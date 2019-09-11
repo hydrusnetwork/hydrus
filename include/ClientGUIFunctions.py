@@ -1,3 +1,4 @@
+import collections
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -27,7 +28,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
     for m in media:
         
-        hashes.update( m.GetHashes() )
+        hashes.add( m.GetHash() )
         
     
     if service_type in HC.TAG_SERVICES:
@@ -167,48 +168,110 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
         
     elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
         
-        rating = value
-        
-        can_set = False
-        can_unset = False
-        
-        for m in media:
+        if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
             
-            ratings_manager = m.GetRatingsManager()
+            rating = value
             
-            current_rating = ratings_manager.GetRating( service_key )
+            can_set = False
+            can_unset = False
             
-            if current_rating == rating and action == HC.CONTENT_UPDATE_FLIP:
+            for m in media:
                 
-                can_unset = True
+                ratings_manager = m.GetRatingsManager()
+                
+                current_rating = ratings_manager.GetRating( service_key )
+                
+                if current_rating == rating and action == HC.CONTENT_UPDATE_FLIP:
+                    
+                    can_unset = True
+                    
+                else:
+                    
+                    can_set = True
+                    
+                
+            
+            if can_set:
+                
+                row = ( rating, hashes )
+                
+            elif can_unset:
+                
+                row = ( None, hashes )
                 
             else:
                 
-                can_set = True
+                return True
                 
             
-        
-        if can_set:
+            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
             
-            row = ( rating, hashes )
+        elif action in ( HC.CONTENT_UPDATE_INCREMENT, HC.CONTENT_UPDATE_DECREMENT ):
             
-        elif can_unset:
+            if service_type == HC.LOCAL_RATING_NUMERICAL:
+                
+                if action == HC.CONTENT_UPDATE_INCREMENT:
+                    
+                    direction = 1
+                    initialisation_rating = 0.0
+                    
+                elif action == HC.CONTENT_UPDATE_DECREMENT:
+                    
+                    direction = -1
+                    initialisation_rating = 1.0
+                    
+                
+                num_stars = service.GetNumStars()
+                
+                if service.AllowZero():
+                    
+                    num_stars += 1
+                    
+                
+                one_star_value = 1.0 / ( num_stars - 1 )
+                
+                ratings_to_hashes = collections.defaultdict( set )
+                
+                for m in media:
+                    
+                    ratings_manager = m.GetRatingsManager()
+                    
+                    current_rating = ratings_manager.GetRating( service_key )
+                    
+                    if current_rating is None:
+                        
+                        new_rating = initialisation_rating
+                        
+                    else:
+                        
+                        new_rating = current_rating + ( one_star_value * direction )
+                        
+                        new_rating = max( min( new_rating, 1.0 ), 0.0 )
+                        
+                    
+                    if current_rating != new_rating:
+                        
+                        ratings_to_hashes[ new_rating ].add( m.GetHash() )
+                        
+                    
+                
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
+                
+            else:
+                
+                return True
+                
             
-            row = ( None, hashes )
-            
-        else:
-            
-            return True
-            
-        
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
         
     else:
         
         return False
         
     
-    HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
+    if len( content_updates ) > 0:
+        
+        HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
+        
     
     return True
     

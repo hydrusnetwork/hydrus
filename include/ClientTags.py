@@ -335,6 +335,14 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def TagOK( self, tag ):
+        
+        with self._lock:
+            
+            return self._TagOK( tag )
+            
+        
+    
     def ToBlacklistString( self ):
         
         with self._lock:

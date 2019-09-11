@@ -511,8 +511,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 external_ip_text = 'Error finding external IP: ' + str( e )
                 
-                return
-                
             
             wx.CallAfter( wx_code, external_ip_text )
             

@@ -33,6 +33,8 @@ import wx
 
 class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
+    TEST_RESULT_DEFAULT = 'Enter a tag here to test if it passes the current filter:'
+    
     def __init__( self, parent, tag_filter, prefer_blacklist = False, namespaces = None, message = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
@@ -110,6 +112,10 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ', style = wx.ST_ELLIPSIZE_END )
         
+        self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT, style = wx.TEXT_ALIGNMENT_RIGHT )
+        
+        self._test_input = wx.TextCtrl( self )
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -125,6 +131,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        hbox = ClientGUICommon.BetterBoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._test_result_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._test_input, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        
+        vbox.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         self.SetSizer( vbox )
         
         #
@@ -134,6 +147,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._simple_whitelist_namespace_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleWhitelistNamespaceCheck )
         self._simple_blacklist_global_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleBlacklistGlobalCheck )
         self._simple_blacklist_namespace_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleBlacklistNamespaceCheck )
+        
+        self._test_input.Bind( wx.EVT_TEXT, self.EventTestText )
         
         self._UpdateStatus()
         
@@ -706,6 +721,40 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._current_filter_st.SetLabelText( 'currently keeping: ' + pretty_tag_filter )
         
+        self._UpdateTest()
+        
+    
+    def _UpdateTest( self ):
+        
+        test_input = self._test_input.GetValue()
+        
+        if test_input == '':
+            
+            text = self.TEST_RESULT_DEFAULT
+            
+            colour = ( 0, 0, 0 )
+            
+        else:
+            
+            tag_filter = self.GetValue()
+            
+            if tag_filter.TagOK( test_input ):
+                
+                text = 'tag passes!'
+                
+                colour = ( 0, 128, 0 )
+                
+            else:
+                
+                text = 'tag blocked!'
+                
+                colour = ( 128, 0, 0 )
+                
+            
+        
+        self._test_result_st.SetForegroundColour( colour )
+        self._test_result_st.SetLabel( text )
+        
     
     def EventListBoxChanged( self, event ):
         
@@ -765,6 +814,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._AdvancedAddWhitelist( tag_slice )
                 
             
+        
+    
+    def EventTestText( self, event ):
+        
+        self._UpdateTest()
         
     
     def GetValue( self ):
@@ -2145,25 +2199,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'set_search_focus':
-                
-                self._SetSearchFocus()
-                
-            else:
-                
-                event.Skip()
-                
-            
-        
-    
     class _Panel( wx.Panel ):
         
         def __init__( self, parent, service_key, tags = None ):
@@ -2985,25 +3020,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         if len( service_keys_to_content_updates ) > 0:
             
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'set_search_focus':
-                
-                self._SetSearchFocus()
-                
-            else:
-                
-                event.Skip()
-                
             
         
     

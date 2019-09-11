@@ -26,6 +26,67 @@ deleted_tag_pool = [ 'trash', 'ugly', 'character:smaus aran', 'red hair' ]
 
 to_be_pended_tag_pool = [ 'clothing:high heels', 'firearm', 'puffy armpit' ]
 
+current_parents_pool = []
+
+current_parents_pool.append( ( 'character:princess peach', 'series:super mario bros' ) )
+current_parents_pool.append( ( 'character:princess peach', 'gender:female' ) )
+current_parents_pool.append( ( 'mario_(mario)', 'series:super mario bros' ) )
+current_parents_pool.append( ( 'meta:explicit', 'nsfw' ) )
+current_parents_pool.append( ( 'bepis', 'genidalia' ) )
+current_parents_pool.append( ( 'bagina', 'genidalia' ) )
+
+pending_parents_pool = []
+
+pending_parents_pool.append( ( 'character:princess daisy', 'series:super mario bros' ) )
+pending_parents_pool.append( ( 'character:princess daisy', 'gender:female' ) )
+pending_parents_pool.append( ( 'mario_(mario)', 'series:super mario bros' ) )
+pending_parents_pool.append( ( 'bepis', 'genidalia' ) )
+pending_parents_pool.append( ( 'bagina', 'genidalia' ) )
+
+to_be_pended_parents_pool = []
+
+to_be_pended_parents_pool.append( ( 'pend:parent a', 'pend:parent b' ) )
+to_be_pended_parents_pool.append( ( 'parent c', 'parent d' ) )
+
+deleted_parents_pool = []
+
+deleted_parents_pool.append( ( 'male', 'human' ) )
+deleted_parents_pool.append( ( 'table', 'general:furniture' ) )
+deleted_parents_pool.append( ( 'character:iron man', 'studio:dc' ) )
+
+current_siblings_pool = []
+
+current_siblings_pool.append( ( 'lara_croft', 'character:lara croft' ) )
+current_siblings_pool.append( ( 'lara croft', 'character:lara croft' ) )
+current_siblings_pool.append( ( 'series:tomb raider (series)', 'series:tomb raider' ) )
+current_siblings_pool.append( ( 'general:lamp', 'lamp' ) )
+current_siblings_pool.append( ( 'bog', 'bepis' ) )
+current_siblings_pool.append( ( 'buggy', 'bagina' ) )
+
+pending_siblings_pool = []
+
+pending_siblings_pool.append( ( 'horse', 'species:horse' ) )
+pending_siblings_pool.append( ( 'equine', 'species:equine' ) )
+pending_siblings_pool.append( ( 'dog', 'species:dog' ) )
+pending_siblings_pool.append( ( 'canine', 'species:canine' ) )
+pending_siblings_pool.append( ( 'eguine', 'equine' ) )
+
+to_be_pended_siblings_pool = []
+
+to_be_pended_siblings_pool.append( ( 'pend:sibling a', 'pend:sibling b' ) )
+to_be_pended_siblings_pool.append( ( 'sibling c', 'sibling d' ) )
+
+deleted_siblings_pool = []
+
+deleted_siblings_pool.append( ( 'male', 'male:male' ) )
+deleted_siblings_pool.append( ( 'table', 'general:table' ) )
+deleted_siblings_pool.append( ( 'shadow', 'character:shadow the hedgehog' ) )
+
+pair_types_to_pools = {}
+
+pair_types_to_pools[ HC.CONTENT_TYPE_TAG_PARENTS ] = ( current_parents_pool, pending_parents_pool, to_be_pended_parents_pool, deleted_parents_pool )
+pair_types_to_pools[ HC.CONTENT_TYPE_TAG_SIBLINGS ] = ( current_siblings_pool, pending_siblings_pool, to_be_pended_siblings_pool, deleted_siblings_pool )
+
 class TestMigration( unittest.TestCase ):
     
     @classmethod
@@ -143,7 +204,7 @@ class TestMigration( unittest.TestCase ):
             
         
     
-    def _add_tags_to_services( self ):
+    def _add_mappings_to_services( self ):
         
         content_updates = []
         
@@ -633,13 +694,306 @@ class TestMigration( unittest.TestCase ):
         run_test( source, self._test_tag_repo_service_keys[1], HC.CONTENT_UPDATE_PETITION, data )
         
     
+    def _add_pairs_to_services( self, content_type ):
+        
+        ( current, pending, to_be_pended, deleted ) = pair_types_to_pools[ content_type ]
+        
+        content_updates = []
+        
+        for pair in current:
+            
+            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
+            
+        
+        for pair in deleted:
+            
+            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
+            
+        
+        service_keys_to_content_updates = { CC.LOCAL_TAG_SERVICE_KEY : content_updates }
+        
+        self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        content_updates = []
+        
+        for pair in current:
+            
+            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
+            
+        
+        for pair in pending:
+            
+            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_PEND, pair ) )
+            
+        
+        for pair in deleted:
+            
+            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
+            
+        
+        service_keys_to_content_updates = { service_key : content_updates for service_key in self._test_tag_repo_service_keys.values() }
+        
+        self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+    
+    def _test_pairs_list_to_list( self, content_type ):
+        
+        ( current, pending, to_be_pended, deleted ) = pair_types_to_pools[ content_type ]
+        
+        data = list( current )
+        
+        self.assertTrue( len( data ) > 0 )
+        
+        source = ClientMigration.MigrationSourceList( self, data )
+        destination = ClientMigration.MigrationDestinationListPairs( self )
+        
+        job = ClientMigration.MigrationJob( self, 'test', source, destination )
+        
+        job.Run()
+        
+        self.assertEqual( destination.GetDataReceived(), data )
+        
+    
+    def _test_pairs_htpa_to_list( self, content_type ):
+        
+        def run_test( source, expected_data ):
+            
+            destination = ClientMigration.MigrationDestinationListPairs( self )
+            
+            job = ClientMigration.MigrationJob( self, 'test', source, destination )
+            
+            job.Run()
+            
+            self.assertEqual( set( destination.GetDataReceived() ), set( expected_data ) )
+            
+        
+        ( current, pending, to_be_pended, deleted ) = pair_types_to_pools[ content_type ]
+        
+        htpa_path = os.path.join( TestController.DB_DIR, 'htpa.db' )
+        
+        htpa = HydrusTagArchive.HydrusTagPairArchive( htpa_path )
+        
+        if content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            htpa.SetPairType( HydrusTagArchive.TAG_PAIR_TYPE_PARENTS )
+            
+        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            htpa.SetPairType( HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS )
+            
+        
+        htpa.BeginBigJob()
+        
+        htpa.AddPairs( current )
+        
+        htpa.CommitBigJob()
+        
+        htpa.Optimise()
+        
+        htpa.Close()
+        
+        del htpa
+        
+        #
+        
+        # test tag filter, left, right, both
+        
+        free_filter = ClientTags.TagFilter()
+        
+        namespace_filter = ClientTags.TagFilter()
+        
+        namespace_filter.SetRule( ':', CC.FILTER_WHITELIST )
+        namespace_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        
+        test_filters = []
+        
+        test_filters.append( ( free_filter, free_filter ) )
+        test_filters.append( ( namespace_filter, free_filter ) )
+        test_filters.append( ( free_filter, namespace_filter ) )
+        test_filters.append( ( namespace_filter, namespace_filter ) )
+        
+        for ( left_tag_filter, right_tag_filter ) in test_filters:
+            
+            source = ClientMigration.MigrationSourceHTPA( self, htpa_path, left_tag_filter, right_tag_filter )
+            
+            expected_data = [ ( left_tag, right_tag ) for ( left_tag, right_tag ) in current if left_tag_filter.TagOK( left_tag ) and right_tag_filter.TagOK( right_tag ) ]
+            
+            run_test( source, expected_data )
+            
+        
+        #
+        
+        os.remove( htpa_path )
+        
+    
+    def _test_pairs_list_to_htpa( self, content_type ):
+        
+        def run_test( source, destination_path, content_type, expected_data ):
+            
+            destination = ClientMigration.MigrationDestinationHTPA( self, destination_path, content_type )
+            
+            job = ClientMigration.MigrationJob( self, 'test', source, destination )
+            
+            job.Run()
+            
+            hta = HydrusTagArchive.HydrusTagPairArchive( destination_path )
+            
+            result = list( hta.IteratePairs() )
+            
+            self.assertEqual( set( result ), set( expected_data ) )
+            
+            hta.Close()
+            
+        
+        ( current, pending, to_be_pended, deleted ) = pair_types_to_pools[ content_type ]
+        
+        htpa_path = os.path.join( TestController.DB_DIR, 'htpa.db' )
+        
+        #
+        
+        source = ClientMigration.MigrationSourceList( self, current )
+        
+        run_test( source, htpa_path, content_type, list( current ) )
+        
+        #
+        
+        os.remove( htpa_path )
+        
+    
+    def _test_pairs_service_to_list( self, content_type ):
+        
+        def run_test( source, expected_data ):
+            
+            destination = ClientMigration.MigrationDestinationListPairs( self )
+            
+            job = ClientMigration.MigrationJob( self, 'test', source, destination )
+            
+            job.Run()
+            
+            self.assertEqual( set( destination.GetDataReceived() ), set( expected_data ) )
+            
+        
+        ( current, pending, to_be_pended, deleted ) = pair_types_to_pools[ content_type ]
+        
+        # test filters and content statuses
+        
+        tag_repo_service_key = self._test_tag_repo_service_keys[10]
+        
+        content_source_tests = []
+        
+        content_source_tests.append( ( CC.LOCAL_TAG_SERVICE_KEY, ( current, ), ( HC.CONTENT_STATUS_CURRENT, ) ) )
+        content_source_tests.append( ( CC.LOCAL_TAG_SERVICE_KEY, ( deleted, ), ( HC.CONTENT_STATUS_DELETED, ) ) )
+        content_source_tests.append( ( tag_repo_service_key, ( current, ), ( HC.CONTENT_STATUS_CURRENT, ) ) )
+        content_source_tests.append( ( tag_repo_service_key, ( current, pending ), ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ) )
+        content_source_tests.append( ( tag_repo_service_key, ( deleted, ), ( HC.CONTENT_STATUS_DELETED, ) ) )
+        
+        free_filter = ClientTags.TagFilter()
+        
+        namespace_filter = ClientTags.TagFilter()
+        
+        namespace_filter.SetRule( ':', CC.FILTER_WHITELIST )
+        namespace_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        
+        test_filters = []
+        
+        test_filters.append( ( free_filter, free_filter ) )
+        test_filters.append( ( namespace_filter, free_filter ) )
+        test_filters.append( ( free_filter, namespace_filter ) )
+        test_filters.append( ( namespace_filter, namespace_filter ) )
+        
+        for ( left_tag_filter, right_tag_filter ) in test_filters:
+            
+            for ( service_key, content_lists, content_statuses ) in content_source_tests:
+                
+                source = ClientMigration.MigrationSourceTagServicePairs( self, service_key, content_type, left_tag_filter, right_tag_filter, content_statuses )
+                
+                expected_data = set()
+                
+                for content_list in content_lists:
+                    
+                    expected_data.update( ( ( left_tag, right_tag ) for ( left_tag, right_tag ) in content_list if left_tag_filter.TagOK( left_tag ) and right_tag_filter.TagOK( right_tag ) ) )
+                    
+                
+                run_test( source, expected_data )
+                
+            
+        
+    
+    def _test_pairs_list_to_service( self, content_type ):
+        
+        def run_test( source, tag_service_key, content_action, expected_data ):
+            
+            destination = ClientMigration.MigrationDestinationTagServicePairs( self, tag_service_key, content_action, content_type )
+            
+            job = ClientMigration.MigrationJob( self, 'test', source, destination )
+            
+            job.Run()
+            
+            if content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+                
+                statuses_to_pairs = self.Read( 'tag_parents', tag_service_key )
+                
+            elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+                
+                statuses_to_pairs = self.Read( 'tag_siblings', tag_service_key )
+                
+            
+            if content_action == HC.CONTENT_UPDATE_ADD:
+                
+                should_be_in = set( statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] )
+                should_not_be_in = set( statuses_to_pairs[ HC.CONTENT_STATUS_DELETED ] )
+                
+            elif content_action == HC.CONTENT_UPDATE_DELETE:
+                
+                should_be_in = set( statuses_to_pairs[ HC.CONTENT_STATUS_DELETED ] )
+                should_not_be_in = set( statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] )
+                
+            elif content_action == HC.CONTENT_UPDATE_PEND:
+                
+                should_be_in = set( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
+                should_not_be_in = set()
+                
+            elif content_action == HC.CONTENT_UPDATE_PETITION:
+                
+                should_be_in = set( statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                should_not_be_in = set()
+                
+            
+            for pair in expected_data:
+                
+                self.assertIn( pair, should_be_in )
+                self.assertNotIn( pair, should_not_be_in )
+                
+            
+        
+        #
+        
+        tag_repo_service_key = self._test_tag_repo_service_keys[11]
+        
+        ( current, pending, to_be_pended, deleted ) = pair_types_to_pools[ content_type ]
+        
+        test_rows = []
+        
+        test_rows.append( ( CC.LOCAL_TAG_SERVICE_KEY, to_be_pended, HC.CONTENT_UPDATE_ADD ) )
+        test_rows.append( ( CC.LOCAL_TAG_SERVICE_KEY, random.sample( current, 3 ), HC.CONTENT_UPDATE_DELETE ) )
+        test_rows.append( ( tag_repo_service_key, to_be_pended, HC.CONTENT_UPDATE_PEND ) )
+        test_rows.append( ( tag_repo_service_key, random.sample( current, 3 ), HC.CONTENT_UPDATE_PETITION ) )
+        
+        for ( service_key, data, action ) in test_rows:
+            
+            source = ClientMigration.MigrationSourceList( self, data )
+            
+            run_test( source, service_key, action, data )
+            
+        
+    
     def test_migration( self ):
         
         # mappings
         
         self._set_up_services()
         self._do_fake_imports()
-        self._add_tags_to_services()
+        self._add_mappings_to_services()
         
         self._test_mappings_list_to_list()
         self._test_mappings_hta_to_list()
@@ -647,8 +1001,14 @@ class TestMigration( unittest.TestCase ):
         self._test_mappings_service_to_list()
         self._test_mappings_list_to_service()
         
-        # parents
-        
-        # siblings
+        for content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
+            
+            self._add_pairs_to_services( content_type )
+            self._test_pairs_list_to_list( content_type )
+            self._test_pairs_htpa_to_list( content_type )
+            self._test_pairs_list_to_htpa( content_type )
+            self._test_pairs_service_to_list( content_type )
+            self._test_pairs_list_to_service( content_type )
+            
         
     

@@ -6,6 +6,16 @@ from . import HydrusGlobals as HG
 from . import HydrusTagArchive
 import os
 
+pair_types_to_content_types = {}
+
+pair_types_to_content_types[ HydrusTagArchive.TAG_PAIR_TYPE_PARENTS ] = HC.CONTENT_TYPE_TAG_PARENTS
+pair_types_to_content_types[ HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS ] = HC.CONTENT_TYPE_TAG_SIBLINGS
+
+content_types_to_pair_types = {}
+
+content_types_to_pair_types[ HC.CONTENT_TYPE_TAG_PARENTS ] = HydrusTagArchive.TAG_PAIR_TYPE_PARENTS
+content_types_to_pair_types[ HC.CONTENT_TYPE_TAG_SIBLINGS ] = HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS
+
 def GetBasicSpeedStatement( num_done, time_started_precise ):
     
     if num_done == 0:
@@ -110,6 +120,62 @@ class MigrationDestinationHTA( MigrationDestination ):
         self._hta.BeginBigJob()
         
     
+class MigrationDestinationHTPA( MigrationDestination ):
+    
+    def __init__( self, controller, path, content_type ):
+        
+        name = os.path.basename( path )
+        
+        MigrationDestination.__init__( self, controller, name )
+        
+        self._path = path
+        self._content_type = content_type
+        
+        self._time_started = 0
+        
+        self._htpa = None
+        
+    
+    def CleanUp( self ):
+        
+        self._htpa.CommitBigJob()
+        
+        if HydrusData.TimeHasPassed( self._time_started + 120 ):
+            
+            self._htpa.Optimise()
+            
+        
+        self._htpa.Close()
+        
+        self._htpa = None
+        
+    
+    def DoSomeWork( self, source ):
+        
+        time_started_precise = HydrusData.GetNowPrecise()
+        
+        data = source.GetSomeData()
+        
+        self._htpa.AddPairs( data )
+        
+        num_done = len( data )
+        
+        return GetBasicSpeedStatement( num_done, time_started_precise )
+        
+    
+    def Prepare( self ):
+        
+        self._time_started = HydrusData.GetNow()
+        
+        self._htpa = HydrusTagArchive.HydrusTagPairArchive( self._path )
+        
+        pair_type = content_types_to_pair_types[ self._content_type ]
+        
+        self._htpa.SetPairType( pair_type )
+        
+        self._htpa.BeginBigJob()
+        
+    
 class MigrationDestinationList( MigrationDestination ):
     
     def __init__( self, controller ):
@@ -144,6 +210,21 @@ class MigrationDestinationListMappings( MigrationDestinationList ):
             
             num_done += len( tags )
             
+        
+        return GetBasicSpeedStatement( num_done, time_started_precise )
+        
+    
+class MigrationDestinationListPairs( MigrationDestinationList ):
+    
+    def DoSomeWork( self, source ):
+        
+        time_started_precise = HydrusData.GetNowPrecise()
+        
+        data = source.GetSomeData()
+        
+        self._data_received.extend( data )
+        
+        num_done = len( data )
         
         return GetBasicSpeedStatement( num_done, time_started_precise )
         
@@ -207,6 +288,43 @@ class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
         service_keys_to_content_updates = { self._tag_service_key : content_updates }
         
         self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        return GetBasicSpeedStatement( num_done, time_started_precise )
+        
+    
+class MigrationDestinationTagServicePairs( MigrationDestinationTagService ):
+    
+    def __init__( self, controller, tag_service_key, content_action, content_type ):
+        
+        MigrationDestinationTagService.__init__( self, controller, tag_service_key, content_action )
+        
+        self._content_type = content_type
+        
+    
+    def DoSomeWork( self, source ):
+        
+        time_started_precise = HydrusData.GetNowPrecise()
+        
+        data = source.GetSomeData()
+        
+        content_updates = []
+        
+        if self._content_action in ( HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_PEND ):
+            
+            reason = 'Mass Migration Job'
+            
+        else:
+            
+            reason = None
+            
+        
+        content_updates = [ HydrusData.ContentUpdate( self._content_type, self._content_action, tag_pair, reason = reason ) for tag_pair in data ]
+        
+        service_keys_to_content_updates = { self._tag_service_key : content_updates }
+        
+        self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        num_done = len( data )
         
         return GetBasicSpeedStatement( num_done, time_started_precise )
         
@@ -474,6 +592,60 @@ class MigrationSourceHTA( MigrationSource ):
         self._iterator = self._hta.IterateMappings()
         
     
+class MigrationSourceHTPA( MigrationSource ):
+    
+    def __init__( self, controller, path, left_tag_filter, right_tag_filter ):
+        
+        name = os.path.basename( path )
+        
+        MigrationSource.__init__( self, controller, name )
+        
+        self._path = path
+        self._left_tag_filter = left_tag_filter
+        self._right_tag_filter = right_tag_filter
+        
+        self._htpa = None
+        self._iterator = None
+        
+    
+    def CleanUp( self ):
+        
+        self._htpa.CommitBigJob()
+        
+        self._htpa.Close()
+        
+        self._htpa = None
+        self._iterator = None
+        
+    
+    def GetSomeData( self ):
+        
+        data = HydrusData.PullNFromIterator( self._iterator, 256 )
+        
+        if len( data ) == 0:
+            
+            self._work_to_do = False
+            
+            return data
+            
+        
+        if not ( self._left_tag_filter.AllowsEverything() and self._right_tag_filter.AllowsEverything() ):
+            
+            data = [ ( left_tag, right_tag ) for ( left_tag, right_tag ) in data if self._left_tag_filter.TagOK( left_tag ) and self._right_tag_filter.TagOK( right_tag ) ]
+            
+        
+        return data
+        
+    
+    def Prepare( self ):
+        
+        self._htpa = HydrusTagArchive.HydrusTagPairArchive( self._path )
+        
+        self._htpa.BeginBigJob()
+        
+        self._iterator = self._htpa.IteratePairs()
+        
+    
 class MigrationSourceList( MigrationSource ):
     
     def __init__( self, controller, data ):
@@ -543,5 +715,44 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
         # later can spread this out into bunch of small jobs, a start and a continue, based on tag filter subsets
         
         self._controller.WriteSynchronous( 'migration_start_mappings_job', self._database_temp_job_name, self._file_service_key, self._tag_service_key, self._hashes, self._content_statuses )
+        
+    
+class MigrationSourceTagServicePairs( MigrationSource ):
+    
+    def __init__( self, controller, tag_service_key, content_type, left_tag_filter, right_tag_filter, content_statuses ):
+        
+        name = controller.services_manager.GetName( tag_service_key )
+        
+        MigrationSource.__init__( self, controller, name )
+        
+        self._tag_service_key = tag_service_key
+        self._content_type = content_type
+        self._left_tag_filter = left_tag_filter
+        self._right_tag_filter = right_tag_filter
+        self._content_statuses = content_statuses
+        
+        self._database_temp_job_name = 'migrate_{}'.format( os.urandom( 16 ).hex() )
+        
+    
+    def CleanUp( self ):
+        
+        self._controller.WriteSynchronous( 'migration_clear_job', self._database_temp_job_name )
+        
+    
+    def GetSomeData( self ):
+        
+        data = self._controller.Read( 'migration_get_pairs', self._database_temp_job_name, self._left_tag_filter, self._right_tag_filter )
+        
+        if len( data ) == 0:
+            
+            self._work_to_do = False
+            
+        
+        return data
+        
+    
+    def Prepare( self ):
+        
+        self._controller.WriteSynchronous( 'migration_start_pairs_job', self._database_temp_job_name, self._tag_service_key, self._content_type, self._content_statuses )
         
     

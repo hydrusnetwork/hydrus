@@ -221,8 +221,9 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         self._current_predicates = []
         
-        output = ''
         colour = ( 0, 0, 0 )
+        
+        output = ''
         
         if len( text ) > 0:
             
@@ -232,9 +233,6 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                 result = LogicExpressionQueryParser.parse_logic_expression_query( text )
                 
                 for s in result:
-                    
-                    output += ' OR '.join( s )
-                    output += os.linesep
                     
                     row_preds = []
                     
@@ -251,7 +249,23 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                             inclusive = True
                             
                         
-                        row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag_string, inclusive )
+                        if '*' in tag_string:
+                            
+                            ( namespace, subtag ) = HydrusTags.SplitTag( tag_string )
+                            
+                            if '*' not in namespace and subtag == '*':
+                                
+                                row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive )
+                                
+                            else:
+                                
+                                row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, tag_string, inclusive )
+                                
+                            
+                        else:
+                            
+                            row_pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag_string, inclusive )
+                            
                         
                         row_preds.append( row_pred )
                         
@@ -266,6 +280,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         
                     
                 
+                output = os.linesep.join( ( pred.ToString() for pred in self._current_predicates ) )
                 colour = ( 0, 128, 0 )
                 
             except ValueError:

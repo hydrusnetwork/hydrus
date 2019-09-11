@@ -1632,6 +1632,7 @@ class MediaCollection( MediaList, Media ):
         self._duration = None
         self._num_frames = None
         self._num_words = None
+        self._has_audio = None
         self._tags_manager = None
         self._locations_manager = None
         self._file_viewing_stats_manager = None
@@ -1653,6 +1654,8 @@ class MediaCollection( MediaList, Media ):
         
         if duration_sum > 0: self._duration = duration_sum
         else: self._duration = None
+        
+        self._has_audio = True in ( media.HasAudio() for media in self._sorted_media )
         
         tags_managers = [ m.GetTagsManager() for m in self._sorted_media ]
         
@@ -1794,6 +1797,11 @@ class MediaCollection( MediaList, Media ):
     def GetTimestamp( self, service_key ): return None
     
     def HasArchive( self ): return self._archive
+    
+    def HasAudio( self ):
+        
+        return self._has_audio
+        
     
     def HasDuration( self ): return self._duration is not None
     
@@ -2524,6 +2532,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return deal_with_none( x.GetDuration() )
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_HAS_AUDIO:
+                
+                def sort_key( x ):
+                    
+                    return - deal_with_none( x.HasAudio() )
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
                 
                 file_service = HG.client_controller.services_manager.GetService( file_service_key )
@@ -2667,6 +2682,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = 'file: approximate bitrate'
             sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = 'file: filesize'
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = 'file: filetype'
+            sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = 'file: has audio'
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'file: time imported'
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = 'random'
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = 'tags: number of tags'
@@ -2704,6 +2720,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_APPROX_BITRATE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = ( 'smallest first', 'largest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'mime', 'mime', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )

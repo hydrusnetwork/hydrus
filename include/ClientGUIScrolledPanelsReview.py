@@ -967,9 +967,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_source_file_filter.SetValue( self.HASHES_SERVICE_KEY )
             
         
-        self._migration_source_file_filter.SetToolTip( 'This filters the files for which tags can be migrated.' )
+        self._migration_source_file_filter.SetToolTip( 'Tags that pass this filter will be applied to the destination with the chosen action.' )
         
-        message = 'The tags that pass this filter will be included in the migration.'
+        message = 'Tags that pass this filter will be applied to the destination with the chosen action.'
+        message += os.linesep * 2
+        message += 'For instance, if you whitelist the \'series\' namespace, only series: tags from the source will be added to/deleted from the destination.'
         
         tag_filter = ClientTags.TagFilter()
         
@@ -978,6 +980,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_tag_filter.SetToolTip( 'This filters the tags that can be migrated.' )
         
         message = 'The left side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
+        message += os.linesep * 2
+        message += 'For instance, if you whitelist the \'character\' namespace, only pairs from the source with character: tags on the left will be added to/deleted from the destination.'
         
         tag_filter = ClientTags.TagFilter()
         
@@ -986,6 +990,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_left_tag_pair_filter.SetToolTip( 'This filters the tags on the left side of the pair that can be migrated.' )
         
         message = 'The right side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
+        message += os.linesep * 2
+        message += 'For instance, if you whitelist the \'series\' namespace, only pairs from the source with series: tags on the right will be added to/deleted from the destination.'
         
         tag_filter = ClientTags.TagFilter()
         
@@ -1129,10 +1135,12 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         destination_action_strings[ HC.CONTENT_UPDATE_PETITION ] = 'petitioning them from'
         
         content_type = self._migration_content_type.GetValue()
+        content_statuses = self._migration_source_content_status_filter.GetValue()
+        
+        destination_service_key = self._migration_destination.GetValue()
+        source_service_key = self._migration_source.GetValue()
         
         if content_type == HC.CONTENT_TYPE_MAPPINGS:
-            
-            destination_service_key = self._migration_destination.GetValue()
             
             if destination_service_key == self.HTA_SERVICE_KEY:
                 
@@ -1157,8 +1165,6 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 destination = ClientMigration.MigrationDestinationTagServiceMappings( HG.client_controller, destination_service_key, content_action )
                 
-            
-            content_statuses = self._migration_source_content_status_filter.GetValue()
             
             file_service_key = self._migration_source_file_filter.GetValue()
             
@@ -1187,8 +1193,6 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             tag_filter = self._migration_source_tag_filter.GetValue()
             
-            source_service_key = self._migration_source.GetValue()
-            
             if source_service_key == self.HTA_SERVICE_KEY:
                 
                 if self._source_archive_path is None:
@@ -1203,6 +1207,47 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             else:
                 
                 source = ClientMigration.MigrationSourceTagServiceMappings( HG.client_controller, source_service_key, file_service_key, desired_hash_type, hashes, tag_filter, content_statuses )
+                
+            
+        else:
+            
+            if destination_service_key == self.HTPA_SERVICE_KEY:
+                
+                if self._dest_archive_path is None:
+                    
+                    wx.MessageBox( 'Please set a path for the destination Hydrus Tag Pair Archive.' )
+                    
+                    return
+                    
+                
+                content_action = HC.CONTENT_UPDATE_ADD
+                
+                destination = ClientMigration.MigrationDestinationHTPA( HG.client_controller, self._dest_archive_path, content_type )
+                
+            else:
+                
+                content_action = self._migration_action.GetValue()
+                
+                destination = ClientMigration.MigrationDestinationTagServicePairs( HG.client_controller, destination_service_key, content_action, content_type )
+                
+            
+            left_tag_pair_filter = self._migration_source_left_tag_pair_filter.GetValue()
+            right_tag_pair_filter = self._migration_source_right_tag_pair_filter.GetValue()
+            
+            if source_service_key == self.HTPA_SERVICE_KEY:
+                
+                if self._source_archive_path is None:
+                    
+                    wx.MessageBox( 'Please set a path for the source Hydrus Tag Archive.' )
+                    
+                    return
+                    
+                
+                source = ClientMigration.MigrationSourceHTPA( HG.client_controller, self._source_archive_path, left_tag_pair_filter, right_tag_pair_filter )
+                
+            else:
+                
+                source = ClientMigration.MigrationSourceTagServicePairs( HG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses )
                 
             
         
@@ -1397,6 +1442,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _UpdateMigrationControlsActions( self ):
         
+        content_type = self._migration_content_type.GetValue()
+        
         self._migration_action.Clear()
         
         source = self._migration_source.GetValue()
@@ -1433,7 +1480,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     actions.append( HC.CONTENT_UPDATE_DELETE )
                     
                 
-                if not pulling_and_pushing_existing:
+                if not pulling_and_pushing_existing and content_type == HC.CONTENT_TYPE_MAPPINGS:
                     
                     actions.append( HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD )
                     
@@ -1553,15 +1600,6 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _UpdateMigrationControlsNewType( self ):
         
         content_type = self._migration_content_type.GetValue()
-        
-        if content_type != HC.CONTENT_TYPE_MAPPINGS:
-            
-            wx.MessageBox( 'Tag parents and siblings are coming soon, but not yet supported!' )
-            
-            self._migration_content_type.SetValue( HC.CONTENT_TYPE_MAPPINGS )
-            
-            return
-            
         
         self._migration_source.Clear()
         self._migration_destination.Clear()

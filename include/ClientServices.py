@@ -574,6 +574,11 @@ class ServiceRemote( Service ):
     
     def _DelayFutureRequests( self, reason, duration = None ):
         
+        if reason == '':
+            
+            reason = 'unknown error'
+            
+        
         if duration is None:
             
             duration = self._GetErrorWaitPeriod()
@@ -811,6 +816,23 @@ class ServiceRestricted( ServiceRemote ):
             
         
         return 'next account sync ' + s
+        
+    
+    def GetStatusString( self ):
+        
+        with self._lock:
+            
+            try:
+                
+                self._CheckFunctional( including_account = False )
+                
+                return 'service is functional'
+                
+            except Exception as e:
+                
+                return str( e )
+                
+            
         
     
     def HasPermission( self, content_type, action ):
@@ -1111,6 +1133,8 @@ class ServiceRepository( ServiceRestricted ):
         
         self._sync_lock = threading.Lock()
         
+        self._is_mostly_caught_up = None
+        
     
     def _CanSyncDownload( self ):
         
@@ -1247,6 +1271,8 @@ class ServiceRepository( ServiceRestricted ):
             with self._lock:
                 
                 self._metadata.UpdateFromSlice( metadata_slice )
+                
+                self._is_mostly_caught_up = None
                 
                 self._SetDirty()
                 
@@ -1753,6 +1779,8 @@ class ServiceRepository( ServiceRestricted ):
             
             if work_done:
                 
+                self._is_mostly_caught_up = None
+                
                 HG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
                 
                 self._SetDirty()
@@ -1810,6 +1838,45 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
+    def IsMostlyCaughtUp( self ):
+        
+        # if a user is more than two weeks behind, let's assume they aren't 'caught up'
+        CAUGHT_UP_BUFFER = 14 * 86400
+        
+        two_weeks_ago = HydrusData.GetNow() - CAUGHT_UP_BUFFER
+        
+        with self._lock:
+            
+            if self._is_mostly_caught_up is None:
+                
+                next_begin = self._metadata.GetNextUpdateBegin()
+                
+                # haven't synced new metadata, so def not caught up
+                if next_begin < two_weeks_ago:
+                    
+                    self._is_mostly_caught_up = False
+                    
+                    return self._is_mostly_caught_up
+                    
+                
+                unprocessed_update_hashes = HG.client_controller.Read( 'repository_unprocessed_hashes', self._service_key )
+                
+                if len( unprocessed_update_hashes ) == 0:
+                    
+                    self._is_mostly_caught_up = True # done them all, even if there aren't any yet to do
+                    
+                else:
+                    
+                    earliest_unsorted_update_timestamp = self._metadata.GetEarliestTimestampForTheseHashes( unprocessed_update_hashes )
+                    
+                    self._is_mostly_caught_up = earliest_unsorted_update_timestamp > two_weeks_ago
+                    
+                
+            
+            return self._is_mostly_caught_up
+            
+        
+    
     def IsPaused( self ):
         
         with self._lock:
@@ -1846,6 +1913,8 @@ class ServiceRepository( ServiceRestricted ):
             self._next_account_sync = 0
             
             self._metadata = HydrusNetwork.Metadata()
+            
+            self._is_mostly_caught_up = None
             
             self._SetDirty()
             
