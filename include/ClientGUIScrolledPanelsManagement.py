@@ -322,13 +322,21 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         service_type = service.GetServiceType()
         name = service.GetName()
+        
         deletable = service_type in HC.ADDREMOVABLE_SERVICES
         
         pretty_service_type = HC.service_string_lookup[ service_type ]
         
         if deletable:
             
-            pretty_deletable = 'yes'
+            if service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES:
+                
+                pretty_deletable = 'must have at least one'
+                
+            else:
+                
+                pretty_deletable = 'yes'
+                
             
         else:
             
@@ -349,9 +357,26 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Delete( self ):
         
+        all_services = self._listctrl.GetData()
+        
         selected_services = self._listctrl.GetData( only_selected = True )
         
         deletable_services = [ service for service in selected_services if service.GetServiceType() in HC.ADDREMOVABLE_SERVICES ]
+        
+        for service_type in HC.MUST_HAVE_AT_LEAST_ONE_SERVICES:
+            
+            num_in_all = len( [ service for service in all_services if service.GetServiceType() == service_type ] )
+            num_in_deletable = len( [ service for service in deletable_services if service.GetServiceType() == service_type ] )
+            
+            if num_in_deletable == num_in_all:
+                
+                message = 'Unfortunately, you must have at least one service of the type "{}". You cannot delete them all.'.format( HC.service_string_lookup[ service_type ] )
+                
+                wx.MessageBox( message )
+                
+                return
+                
+            
         
         if len( deletable_services ) > 0:
             
@@ -4132,9 +4157,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_services = ClientGUICommon.BetterChoice( suggested_tags_favourites_panel )
             
-            self._suggested_favourites_services.Append( CC.LOCAL_TAG_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
+            tag_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
             
-            tag_services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
             
             for tag_service in tag_services:
                 
@@ -4149,7 +4174,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = False
             
-            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._suggested_favourites.SetTagServiceKey, show_paste_button = True )
+            self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY, tag_service_key_changed_callable = self._suggested_favourites.SetTagServiceKey, show_paste_button = True )
             
             #
             
@@ -4189,8 +4214,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._suggested_tags_width.SetValue( self._new_options.GetInteger( 'suggested_tags_width' ) )
             
             self._suggested_tags_layout.SetValue( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
-            
-            self._suggested_favourites_services.SetValue( CC.LOCAL_TAG_SERVICE_KEY )
             
             self._show_related_tags.SetValue( self._new_options.GetBoolean( 'show_related_tags' ) )
             

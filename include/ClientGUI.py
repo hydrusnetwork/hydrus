@@ -463,55 +463,65 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _AutoRepoSetup( self ):
         
+        host = 'ptr.hydrus.network'
+        port = 45871
+        access_key = bytes.fromhex( '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f' )
+        
+        ptr_credentials = HydrusNetwork.Credentials( host = host, port = port, access_key = access_key )
+        
         def do_it():
-            
-            edit_log = []
-            
-            service_key = HydrusData.GenerateKey()
-            service_type = HC.TAG_REPOSITORY
-            name = 'public tag repository'
-            
-            tag_repo = ClientServices.GenerateService( service_key, service_type, name )
-            
-            host = 'hydrus.no-ip.org'
-            port = 45871
-            access_key = bytes.fromhex( '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f' )
-            
-            credentials = HydrusNetwork.Credentials( host, port, access_key )
-            
-            tag_repo.SetCredentials( credentials )
-            
-            service_key = HydrusData.GenerateKey()
-            service_type = HC.FILE_REPOSITORY
-            name = 'read-only art file repository'
-            
-            file_repo = ClientServices.GenerateService( service_key, service_type, name )
-            
-            host = 'hydrus.no-ip.org'
-            port = 45872
-            access_key = bytes.fromhex( '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5' )
-            
-            credentials = HydrusNetwork.Credentials( host, port, access_key )
-            
-            file_repo.SetCredentials( credentials )
             
             all_services = list( self._controller.services_manager.GetServices() )
             
-            all_services.append( tag_repo )
-            all_services.append( file_repo )
+            all_names = [ s.GetName() for s in all_services ]
+            
+            name = HydrusSerialisable.GetNonDupeName( 'public tag repository', all_names )
+            
+            service_key = HydrusData.GenerateKey()
+            service_type = HC.TAG_REPOSITORY
+            
+            public_tag_repo = ClientServices.GenerateService( service_key, service_type, name )
+            
+            public_tag_repo.SetCredentials( ptr_credentials )
+            
+            all_services.append( public_tag_repo )
             
             self._controller.SetServices( all_services )
             
-            message = 'Auto repo setup done! Check services->review services to see your new services.'
+            message = 'PTR setup done! Check services->review services to see it.'
             message += os.linesep * 2
             message += 'The PTR has a lot of tags and will sync a little bit at a time when you are not using the client. Expect it to take a few weeks to sync fully.'
             
             HydrusData.ShowText( message )
             
         
-        text = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
+        have_it_already = False
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        services = self._controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+        
+        for service in services:
+            
+            credentials = service.GetCredentials()
+            
+            if credentials.GetSerialisableTuple() == ptr_credentials.GetSerialisableTuple():
+                
+                have_it_already = True
+                
+                break
+                
+            
+        
+        text = 'This will automatically set up your client with the Public Tag Repository, just as if you had added it manually under services->manage services.'
+        text += os.linesep * 2
+        text += 'Be aware that the PTR has hundreds of millions of mappings. Processing takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
+        
+        if have_it_already:
+            
+            text += os.linesep * 2
+            text += 'You seem to have the PTR already. If it is paused or desynchronised, this is best fixed under services->review services. Are you sure you want to add a duplicate?'
+            
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'not now' )
         
         if result == wx.ID_YES:
             
@@ -2146,11 +2156,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            dont_know = wx.Menu()
+            ClientGUIMenus.AppendMenuItem( self, menu, 'add the public tag repository', 'This will add the public tag repository to your client.', self._AutoRepoSetup )
             
-            ClientGUIMenus.AppendMenuItem( self, dont_know, 'just set up some repositories for me, please', 'This will add the hydrus dev\'s two repositories to your client.', self._AutoRepoSetup )
-            
-            ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
             

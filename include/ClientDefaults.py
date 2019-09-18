@@ -91,7 +91,7 @@ def GetClientDefaultOptions():
     
     options[ 'confirm_client_exit' ] = False
     
-    options[ 'default_tag_repository' ] = CC.LOCAL_TAG_SERVICE_KEY
+    options[ 'default_tag_repository' ] = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
     options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
     
     options[ 'pause_export_folders_sync' ] = False
@@ -523,7 +523,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 512 * MB ) # don't sync a giant db in one day
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
     
@@ -543,9 +543,9 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     rules = HydrusNetworking.BandwidthRules()
     
     # most gallery downloaders need two rqs per file (page and file), remember
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 400 ) # catch up on a big sub in little chunks every day
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 800 ) # catch up on a big sub in little chunks every day
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 512 * MB ) # catch up on a big sub in little chunks every day
     
     bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
     

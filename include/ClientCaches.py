@@ -1791,7 +1791,9 @@ class TagSiblingsManager( object ):
             
             all_pairs = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
-            if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+            service = self._controller.services_manager.GetService( service_key )
+            
+            if service.GetServiceType() == HC.LOCAL_TAG:
                 
                 local_tags_pairs = set( all_pairs )
                 

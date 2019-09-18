@@ -43,8 +43,8 @@ try:
     argparser.add_argument( '-d', '--db_dir', help = 'set an external db location' )
     argparser.add_argument( '--temp_dir', help = 'override the program\'s temporary directory' )
     argparser.add_argument( '--no_daemons', action='store_true', help = 'run without background daemons' )
-    argparser.add_argument( '--no_wal', action='store_true', help = 'run without WAL db journalling' )
-    argparser.add_argument( '--db_memory_journalling', action='store_true', help = 'run db journalling entirely in memory (DANGEROUS)' )
+    argparser.add_argument( '--no_wal', action='store_true', help = 'run without WAL db journaling' )
+    argparser.add_argument( '--db_memory_journaling', action='store_true', help = 'run db journaling entirely in memory (DANGEROUS)' )
     argparser.add_argument( '--db_synchronous_override', help = 'override SQLite Synchronous PRAGMA (range 0-3, default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
     
@@ -89,7 +89,7 @@ try:
     
     HG.no_daemons = result.no_daemons
     HG.no_wal = result.no_wal
-    HG.db_memory_journalling = result.db_memory_journalling
+    HG.db_memory_journaling = result.db_memory_journaling
     
     if result.db_synchronous_override is not None:
         

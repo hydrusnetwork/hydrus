@@ -89,11 +89,11 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c*' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:*' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'series:*' )
         
         self.assertEqual( result, [] )
         
@@ -121,13 +121,13 @@ class TestClientDB( unittest.TestCase ):
         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = content_updates
+        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = content_updates
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = True )
         
         preds = set()
         
@@ -140,7 +140,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = False )
         
         preds = set()
         
@@ -153,13 +153,13 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'ser*' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'ser*' )
         
         self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:c*' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'series:c*' )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 )
         
@@ -171,7 +171,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'car', exact_match = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'car', exact_match = True )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 )
         
@@ -183,7 +183,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c', exact_match = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, search_text = 'c', exact_match = True )
         
         self.assertEqual( result, [] )
         
@@ -411,7 +411,7 @@ class TestClientDB( unittest.TestCase ):
         service_keys_to_content_updates = {}
         
         service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
-        service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
+        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -462,7 +462,7 @@ class TestClientDB( unittest.TestCase ):
         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
         content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = content_updates
+        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = content_updates
         
         self._write( 'content_updates', service_keys_to_content_updates )
         
@@ -714,7 +714,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 #
                 
-                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, predicates = [] )
+                fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, predicates = [] )
                 
                 management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, False )
                 
@@ -1029,7 +1029,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'tag_censorship', CC.LOCAL_TAG_SERVICE_KEY )
+        result = self._read( 'tag_censorship', CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, ( True, [] ) )
         
@@ -1037,7 +1037,7 @@ class TestClientDB( unittest.TestCase ):
         
         info = []
         
-        info.append( ( CC.LOCAL_TAG_SERVICE_KEY, False, [ ':', 'series:' ] ) )
+        info.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, False, [ ':', 'series:' ] ) )
         info.append( ( CC.LOCAL_FILE_SERVICE_KEY, True, [ ':' ] ) ) # bit dodgy, but whatever!
         
         self._write( 'tag_censorship', info )
@@ -1053,7 +1053,7 @@ class TestClientDB( unittest.TestCase ):
             self.assertIn( row, info )
             
         
-        result = self._read( 'tag_censorship', CC.LOCAL_TAG_SERVICE_KEY )
+        result = self._read( 'tag_censorship', CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, ( False, [ ':', 'series:' ] ) )
         
@@ -1126,7 +1126,7 @@ class TestClientDB( unittest.TestCase ):
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
+        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         

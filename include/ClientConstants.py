@@ -578,7 +578,7 @@ class GlobalBMPs( object ):
         GlobalBMPs.last = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'last.png' ) )
         
 
-LOCAL_TAG_SERVICE_KEY = b'local tags'
+DEFAULT_LOCAL_TAG_SERVICE_KEY = b'local tags'
 
 LOCAL_FILE_SERVICE_KEY = b'local files'
 

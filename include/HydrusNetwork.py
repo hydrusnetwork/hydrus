@@ -1648,7 +1648,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
     
     def _GetNextUpdateDueTime( self, from_client = False ):
         
-        delay = 0
+        delay = 10
         
         if from_client:
             
@@ -1746,11 +1746,20 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            largest_update_index = max( self._metadata.keys() )
+            keys = list( self._metadata.keys() )
             
-            ( update_hashes, begin, end ) = self._GetUpdate( largest_update_index )
-            
-            return end + 1
+            if len( keys ) == 0:
+                
+                return HydrusData.GetNow()
+                
+            else:
+                
+                largest_update_index = max( keys )
+                
+                ( update_hashes, begin, end ) = self._GetUpdate( largest_update_index )
+                
+                return end + 1
+                
             
         
     
@@ -1821,6 +1830,21 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 return update_hashes
                 
+            
+        
+    
+    def GetUpdateIndicesAndTimes( self ):
+        
+        with self._lock:
+            
+            result = []
+            
+            for ( update_index, ( update_hashes, begin, end ) ) in list(self._metadata.items()):
+                
+                result.append( ( update_index, begin, end ) )
+                
+            
+            return result
             
         
     
@@ -2265,6 +2289,14 @@ class ServerServiceRepository( ServerServiceRestricted ):
         ServerServiceRestricted._LoadFromDictionary( self, dictionary )
         
         self._metadata = dictionary[ 'metadata' ]
+        
+    
+    def GetMetadata( self ):
+        
+        with self._lock:
+            
+            return self._metadata
+            
         
     
     def GetMetadataSlice( self, from_update_index ):

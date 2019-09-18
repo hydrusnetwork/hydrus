@@ -861,6 +861,8 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                     raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
                     
                 
+                service = HG.client_controller.services_manager.GetService( service_key )
+                
                 tags = HydrusTags.CleanTags( tags )
                 
                 if len( tags ) == 0:
@@ -868,7 +870,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                     continue
                     
                 
-                if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                if service.GetServiceType() == HC.LOCAL_TAG:
                     
                     content_action = HC.CONTENT_UPDATE_ADD
                     
@@ -909,6 +911,8 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                     raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
                     
                 
+                service = HG.client_controller.services_manager.GetService( service_key )
+                
                 for ( content_action, tags ) in actions_to_tags.items():
                     
                     content_action = int( content_action )
@@ -920,7 +924,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         continue
                         
                     
-                    if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                    if service.GetServiceType() == HC.LOCAL_TAG:
                         
                         if content_action not in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
                             

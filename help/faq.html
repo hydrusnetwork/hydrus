@@ -31,7 +31,7 @@
 				<li>Folders can offer context, but they are clunky and time-consuming to change. If you put each chapter of a comic in a different folder, for instance, reading several volumes in one sitting can be a pain. Nesting many folders adds navigation-latency and tends to induce less informative "04.jpg"-type filenames.</li>
 			</ul>
 			<p>So, the client tracks files by their <i>hash</i>.</p>
-			<p>Please do not tag your files with their exact original 'filename.jpg' on my public tag repo. <a href="https://www.youtube.com/watch?v=_yYS0ZZdsnA">Shed the concept of filenames as you would chains.</a></p>
+			<p>As a general rule, I suggest you not set up hydrus to parse and display all your imported files' filenames as tags. 'image.jpg' is useless as a tag. <a href="https://www.youtube.com/watch?v=_yYS0ZZdsnA">Shed the concept of filenames as you would chains.</a></p>
 			<a id="external_files"><h3>can the client manage files from their original locations?</h3></a>
 			<p>When the client imports a file, it makes a quickly accessible but human-ugly copy in its internal database, by default under <i>install_dir/db/client_files</i>. When it needs to access that file again, it always knows where it is, and it can be confident it is what it expects it to be. It never accesses the original again.</p>
 			<p>This storage method is not always convenient, particularly for those who are hesitant about converting to using hydrus completely and also do not want to maintain two large copies of their collections. The question comes up--"can hydrus track files from their original locations, without having to copy them into the db?"</p>

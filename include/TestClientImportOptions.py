@@ -431,7 +431,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
-        example_service_key = HydrusData.GenerateKey()
+        example_service_key = HG.test_controller.example_tag_repo_service_key
         
         #
         
@@ -460,8 +460,8 @@ class TestTagImportOptions( unittest.TestCase ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
-        example_service_key_1 = HydrusData.GenerateKey()
-        example_service_key_2 = HydrusData.GenerateKey()
+        example_service_key_1 = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+        example_service_key_2 = HG.test_controller.example_tag_repo_service_key
         
         #
         

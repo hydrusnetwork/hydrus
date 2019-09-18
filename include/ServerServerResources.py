@@ -487,7 +487,9 @@ class HydrusResourceRestrictedRepositoryFile( HydrusResourceRestricted ):
             file_dict[ 'ip' ] = request.getClientIP()
             
         
-        HG.server_controller.WriteSynchronous( 'file', self._service, request.hydrus_account, file_dict )
+        timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
+        
+        HG.server_controller.WriteSynchronous( 'file', self._service, request.hydrus_account, file_dict, timestamp )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -587,7 +589,9 @@ class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
         
         client_to_server_update = request.parsed_request_args[ 'client_to_server_update' ]
         
-        HG.server_controller.WriteSynchronous( 'update', self._service_key, request.hydrus_account, client_to_server_update )
+        timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
+        
+        HG.server_controller.WriteSynchronous( 'update', self._service_key, request.hydrus_account, client_to_server_update, timestamp )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

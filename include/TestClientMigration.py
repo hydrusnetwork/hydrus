@@ -224,7 +224,7 @@ class TestMigration( unittest.TestCase ):
                 
             
         
-        service_keys_to_content_updates = { CC.LOCAL_TAG_SERVICE_KEY : content_updates }
+        service_keys_to_content_updates = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : content_updates }
         
         self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
         
@@ -473,7 +473,7 @@ class TestMigration( unittest.TestCase ):
         
         tag_filter = ClientTags.TagFilter()
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = list( self._hashes_to_current_tags.items() )
         
@@ -485,7 +485,7 @@ class TestMigration( unittest.TestCase ):
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.LOCAL_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
@@ -500,7 +500,7 @@ class TestMigration( unittest.TestCase ):
         # not all hashes, since hash type lookup only available for imported files
         hashes = random.sample( self._my_files_sha256, 25 )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
@@ -517,7 +517,7 @@ class TestMigration( unittest.TestCase ):
         # not all hashes, since hash type lookup only available for imported files
         expected_data = [ ( self._sha256_to_sha1[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         run_test( source, expected_data )
         
@@ -532,7 +532,7 @@ class TestMigration( unittest.TestCase ):
         tag_filter.SetRule( '', CC.FILTER_WHITELIST )
         tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tag_filter.Filter( tags ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         expected_data = [ ( hash, tags ) for ( hash, tags ) in expected_data if len( tags ) > 0 ]
@@ -550,7 +550,7 @@ class TestMigration( unittest.TestCase ):
         
         tag_filter = ClientTags.TagFilter()
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
         
         expected_data = list( self._hashes_to_deleted_tags.items() )
         
@@ -659,7 +659,7 @@ class TestMigration( unittest.TestCase ):
         
         source = ClientMigration.MigrationSourceList( self, data )
         
-        run_test( source, CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_UPDATE_ADD, data )
+        run_test( source, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_UPDATE_ADD, data )
         
         # local delete
         
@@ -667,7 +667,7 @@ class TestMigration( unittest.TestCase ):
         
         source = ClientMigration.MigrationSourceList( self, data )
         
-        run_test( source, CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_UPDATE_DELETE, data )
+        run_test( source, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_UPDATE_DELETE, data )
         
         # local clear deletion record
         
@@ -675,7 +675,7 @@ class TestMigration( unittest.TestCase ):
         
         source = ClientMigration.MigrationSourceList( self, data )
         
-        run_test( source, CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, data )
+        run_test( source, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, data )
         
         # tag repo pend
         
@@ -710,7 +710,7 @@ class TestMigration( unittest.TestCase ):
             content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
             
         
-        service_keys_to_content_updates = { CC.LOCAL_TAG_SERVICE_KEY : content_updates }
+        service_keys_to_content_updates = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : content_updates }
         
         self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
         
@@ -881,8 +881,8 @@ class TestMigration( unittest.TestCase ):
         
         content_source_tests = []
         
-        content_source_tests.append( ( CC.LOCAL_TAG_SERVICE_KEY, ( current, ), ( HC.CONTENT_STATUS_CURRENT, ) ) )
-        content_source_tests.append( ( CC.LOCAL_TAG_SERVICE_KEY, ( deleted, ), ( HC.CONTENT_STATUS_DELETED, ) ) )
+        content_source_tests.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ( current, ), ( HC.CONTENT_STATUS_CURRENT, ) ) )
+        content_source_tests.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ( deleted, ), ( HC.CONTENT_STATUS_DELETED, ) ) )
         content_source_tests.append( ( tag_repo_service_key, ( current, ), ( HC.CONTENT_STATUS_CURRENT, ) ) )
         content_source_tests.append( ( tag_repo_service_key, ( current, pending ), ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ) )
         content_source_tests.append( ( tag_repo_service_key, ( deleted, ), ( HC.CONTENT_STATUS_DELETED, ) ) )
@@ -974,8 +974,8 @@ class TestMigration( unittest.TestCase ):
         
         test_rows = []
         
-        test_rows.append( ( CC.LOCAL_TAG_SERVICE_KEY, to_be_pended, HC.CONTENT_UPDATE_ADD ) )
-        test_rows.append( ( CC.LOCAL_TAG_SERVICE_KEY, random.sample( current, 3 ), HC.CONTENT_UPDATE_DELETE ) )
+        test_rows.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, to_be_pended, HC.CONTENT_UPDATE_ADD ) )
+        test_rows.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, random.sample( current, 3 ), HC.CONTENT_UPDATE_DELETE ) )
         test_rows.append( ( tag_repo_service_key, to_be_pended, HC.CONTENT_UPDATE_PEND ) )
         test_rows.append( ( tag_repo_service_key, random.sample( current, 3 ), HC.CONTENT_UPDATE_PETITION ) )
         

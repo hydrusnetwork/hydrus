@@ -10,7 +10,7 @@ model_shutdown = False
 no_daemons = False
 no_wal = False
 no_db_temp_files = False
-db_memory_journalling = False
+db_memory_journaling = False
 db_synchronous_override = None
 
 import_folders_running = False

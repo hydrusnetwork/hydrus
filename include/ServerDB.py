@@ -1,26 +1,16 @@
-import collections
 import hashlib
 from . import HydrusConstants as HC
 from . import HydrusDB
 from . import HydrusEncryption
 from . import HydrusExceptions
-from . import HydrusFileHandling
-from . import HydrusNATPunch
 from . import HydrusNetwork
-from . import HydrusNetworking
 from . import HydrusPaths
 from . import HydrusSerialisable
-import itertools
-import json
 import os
-import queue
 import random
 from . import ServerFiles
-import shutil
 import sqlite3
-import stat
 import sys
-import threading
 import time
 import traceback
 from . import HydrusData
@@ -102,6 +92,22 @@ class DB( HydrusDB.HydrusDB ):
         self._ssl_key_path = os.path.join( db_dir, self._ssl_key_filename )
         
         self._account_type_cache = {}
+        
+        # create ssl keys
+        
+        cert_here = os.path.exists( self._ssl_cert_path )
+        key_here = os.path.exists( self._ssl_key_path )
+        
+        if cert_here ^ key_here:
+            
+            raise Exception( 'While creating the server database, only one of the paths "{}" and "{}" existed. You can create a server db with these files already in place, but please either delete the existing file (to have hydrus generate its own pair) or find the other in the pair (to use your own).'.format( self._ssl_cert_path, self._ssl_key_path ) )
+            
+        elif not ( cert_here or key_here ):
+            
+            HydrusData.Print( 'Generating new cert/key files.' )
+            
+            HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+            
         
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
@@ -330,20 +336,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CreateDB( self ):
         
-        # create ssl keys
-        
-        cert_here = os.path.exists( self._ssl_cert_path )
-        key_here = os.path.exists( self._ssl_key_path )
-        
-        if cert_here ^ key_here:
-            
-            raise Exception( 'While creating the server database, only one of the paths "{}" and "{}" existed. You can create a server db with these files already in place, but please either delete the existing file (to have hydrus generate its own pair) or find the other in the pair (to use your own).'.format( self._ssl_cert_path, self._ssl_key_path ) )
-            
-        elif not ( cert_here or key_here ):
-            
-            HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
-            
-        
         HydrusPaths.MakeSureDirectoryExists( self._files_dir )
         
         for prefix in HydrusData.IterateHexPrefixes():
@@ -397,7 +389,7 @@ class DB( HydrusDB.HydrusDB ):
         self._AddService( admin_service ) # this sets up the admin account and a registration key by itself
         
     
-    def _DeleteAllAccountContributions( self, service_key, account, subject_accounts, superban ):
+    def _DeleteAllAccountContributions( self, service_key, account, subject_accounts, superban, timestamp ):
         
         account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
         
@@ -415,7 +407,7 @@ class DB( HydrusDB.HydrusDB ):
             
             account_id = self._GetAccountId( account_key )
             
-            self._RepositorySuperBan( service_id, account_id, subject_account_ids )
+            self._RepositorySuperBan( service_id, account_id, subject_account_ids, timestamp )
             
         
     
@@ -624,7 +616,7 @@ class DB( HydrusDB.HydrusDB ):
                 raise HydrusExceptions.NotFoundException( 'The service could not find that service hash in its database.' )
                 
             
-            service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
+            service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id, HydrusData.GetNow() )
             
             ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
             
@@ -656,7 +648,7 @@ class DB( HydrusDB.HydrusDB ):
                 raise HydrusExceptions.NotFoundException( 'The service could not find that service hash in its database.' )
                 
             
-            service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
+            service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id, HydrusData.GetNow() )
             
             if not self._MasterTagExists( tag ):
                 
@@ -670,7 +662,7 @@ class DB( HydrusDB.HydrusDB ):
                 raise HydrusExceptions.NotFoundException( 'The service could not find that service tag in its database.' )
                 
             
-            service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id )
+            service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id, HydrusData.GetNow() )
             
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
             
@@ -1271,22 +1263,20 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryAddFile( self, service_id, account_id, file_dict, overwrite_deleted ):
+    def _RepositoryAddFile( self, service_id, account_id, file_dict, overwrite_deleted, timestamp ):
         
         master_hash_id = self._AddFile( file_dict )
         
-        service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
+        service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id, timestamp )
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
-        
-        now = HydrusData.GetNow()
         
         if 'ip' in file_dict:
             
             ip = file_dict[ 'ip' ]
             
-            self._c.execute( 'INSERT INTO ' + ip_addresses_table_name + ' ( master_hash_id, ip, ip_timestamp ) VALUES ( ?, ?, ? );', ( master_hash_id, ip, now ) )
+            self._c.execute( 'INSERT INTO ' + ip_addresses_table_name + ' ( master_hash_id, ip, ip_timestamp ) VALUES ( ?, ?, ? );', ( master_hash_id, ip, timestamp ) )
             
         
         result = self._c.execute( 'SELECT 1 FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;', ( service_hash_id, ) ).fetchone()
@@ -1313,13 +1303,13 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._c.execute( 'INSERT INTO ' + current_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( service_hash_id, account_id, now ) )
+        self._c.execute( 'INSERT INTO ' + current_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( service_hash_id, account_id, timestamp ) )
         
     
-    def _RepositoryAddMappings( self, service_id, account_id, master_tag_id, master_hash_ids, overwrite_deleted ):
+    def _RepositoryAddMappings( self, service_id, account_id, master_tag_id, master_hash_ids, overwrite_deleted, timestamp ):
         
-        service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id )
-        service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids )
+        service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id, timestamp )
+        service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
@@ -1341,15 +1331,13 @@ class DB( HydrusDB.HydrusDB ):
         
         # in future, delete from pending with the master ids here
         
-        now = HydrusData.GetNow()
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + current_mappings_table_name + ' ( service_tag_id, service_hash_id, account_id, mapping_timestamp ) VALUES ( ?, ?, ?, ? );', [ ( service_tag_id, service_hash_id, account_id, now ) for service_hash_id in service_hash_ids ] )
+        self._c.executemany( 'INSERT OR IGNORE INTO ' + current_mappings_table_name + ' ( service_tag_id, service_hash_id, account_id, mapping_timestamp ) VALUES ( ?, ?, ?, ? );', [ ( service_tag_id, service_hash_id, account_id, timestamp ) for service_hash_id in service_hash_ids ] )
         
     
-    def _RepositoryAddTagParent( self, service_id, account_id, child_master_tag_id, parent_master_tag_id, overwrite_deleted ):
+    def _RepositoryAddTagParent( self, service_id, account_id, child_master_tag_id, parent_master_tag_id, overwrite_deleted, timestamp ):
         
-        child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id )
-        parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id )
+        child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, timestamp )
+        parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, timestamp )
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
@@ -1370,19 +1358,19 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        now = HydrusData.GetNow()
-        
-        self._c.execute( 'INSERT OR IGNORE INTO ' + current_tag_parents_table_name + ' ( child_service_tag_id, parent_service_tag_id, account_id, parent_timestamp ) VALUES ( ?, ?, ?, ? );', ( child_service_tag_id, parent_service_tag_id, account_id, now ) )
+        self._c.execute( 'INSERT OR IGNORE INTO ' + current_tag_parents_table_name + ' ( child_service_tag_id, parent_service_tag_id, account_id, parent_timestamp ) VALUES ( ?, ?, ?, ? );', ( child_service_tag_id, parent_service_tag_id, account_id, timestamp ) )
         
         child_master_hash_ids = self._RepositoryGetCurrentMappingsMasterHashIds( service_id, child_service_tag_id )
         
-        self._RepositoryAddMappings( service_id, account_id, parent_master_tag_id, child_master_hash_ids, False )
+        overwrite_deleted = False
+        
+        self._RepositoryAddMappings( service_id, account_id, parent_master_tag_id, child_master_hash_ids, overwrite_deleted, timestamp )
         
     
-    def _RepositoryAddTagSibling( self, service_id, account_id, bad_master_tag_id, good_master_tag_id, overwrite_deleted ):
+    def _RepositoryAddTagSibling( self, service_id, account_id, bad_master_tag_id, good_master_tag_id, overwrite_deleted, timestamp ):
         
-        bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id )
-        good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id )
+        bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, timestamp )
+        good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, timestamp )
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
@@ -1403,9 +1391,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        now = HydrusData.GetNow()
-        
-        self._c.execute( 'INSERT OR IGNORE INTO ' + current_tag_siblings_table_name + ' ( bad_service_tag_id, good_service_tag_id, account_id, sibling_timestamp ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, now ) )
+        self._c.execute( 'INSERT OR IGNORE INTO ' + current_tag_siblings_table_name + ' ( bad_service_tag_id, good_service_tag_id, account_id, sibling_timestamp ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, timestamp ) )
         
     
     def _RepositoryBan( self, service_id, subject_account_ids ):
@@ -1578,7 +1564,7 @@ class DB( HydrusDB.HydrusDB ):
         return update_hashes
         
     
-    def _RepositoryDeleteFiles( self, service_id, account_id, service_hash_ids ):
+    def _RepositoryDeleteFiles( self, service_id, account_id, service_hash_ids, timestamp ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
@@ -1591,12 +1577,10 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'DELETE FROM ' + current_files_table_name + ' WHERE service_hash_id = ?', ( ( service_hash_id, ) for service_hash_id in valid_service_hash_ids ) )
         self._c.executemany( 'DELETE FROM ' + petitioned_files_table_name + ' WHERE service_hash_id = ?', ( ( service_hash_id, ) for service_hash_id in valid_service_hash_ids ) )
         
-        now = HydrusData.GetNow()
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + deleted_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, now ) for service_hash_id in valid_service_hash_ids ) )
+        self._c.executemany( 'INSERT OR IGNORE INTO ' + deleted_files_table_name + ' ( service_hash_id, account_id, file_timestamp ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, timestamp ) for service_hash_id in valid_service_hash_ids ) )
         
     
-    def _RepositoryDeleteMappings( self, service_id, account_id, service_tag_id, service_hash_ids ):
+    def _RepositoryDeleteMappings( self, service_id, account_id, service_tag_id, service_hash_ids, timestamp ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
@@ -1609,12 +1593,10 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'DELETE FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( ( service_tag_id, service_hash_id ) for service_hash_id in valid_service_hash_ids ) )
         self._c.executemany( 'DELETE FROM ' + petitioned_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( ( service_tag_id, service_hash_id ) for service_hash_id in valid_service_hash_ids ) )
         
-        now = HydrusData.GetNow()
-        
-        self._c.executemany( 'INSERT OR IGNORE INTO ' + deleted_mappings_table_name + ' ( service_tag_id, service_hash_id, account_id, mapping_timestamp ) VALUES ( ?, ?, ?, ? );', ( ( service_tag_id, service_hash_id, account_id, now ) for service_hash_id in valid_service_hash_ids ) )
+        self._c.executemany( 'INSERT OR IGNORE INTO ' + deleted_mappings_table_name + ' ( service_tag_id, service_hash_id, account_id, mapping_timestamp ) VALUES ( ?, ?, ?, ? );', ( ( service_tag_id, service_hash_id, account_id, timestamp ) for service_hash_id in valid_service_hash_ids ) )
         
     
-    def _RepositoryDeleteTagParent( self, service_id, account_id, child_service_tag_id, parent_service_tag_id ):
+    def _RepositoryDeleteTagParent( self, service_id, account_id, child_service_tag_id, parent_service_tag_id, timestamp ):
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
@@ -1623,12 +1605,10 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM ' + current_tag_parents_table_name + ' WHERE child_service_tag_id = ? AND parent_service_tag_id = ?;', ( child_service_tag_id, parent_service_tag_id ) )
         self._c.execute( 'DELETE FROM ' + petitioned_tag_parents_table_name + ' WHERE child_service_tag_id = ? AND parent_service_tag_id = ?;', ( child_service_tag_id, parent_service_tag_id ) )
         
-        now = HydrusData.GetNow()
-        
-        self._c.execute( 'INSERT OR IGNORE INTO ' + deleted_tag_parents_table_name + ' ( child_service_tag_id, parent_service_tag_id, account_id, parent_timestamp ) VALUES ( ?, ?, ?, ? );', ( child_service_tag_id, parent_service_tag_id, account_id, now ) )
+        self._c.execute( 'INSERT OR IGNORE INTO ' + deleted_tag_parents_table_name + ' ( child_service_tag_id, parent_service_tag_id, account_id, parent_timestamp ) VALUES ( ?, ?, ?, ? );', ( child_service_tag_id, parent_service_tag_id, account_id, timestamp ) )
         
     
-    def _RepositoryDeleteTagSibling( self, service_id, account_id, bad_service_tag_id, good_service_tag_id ):
+    def _RepositoryDeleteTagSibling( self, service_id, account_id, bad_service_tag_id, good_service_tag_id, timestamp ):
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
@@ -1637,9 +1617,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM ' + current_tag_siblings_table_name + ' WHERE bad_service_tag_id = ? AND good_service_tag_id = ?;', ( bad_service_tag_id, good_service_tag_id ) )
         self._c.execute( 'DELETE FROM ' + petitioned_tag_siblings_table_name + ' WHERE bad_service_tag_id = ? AND good_service_tag_id = ?;', ( bad_service_tag_id, good_service_tag_id ) )
         
-        now = HydrusData.GetNow()
-        
-        self._c.execute( 'INSERT OR IGNORE INTO ' + deleted_tag_siblings_table_name + ' ( bad_service_tag_id, good_service_tag_id, account_id, sibling_timestamp ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, now ) )
+        self._c.execute( 'INSERT OR IGNORE INTO ' + deleted_tag_siblings_table_name + ' ( bad_service_tag_id, good_service_tag_id, account_id, sibling_timestamp ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, timestamp ) )
         
     
     def _RepositoryDenyFilePetition( self, service_id, service_hash_ids ):
@@ -2246,7 +2224,7 @@ class DB( HydrusDB.HydrusDB ):
         return petition
         
     
-    def _RepositoryGetServiceHashId( self, service_id, master_hash_id ):
+    def _RepositoryGetServiceHashId( self, service_id, master_hash_id, timestamp ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
         
@@ -2254,9 +2232,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            now = HydrusData.GetNow()
-            
-            self._c.execute( 'INSERT INTO ' + hash_id_map_table_name + ' ( master_hash_id, hash_id_timestamp ) VALUES ( ?, ? );', ( master_hash_id, now ) )
+            self._c.execute( 'INSERT INTO ' + hash_id_map_table_name + ' ( master_hash_id, hash_id_timestamp ) VALUES ( ?, ? );', ( master_hash_id, timestamp ) )
             
             service_hash_id = self._c.lastrowid
             
@@ -2270,7 +2246,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryGetServiceHashIds( self, service_id, master_hash_ids ):
+    def _RepositoryGetServiceHashIds( self, service_id, master_hash_ids, timestamp ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
         
@@ -2295,9 +2271,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( master_hash_ids_not_in_table ) > 0:
             
-            now = HydrusData.GetNow()
-            
-            self._c.executemany( 'INSERT INTO ' + hash_id_map_table_name + ' ( master_hash_id, hash_id_timestamp ) VALUES ( ?, ? );', ( ( master_hash_id, now ) for master_hash_id in master_hash_ids_not_in_table ) )
+            self._c.executemany( 'INSERT INTO ' + hash_id_map_table_name + ' ( master_hash_id, hash_id_timestamp ) VALUES ( ?, ? );', ( ( master_hash_id, timestamp ) for master_hash_id in master_hash_ids_not_in_table ) )
             
             for master_hash_id in master_hash_ids_not_in_table:
                 
@@ -2310,7 +2284,7 @@ class DB( HydrusDB.HydrusDB ):
         return service_hash_ids
         
     
-    def _RepositoryGetServiceTagId( self, service_id, master_tag_id ):
+    def _RepositoryGetServiceTagId( self, service_id, master_tag_id, timestamp ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
         
@@ -2318,9 +2292,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            now = HydrusData.GetNow()
-            
-            self._c.execute( 'INSERT INTO ' + tag_id_map_table_name + ' ( master_tag_id, tag_id_timestamp ) VALUES ( ?, ? );', ( master_tag_id, now ) )
+            self._c.execute( 'INSERT INTO ' + tag_id_map_table_name + ' ( master_tag_id, tag_id_timestamp ) VALUES ( ?, ? );', ( master_tag_id, timestamp ) )
             
             service_tag_id = self._c.lastrowid
             
@@ -2586,8 +2558,8 @@ class DB( HydrusDB.HydrusDB ):
         
         if child_exists and parent_exists:
             
-            child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id )
-            parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id )
+            child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, HydrusData.GetNow() )
+            parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, HydrusData.GetNow() )
             
             result = self._c.execute( 'SELECT 1 FROM ' + current_tag_parents_table_name + ' WHERE child_service_tag_id = ? AND parent_service_tag_id = ?;', ( child_service_tag_id, parent_service_tag_id ) ).fetchone()
             
@@ -2609,8 +2581,8 @@ class DB( HydrusDB.HydrusDB ):
         
         if bad_exists and good_exists:
             
-            bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id )
-            good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id )
+            bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, HydrusData.GetNow() )
+            good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, HydrusData.GetNow() )
             
             result = self._c.execute( 'SELECT 1 FROM ' + current_tag_siblings_table_name + ' WHERE bad_service_tag_id = ? AND good_service_tag_id = ?;', ( bad_service_tag_id, good_service_tag_id ) ).fetchone()
             
@@ -2630,8 +2602,6 @@ class DB( HydrusDB.HydrusDB ):
         select_statement = 'SELECT service_hash_id FROM ' + current_files_table_name + ' WHERE service_hash_id IN {};'
         
         valid_service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._SelectFromList( select_statement, service_hash_ids ) ]
-        
-        now = HydrusData.GetNow()
         
         self._c.executemany( 'REPLACE INTO ' + petitioned_files_table_name + ' ( service_hash_id, account_id, reason_id ) VALUES ( ?, ?, ? );', ( ( service_hash_id, account_id, reason_id ) for service_hash_id in valid_service_hash_ids ) )
         
@@ -2675,7 +2645,7 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'REPLACE INTO ' + petitioned_tag_siblings_table_name + ' ( bad_service_tag_id, good_service_tag_id, account_id, reason_id ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, reason_id ) )
         
     
-    def _RepositoryProcessAddFile( self, service, account, file_dict ):
+    def _RepositoryProcessAddFile( self, service, account, file_dict, timestamp ):
         
         service_key = service.GetServiceKey()
         
@@ -2728,11 +2698,11 @@ class DB( HydrusDB.HydrusDB ):
             
             overwrite_deleted = can_overrule_files
             
-            self._RepositoryAddFile( service_id, account_id, file_dict, overwrite_deleted )
+            self._RepositoryAddFile( service_id, account_id, file_dict, overwrite_deleted, timestamp )
             
         
     
-    def _RepositoryProcessClientToServerUpdate( self, service_key, account, client_to_server_update ):
+    def _RepositoryProcessClientToServerUpdate( self, service_key, account, client_to_server_update, timestamp ):
         
         service_id = self._GetServiceId( service_key )
         
@@ -2761,11 +2731,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 master_hash_ids = self._GetMasterHashIds( hashes )
                 
-                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids )
+                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
                 
                 if can_overrule_files:
                     
-                    self._RepositoryDeleteFiles( service_id, account_id, service_hash_ids )
+                    self._RepositoryDeleteFiles( service_id, account_id, service_hash_ids, timestamp )
                     
                 elif can_petition_files:
                     
@@ -2782,7 +2752,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 master_hash_ids = self._GetMasterHashIds( hashes )
                 
-                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids )
+                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
                 
                 self._RepositoryDenyFilePetition( service_id, service_hash_ids )
                 
@@ -2802,7 +2772,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 overwrite_deleted = can_overrule_mappings
                 
-                self._RepositoryAddMappings( service_id, account_id, master_tag_id, master_hash_ids, overwrite_deleted )
+                self._RepositoryAddMappings( service_id, account_id, master_tag_id, master_hash_ids, overwrite_deleted, timestamp )
                 
             
         
@@ -2812,15 +2782,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 master_tag_id = self._GetMasterTagId( tag )
                 
-                service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id )
+                service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id, timestamp )
                 
                 master_hash_ids = self._GetMasterHashIds( hashes )
                 
-                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids )
+                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
                 
                 if can_overrule_mappings:
                     
-                    self._RepositoryDeleteMappings( service_id, account_id, service_tag_id, service_hash_ids )
+                    self._RepositoryDeleteMappings( service_id, account_id, service_tag_id, service_hash_ids, timestamp )
                     
                 elif can_petition_mappings:
                     
@@ -2837,11 +2807,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 master_tag_id = self._GetMasterTagId( tag )
                 
-                service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id )
+                service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id, timestamp )
                 
                 master_hash_ids = self._GetMasterHashIds( hashes )
                 
-                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids )
+                service_hash_ids = self._RepositoryGetServiceHashIds( service_id, master_hash_ids, timestamp )
                 
                 self._RepositoryDenyMappingPetition( service_id, service_tag_id, service_hash_ids )
                 
@@ -2860,7 +2830,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     overwrite_deleted = can_overrule_tag_parents
                     
-                    self._RepositoryAddTagParent( service_id, account_id, child_master_tag_id, parent_master_tag_id, overwrite_deleted )
+                    self._RepositoryAddTagParent( service_id, account_id, child_master_tag_id, parent_master_tag_id, overwrite_deleted, timestamp )
                     
                 elif can_petition_tag_parents:
                     
@@ -2875,12 +2845,12 @@ class DB( HydrusDB.HydrusDB ):
                 child_master_tag_id = self._GetMasterTagId( child_tag )
                 parent_master_tag_id = self._GetMasterTagId( parent_tag )
                 
-                child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id )
-                parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id )
+                child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, timestamp )
+                parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, timestamp )
                 
                 if can_overrule_tag_parents:
                     
-                    self._RepositoryDeleteTagParent( service_id, account_id, child_service_tag_id, parent_service_tag_id )
+                    self._RepositoryDeleteTagParent( service_id, account_id, child_service_tag_id, parent_service_tag_id, timestamp )
                     
                 elif can_petition_tag_parents:
                     
@@ -2906,8 +2876,8 @@ class DB( HydrusDB.HydrusDB ):
                 child_master_tag_id = self._GetMasterTagId( child_tag )
                 parent_master_tag_id = self._GetMasterTagId( parent_tag )
                 
-                child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id )
-                parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id )
+                child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, timestamp )
+                parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, timestamp )
                 
                 self._RepositoryDenyTagParentPetition( service_id, child_service_tag_id, parent_service_tag_id )
                 
@@ -2926,7 +2896,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     overwrite_deleted = can_overrule_tag_siblings
                     
-                    self._RepositoryAddTagSibling( service_id, account_id, bad_master_tag_id, good_master_tag_id, overwrite_deleted )
+                    self._RepositoryAddTagSibling( service_id, account_id, bad_master_tag_id, good_master_tag_id, overwrite_deleted, timestamp )
                     
                 elif can_petition_tag_siblings:
                     
@@ -2941,12 +2911,12 @@ class DB( HydrusDB.HydrusDB ):
                 bad_master_tag_id = self._GetMasterTagId( bad_tag )
                 good_master_tag_id = self._GetMasterTagId( good_tag )
                 
-                bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id )
-                good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id )
+                bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, timestamp )
+                good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, timestamp )
                 
                 if can_overrule_tag_siblings:
                     
-                    self._RepositoryDeleteTagSibling( service_id, account_id, bad_service_tag_id, good_service_tag_id )
+                    self._RepositoryDeleteTagSibling( service_id, account_id, bad_service_tag_id, good_service_tag_id, timestamp )
                     
                 elif can_petition_tag_siblings:
                     
@@ -2972,8 +2942,8 @@ class DB( HydrusDB.HydrusDB ):
                 bad_master_tag_id = self._GetMasterTagId( bad_tag )
                 good_master_tag_id = self._GetMasterTagId( good_tag )
                 
-                bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id )
-                good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id )
+                bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, timestamp )
+                good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, timestamp )
                 
                 self._RepositoryDenyTagSiblingPetition( service_id, bad_service_tag_id, good_service_tag_id )
                 
@@ -3004,7 +2974,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryRewardTagParentPenders( self, service_id, child_master_tag_id, parent_master_tag_id, multiplier ):
         
-        child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id )
+        child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, HydrusData.GetNow() )
         
         score = self._RepositoryGetCurrentMappingsCount( service_id, child_service_tag_id )
         
@@ -3040,7 +3010,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryRewardTagSiblingPenders( self, service_id, bad_master_tag_id, good_master_tag_id, multiplier ):
         
-        bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id )
+        bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, HydrusData.GetNow() )
         
         score = self._RepositoryGetCurrentMappingsCount( service_id, bad_service_tag_id )
         
@@ -3106,7 +3076,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositorySuperBan( self, service_id, admin_account_id, subject_account_ids ):
+    def _RepositorySuperBan( self, service_id, admin_account_id, subject_account_ids, timestamp ):
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         
@@ -3116,7 +3086,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( service_hash_ids ) > 0:
             
-            self._RepositoryDeleteFiles( service_id, admin_account_id, service_hash_ids )
+            self._RepositoryDeleteFiles( service_id, admin_account_id, service_hash_ids, timestamp )
             
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
@@ -3129,7 +3099,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( service_tag_id, service_hash_ids ) in list(mappings_dict.items()):
                 
-                self._RepositoryDeleteMappings( service_id, admin_account_id, service_tag_id, service_hash_ids )
+                self._RepositoryDeleteMappings( service_id, admin_account_id, service_tag_id, service_hash_ids, timestamp )
                 
             
         
@@ -3143,7 +3113,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( child_service_tag_id, parent_service_tag_id ) in pairs:
                 
-                self._RepositoryDeleteTagParent( service_id, admin_account_id, child_service_tag_id, parent_service_tag_id )
+                self._RepositoryDeleteTagParent( service_id, admin_account_id, child_service_tag_id, parent_service_tag_id, timestamp )
                 
             
         
@@ -3157,7 +3127,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( bad_service_tag_id, good_service_tag_id ) in pairs:
                 
-                self._RepositoryDeleteTagSibling( service_id, admin_account_id, bad_service_tag_id, good_service_tag_id )
+                self._RepositoryDeleteTagSibling( service_id, admin_account_id, bad_service_tag_id, good_service_tag_id, timestamp )
                 
             
         
@@ -3234,6 +3204,70 @@ class DB( HydrusDB.HydrusDB ):
         HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
         
         # all updates timed out, 244->245 was the last
+        
+        if version == 367:
+            
+            HydrusData.Print( 'Updating service timestamps.' )
+            
+            next_commit = HydrusData.GetNow() + 60
+            
+            services = self._GetServices( HC.REPOSITORIES )
+            
+            for service in services:
+                
+                service_key = service.GetServiceKey()
+                
+                service_id = self._GetServiceId( service_key )
+                
+                metadata = service.GetMetadata()
+                
+                jobs = []
+                
+                ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
+                
+                jobs.append( ( hash_id_map_table_name, 'hash_id_timestamp' ) )
+                jobs.append( ( tag_id_map_table_name, 'tag_id_timestamp' ) )
+                
+                ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+                
+                jobs.append( ( current_files_table_name, 'file_timestamp' ) )
+                jobs.append( ( deleted_files_table_name, 'file_timestamp' ) )
+                jobs.append( ( ip_addresses_table_name, 'ip_timestamp' ) )
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+                
+                jobs.append( ( current_mappings_table_name, 'mapping_timestamp' ) )
+                jobs.append( ( deleted_mappings_table_name, 'mapping_timestamp' ) )
+                
+                ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+                
+                jobs.append( ( current_tag_parents_table_name, 'parent_timestamp' ) )
+                jobs.append( ( deleted_tag_parents_table_name, 'parent_timestamp' ) )
+                
+                #
+                
+                ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+                
+                jobs.append( ( current_tag_siblings_table_name, 'sibling_timestamp' ) )
+                jobs.append( ( deleted_tag_siblings_table_name, 'sibling_timestamp' ) )
+                
+                for ( update_index, begin, end ) in metadata.GetUpdateIndicesAndTimes():
+                    
+                    for ( table_name, column_name ) in jobs:
+                        
+                        self._c.execute( 'UPDATE {} SET {} = ? WHERE {} BETWEEN ? AND ?;'.format( table_name, column_name, column_name ), ( begin + 1, begin, end ) )
+                        
+                    
+                    if HydrusData.TimeHasPassed( next_commit ):
+                        
+                        self._Commit()
+                        self._BeginImmediate()
+                        
+                        next_commit = HydrusData.GetNow() + 60
+                        
+                    
+                
+            
         
         HydrusData.Print( 'The server has updated to version ' + str( version + 1 ) )
         

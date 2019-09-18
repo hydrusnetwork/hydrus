@@ -5456,7 +5456,7 @@ You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my
 
 ---
 
-Please note that you can set up the 'default' values for these tag import options under _network->downloaders->manage default tag import options_, both globally and on a per-parser basis. If you always want all the tags going to 'local tags', this is easy to set up there, and you won't have to put it in every time.'''
+Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default tag import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
         
         wx.MessageBox( message )
         

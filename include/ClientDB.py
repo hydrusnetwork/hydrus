@@ -574,11 +574,9 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitDBCursor()
             
-            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.SetVariable( 'popup_text_1', 'backup complete!' )
             
             job_key.Finish()
-            
-            job_key.Delete( 5 )
             
         
     
@@ -1495,7 +1493,7 @@ class DB( HydrusDB.HydrusDB ):
         init_service_info.append( ( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ) )
         init_service_info.append( ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ) )
         init_service_info.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'repository updates' ) )
-        init_service_info.append( ( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'local tags' ) )
+        init_service_info.append( ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'my tags' ) )
         init_service_info.append( ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ) )
         init_service_info.append( ( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, 'all known tags' ) )
         init_service_info.append( ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' ) )
@@ -8105,7 +8103,6 @@ class DB( HydrusDB.HydrusDB ):
         self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
         self._local_update_service_id = self._GetServiceId( CC.LOCAL_UPDATE_SERVICE_KEY )
         self._combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-        self._local_tag_service_id = self._GetServiceId( CC.LOCAL_TAG_SERVICE_KEY )
         self._combined_file_service_id = self._GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
         self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
         
@@ -8493,55 +8490,106 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE durable_temp.{} ( hash_id INTEGER PRIMARY KEY );'.format( database_temp_job_name ) )
         
-        tag_service_id = self._GetServiceId( tag_service_key )
-        
-        statuses_to_tables = {}
-        
-        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-            
-            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
-            
-            statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = current_mappings_table_name
-            statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = deleted_mappings_table_name
-            statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = pending_mappings_table_name
-            
-        else:
-            
-            file_service_id = self._GetServiceId( file_service_key )
-            
-            ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
-            
-            statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = cache_current_mappings_table_name
-            statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = cache_deleted_mappings_table_name
-            statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = cache_pending_mappings_table_name
-            
-        
-        select_subqueries = []
-        
-        for content_status in content_statuses:
-            
-            table_name = statuses_to_tables[ content_status ]
-            
-            select_subquery = 'SELECT DISTINCT hash_id FROM {}'.format( table_name )
-            
-            select_subqueries.append( select_subquery )
-            
-        
         if hashes is not None:
             
             hash_ids = self._GetHashIds( hashes )
             
-            with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_table_name:
+            self._c.executemany( 'INSERT INTO {} ( hash_id ) VALUES ( ? );'.format( database_temp_job_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+            
+        else:
+            
+            tag_service_id = self._GetServiceId( tag_service_key )
+            
+            statuses_to_tables = {}
+            
+            use_hashes_table = False
+            
+            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
-                for select_subquery in select_subqueries:
+                # if our tag service is the biggest, and if it basically accounts for all the hashes we know about, it is much faster to just use the hashes table
+                
+                our_results = self._GetServiceInfo( tag_service_key )
+                
+                our_num_files = our_results[ HC.SERVICE_INFO_NUM_FILES ]
+                
+                other_services = [ service for service in self._GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != tag_service_key ]
+                
+                other_num_files = []
+                
+                for other_service in other_services:
                     
-                    select_subquery = 'SELECT hash_id FROM {} INTERSECT {}'.format( temp_table_name, select_subquery )
+                    other_results = self._GetServiceInfo( other_service.GetServiceKey() )
                     
-                    self._c.execute( 'INSERT INTO {} ( hash_id ) {};'.format( database_temp_job_name, select_subquery ) )
+                    other_num_files.append( other_results[ HC.SERVICE_INFO_NUM_FILES ] )
+                    
+                
+                if len( other_num_files ) == 0:
+                    
+                    we_are_big = True
+                    
+                else:
+                    
+                    we_are_big = our_num_files >= 0.75 * max( other_num_files )
+                    
+                
+                if we_are_big:
+                    
+                    local_files_results = self._GetServiceInfo( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    local_files_num_files = local_files_results[ HC.SERVICE_INFO_NUM_FILES ]
+                    
+                    if local_files_num_files > our_num_files:
+                        
+                        # probably a small local tags service, ok to pull from current_mappings
+                        
+                        we_are_big = False
+                        
+                    
+                
+                if we_are_big:
+                    
+                    use_hashes_table = True
                     
                 
             
-        else:
+            if use_hashes_table:
+                
+                # this obviously just pulls literally all known files
+                # makes migration take longer if the tag service does not cover many of these files, but saves huge startup time since it is a simple list
+                select_subqueries = [ 'SELECT hash_id FROM hashes' ]
+                
+            else:
+                
+                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+                    
+                    statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = current_mappings_table_name
+                    statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = deleted_mappings_table_name
+                    statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = pending_mappings_table_name
+                    
+                else:
+                    
+                    file_service_id = self._GetServiceId( file_service_key )
+                    
+                    ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                    
+                    statuses_to_tables[ HC.CONTENT_STATUS_CURRENT ] = cache_current_mappings_table_name
+                    statuses_to_tables[ HC.CONTENT_STATUS_DELETED ] = cache_deleted_mappings_table_name
+                    statuses_to_tables[ HC.CONTENT_STATUS_PENDING ] = cache_pending_mappings_table_name
+                    
+                
+                select_subqueries = []
+                
+                for content_status in content_statuses:
+                    
+                    table_name = statuses_to_tables[ content_status ]
+                    
+                    select_subquery = 'SELECT DISTINCT hash_id FROM {}'.format( table_name )
+                    
+                    select_subqueries.append( select_subquery )
+                    
+                
             
             for select_subquery in select_subqueries:
                 
@@ -10646,7 +10694,6 @@ class DB( HydrusDB.HydrusDB ):
         self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
         self._local_update_service_id = self._GetServiceId( CC.LOCAL_UPDATE_SERVICE_KEY )
         self._combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-        self._local_tag_service_id = self._GetServiceId( CC.LOCAL_TAG_SERVICE_KEY )
         self._combined_file_service_id = self._GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
         self._combined_tag_service_id = self._GetServiceId( CC.COMBINED_TAG_SERVICE_KEY )
         
@@ -13068,6 +13115,183 @@ class DB( HydrusDB.HydrusDB ):
             self._controller.pub( 'splash_set_status_subtext', 'doing some db optimisation' )
             
             self._c.execute( 'ANALYZE main;' )
+            
+        
+        if version == 367:
+            
+            try:
+                
+                result = self._c.execute( 'SELECT name FROM services WHERE service_key = ?;', ( sqlite3.Binary( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ), ) ).fetchone()
+                
+                if result is not None:
+                    
+                    ( service_name, ) = result
+                    
+                    if service_name == 'local tags':
+                        
+                        self._c.execute( 'UPDATE services SET name = ? WHERE service_key = ?;', ( 'my tags', sqlite3.Binary( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ), ) )
+                        
+                    
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update default local tag service name failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                # increasing default limit, let's see how it goes
+                
+                bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+                
+                #
+                
+                hydrus_default_nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS )
+                
+                current_rules = bandwidth_manager.GetRules( hydrus_default_nc )
+                
+                old_defaults = HydrusNetworking.BandwidthRules()
+                
+                old_defaults.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1024 * 1024 )
+                
+                if current_rules.GetSerialisableTuple() == old_defaults.GetSerialisableTuple():
+                    
+                    new_rules = HydrusNetworking.BandwidthRules()
+                    
+                    new_rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 512 * 1024 * 1024 )
+                    
+                    bandwidth_manager.SetRules( hydrus_default_nc, new_rules )
+                    
+                    self._SetJSONDump( bandwidth_manager )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update default hydrus bandwidth rules failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                session_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
+                
+                #
+                
+                # late hackery, just clear all hydrus sessions due to ptr switch
+                
+                services = self._GetServices( HC.REPOSITORIES )
+                
+                for service in services:
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, service_key )
+                    
+                    session_manager.ClearSession( nc )
+                    
+                
+                self._SetJSONDump( session_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to clear repository session info failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                services = self._GetServices( HC.REPOSITORIES )
+                
+                for service in services:
+                    
+                    name = service.GetName()
+                    credentials = service.GetCredentials()
+                    
+                    ( host, port ) = credentials.GetAddress()
+                    
+                    do_transfer = False
+                    do_pause = False
+                    
+                    if host == 'hydrus.no-ip.org':
+                        
+                        if port == 45872:
+                            
+                            do_pause = True
+                            
+                        elif port == 45871:
+                            
+                            def ask_what_to_do():
+                                
+                                message = 'The PTR is no longer run by hydrus dev! A user on the discord has kindly offered to host it relieve the bandwidth issues. A new janitorial team will also help deal with the piled-up petitions. Please see the v368 release post for more information, or check here:'
+                                message += os.linesep * 2
+                                message += 'https://hydrus.tumblr.com/post/187561442294'
+                                message += os.linesep * 2
+                                message += 'The PTR is at a new address, "https://ptr.hydrus.network:45871". Would you like to automatically redirect your client\'s PTR service, "{}", to that new location and keep using it?'.format( name )
+                                
+                                from . import ClientGUIDialogsQuick
+                                
+                                result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'PTR has moved!', yes_label = 'yes, move me to the new location', no_label = 'no, pause my ptr as it is' )
+                                
+                                return result
+                                
+                            
+                            result = self._controller.CallBlockingToWX( None, ask_what_to_do )
+                            
+                            if result == wx.ID_YES:
+                                
+                                do_transfer = True
+                                
+                            else:
+                                
+                                do_pause = True
+                                
+                            
+                        
+                    
+                    if do_pause:
+                        
+                        if not service.IsPaused():
+                            
+                            service.PausePlay()
+                            
+                        
+                    elif do_transfer:
+                        
+                        credentials.SetAddress( 'ptr.hydrus.network', port )
+                        
+                    
+                    if do_transfer or do_pause:
+                        
+                        ( service_key, service_type, name, dictionary ) = service.ToTuple()
+                        
+                        dictionary_string = dictionary.DumpToString()
+                        
+                        self._c.execute( 'UPDATE services SET dictionary_string = ? WHERE service_key = ?;', ( dictionary_string, sqlite3.Binary( service_key ) ) )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to check or update PTR service(s) to the new location failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

@@ -176,6 +176,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
+    def _AdvancedAddBlacklistButton( self ):
+        
+        tag_slice = self._advanced_blacklist_input.GetValue()
+        
+        self._AdvancedAddBlacklist( tag_slice )
+        
+    
     def _AdvancedAddBlacklistMultiple( self, tag_slices ):
         
         for tag_slice in tag_slices:
@@ -207,6 +214,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._UpdateStatus()
+        
+    
+    def _AdvancedAddWhitelistButton( self ):
+        
+        tag_slice = self._advanced_whitelist_input.GetValue()
+        
+        self._AdvancedAddWhitelist( tag_slice )
         
     
     def _AdvancedAddWhitelistMultiple( self, tag_slices ):
@@ -315,7 +329,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._advanced_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._AdvancedAddBlacklistMultiple, allow_empty_input = True )
         
-        add_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'add', self._AdvancedAddBlacklist )
+        add_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'add', self._AdvancedAddBlacklistButton )
         delete_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'delete', self._AdvancedDeleteBlacklist )
         blacklist_everything_button = ClientGUICommon.BetterButton( blacklist_panel, 'block everything', self._AdvancedBlacklistEverything )
         
@@ -327,7 +341,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._advanced_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._AdvancedAddWhitelistMultiple, allow_empty_input = True )
         
-        self._advanced_add_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'add', self._AdvancedAddWhitelist )
+        self._advanced_add_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'add', self._AdvancedAddWhitelistButton )
         delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'delete', self._AdvancedDeleteWhitelist )
         
         #
@@ -1110,12 +1124,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._groups_of_content_updates = []
             
-            self._i_am_local_tag_service = self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY
+            self._service = HG.client_controller.services_manager.GetService( self._tag_service_key )
             
-            if not self._i_am_local_tag_service:
-                
-                self._service = HG.client_controller.services_manager.GetService( tag_service_key )
-                
+            self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
             
@@ -1678,7 +1689,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     return
                     
                 
-                if self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY:
+                if self._i_am_local_tag_service:
                     
                     addee_action = HC.CONTENT_UPDATE_ADD
                     removee_action = HC.CONTENT_UPDATE_DELETE
@@ -2207,10 +2218,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._service_key = service_key
             
-            if service_key != CC.LOCAL_TAG_SERVICE_KEY:
-                
-                self._service = HG.client_controller.services_manager.GetService( service_key )
-                
+            self._service = HG.client_controller.services_manager.GetService( self._service_key )
+            
+            self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
             self._pairs_to_reasons = {}
             
@@ -2354,7 +2364,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
                 do_it = True
                 
-                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                if not self._i_am_local_tag_service:
                     
                     if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
                         
@@ -2405,8 +2415,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
-                        
+                    if not self._i_am_local_tag_service:
                         
                         if len( current_pairs ) > 10:
                             
@@ -2867,7 +2876,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             content_updates = []
             
-            if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
+            if self._i_am_local_tag_service:
                 
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
@@ -3041,10 +3050,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._service_key = service_key
             
-            if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
-                
-                self._service = HG.client_controller.services_manager.GetService( service_key )
-                
+            self._service = HG.client_controller.services_manager.GetService( self._service_key )
+            
+            self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
             self._original_statuses_to_pairs = collections.defaultdict( set )
             self._current_statuses_to_pairs = collections.defaultdict( set )
@@ -3193,7 +3201,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 do_it = True
                 
-                if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                if not self._i_am_local_tag_service:
                     
                     if default_reason is not None:
                         
@@ -3246,7 +3254,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     do_it = True
                     
-                    if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
+                    if not self._i_am_local_tag_service:
                         
                         if default_reason is not None:
                             
@@ -3743,7 +3751,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             content_updates = []
             
-            if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
+            if self._i_am_local_tag_service:
                 
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     

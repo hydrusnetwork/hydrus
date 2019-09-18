@@ -314,7 +314,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'Hydrus-Client-API-Access-Key' : 'abcd', 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Access-Key' : 'abcd', 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -326,7 +326,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 403 )
         
-        body_dict = { 'Hydrus-Client-API-Session-Key' : 'abcd', 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Session-Key' : 'abcd', 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -367,7 +367,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -379,7 +379,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'Hydrus-Client-API-Session-Key' : session_key_hex, 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -562,7 +562,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_answer = {}
         
-        expected_answer[ 'local_tags' ] = [ "local tags" ]
+        expected_answer[ 'local_tags' ] = [ "my tags" ]
         expected_answer[ 'tag_repositories' ] = [ "example tag repo" ]
         
         self.assertEqual( d, expected_answer )
@@ -611,7 +611,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'service_names_to_tags' : { 'local tags' : [ 'test' ] } }
+        body_dict = { 'service_names_to_tags' : { 'my tags' : [ 'test' ] } }
         
         body = json.dumps( body_dict )
         
@@ -645,7 +645,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -659,7 +659,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash ] ) ) ) ]
+        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash ] ) ) ) ]
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -684,7 +684,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hashes' : [ hash_hex, hash2_hex ], 'service_names_to_tags' : { 'local tags' : [ 'test', 'test2' ] } }
+        body_dict = { 'hashes' : [ hash_hex, hash2_hex ], 'service_names_to_tags' : { 'my tags' : [ 'test', 'test2' ] } }
         
         body = json.dumps( body_dict )
         
@@ -698,7 +698,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash, hash2 ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash, hash2 ] ) ) ) ]
+        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash, hash2 ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash, hash2 ] ) ) ) ]
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -730,7 +730,7 @@ class TestClientAPI( unittest.TestCase ):
         
         first_dict[ HC.CONTENT_STATUS_CURRENT ] = { ( 'test', 'muh test' ) }
         
-        tag_siblings[ CC.LOCAL_TAG_SERVICE_KEY ] = first_dict
+        tag_siblings[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = first_dict
         
         HG.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
@@ -740,7 +740,7 @@ class TestClientAPI( unittest.TestCase ):
         
         first_dict[ HC.CONTENT_STATUS_CURRENT ] = { ( 'muh test', 'muh test parent' ) }
         
-        tag_parents[ CC.LOCAL_TAG_SERVICE_KEY ] = first_dict
+        tag_parents[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = first_dict
         
         HG.test_controller.SetRead( 'tag_parents', tag_parents )
         
@@ -753,7 +753,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test' ] } }
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test' ] } }
         
         body = json.dumps( body_dict )
         
@@ -767,7 +767,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'muh test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'muh test parent', set( [ hash ] ) ) ) ]
+        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'muh test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'muh test parent', set( [ hash ] ) ) ) ]
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -792,7 +792,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_tags/add_tags'
         
-        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'local tags' : [ 'test' ] }, 'add_siblings_and_parents' : False }
+        body_dict = { 'hash' : hash_hex, 'service_names_to_tags' : { 'my tags' : [ 'test' ] }, 'add_siblings_and_parents' : False }
         
         body = json.dumps( body_dict )
         
@@ -806,7 +806,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ) ]
+        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ) ]
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -1086,7 +1086,7 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.ClearWrites( 'import_url_test' )
         
-        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'service_names_to_tags' : { 'local tags' : [ '/tv/ thread' ] } }
+        request_dict = { 'url' : url, 'destination_page_name' : 'muh /tv/', 'show_destination_page' : True, 'service_names_to_tags' : { 'my tags' : [ '/tv/ thread' ] } }
         
         request_body = json.dumps( request_dict )
         
@@ -1105,7 +1105,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
+        service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
         
         self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, service_keys_to_tags, 'muh /tv/', None, True ), {} ) ] )
         
@@ -1596,7 +1596,7 @@ class TestClientAPI( unittest.TestCase ):
             
             file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration, has_audio = has_audio )
             
-            service_keys_to_statuses_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+            service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
             
             tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
             
@@ -1782,7 +1782,7 @@ class TestClientAPI( unittest.TestCase ):
         
         file_info_manager = ClientMedia.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
         
-        service_keys_to_statuses_to_tags = { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
+        service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
         
         tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
         

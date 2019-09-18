@@ -773,8 +773,8 @@ class TestTagSiblings( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._first_key = HydrusData.GenerateKey()
-        cls._second_key = HydrusData.GenerateKey()
+        cls._first_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+        cls._second_key = HG.test_controller.example_tag_repo_service_key
         
         tag_siblings = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -795,7 +795,7 @@ class TestTagSiblings( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
-        cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HG.client_controller )
+        cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HG.test_controller )
         
     
     def test_collapse_predicates( self ):

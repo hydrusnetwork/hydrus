@@ -163,7 +163,9 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
             continue
             
         
-        if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        if service.GetServiceType() == HC.LOCAL_TAG:
             
             action = HC.CONTENT_UPDATE_ADD
             

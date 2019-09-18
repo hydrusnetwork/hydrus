@@ -487,7 +487,7 @@ class HydrusDB( object ):
             
             self._c.execute( 'PRAGMA {}.cache_size = -10000;'.format( db_name ) )
             
-            if HG.db_memory_journalling:
+            if HG.db_memory_journaling:
                 
                 self._c.execute( 'PRAGMA {}.journal_mode = MEMORY;'.format( db_name ) )
                 

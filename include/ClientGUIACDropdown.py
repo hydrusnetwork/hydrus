@@ -1236,7 +1236,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         if file_service_key == CC.COMBINED_FILE_SERVICE_KEY and self._tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            self._ChangeTagService( CC.LOCAL_TAG_SERVICE_KEY )
+            local_tag_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
+            
+            self._ChangeTagService( local_tag_services[0].GetServiceKey() )
             
         
         self._file_service_key = file_service_key
@@ -1352,7 +1354,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         services = []
         
-        services.append( services_manager.GetService( CC.LOCAL_TAG_SERVICE_KEY ) )
+        services.extend( services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         services.extend( services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
         
@@ -1841,14 +1843,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._null_entry_callable = null_entry_callable
         self._tag_service_key_changed_callable = tag_service_key_changed_callable
         
-        if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY and HC.options[ 'show_all_tags_in_autocomplete' ]:
-            
-            file_service_key = CC.COMBINED_FILE_SERVICE_KEY
-            
+        service = HG.client_controller.services_manager.GetService( tag_service_key )
         
-        if tag_service_key == CC.LOCAL_TAG_SERVICE_KEY:
+        if service.GetServiceType() == HC.LOCAL_TAG:
             
             file_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        elif tag_service_key != CC.COMBINED_TAG_SERVICE_KEY and HC.options[ 'show_all_tags_in_autocomplete' ]:
+            
+            file_service_key = CC.COMBINED_FILE_SERVICE_KEY
             
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )

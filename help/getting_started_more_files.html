@@ -32,34 +32,7 @@
 					<p>This will copy the files' unique identifiers to your clipboard, in hexadecimal.</p>
 					<p>You will not have to do this often. It is best when you want to identify a number of files to someone else without having to send them the actual files.</p>
 				</li>
-				<li>
-					<p><b>share->copy->path/local url</b></p>
-					<p>Selecting 'copy path' will copy the file's raw database path (install_path/db/client_files/[hash].ext) to your clipboard.</p>
-					<p>Selecting 'copy local url' copies a URL in the form http://127.0.0.1:45865/file?hash=[hash]. The client maintains a little localhost-only server on 45865 just for this purpose.</p>
-					<p>These are useful when you want to send a single file to another program that won't accept a drag and drop. You can copy either of these addresses into a file open dialog like so:</p>
-					<p><a href="upload.png"><img src="upload.png" width="960" height="600" /></a></p>
-					<p>You can also paste into your browser's address bar, to check they are working.</p>
-					<p>The path method will always work, the url method will only work while the client is running.</p>
-					<p>The path method will send the file's hash as the filename, the url method might send something odd like file[7].</p>
-					<p>If you use the path method to open a file inside an image editing program, remember to go 'save as' and give it a new filename! The client does not expect files inside its db directory to change.</p>
-				</li>
 			</ul>
-			<h3>sharing files</h3>
-			<p>The hydrus network's server has a service that lets clients share files anonymously, called a <i>file repository</i>.</p>
-			<p>It simply stores files. Anyone who has an access key to the repository can see the pool's thumbnails and download anything they like. They may also have permission to upload or delete. I run a download-only file repository that you are welcome to connect to to get a feel for the interface. To add its details, go <i>services->manage services</i>, click add, and select 'hydrus file repository'.</p>
-			<p>This image is for the tag repo, but it is the same interface:</p>
-			<p><img src="edit_repos_public_tag_repo.png" /></p>
-			<p>For the file repo, put in this information:</p>
-			<ul>
-				<li>hydrus.no-ip.org</li>
-				<li>45872</li>
-				<li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5</li>
-			</ul>
-			<p>Hit ok and then go <i>services->review services</i> to see your new file repository. Over time, usually when it is idle, your client will download updates from the repository until it is fully synchronised. You can customise when this happens in <i>file->options->maintenance and processing</i>.</p>
-			<p><img src="review_services.png" /></p>
-			<p>From now on, you will see your new repository under <i>F9->files</i> (although until your client has done some synchronisation, you will not see any files). A repository search page works exactly like a local or a trash one, it just uses a different file list. Files you do not have will be drawn with a dark background, those you do will be drawn as normal. You might not see all the thumbnails until you are fully synchronised.</p>
-			<p>To download a file, double- or middle-click it, or select from the right click menu. It should pop in fairly quickly.</p>
-			<p>If you have permission to upload files to a particular repository, that option will appear in the right-click menu for any local files. Selecting this will pend them for batch uploading; just select from the new <i>pending</i> menu to start the upload when you are ready.</p>
 			<p class="right"><a href="getting_started_tags.html">Ok, I'm ready to learn about tags! ----></a></p>
 		</div>
 	</body>

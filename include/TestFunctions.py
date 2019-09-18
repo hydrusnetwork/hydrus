@@ -1,5 +1,6 @@
 import collections
 from . import HydrusConstants as HC
+from . import HydrusGlobals as HG
 from . import ClientData
 from . import ClientTags
 import os
@@ -15,8 +16,8 @@ class TestFunctions( unittest.TestCase ):
         
         hashes = { hash }
         
-        local_key = CC.LOCAL_TAG_SERVICE_KEY
-        remote_key = HydrusData.GenerateKey()
+        local_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
+        remote_key = HG.test_controller.example_tag_repo_service_key
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags( { local_key : { 'a' } } )
         

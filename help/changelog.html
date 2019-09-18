@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 368</h3></li>
+				<ul>
+					<li>multiple local tag services:</li>
+					<li>you can now add additional local tag services under services->manage services!</li>
+					<li>new local tag services will appear in manage tags and tag import options and so on, just like when you add a tag repository</li>
+					<li>you can also delete local tag services, but you must have at least one</li>
+					<li>the default local tag service created for a new client is now renamed from 'local tags' to 'my tags'. any existing user with their local tag service called 'local tags' will be renamed on update to 'my tags'</li>
+					<li>.</li>
+					<li>ptr migration:</li>
+					<li>the ptr has been successfully migrated to user management! hydrus dev is no longer involved in running or administering it. the old bandwidth limits are removed! it has the same port and access key, but instead of hydrus.no-ip.org, it is now at ptr.hydrus.network</li>
+					<li>on update, if you sync with the ptr, you will get a yes/no asking if you want to continue using it at the new location. on yes, it'll update your server's address automatically. on no, it'll leave it as-is and pause it. if you still have a connection to my old read-only file repo, that will be paused</li>
+					<li>changed the auto repo setup command to be _help->add the public tag repository_. it points to the new location</li>
+					<li>as repo processing and related maintenance is now nicer, and secondarily since bandwidth limits are less a problem for the ptr specifically, the default clientside hydrus bandwidth limit of 64MB/day is lifted to 512MB/day. any users who are still on the old default will be updated</li>
+					<li>updated the help regarding the public tag repository, both in general description and the specific setup details</li>
+					<li>a copy of the same sanitized and frozen PTR db used to start the new PTR, and convenient tag archives of its content, are now available at https://mega.nz/#F!w7REiS7a!bTKhQvZP48Fpo-zj5MAlhQ</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>fixed a small bug related to the new 'caught up' repository mechanic for clients that only just added (or desynced) a repository</li>
+					<li>rewrote the tag migration startup job to handle specific 'x files' jobs better--they should now start relatively instantly, no matter the size of the tag service</li>
+					<li>on 'all known files' tag migrations, a startup optimisation will now be applied if the tag service is huge</li>
+					<li>fixed the tag filter's advanced panel's 'add' buttons, which were not hooked up correctly</li>
+					<li>the internal backup job now leaves a non-auto-removing 'backup complete!' message when finished</li>
+					<li>on update, server hydrus repositories will collapse all their existing content timestamps to a single value per update. also, all future content uploads will collapse similarly, meaning all update content has the same timestamp. this adds a further layer of anonymity and is a mid-step towards future serverside db compaction (I think I can ultimately reduce server.mappings.db filesize by ~33%). if you have a tag repo with 10M+ mappings, this will take some time</li>
+					<li>hydrus servers now generate new cert/key files on boot if they are missing. whenever they generate a new cert/key, they now print a notification to the log</li>
+					<li>misc help fixes and updates, and removed some ancient help that referred to old systems</li>
+					<li>corrected journalling->journaling typo for the new experimental launch parameter</li>
+				</ul>
 				<li><h3>version 367</h3></li>
 				<ul>
 					<li>tag migration:</li>
