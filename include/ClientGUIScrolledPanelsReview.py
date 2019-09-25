@@ -962,7 +962,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if self._hashes is not None:
             
-            self._migration_source_file_filter.Append( '{} hashes'.format( HydrusData.ToHumanInt( len( self._hashes ) ) ), self.HASHES_SERVICE_KEY )
+            self._migration_source_file_filter.Append( '{} files'.format( HydrusData.ToHumanInt( len( self._hashes ) ) ), self.HASHES_SERVICE_KEY )
             
             self._migration_source_file_filter.SetValue( self.HASHES_SERVICE_KEY )
             
@@ -1577,17 +1577,14 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             source_service_type = source_service.GetServiceType()
             
-            if source_service_type == HC.LOCAL_TAG:
+            self._migration_source_content_status_filter.Append( 'current', ( HC.CONTENT_STATUS_CURRENT, ) )
+            
+            if source_service_type == HC.TAG_REPOSITORY:
                 
-                self._migration_source_content_status_filter.Append( 'current', ( HC.CONTENT_STATUS_CURRENT, ) )
-                self._migration_source_content_status_filter.Append( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )
-                
-            elif source_service_type == HC.TAG_REPOSITORY:
-                
-                self._migration_source_content_status_filter.Append( 'current', ( HC.CONTENT_STATUS_CURRENT, ) )
                 self._migration_source_content_status_filter.Append( 'current and pending', ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
-                self._migration_source_content_status_filter.Append( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )
                 
+            
+            self._migration_source_content_status_filter.Append( 'deleted', ( HC.CONTENT_STATUS_DELETED, ) )
             
             self._migration_source_content_status_filter.Enable()
             
@@ -2546,7 +2543,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def do_it( hash_ids, job_type ):
             
-            HG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs', hash_ids, job_type )
+            HG.client_controller.files_maintenance_manager.ScheduleJobHashIds( hash_ids, job_type )
             
             wx.CallAfter( wx_done )
             
@@ -2609,7 +2606,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             for job_type in job_types:
                 
-                HG.client_controller.WriteSynchronous( 'file_maintenance_cancel_jobs', job_type )
+                HG.client_controller.files_maintenance_manager.CancelJobs( job_type )
                 
             
             wx.CallAfter( wx_done )
@@ -2631,7 +2628,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DoAllWork( self ):
         
-        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.DoMaintenance, maintenance_mode = HC.MAINTENANCE_FORCED )
+        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.ForceMaintenance )
         
     
     def _DoWork( self ):
@@ -2643,7 +2640,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.DoMaintenance, mandated_job_types = job_types, maintenance_mode = HC.MAINTENANCE_FORCED )
+        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.ForceMaintenance, mandated_job_types = job_types )
         
     
     def _RefreshWorkDue( self ):
@@ -2712,7 +2709,11 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         job_type = self._action_selector.GetValue()
         
-        wx.MessageBox( ClientFiles.regen_file_enum_to_description_lookup[ job_type ] )
+        message = ClientFiles.regen_file_enum_to_description_lookup[ job_type ]
+        message += os.linesep * 2
+        message += 'This job has weight {}, where a normalised unit of file work has value {}.'.format( HydrusData.ToHumanInt( ClientFiles.regen_file_enum_to_job_weight_lookup[ job_type ] ), HydrusData.ToHumanInt( ClientFiles.NORMALISED_BIG_JOB_WEIGHT ) )
+        
+        wx.MessageBox( message )
         
     
     def _SelectRepoUpdateFiles( self ):

@@ -87,6 +87,15 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
             
         
     
+    def subtag_lexicographic_key( tag ):
+        
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+        
+        comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+        
+        return comparable_subtag
+        
+    
     def incidence_key( tag ):
         
         if tags_to_count is None:
@@ -163,11 +172,11 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         
     else:
         
-        if sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+        if sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC, CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC ):
             
             reverse = True
             
-        elif sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC ):
+        elif sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC ):
             
             reverse = False
             
@@ -179,6 +188,10 @@ def SortTags( sort_by, tags_list, tags_to_count = None ):
         elif sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_ASC, CC.SORT_BY_LEXICOGRAPHIC_DESC ):
             
             key = lexicographic_key
+            
+        elif sort_by in ( CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC ):
+            
+            key = subtag_lexicographic_key
             
         
         tags_list.sort( key = key, reverse = reverse )

@@ -241,6 +241,14 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     return ( size, mime, width, height, duration, num_frames, has_audio, num_words )
     
+def GetFileModifiedTimestamp( path ):
+    
+    s = os.stat( path )
+    
+    file_modified_timestamp = int( s.st_mtime )
+    
+    return file_modified_timestamp
+    
 def GetHashFromPath( path ):
     
     h = hashlib.sha256()

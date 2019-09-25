@@ -2,6 +2,7 @@ from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import ClientCaches
 from . import ClientData
+from . import ClientDownloading
 from . import ClientDragDrop
 from . import ClientExporting
 from . import ClientGUICommon
@@ -26,7 +27,6 @@ from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
 from . import ClientGUITags
 from . import ClientGUITopLevelWindows
-from . import ClientDownloading
 from . import ClientMedia
 from . import ClientNetworkingContexts
 from . import ClientNetworkingJobs
@@ -43,6 +43,7 @@ import gc
 import hashlib
 from . import HydrusData
 from . import HydrusExceptions
+from . import HydrusImageHandling
 from . import HydrusPaths
 from . import HydrusGlobals as HG
 from . import HydrusNetwork
@@ -1258,6 +1259,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _EnableLoadTruncatedImages( self ):
+        
+        result = HydrusImageHandling.EnableLoadTruncatedImages()
+        
+        if not result:
+            
+            wx.MessageBox( 'Could not turn on--perhaps your version of PIL does not support it?' )
+            
+        
+    
     def _ExportDownloader( self ):
         
         with ClientGUITopLevelWindows.DialogNullipotent( self, 'export downloaders' ) as dlg:
@@ -1783,7 +1794,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'review scheduled file maintenance', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
+            file_maintenance_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, file_maintenance_menu, 'review scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
+            ClientGUIMenus.AppendSeparator( file_maintenance_menu )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_idle' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, file_maintenance_menu, 'work during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_active' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, file_maintenance_menu, 'work during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
+            
+            ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'file maintenance' )
+            
             ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
@@ -2239,6 +2270,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'clear_all_thumbnails' )
             ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
@@ -4747,6 +4779,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NotifyNewOptions( self ):
         
+        self._DirtyMenu( 'database' )
         self._DirtyMenu( 'services' )
         self._DirtyMenu( 'help' )
         

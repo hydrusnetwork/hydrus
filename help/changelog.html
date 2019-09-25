@@ -8,6 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 369</h3></li>
+				<ul>
+					<li>file maintenance:</li>
+					<li>the file maintenance manager now works continuously in the background, optionally in both idle and active time, with two different throttles, which are now always active</li>
+					<li>as usual, the default throttles are low-load (1 heavy job every 2 (idle) or 20 (normal) seconds), so as not to interfere with your browsing or other programs--feel free to speed them up as you wish</li>
+					<li>the options for file maintenance under 'maintenance and processing' are updated, and quick-pause actions are now available under database->maintain->file maintenance</li>
+					<li>the file maintenance manager no longer works on shutdown</li>
+					<li>the file maintenance manager will now only make a popup if it is started by the user--it otherwise now works silently in the background</li>
+					<li>the file maintenance manager now weights its jobs, so quick jobs will run faster and heavy jobs will space out more. exact weights, if you are interested, are now under the 'see description' button on the maintenance panel</li>
+					<li>file maintenance jobs now report to the debug file report mode</li>
+					<li>improved some misc file maintenance code, particularly with how the panel talks to the manager</li>
+					<li>media with new metadata will now refresh their thumbnails (for now, this means updating the has_audio icon)</li>
+					<li>.</li>
+					<li>modified timestamps:</li>
+					<li>the client now records file modified timestamps of all file imports!</li>
+					<li>on update, the retroactive population of this data for all existing local files will be scheduled on the file maintenance system, which has a new job type for this</li>
+					<li>the modified time now appears on a file's information lines that present on a right-click</li>
+					<li>the modified time can be sorted with the new 'file: modified time' sort</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added lexicographic sort by subtag (ignoring namespace) to the normal taglist sort selection</li>
+					<li>reworded the sort by lexicogrphic (grouped by namespace), to be (group unnamespaced)</li>
+					<li>the export files panel now has an explicit button to change the neighbouring .txt file tag services</li>
+					<li>on duplicate merge action options panel, 'sync archive' is no longer disabled for advanced users' 'alternates' duplicate action</li>
+					<li>split the download and process sync components of repositories a little</li>
+					<li>added a 'download now' button to repositories' review services panels, to hurry up metadata/update download when possible</li>
+					<li>the 'process now' button's enable/disable states should now be more reliable</li>
+					<li>the 'refresh account' button now disables when a repository is paused</li>
+					<li>improved stability of 'process now' button post-job updating</li>
+					<li>added a subscription option to the downloading option panel to change how many file-fails in a run will cause a sync to stop working early</li>
+					<li>re-added the truncated image loading mode to the debug->data actions menu. this has hung indefinitely with some bad files, so it not on by default</li>
+					<li>fixed an issue with copying an external local booru url with a upnp port</li>
+					<li>fixed an unrecoverable ui hang when a modal popup wants to self-terminate while a child yesno is open</li>
+					<li>if on a hydrus request the session key is invalid (due, for instance, to a recent serverside session clearing :^)), the session key cookie will now correctly be cleared clientside so a new one can be generated automatically on the next request</li>
+					<li>hydrus services can now take the access key as their credential using the 'Hydrus-Key' header. more options will come here, basically the same as the client api</li>
+					<li>network jobs waiting on a login process now continue faster once the login is complete (5s sleep cycle down to 1s)</li>
+					<li>perhaps fixed some linux problems with tag migration panel, perhaps not</li>
+					<li>caught and silenced a rare unimportant services shutdown error</li>
+					<li>updated to opencv 4.1.1 on the linux build</li>
+					<li>updated windows ffmpeg to 4.2.1</li>
+				</ul>
 				<li><h3>version 368</h3></li>
 				<ul>
 					<li>multiple local tag services:</li>

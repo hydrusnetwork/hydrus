@@ -322,8 +322,6 @@ class NetworkEngine( object ):
                     
                     job.SetStatus( 'waiting in login queue\u2026' )
                     
-                    job.Sleep( 5 )
-                    
                 
                 return True
                 
@@ -442,21 +440,21 @@ class NetworkEngine( object ):
             
             with self._lock:
                 
-                self._jobs_awaiting_validity = list(filter( ProcessValidationJob, self._jobs_awaiting_validity ))
+                self._jobs_awaiting_validity = list( filter( ProcessValidationJob, self._jobs_awaiting_validity ) )
                 
                 ProcessCurrentValidationJob()
                 
-                self._jobs_awaiting_bandwidth = list(filter( ProcessBandwidthJob, self._jobs_awaiting_bandwidth ))
+                self._jobs_awaiting_bandwidth = list( filter( ProcessBandwidthJob, self._jobs_awaiting_bandwidth ) )
                 
                 ProcessForceLogins()
                 
-                self._jobs_awaiting_login = list(filter( ProcessLoginJob, self._jobs_awaiting_login ))
+                self._jobs_awaiting_login = list( filter( ProcessLoginJob, self._jobs_awaiting_login ) )
                 
                 ProcessCurrentLoginJob()
                 
-                self._jobs_awaiting_slot = list(filter( ProcessReadyJob, self._jobs_awaiting_slot ))
+                self._jobs_awaiting_slot = list( filter( ProcessReadyJob, self._jobs_awaiting_slot ) )
                 
-                self._jobs_running = list(filter( ProcessRunningJob, self._jobs_running ))
+                self._jobs_running = list( filter( ProcessRunningJob, self._jobs_running ) )
                 
             
             # we want to catch the rollover of the second for bandwidth jobs

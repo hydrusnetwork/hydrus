@@ -31,12 +31,20 @@ from . import HydrusGlobals as HG
 from . import HydrusPaths
 import warnings
 
-if hasattr( PILImageFile, 'LOAD_TRUNCATED_IMAGES' ):
+def EnableLoadTruncatedImages():
     
-    pass
-    
-    # this can now cause load hangs due to the trunc load code adding infinite fake EOFs to the file stream, wew lad
-    # PILImageFile.LOAD_TRUNCATED_IMAGES = True
+    if hasattr( PILImageFile, 'LOAD_TRUNCATED_IMAGES' ):
+        
+        # this can now cause load hangs due to the trunc load code adding infinite fake EOFs to the file stream, wew lad
+        # hence debug only
+        PILImageFile.LOAD_TRUNCATED_IMAGES = True
+        
+        return True
+        
+    else:
+        
+        return False
+        
     
 if not hasattr( PILImage, 'DecompressionBombWarning' ):
     

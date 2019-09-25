@@ -91,10 +91,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
         
-        self._dictionary[ 'booleans' ][ 'file_maintenance_on_shutdown' ] = True
         self._dictionary[ 'booleans' ][ 'file_maintenance_during_idle' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'file_maintenance_throttle_enable' ] = True
+        self._dictionary[ 'booleans' ][ 'file_maintenance_during_active' ] = True
         
         self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
         
@@ -238,8 +236,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'thumbnail_border' ] = 1
         self._dictionary[ 'integers' ][ 'thumbnail_margin' ] = 2
         
-        self._dictionary[ 'integers' ][ 'file_maintenance_throttle_files' ] = 200
-        self._dictionary[ 'integers' ][ 'file_maintenance_throttle_time_delta' ] = 86400
+        self._dictionary[ 'integers' ][ 'file_maintenance_idle_throttle_files' ] = 1
+        self._dictionary[ 'integers' ][ 'file_maintenance_idle_throttle_time_delta' ] = 2
+        
+        self._dictionary[ 'integers' ][ 'file_maintenance_active_throttle_files' ] = 1
+        self._dictionary[ 'integers' ][ 'file_maintenance_active_throttle_time_delta' ] = 20
         
         self._dictionary[ 'integers' ][ 'subscription_network_error_delay' ] = 12 * 3600
         self._dictionary[ 'integers' ][ 'subscription_other_error_delay' ] = 36 * 3600
@@ -283,6 +284,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_max_time' ] = 60
         
         self._dictionary[ 'noneable_integers' ][ 'autocomplete_exact_match_threshold' ] = 2
+        
+        self._dictionary[ 'noneable_integers' ][ 'subscription_file_error_cancel_threshold' ] = 5
         
         #
         

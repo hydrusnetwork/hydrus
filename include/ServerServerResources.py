@@ -181,39 +181,51 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
     
     def _callbackEstablishAccountFromHeader( self, request ):
         
-        if not request.requestHeaders.hasHeader( 'Cookie' ):
-            
-            raise HydrusExceptions.MissingCredentialsException( 'No Session Cookie found!' )
-            
+        session_key = None
         
-        cookie_texts = request.requestHeaders.getRawHeaders( 'Cookie' )
-        
-        cookie_text = cookie_texts[0]
-        
-        try:
+        if request.requestHeaders.hasHeader( 'Cookie' ):
             
-            cookies = http.cookies.SimpleCookie( cookie_text )
+            cookie_texts = request.requestHeaders.getRawHeaders( 'Cookie' )
             
-            if 'session_key' not in cookies:
+            cookie_text = cookie_texts[0]
+            
+            try:
                 
-                session_key = None
+                cookies = http.cookies.SimpleCookie( cookie_text )
+                
+                if 'session_key' in cookies:
+                    
+                    # Morsel, for real, ha ha ha
+                    morsel = cookies[ 'session_key' ]
+                    
+                    session_key_hex = morsel.value
+                    
+                    session_key = bytes.fromhex( session_key_hex )
+                    
+                
+            except:
+                
+                raise HydrusExceptions.InsufficientCredentialsException( 'Problem parsing cookies for Session Cookie!' )
+                
+            
+        
+        if session_key is None:
+            
+            access_key = self._parseHydrusNetworkAccessKey( request, key_required = False )
+            
+            if access_key is None:
+                
+                raise HydrusExceptions.MissingCredentialsException( 'No credentials found in request!' )
                 
             else:
                 
-                # Morsel, for real, ha ha ha
-                morsel = cookies[ 'session_key' ]
-                
-                session_key_hex = morsel.value
-                
-                session_key = bytes.fromhex( session_key_hex )
+                account = HG.server_controller.server_session_manager.GetAccountFromAccessKey( self._service_key, access_key )
                 
             
-        except:
+        else:
             
-            raise Exception( 'Problem parsing cookies for Session Cookie!' )
+            account = HG.server_controller.server_session_manager.GetAccount( self._service_key, session_key )
             
-        
-        account = HG.server_controller.server_session_manager.GetAccount( self._service_key, session_key )
         
         request.hydrus_account = account
         
@@ -366,7 +378,9 @@ class HydrusResourceRestrictedBackup( HydrusResourceRestricted ):
         # check permission here since this is an asynchronous job
         request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
         
-        HG.server_controller.Write( 'backup' )
+        skip_vacuum = request.parsed_request_args.GetValue( 'skip_vacuum', bool, False )
+        
+        HG.server_controller.Write( 'backup', skip_vacuum )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

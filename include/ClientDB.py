@@ -1404,6 +1404,9 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'local_ratings', [ 'hash_id' ] )
         self._CreateIndex( 'local_ratings', [ 'rating' ] )
         
+        self._c.execute( 'CREATE TABLE file_modified_timestamps ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp INTEGER );' )
+        self._CreateIndex( 'file_modified_timestamps', [ 'file_modified_timestamp' ] )
+        
         self._c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
         
         self._c.execute( 'CREATE TABLE recent_tags ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id ) );' )
@@ -3595,7 +3598,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _FileMaintenanceClearJobs( self, cleared_job_tuples ):
         
-        new_file_info_hashes = set()
+        new_file_info = set()
         
         for ( hash, job_type, additional_data ) in cleared_job_tuples:
             
@@ -3609,9 +3612,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, has_audio = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, has_audio, num_words, hash_id ) )
                     
-                    self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
-                    
-                    new_file_info_hashes.add( hash )
+                    new_file_info.add( ( hash_id, hash ) )
                     
                     if mime not in HC.HYDRUS_UPDATE_FILES:
                         
@@ -3622,12 +3623,27 @@ class DB( HydrusDB.HydrusDB ):
                             self._FileMaintenanceAddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
                             
                         
+                        result = self._c.execute( 'SELECT 1 FROM file_modified_timestamps WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                        
+                        if result is None:
+                            
+                            self._FileMaintenanceAddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP )
+                            
+                        
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
                     
                     ( md5, sha1, sha512 ) = additional_data
                     
                     self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+                    
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
+                    
+                    file_modified_timestamp = additional_data
+                    
+                    self._c.execute( 'REPLACE INTO file_modified_timestamps ( hash_id, file_modified_timestamp ) VALUES ( ?, ? );', ( hash_id, file_modified_timestamp ) )
+                    
+                    new_file_info.add( ( hash_id, hash ) )
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA:
                     
@@ -3659,9 +3675,18 @@ class DB( HydrusDB.HydrusDB ):
             self._c.executemany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, job_type_to_delete ) for job_type_to_delete in job_types_to_delete ) )
             
         
-        if len( new_file_info_hashes ) > 0:
+        if len( new_file_info ) > 0:
             
-            self._controller.pub( 'new_file_info', new_file_info_hashes )
+            hashes = set()
+            
+            for ( hash_id, hash ) in new_file_info:
+                
+                self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+                
+                hashes.add( hash )
+                
+            
+            self._controller.pub( 'new_file_info', hashes )
             
         
     
@@ -3678,9 +3703,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for job_type in possible_job_types:
             
-            ideal_job_size = ClientFiles.regen_file_enum_to_ideal_job_size_lookup[ job_type ]
-            
-            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), ideal_job_size ) ) )
+            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusData.GetNow(), 256 ) ) )
             
             if len( hash_ids ) > 0:
                 
@@ -6559,6 +6582,8 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_ids_to_file_viewing_stats_managers = { hash_id : ClientMedia.FileViewingStatsManager( preview_views, preview_viewtime, media_views, media_viewtime ) for ( hash_id, preview_views, preview_viewtime, media_views, media_viewtime ) in self._SelectFromList( 'SELECT hash_id, preview_views, preview_viewtime, media_views, media_viewtime FROM file_viewing_stats WHERE hash_id IN {};', hash_ids ) }
             
+            hash_ids_to_file_modified_timestamps = dict( self._SelectFromList( 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps WHERE hash_id IN {};', hash_ids ) )
+            
             #
             
             hash_ids_to_current_file_service_ids = { hash_id : [ file_service_id for ( file_service_id, timestamp ) in file_service_ids_and_timestamps ] for ( hash_id, file_service_ids_and_timestamps ) in list(hash_ids_to_current_file_service_ids_and_timestamps.items()) }
@@ -6595,7 +6620,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_and_timestamps[ hash_id ] }
                 
-                locations_manager = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps )
+                if hash_id in hash_ids_to_file_modified_timestamps:
+                    
+                    file_modified_timestamp = hash_ids_to_file_modified_timestamps[ hash_id ]
+                    
+                else:
+                    
+                    file_modified_timestamp = None
+                    
+                
+                locations_manager = ClientMedia.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys, inbox, urls, service_keys_to_filenames, current_to_timestamps = current_file_service_keys_to_timestamps, file_modified_timestamp = file_modified_timestamp )
                 
                 #
                 
@@ -8007,6 +8041,10 @@ class DB( HydrusDB.HydrusDB ):
             ( md5, sha1, sha512 ) = file_import_job.GetExtraHashes()
             
             self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+            
+            file_modified_timestamp = file_import_job.GetFileModifiedTimestamp()
+            
+            self._c.execute( 'REPLACE INTO file_modified_timestamps ( hash_id, file_modified_timestamp ) VALUES ( ?, ? );', ( hash_id, file_modified_timestamp ) )
             
             file_import_options = file_import_job.GetFileImportOptions()
             
@@ -13289,6 +13327,29 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to check or update PTR service(s) to the new location failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 368:
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS file_modified_timestamps ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp INTEGER );' )
+            self._CreateIndex( 'file_modified_timestamps', [ 'file_modified_timestamp' ] )
+            
+            try:
+                
+                self._controller.pub( 'splash_set_status_subtext', 'queueing up modified timestamp jobs' )
+                
+                service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                
+                self._c.execute( 'INSERT OR IGNORE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) SELECT hash_id, ?, ? FROM files_info NATURAL JOIN current_files WHERE service_id = ?;', ( ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, 0, service_id ) )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to schedule file modified timestamp generation failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

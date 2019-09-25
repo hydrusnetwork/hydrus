@@ -482,6 +482,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         
+        self._export_tag_txts_services_button = ClientGUICommon.BetterButton( self, 'set .txt services', self._SetTxtServices )
+        
         self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
         self._export_tag_txts.SetToolTip( text )
         self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
@@ -536,6 +538,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
+        txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        txt_hbox.Add( self._export_tag_txts_services_button, CC.FLAGS_VCENTER )
+        txt_hbox.Add( self._export_tag_txts, CC.FLAGS_VCENTER )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -543,12 +550,14 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
         vbox.Add( self._export_symlinks, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( txt_hbox, CC.FLAGS_LONE_BUTTON )
         vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
         self._RefreshTags()
+        
+        self._UpdateTxtButton()
         
         wx.CallAfter( self._export.SetFocus )
         
@@ -635,17 +644,22 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         export_tag_txts = self._export_tag_txts.GetValue()
         
+        if self._export_tag_txts.GetValue():
+            
+            neighbouring_txt_tag_service_keys = self._neighbouring_txt_tag_service_keys
+            
+        else:
+            
+            neighbouring_txt_tag_service_keys = []
+            
+        
         directory = self._directory_picker.GetPath()
         
         HydrusPaths.MakeSureDirectoryExists( directory )
         
         pattern = self._pattern.GetValue()
         
-        new_options = HG.client_controller.new_options
-        
-        new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
-        
-        new_options.SetString( 'export_phrase', pattern )
+        HG.client_controller.new_options.SetString( 'export_phrase', pattern )
         
         try:
             
@@ -800,7 +814,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             wx.CallAfter( wx_done, quit_afterwards )
             
         
-        HG.client_controller.CallToThread( do_it, directory, self._neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
+        HG.client_controller.CallToThread( do_it, directory, neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
         
     
     def _GetPath( self, media ):
@@ -872,6 +886,61 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._tags_box.SetTagsByMedia( all_media )
         
     
+    def _SetTxtServices( self ):
+        
+        services_manager = HG.client_controller.services_manager
+        
+        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+        
+        choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'select tag services' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._neighbouring_txt_tag_service_keys = panel.GetValue()
+                
+                HG.client_controller.new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
+                
+            
+        
+        if len( self._neighbouring_txt_tag_service_keys ) == 0:
+            
+            self._export_tag_txts.SetValue( False )
+            
+        
+        self._UpdateTxtButton()
+        
+    
+    def _UpdateTxtButton( self ):
+        
+        if self._export_tag_txts.GetValue():
+            
+            self._export_tag_txts_services_button.Enable()
+            
+        else:
+            
+            self._export_tag_txts_services_button.Disable()
+            
+        
+        if len( self._neighbouring_txt_tag_service_keys ) == 0:
+            
+            tt = 'No services set.'
+            
+        else:
+            
+            names = [ HG.client_controller.services_manager.GetName( service_key ) for service_key in self._neighbouring_txt_tag_service_keys ]
+            
+            tt = ', '.join( names )
+            
+        
+        self._export_tag_txts_services_button.SetToolTip( tt )
+        
+    
     def EventExport( self, event ):
         
         self._DoExport()
@@ -891,42 +960,17 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventExportTagTxtsChanged( self, event ):
         
-        if self._export_tag_txts.GetValue() == True:
+        turning_on = self._export_tag_txts.GetValue()
+        
+        self._UpdateTxtButton()
+        
+        if turning_on:
             
-            services_manager = HG.client_controller.services_manager
-            
-            tag_services = services_manager.GetServices( HC.TAG_SERVICES )
-            
-            choice_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
-            
-            with ClientGUITopLevelWindows.DialogEdit( self, 'select tag services' ) as dlg:
-                
-                panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    self._neighbouring_txt_tag_service_keys = panel.GetValue()
-                    
-                    if len( self._neighbouring_txt_tag_service_keys ) == 0:
-                        
-                        self._export_tag_txts.SetValue( False )
-                        
-                    else:
-                        
-                        self._export_tag_txts.SetValue( True )
-                        
-                    
-                else:
-                    
-                    self._export_tag_txts.SetValue( False )
-                    
-                
+            self._SetTxtServices()
             
         else:
             
-            self._neighbouring_txt_tag_service_keys = []
+            HG.client_controller.new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', [] )
             
         
     

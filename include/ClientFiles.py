@@ -29,6 +29,7 @@ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA = 6
 REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS = 7
 REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP = 8
 REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA = 9
+REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP = 10
 
 regen_file_enum_to_str_lookup = {}
 
@@ -42,6 +43,7 @@ regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'fix file read/write permissions'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'check for membership in the similar files search system'
 regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'regenerate similar files metadata'
+regen_file_enum_to_str_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'regenerate file modified date'
 
 regen_file_enum_to_description_lookup = {}
 
@@ -55,19 +57,23 @@ regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_D
 regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 'This ensures that files in the file system are readable and writeable. For Linux/OS X users, it specifically sets 644. If you wish to run this job on Linux/OS X, ensure you are first the file owner of all your files.'
 regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.'
 regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 'This forces a regeneration of the file\'s similar-files \'phashes\'. It is not useful unless you know there is missing data to repair.'
+regen_file_enum_to_description_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 'This rechecks the file\'s modified timestamp and saves it to the database.'
 
-regen_file_enum_to_ideal_job_size_lookup = {}
+NORMALISED_BIG_JOB_WEIGHT = 100
 
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 250
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 250
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 1000
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 25
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 100
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = 10000
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 100
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 500
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 1000
-regen_file_enum_to_ideal_job_size_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 100
+regen_file_enum_to_job_weight_lookup = {}
+
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_METADATA ] = 100
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL ] = 50
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL ] = 25
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_OTHER_HASHES ] = 100
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ] = 25
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE ] = 5
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA ] = 100
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = 25
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = 50
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = 100
+regen_file_enum_to_job_weight_lookup[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = 10
 
 regen_file_enum_to_overruled_jobs = {}
 
@@ -81,8 +87,9 @@ regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA 
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ] = []
 regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA ] = [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ]
+regen_file_enum_to_overruled_jobs[ REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP ] = []
 
-ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
+ALL_REGEN_JOBS_IN_PREFERRED_ORDER = [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA, REGENERATE_FILE_DATA_JOB_FILE_METADATA, REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL, REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP, REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS, REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP, REGENERATE_FILE_DATA_JOB_OTHER_HASHES, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES ]
 
 def GetAllFilePaths( raw_paths, do_human_sort = True ):
     
@@ -1305,24 +1312,47 @@ class FilesMaintenanceManager( object ):
         
         self._work_tracker = HydrusNetworking.BandwidthTracker()
         
-        self._work_rules = HydrusNetworking.BandwidthRules()
+        self._idle_work_rules = HydrusNetworking.BandwidthRules()
+        self._active_work_rules = HydrusNetworking.BandwidthRules()
         
         self._ReInitialiseWorkRules()
         
         self._maintenance_lock = threading.Lock()
         self._lock = threading.Lock()
         
+        self._wake_background_event = threading.Event()
+        self._reset_background_event = threading.Event()
+        self._shutdown = False
+        
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        self._controller.sub( self, 'Shutdown', 'shutdown' )
         
     
-    def _AbleToDoMaintenance( self ):
+    def _AbleToDoBackgroundMaintenance( self ):
         
-        if self._controller.new_options.GetBoolean( 'file_maintenance_throttle_enable' ):
+        if HG.client_controller.CurrentlyIdle():
             
-            return self._work_rules.CanStartRequest( self._work_tracker )
+            if not self._controller.new_options.GetBoolean( 'file_maintenance_during_idle' ):
+                
+                return False
+                
             
-        
-        return True
+            if not self._controller.GoodTimeToStartBackgroundWork():
+                
+                return False
+                
+            
+            return self._idle_work_rules.CanStartRequest( self._work_tracker )
+            
+        else:
+            
+            if not self._controller.new_options.GetBoolean( 'file_maintenance_during_active' ):
+                
+                return False
+                
+            
+            return self._active_work_rules.CanStartRequest( self._work_tracker )
+            
         
     
     def _CheckFileIntegrity( self, media_result, job_type ):
@@ -1437,9 +1467,12 @@ class FilesMaintenanceManager( object ):
     
     def _ClearJobs( self, hashes, job_type ):
         
-        cleared_jobs = [ ( hash, job_type, None ) for hash in hashes ]
-        
-        self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
+        if len( hashes ) > 0:
+            
+            cleared_jobs = [ ( hash, job_type, None ) for hash in hashes ]
+            
+            self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
+            
         
     
     def _DeleteNeighbourDupes( self, media_result ):
@@ -1497,6 +1530,32 @@ class FilesMaintenanceManager( object ):
             self._CheckFileIntegrity( media_result, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
             
             return None
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
+    def _RegenFileModifiedTimestamp( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime in HC.HYDRUS_UPDATE_FILES:
+            
+            return None
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            file_modified_timestamp = HydrusFileHandling.GetFileModifiedTimestamp( path )
+            
+            additional_data = file_modified_timestamp
+            
+            return additional_data
             
         except HydrusExceptions.FileMissingException:
             
@@ -1598,15 +1657,22 @@ class FilesMaintenanceManager( object ):
     
     def _ReInitialiseWorkRules( self ):
         
-        file_maintenance_throttle_files = self._controller.new_options.GetInteger( 'file_maintenance_throttle_files' )
-        file_maintenance_throttle_time_delta = self._controller.new_options.GetInteger( 'file_maintenance_throttle_time_delta' )
+        file_maintenance_idle_throttle_files = self._controller.new_options.GetInteger( 'file_maintenance_idle_throttle_files' )
+        file_maintenance_idle_throttle_time_delta = self._controller.new_options.GetInteger( 'file_maintenance_idle_throttle_time_delta' )
         
-        self._work_rules = HydrusNetworking.BandwidthRules()
+        self._idle_work_rules = HydrusNetworking.BandwidthRules()
         
-        self._work_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, file_maintenance_throttle_time_delta, file_maintenance_throttle_files )
+        self._idle_work_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, file_maintenance_idle_throttle_time_delta, file_maintenance_idle_throttle_files * NORMALISED_BIG_JOB_WEIGHT )
+        
+        file_maintenance_active_throttle_files = self._controller.new_options.GetInteger( 'file_maintenance_active_throttle_files' )
+        file_maintenance_active_throttle_time_delta = self._controller.new_options.GetInteger( 'file_maintenance_active_throttle_time_delta' )
+        
+        self._active_work_rules = HydrusNetworking.BandwidthRules()
+        
+        self._active_work_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, file_maintenance_active_throttle_time_delta, file_maintenance_active_throttle_files * NORMALISED_BIG_JOB_WEIGHT )
         
     
-    def _RunJob( self, media_results, job_type, job_key, doing_background_maintenance = False ):
+    def _RunJob( self, media_results, job_type, job_key ):
         
         num_bad_files = 0
         num_thumb_refits = 0
@@ -1619,6 +1685,11 @@ class FilesMaintenanceManager( object ):
             
             num_to_do = len( media_results )
             
+            if HG.file_report_mode:
+                
+                HydrusData.ShowText( 'file maintenance: {} for {} files'.format( regen_file_enum_to_str_lookup[ job_type ], HydrusData.ToHumanInt( num_to_do ) ) )
+                
+            
             for ( i, media_result ) in enumerate( media_results ):
                 
                 hash = media_result.GetHash()
@@ -1628,17 +1699,7 @@ class FilesMaintenanceManager( object ):
                     return
                     
                 
-                if doing_background_maintenance and not self._AbleToDoMaintenance():
-                    
-                    return
-                    
-                
                 status_text = '{}: {}'.format( regen_file_enum_to_str_lookup[ job_type ], HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                
-                if i % 10 == 0:
-                    
-                    self._controller.pub( 'splash_set_status_text', status_text, print_to_log = False )
-                    
                 
                 job_key.SetVariable( 'popup_text_1', status_text )
                 job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
@@ -1650,6 +1711,10 @@ class FilesMaintenanceManager( object ):
                     if job_type == REGENERATE_FILE_DATA_JOB_FILE_METADATA:
                         
                         additional_data = self._RegenFileMetadata( media_result )
+                        
+                    elif job_type == REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
+                        
+                        additional_data = self._RegenFileModifiedTimestamp( media_result )
                         
                     elif job_type == REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
                         
@@ -1710,7 +1775,7 @@ class FilesMaintenanceManager( object ):
                     
                 finally:
                     
-                    self._work_tracker.ReportRequestUsed()
+                    self._work_tracker.ReportRequestUsed( num_requests = regen_file_enum_to_job_weight_lookup[ job_type ] )
                     
                     cleared_jobs.append( ( hash, job_type, additional_data ) )
                     
@@ -1743,44 +1808,36 @@ class FilesMaintenanceManager( object ):
             
         
     
+    def CancelJobs( self, job_type ):
+        
+        with self._lock:
+            
+            self._controller.WriteSynchronous( 'file_maintenance_cancel_jobs', job_type )
+            
+            self._reset_background_event.set()
+            
+        
+    
     def ClearJobs( self, hashes, job_type ):
         
         with self._lock:
             
             self._ClearJobs( hashes, job_type )
             
+            self._reset_background_event.set()
+            
         
     
-    def DoMaintenance( self, mandated_job_types = None, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
+    def ForceMaintenance( self, mandated_job_types = None ):
         
-        if maintenance_mode == HC.MAINTENANCE_IDLE:
-            
-            if not self._controller.new_options.GetBoolean( 'file_maintenance_during_idle' ):
-                
-                return
-                
-            
-            if not self._controller.GoodTimeToStartBackgroundWork():
-                
-                return
-                
-            
+        self._reset_background_event.set()
         
-        doing_background_maintenance = maintenance_mode != HC.MAINTENANCE_FORCED
-        
-        with self._lock:
-            
-            if doing_background_maintenance and not self._AbleToDoMaintenance():
-                
-                return
-                
-            
-        
-        job_key = ClientThreading.JobKey( cancellable = True, maintenance_mode = maintenance_mode, stop_time = stop_time )
+        job_key = ClientThreading.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_title', 'regenerating file data' )
         
         message_pubbed = False
+        work_done = False
         
         with self._maintenance_lock:
             
@@ -1794,6 +1851,8 @@ class FilesMaintenanceManager( object ):
                         
                         break
                         
+                    
+                    work_done = True
                     
                     if not message_pubbed:
                         
@@ -1815,16 +1874,11 @@ class FilesMaintenanceManager( object ):
                     
                     missing_hashes = [ hash for hash in hashes if hash not in hashes_to_media_results ]
                     
+                    self._ClearJobs( missing_hashes, job_type )
+                    
                     with self._lock:
                         
-                        self._RunJob( media_results, job_type, job_key, doing_background_maintenance = doing_background_maintenance )
-                        
-                        self._ClearJobs( missing_hashes, job_type )
-                        
-                        if doing_background_maintenance and not self._AbleToDoMaintenance():
-                            
-                            return
-                            
+                        self._RunJob( media_results, job_type, job_key )
                         
                     
                     time.sleep( 0.0001 )
@@ -1840,7 +1894,7 @@ class FilesMaintenanceManager( object ):
                 
                 job_key.Delete( 5 )
                 
-                if not message_pubbed and maintenance_mode == HC.MAINTENANCE_FORCED:
+                if not work_done:
                     
                     HydrusData.ShowText( 'No file maintenance due!' )
                     
@@ -1850,30 +1904,130 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def GetIdleShutdownWorkDue( self ):
+    def MainLoopBackgroundWork( self ):
         
-        with self._lock:
+        def check_shutdown():
             
-            if not self._AbleToDoMaintenance():
+            if HydrusThreading.IsThreadShuttingDown() or self._shutdown:
                 
-                return []
+                raise HydrusExceptions.ShutdownException()
                 
             
-            job_types_to_counts = self._controller.Read( 'file_maintenance_get_job_counts' )
+        
+        def wait_on_maintenance():
             
-            statements = []
-            
-            for job_type in ALL_REGEN_JOBS_IN_PREFERRED_ORDER:
+            while True:
                 
-                if job_type in job_types_to_counts:
+                check_shutdown()
+                
+                if self._AbleToDoBackgroundMaintenance() or self._reset_background_event.is_set():
                     
-                    statement = '{}: {} files'.format( regen_file_enum_to_str_lookup[ job_type ], HydrusData.ToHumanInt( job_types_to_counts[ job_type ] ) )
-                    
-                    statements.append( statement )
+                    break
                     
                 
+                time.sleep( 1 )
+                
             
-            return statements
+        
+        def should_reset():
+            
+            if self._reset_background_event.is_set():
+                
+                self._reset_background_event.clear()
+                
+                return True
+                
+            else:
+                
+                return False
+                
+            
+        
+        try:
+            
+            time_to_start = HydrusData.GetNow() + 15
+            
+            while not HydrusData.TimeHasPassed( time_to_start ):
+                
+                check_shutdown()
+                
+                time.sleep( 1 )
+                
+            
+            while True:
+                
+                check_shutdown()
+                
+                did_work = False
+                
+                with self._maintenance_lock:
+                    
+                    job = self._controller.Read( 'file_maintenance_get_job' )
+                    
+                    if job is not None:
+                        
+                        did_work = True
+                        
+                        job_key = ClientThreading.JobKey()
+                        
+                        i = 0
+                        
+                        try:
+                            
+                            ( hashes, job_type ) = job
+                            
+                            media_results = self._controller.Read( 'media_results', hashes )
+                            
+                            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+                            
+                            missing_hashes = [ hash for hash in hashes if hash not in hashes_to_media_results ]
+                            
+                            self._ClearJobs( missing_hashes, job_type )
+                            
+                            for media_result in media_results:
+                                
+                                wait_on_maintenance()
+                                
+                                if should_reset():
+                                    
+                                    break
+                                    
+                                
+                                with self._lock:
+                                    
+                                    self._RunJob( ( media_result, ), job_type, job_key )
+                                    
+                                
+                                time.sleep( 0.0001 )
+                                
+                                i += 1
+                                
+                                if i % 100 == 0:
+                                    
+                                    self._controller.pub( 'notify_files_maintenance_done' )
+                                    
+                                
+                            
+                        finally:
+                            
+                            self._controller.pub( 'notify_files_maintenance_done' )
+                            
+                        
+                    
+                
+                if not did_work:
+                    
+                    self._wake_background_event.wait( 600 )
+                    
+                    self._wake_background_event.clear()
+                    
+                
+                time.sleep( 2 )
+                
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
             
         
     
@@ -1896,11 +2050,13 @@ class FilesMaintenanceManager( object ):
             self._controller.pub( 'message', job_key )
             
         
+        self._reset_background_event.set()
+        
         with self._lock:
             
             try:
                 
-                self._RunJob( media_results, job_type, job_key, doing_background_maintenance = False )
+                self._RunJob( media_results, job_type, job_key )
                 
             finally:
                 
@@ -1923,5 +2079,28 @@ class FilesMaintenanceManager( object ):
             
             self._controller.Write( 'file_maintenance_add_jobs_hashes', hashes, job_type, time_can_start )
             
+            self._wake_background_event.set()
+            
         
     
+    def ScheduleJobHashIds( self, hash_ids, job_type, time_can_start = 0 ):
+        
+        with self._lock:
+            
+            self._controller.Write( 'file_maintenance_add_jobs', hash_ids, job_type, time_can_start )
+            
+            self._wake_background_event.set()
+            
+        
+    
+    def Shutdown( self ):
+        
+        self._shutdown = True
+        
+        self._wake_background_event.set()
+        
+    
+    def Start( self ):
+        
+        self._controller.CallToThreadLongRunning( self.MainLoopBackgroundWork )
+        

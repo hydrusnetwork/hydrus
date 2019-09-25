@@ -1800,6 +1800,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._gallery_page_wait_period_subscriptions = wx.SpinCtrl( subscriptions, min = 1, max = 30 )
             self._max_simultaneous_subscriptions = wx.SpinCtrl( subscriptions, min = 1, max = 100 )
             
+            self._subscription_file_error_cancel_threshold = ClientGUICommon.NoneableSpinCtrl( subscriptions, min = 1, max = 1000000, unit = 'errors' )
+            self._subscription_file_error_cancel_threshold.SetToolTip( 'This is a simple patch and will be replaced with a better "retry network errors later" system at some point, but is useful to increase if you have subs to unreliable websites.' )
+            
             self._process_subs_in_random_order = wx.CheckBox( subscriptions )
             self._process_subs_in_random_order.SetToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
             
@@ -1854,6 +1857,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._gallery_page_wait_period_subscriptions.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_subscriptions' ) )
             self._gallery_page_wait_period_subscriptions.SetToolTip( gallery_page_tt )
             self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
+            
+            self._subscription_file_error_cancel_threshold.SetValue( self._new_options.GetNoneableInteger( 'subscription_file_error_cancel_threshold' ) )
+            
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
             self._pause_character.SetValue( self._new_options.GetString( 'pause_character' ) )
@@ -1888,6 +1894,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Additional fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_subscriptions ) )
             rows.append( ( 'Maximum number of subscriptions that can sync simultaneously:', self._max_simultaneous_subscriptions ) )
+            rows.append( ( 'If a subscription has this many failed file imports, stop and continue later:', self._subscription_file_error_cancel_threshold ) )
             rows.append( ( 'Sync subscriptions in random order:', self._process_subs_in_random_order ) )
             
             gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
@@ -1945,6 +1952,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'gallery_page_wait_period_subscriptions', self._gallery_page_wait_period_subscriptions.GetValue() )
             self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.GetValue() )
+            self._new_options.SetNoneableInteger( 'subscription_file_error_cancel_threshold', self._subscription_file_error_cancel_threshold.GetValue() )
             self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
             
             self._new_options.SetInteger( 'watcher_page_wait_period', self._watcher_page_wait_period.GetValue() )
@@ -2927,26 +2935,30 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            min_unit_value = 1
+            max_unit_value = 1000
+            min_time_delta = 1
+            
             self._file_maintenance_during_idle = wx.CheckBox( self._file_maintenance_panel )
-            self._file_maintenance_on_shutdown = wx.CheckBox( self._file_maintenance_panel )
-            self._file_maintenance_throttle_enable = wx.CheckBox( self._file_maintenance_panel )
             
-            min_unit_value = 10
-            max_unit_value = 100000
-            min_time_delta = 3600
+            self._file_maintenance_idle_throttle_velocity = ClientGUITime.VelocityCtrl( self._file_maintenance_panel, min_unit_value, max_unit_value, min_time_delta, minutes = True, seconds = True, per_phrase = 'every', unit = 'heavy work units' )
             
-            self._file_maintenance_throttle_velocity = ClientGUITime.VelocityCtrl( self._file_maintenance_panel, min_unit_value, max_unit_value, min_time_delta, days = True, hours = True, per_phrase = 'every', unit = 'files' )
+            self._file_maintenance_during_active = wx.CheckBox( self._file_maintenance_panel )
             
-            tt = 'Please note that this throttle is not very rigorous, as file processing history is not currently saved on client restart. If you restart the client, the file manager thinks it has run on 0 files and will be happy to run until the throttle kicks in again.'
+            self._file_maintenance_active_throttle_velocity = ClientGUITime.VelocityCtrl( self._file_maintenance_panel, min_unit_value, max_unit_value, min_time_delta, minutes = True, seconds = True, per_phrase = 'every', unit = 'heavy work units' )
             
-            self._file_maintenance_throttle_enable.SetToolTip( tt )
-            self._file_maintenance_throttle_velocity.SetToolTip( tt )
+            tt = 'Different jobs will count for more or less weight. A file metadata reparse will count as one work unit, but quicker jobs like checking for file presence will count as fractions of one and will will work more frequently.'
+            tt += os.linesep * 2
+            tt += 'Please note that this throttle is not rigorous for long timescales, as file processing history is not currently saved on client exit. If you restart the client, the file manager thinks it has run 0 jobs and will be happy to run until the throttle kicks in again.'
+            
+            self._file_maintenance_idle_throttle_velocity.SetToolTip( tt )
+            self._file_maintenance_active_throttle_velocity.SetToolTip( tt )
             
             #
             
-            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._vacuum_panel, '', min = 28, max = 365, none_phrase = 'do not automatically vacuum' )
+            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._vacuum_panel, '', min = 28, max = 1000, none_phrase = 'do not automatically vacuum' )
             
-            tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 90 days+.'
+            tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 180 days+.'
             
             self._maintenance_vacuum_period_days.SetToolTip( tts )
             
@@ -2962,19 +2974,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
             
             self._file_maintenance_during_idle.SetValue( self._new_options.GetBoolean( 'file_maintenance_during_idle' ) )
-            self._file_maintenance_on_shutdown.SetValue( self._new_options.GetBoolean( 'file_maintenance_on_shutdown' ) )
-            self._file_maintenance_throttle_enable.SetValue( self._new_options.GetBoolean( 'file_maintenance_throttle_enable' ) )
             
-            file_maintenance_throttle_files = self._new_options.GetInteger( 'file_maintenance_throttle_files' )
-            file_maintenance_throttle_time_delta = self._new_options.GetInteger( 'file_maintenance_throttle_time_delta' )
+            file_maintenance_idle_throttle_files = self._new_options.GetInteger( 'file_maintenance_idle_throttle_files' )
+            file_maintenance_idle_throttle_time_delta = self._new_options.GetInteger( 'file_maintenance_idle_throttle_time_delta' )
             
-            file_maintenance_throttle_velocity = ( file_maintenance_throttle_files, file_maintenance_throttle_time_delta )
+            file_maintenance_idle_throttle_velocity = ( file_maintenance_idle_throttle_files, file_maintenance_idle_throttle_time_delta )
             
-            self._file_maintenance_throttle_velocity.SetValue( file_maintenance_throttle_velocity )
+            self._file_maintenance_idle_throttle_velocity.SetValue( file_maintenance_idle_throttle_velocity )
+            
+            self._file_maintenance_during_active.SetValue( self._new_options.GetBoolean( 'file_maintenance_during_active' ) )
+            
+            file_maintenance_active_throttle_files = self._new_options.GetInteger( 'file_maintenance_active_throttle_files' )
+            file_maintenance_active_throttle_time_delta = self._new_options.GetInteger( 'file_maintenance_active_throttle_time_delta' )
+            
+            file_maintenance_active_throttle_velocity = ( file_maintenance_active_throttle_files, file_maintenance_active_throttle_time_delta )
+            
+            self._file_maintenance_active_throttle_velocity.SetValue( file_maintenance_active_throttle_velocity )
             
             self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
-            
-            self._file_maintenance_throttle_enable.Bind( wx.EVT_CHECKBOX, self.EventFileMaintenanceThrottle )
             
             #
             
@@ -3027,16 +3044,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            message = 'File maintenance jobs include reparsing file metadata and regenerating thumbnails.'
+            message = 'Scheduled jobs such as reparsing file metadata and regenerating thumbnails are performed in the background.'
             
             self._file_maintenance_panel.Add( ClientGUICommon.BetterStaticText( self._file_maintenance_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
-            rows.append( ( 'Permit file maintenance to run during idle time: ', self._file_maintenance_during_idle ) )
-            rows.append( ( 'Permit file maintenance to run during shutdown: ', self._file_maintenance_on_shutdown ) )
-            rows.append( ( 'Throttle file maintenance: ', self._file_maintenance_throttle_enable ) )
-            rows.append( ( 'Throttle to this value: ', self._file_maintenance_throttle_velocity ) )
+            rows.append( ( 'Run file maintenance during idle time: ', self._file_maintenance_during_idle ) )
+            rows.append( ( 'Idle throttle: ', self._file_maintenance_idle_throttle_velocity ) )
+            rows.append( ( 'Run file maintenance during normal time: ', self._file_maintenance_during_active ) )
+            rows.append( ( 'Normal throttle: ', self._file_maintenance_active_throttle_velocity ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._file_maintenance_panel, rows )
             
@@ -3062,7 +3079,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self.SetSizer( vbox )
             
-            self._EnableDisableFileMaintenanceThrottle()
             self._EnableDisableIdleNormal()
             self._EnableDisableIdleShutdown()
             
@@ -3075,15 +3091,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._idle_mouse_period.Enable()
                 self._idle_cpu_max.Enable()
                 
-                self._file_maintenance_during_idle.Enable()
-                
             else:
                 
                 self._idle_period.Disable()
                 self._idle_mouse_period.Disable()
                 self._idle_cpu_max.Disable()
-                
-                self._file_maintenance_during_idle.Disable()
                 
             
         
@@ -3094,26 +3106,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._shutdown_work_period.Disable()
                 self._idle_shutdown_max_minutes.Disable()
                 
-                self._file_maintenance_on_shutdown.Disable()
-                
             else:
                 
                 self._shutdown_work_period.Enable()
                 self._idle_shutdown_max_minutes.Enable()
-                
-                self._file_maintenance_on_shutdown.Enable()
-                
-            
-        
-        def _EnableDisableFileMaintenanceThrottle( self ):
-            
-            if self._file_maintenance_throttle_enable.GetValue() == True:
-                
-                self._file_maintenance_throttle_velocity.Enable()
-                
-            else:
-                
-                self._file_maintenance_throttle_velocity.Disable()
                 
             
         
@@ -3125,11 +3121,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def EventIdleShutdown( self, event ):
             
             self._EnableDisableIdleShutdown()
-            
-        
-        def EventFileMaintenanceThrottle( self, event ):
-            
-            self._EnableDisableFileMaintenanceThrottle()
             
         
         def UpdateOptions( self ):
@@ -3146,15 +3137,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
             
             self._new_options.SetBoolean( 'file_maintenance_during_idle', self._file_maintenance_during_idle.GetValue() )
-            self._new_options.SetBoolean( 'file_maintenance_on_shutdown', self._file_maintenance_on_shutdown.GetValue() )
-            self._new_options.SetBoolean( 'file_maintenance_throttle_enable', self._file_maintenance_throttle_enable.GetValue() )
             
-            file_maintenance_throttle_velocity = self._file_maintenance_throttle_velocity.GetValue()
+            file_maintenance_idle_throttle_velocity = self._file_maintenance_idle_throttle_velocity.GetValue()
             
-            ( file_maintenance_throttle_files, file_maintenance_throttle_time_delta ) = file_maintenance_throttle_velocity
+            ( file_maintenance_idle_throttle_files, file_maintenance_idle_throttle_time_delta ) = file_maintenance_idle_throttle_velocity
             
-            self._new_options.SetInteger( 'file_maintenance_throttle_files', file_maintenance_throttle_files )
-            self._new_options.SetInteger( 'file_maintenance_throttle_time_delta', file_maintenance_throttle_time_delta )
+            self._new_options.SetInteger( 'file_maintenance_idle_throttle_files', file_maintenance_idle_throttle_files )
+            self._new_options.SetInteger( 'file_maintenance_idle_throttle_time_delta', file_maintenance_idle_throttle_time_delta )
+            
+            self._new_options.SetBoolean( 'file_maintenance_during_active', self._file_maintenance_during_active.GetValue() )
+            
+            file_maintenance_active_throttle_velocity = self._file_maintenance_active_throttle_velocity.GetValue()
+            
+            ( file_maintenance_active_throttle_files, file_maintenance_active_throttle_time_delta ) = file_maintenance_active_throttle_velocity
+            
+            self._new_options.SetInteger( 'file_maintenance_active_throttle_files', file_maintenance_active_throttle_files )
+            self._new_options.SetInteger( 'file_maintenance_active_throttle_time_delta', file_maintenance_active_throttle_time_delta )
             
             self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
@@ -3849,12 +3847,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general_panel = ClientGUICommon.StaticBox( self, 'general tag options' )
             
-            self._default_tag_sort = wx.Choice( general_panel )
+            self._default_tag_sort = ClientGUICommon.BetterChoice( general_panel )
             
             self._default_tag_sort.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
             self._default_tag_sort.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-            self._default_tag_sort.Append( 'lexicographic (a-z) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
-            self._default_tag_sort.Append( 'lexicographic (z-a) (grouped by namespace)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
+            self._default_tag_sort.Append( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
+            self._default_tag_sort.Append( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
+            self._default_tag_sort.Append( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
+            self._default_tag_sort.Append( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
             self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
             self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
             self._default_tag_sort.Append( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
@@ -3888,14 +3888,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC: self._default_tag_sort.Select( 2 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._default_tag_sort.Select( 3 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 4 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 5 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC: self._default_tag_sort.Select( 6 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC: self._default_tag_sort.Select( 7 )
+            self._default_tag_sort.SetValue( HC.options[ 'default_tag_sort' ] )
             
             self._default_tag_service_search_page.Append( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
             

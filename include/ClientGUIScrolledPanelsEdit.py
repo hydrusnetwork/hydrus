@@ -1350,7 +1350,6 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._duplicate_action in ( HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE ) and not for_custom_action:
             
-            self._sync_archive.Disable()
             self._sync_urls_action.Disable()
             
             self._sync_urls_action.SetValue( None )

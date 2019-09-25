@@ -1715,7 +1715,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
             if num_files > 50:
                 
                 text += os.linesep * 2
-                text += 'You have selected {} files, so this job may take some time. If you would like, you can simply schedule it to happen in idle time.'.format( HydrusData.ToHumanInt( num_files ) )
+                text += 'You have selected {} files, so this job may take some time. You can run it all now or schedule it to the overall file maintenance queue for later spread-out processing.'.format( HydrusData.ToHumanInt( num_files ) )
                 
                 yes_tuples = []
                 
@@ -4599,6 +4599,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             media.RefreshFileInfo()
             
+        
+        self._RedrawMedia( affected_media )
         
     
     def NewThumbnails( self, hashes ):

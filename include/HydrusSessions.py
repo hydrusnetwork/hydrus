@@ -81,6 +81,27 @@ class HydrusSessionManagerServer( object ):
             
         
     
+    def GetAccountFromAccessKey( self, service_key, access_key ):
+        
+        with self._lock:
+            
+            account_key = HG.controller.Read( 'account_key_from_access_key', service_key, access_key )
+            
+            account_keys_to_accounts = self._service_keys_to_account_keys_to_accounts[ service_key ]
+            
+            if account_key not in account_keys_to_accounts:
+                
+                account = HG.controller.Read( 'account', service_key, account_key )
+                
+                account_keys_to_accounts[ account_key ] = account
+                
+            
+            account = account_keys_to_accounts[ account_key ]
+            
+            return account
+            
+        
+    
     def GetDirtyAccounts( self ):
         
         with self._lock:

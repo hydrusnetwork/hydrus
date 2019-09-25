@@ -493,11 +493,6 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        if self.new_options.GetBoolean( 'file_maintenance_on_shutdown' ):
-            
-            self.files_maintenance_manager.DoMaintenance( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
-            
-        
         self.Write( 'last_shutdown_work_time', HydrusData.GetNow() )
         
     
@@ -658,11 +653,6 @@ class Controller( HydrusController.HydrusController ):
                 
                 work_to_do.append( service.GetName() + ' repository processing' )
                 
-            
-        
-        if self.new_options.GetBoolean( 'file_maintenance_on_shutdown' ):
-            
-            work_to_do.extend( self.files_maintenance_manager.GetIdleShutdownWorkDue() )
             
         
         return work_to_do
@@ -919,16 +909,13 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions', 'wake_idle_workers' ), period = 4 * 3600, pre_call_wait = 1 ) )
             
         
+        self.files_maintenance_manager.Start()
+        
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
         job.WakeOnPubSub( 'notify_restart_import_folders_daemon' )
         job.WakeOnPubSub( 'notify_new_import_folders' )
         job.ShouldDelayOnWakeup( True )
         self._daemon_jobs[ 'import_folders' ] = job
-        
-        job = self.CallRepeating( 60.0, 300.0, self.files_maintenance_manager.DoMaintenance, maintenance_mode = HC.MAINTENANCE_IDLE )
-        job.ShouldDelayOnWakeup( True )
-        job.WakeOnPubSub( 'wake_idle_workers' )
-        self._daemon_jobs[ 'maintain_files' ] = job
         
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckExportFolders )
         job.WakeOnPubSub( 'notify_restart_export_folders_daemon' )
@@ -1435,7 +1422,16 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.SetRunningTwistedServices( [] )
+            self.files_maintenance_manager.Shutdown()
+            
+            try:
+                
+                self.SetRunningTwistedServices( [] )
+                
+            except:
+                
+                pass # sometimes this throws a wobbler, screw it
+                
             
         
         HydrusController.HydrusController.ShutdownView( self )

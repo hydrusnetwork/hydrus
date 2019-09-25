@@ -586,7 +586,7 @@ class LocationsManager( object ):
     
     LOCAL_LOCATIONS = { CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }
     
-    def __init__( self, current, deleted, pending, petitioned, inbox = False, urls = None, service_keys_to_filenames = None, current_to_timestamps = None ):
+    def __init__( self, current, deleted, pending, petitioned, inbox = False, urls = None, service_keys_to_filenames = None, current_to_timestamps = None, file_modified_timestamp = None ):
         
         self._current = current
         self._deleted = deleted
@@ -616,6 +616,8 @@ class LocationsManager( object ):
         
         self._current_to_timestamps = current_to_timestamps
         
+        self._file_modified_timestamp = file_modified_timestamp
+        
     
     def DeletePending( self, service_key ):
         
@@ -633,7 +635,7 @@ class LocationsManager( object ):
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
         current_to_timestamps = dict( self._current_to_timestamps )
         
-        return LocationsManager( current, deleted, pending, petitioned, self._inbox, urls, service_keys_to_filenames, current_to_timestamps )
+        return LocationsManager( current, deleted, pending, petitioned, self._inbox, urls, service_keys_to_filenames, current_to_timestamps, self._file_modified_timestamp )
         
     
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
@@ -648,6 +650,11 @@ class LocationsManager( object ):
     def GetDeletedRemote( self ):
         
         return self._deleted - self.LOCAL_LOCATIONS
+        
+    
+    def GetFileModifiedTimestamp( self ):
+        
+        return self._file_modified_timestamp
         
     
     def GetInbox( self ):
@@ -1970,6 +1977,13 @@ class MediaSingleton( Media ):
             lines.append( 'was once previously in this client' )
             
         
+        file_modified_timestamp = locations_manager.GetFileModifiedTimestamp()
+        
+        if file_modified_timestamp is not None:
+            
+            lines.append( 'file modified: {}'.format( HydrusData.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) )
+            
+        
         for service_key in current_service_keys:
             
             if service_key in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
@@ -2555,6 +2569,13 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     return deal_with_none( x.GetTimestamp( file_service_key ) )
                     
                 
+            elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:
+                
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetLocationsManager().GetFileModifiedTimestamp() )
+                    
+                
             elif sort_data == CC.SORT_FILES_BY_HEIGHT:
                 
                 def sort_key( x ):
@@ -2684,6 +2705,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = 'file: filetype'
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = 'file: has audio'
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'file: time imported'
+            sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = 'file: modified time'
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = 'random'
             sort_string_lookup[ CC.SORT_FILES_BY_NUM_TAGS ] = 'tags: number of tags'
             sort_string_lookup[ CC.SORT_FILES_BY_MEDIA_VIEWS ] = 'views: media views'
@@ -2722,6 +2744,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = ( 'shortest first', 'longest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_HAS_AUDIO ] = ( 'audio first', 'silent first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
+            sort_string_lookup[ CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'mime', 'mime', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )

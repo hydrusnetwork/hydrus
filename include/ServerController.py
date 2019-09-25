@@ -444,7 +444,14 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownView( self ):
         
-        self.SetRunningTwistedServices( [] )
+        try:
+            
+            self.SetRunningTwistedServices( [] )
+            
+        except:
+            
+            pass # sometimes this throws a wobbler, screw it
+            
         
         HydrusController.HydrusController.ShutdownView( self )
         

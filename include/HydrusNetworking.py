@@ -865,7 +865,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ReportRequestUsed( self ):
+    def ReportRequestUsed( self, num_requests = 1 ):
         
         with self._lock:
             
@@ -873,15 +873,15 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             ( month_time, day_time, hour_time, minute_time, second_time ) = self._GetTimes( dt )
             
-            self._months_requests[ month_time ] += 1
+            self._months_requests[ month_time ] += num_requests
             
-            self._days_requests[ day_time ] += 1
+            self._days_requests[ day_time ] += num_requests
             
-            self._hours_requests[ hour_time ] += 1
+            self._hours_requests[ hour_time ] += num_requests
             
-            self._minutes_requests[ minute_time ] += 1
+            self._minutes_requests[ minute_time ] += num_requests
             
-            self._seconds_requests[ second_time ] += 1
+            self._seconds_requests[ second_time ] += num_requests
             
             self._MaintainCache()
             

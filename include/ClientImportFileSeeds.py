@@ -178,6 +178,7 @@ class FileImportJob( object ):
         self._thumbnail_bytes = None
         self._phashes = None
         self._extra_hashes = None
+        self._file_modified_timestamp = None
         
     
     def CheckIsGoodToImport( self ):
@@ -325,6 +326,8 @@ class FileImportJob( object ):
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
+        self._file_modified_timestamp = HydrusFileHandling.GetFileModifiedTimestamp( self._temp_path )
+        
     
     def GetExtraHashes( self ):
         
@@ -339,6 +342,11 @@ class FileImportJob( object ):
     def GetFileInfo( self ):
         
         return self._file_info
+        
+    
+    def GetFileModifiedTimestamp( self ):
+        
+        return self._file_modified_timestamp
         
     
     def GetHash( self ):

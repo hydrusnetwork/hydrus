@@ -1005,7 +1005,15 @@ class ReviewServicePanel( wx.Panel ):
             #
             
             self._refresh_account_button.SetLabelText( 'refresh account' )
-            self._refresh_account_button.Enable()
+            
+            if self._service.CanSyncAccount( including_external_communication = False ):
+                
+                self._refresh_account_button.Enable()
+                
+            else:
+                
+                self._refresh_account_button.Disable()
+                
             
             account_key = account.GetAccountKey()
             
@@ -1108,7 +1116,8 @@ class ReviewServicePanel( wx.Panel ):
             self._processing_progress = ClientGUICommon.TextAndGauge( self )
             self._is_mostly_caught_up_st = ClientGUICommon.BetterStaticText( self )
             
-            self._sync_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncNow )
+            self._sync_remote_now_button = ClientGUICommon.BetterButton( self, 'download now', self._SyncRemoteNow )
+            self._sync_processing_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncProcessingNow )
             self._pause_play_button = ClientGUICommon.BetterButton( self, 'pause', self._PausePlay )
             self._export_updates_button = ClientGUICommon.BetterButton( self, 'export updates', self._ExportUpdates )
             self._reset_button = ClientGUICommon.BetterButton( self, 'reset processing cache', self._Reset )
@@ -1129,7 +1138,8 @@ class ReviewServicePanel( wx.Panel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.Add( self._sync_now_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._sync_remote_now_button, CC.FLAGS_VCENTER )
+            hbox.Add( self._sync_processing_now_button, CC.FLAGS_VCENTER )
             hbox.Add( self._pause_play_button, CC.FLAGS_VCENTER )
             hbox.Add( self._export_updates_button, CC.FLAGS_VCENTER )
             hbox.Add( self._reset_button, CC.FLAGS_VCENTER )
@@ -1253,7 +1263,8 @@ class ReviewServicePanel( wx.Panel ):
             
             service_paused = self._service.IsPaused()
             
-            self._sync_now_button.Disable()
+            self._sync_remote_now_button.Disable()
+            self._sync_processing_now_button.Disable()
             
             if service_paused:
                 
@@ -1292,7 +1303,21 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def _SyncNow( self ):
+        def _SyncRemoteNow( self ):
+            
+            def do_it( service, my_updater ):
+                
+                service.SyncRemote()
+                
+                my_updater.Update()
+                
+            
+            self._sync_remote_now_button.Disable()
+            
+            HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
+            
+        
+        def _SyncProcessingNow( self ):
             
             message = 'This will tell the database to process any possible outstanding update files right now.'
             message += os.linesep * 2
@@ -1302,16 +1327,16 @@ class ReviewServicePanel( wx.Panel ):
             
             if result == wx.ID_YES:
                 
-                def do_it():
+                def do_it( service, my_updater ):
                     
-                    self._service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_FORCED )
+                    service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_FORCED )
                     
-                    self._my_updater.Update()
+                    my_updater.Update()
                     
                 
-                self._sync_now_button.Disable()
+                self._sync_processing_now_button.Disable()
                 
-                HG.client_controller.CallToThread( do_it )
+                HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
                 
             
         
@@ -1348,11 +1373,6 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._is_mostly_caught_up_st.SetLabel( caught_up_text )
                 
-                if processing_value == download_value:
-                    
-                    self._sync_now_button.Disable()
-                    
-                
                 if download_value == 0:
                     
                     self._export_updates_button.Disable()
@@ -1371,19 +1391,33 @@ class ReviewServicePanel( wx.Panel ):
                     self._reset_button.Enable()
                     
                 
-                processing_work_to_do = processing_value < download_value
+                metadata_due = self._service.GetMetadata().UpdateDue( from_client = True )
+                updates_due = download_value < range
                 
-                service_paused = self._service.IsPaused()
+                download_work_to_do = metadata_due or updates_due
                 
-                all_repo_sync_paused = HG.client_controller.options[ 'pause_repo_sync' ]
+                can_sync_download = self._service.CanSyncDownload()
                 
-                if service_paused or all_repo_sync_paused or not processing_work_to_do:
+                if download_work_to_do and can_sync_download:
                     
-                    self._sync_now_button.Disable()
+                    self._sync_remote_now_button.Enable()
                     
                 else:
                     
-                    self._sync_now_button.Enable()
+                    self._sync_remote_now_button.Disable()
+                    
+                
+                processing_work_to_do = processing_value < download_value
+                
+                can_sync_process = self._service.CanSyncDownload()
+                
+                if processing_work_to_do and can_sync_process:
+                    
+                    self._sync_processing_now_button.Enable()
+                    
+                else:
+                    
+                    self._sync_processing_now_button.Disable()
                     
                 
             

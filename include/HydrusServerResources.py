@@ -638,11 +638,18 @@ class HydrusResource( Resource ):
         return request
         
     
-    def _parseHydrusNetworkAccessKey( self, request ):
+    def _parseHydrusNetworkAccessKey( self, request, key_required = True ):
         
         if not request.requestHeaders.hasHeader( 'Hydrus-Key' ):
             
-            raise HydrusExceptions.MissingCredentialsException( 'No hydrus key header found!' )
+            if key_required:
+                
+                raise HydrusExceptions.MissingCredentialsException( 'No hydrus key header found!' )
+                
+            else:
+                
+                return None
+                
             
         
         hex_keys = request.requestHeaders.getRawHeaders( 'Hydrus-Key' )

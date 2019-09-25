@@ -634,10 +634,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             error_count += 1
                             
-                            time.sleep( 10 )
+                            time.sleep( 5 )
                             
                         
-                        if error_count > 4:
+                        error_count_threshold = HG.client_controller.new_options.GetNoneableInteger( 'subscription_file_error_cancel_threshold' )
+                        
+                        if error_count_threshold is not None and error_count >= error_count_threshold:
                             
                             raise Exception( 'The subscription ' + self._name + ' encountered several errors when downloading files, so it abandoned its sync.' )
                             

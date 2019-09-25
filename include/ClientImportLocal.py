@@ -10,6 +10,7 @@ from . import ClientThreading
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
+from . import HydrusFileHandling
 from . import HydrusGlobals as HG
 from . import HydrusPaths
 from . import HydrusSerialisable
@@ -44,9 +45,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    s = os.stat( path )
+                    file_modified_time = HydrusFileHandling.GetFileModifiedTimestamp( path )
                     
-                    file_seed.source_time = int( min( s.st_mtime, s.st_ctime ) )
+                    file_seed.source_time = file_modified_time
                     
                 except:
                     

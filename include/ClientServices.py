@@ -457,11 +457,11 @@ class ServiceLocalBooru( ServiceLocalServerService ):
             
             if self._upnp_port is None:
                 
-                port = ':' + self._port
+                port = ':{}'.format( self._port )
                 
             else:
                 
-                port = ':' + self._upnp_port
+                port = ':{}'.format( self._upnp_port )
                 
             
         else:
@@ -470,7 +470,7 @@ class ServiceLocalBooru( ServiceLocalServerService ):
             
             if port != '':
                 
-                port = ':' + port
+                port = ':{}'.format( port )
                 
             
         
@@ -719,6 +719,8 @@ class ServiceRestricted( ServiceRemote ):
         
         self._next_account_sync = HydrusData.GetNow()
         
+        HG.client_controller.network_engine.session_manager.ClearSession( self.network_context )
+        
         self._SetDirty()
         
         HG.client_controller.pub( 'important_dirt_to_clean' )
@@ -746,6 +748,20 @@ class ServiceRestricted( ServiceRemote ):
         else:
             
             return HC.UPDATE_DURATION
+            
+        
+    
+    def _CanSyncAccount( self, including_external_communication = True ):
+        
+        try:
+            
+            self._CheckFunctional( including_external_communication = including_external_communication, including_account = False )
+            
+            return True
+            
+        except:
+            
+            return False
             
         
     
@@ -786,6 +802,14 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ] )
         self._next_account_sync = dictionary[ 'next_account_sync' ]
+        
+    
+    def CanSyncAccount( self, including_external_communication = True ):
+        
+        with self._lock:
+            
+            return self._CanSyncAccount( including_external_communication = including_external_communication )
+            
         
     
     def CheckFunctional( self, including_external_communication = True, including_bandwidth = True, including_account = True ):
@@ -1047,22 +1071,17 @@ class ServiceRestricted( ServiceRemote ):
                 
             else:
                 
-                do_it = HydrusData.TimeHasPassed( self._next_account_sync )
-                
-                if do_it:
+                if not self._CanSyncAccount():
                     
-                    try:
-                        
-                        self._CheckFunctional( including_account = False )
-                        
-                    except:
-                        
-                        do_it = False
-                        
-                        self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION
-                        
-                        self._SetDirty()
-                        
+                    do_it = False
+                    
+                    self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION
+                    
+                    self._SetDirty()
+                    
+                else:
+                    
+                    do_it = HydrusData.TimeHasPassed( self._next_account_sync )
                     
                 
             
@@ -1131,7 +1150,8 @@ class ServiceRepository( ServiceRestricted ):
         
         ServiceRestricted.__init__( self, service_key, service_type, name, dictionary = dictionary )
         
-        self._sync_lock = threading.Lock()
+        self._sync_remote_lock = threading.Lock()
+        self._sync_processing_lock = threading.Lock()
         
         self._is_mostly_caught_up = None
         
@@ -1814,6 +1834,30 @@ class ServiceRepository( ServiceRestricted ):
         return processing_value < range
         
     
+    def CanSyncDownload( self ):
+        
+        with self._lock:
+            
+            return self._CanSyncDownload()
+            
+        
+    
+    def CanSyncProcess( self ):
+        
+        with self._lock:
+            
+            return self._CanSyncProcess()
+            
+        
+    
+    def GetMetadata( self ):
+        
+        with self._lock:
+            
+            return self._metadata
+            
+        
+    
     def GetNextUpdateDueString( self ):
         
         with self._lock:
@@ -1924,17 +1968,15 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
-    def Sync( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
+    def SyncRemote( self, stop_time = None ):
         
-        with self._sync_lock: # to stop sync_now button clicks from stomping over the regular daemon and vice versa
+        with self._sync_remote_lock:
             
             try:
                 
                 self._SyncDownloadMetadata()
                 
                 self._SyncDownloadUpdates( stop_time )
-                
-                self._SyncProcessUpdates( maintenance_mode = maintenance_mode, stop_time = stop_time )
                 
                 self.SyncThumbnails( stop_time )
                 
@@ -1962,7 +2004,7 @@ class ServiceRepository( ServiceRestricted ):
     
     def SyncProcessUpdates( self, maintenance_mode = HC.MAINTENANCE_IDLE, stop_time = None ):
         
-        with self._sync_lock:
+        with self._sync_processing_lock:
             
             self._SyncProcessUpdates( maintenance_mode = maintenance_mode, stop_time = stop_time )
             

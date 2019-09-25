@@ -1063,6 +1063,8 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
+        self._yesno_open = False
+        
         self._job_key = job_key
         
         self._message_window = PopupMessage( self, self, self._job_key )
@@ -1170,7 +1172,16 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 text = 'Cancel/stop job?'
                 
-                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                self._yesno_open = True
+                
+                try:
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                    
+                finally:
+                    
+                    self._yesno_open = False
+                    
                 
                 if result == wx.ID_YES:
                     
@@ -1196,11 +1207,14 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if self._job_key.IsDone():
                 
-                parent = self.GetParent()
-                
-                if parent.IsModal(): # event sometimes fires after modal done
+                if not self._yesno_open: # don't close while a child dialog open m8
                     
-                    parent.DoOK()
+                    parent = self.GetParent()
+                    
+                    if parent.IsModal(): # event sometimes fires after modal done
+                        
+                        parent.DoOK()
+                        
                     
                 
             else:

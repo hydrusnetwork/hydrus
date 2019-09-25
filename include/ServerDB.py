@@ -275,7 +275,7 @@ class DB( HydrusDB.HydrusDB ):
         HG.server_busy = False
         
     
-    def _Backup( self ):
+    def _Backup( self, skip_vacuum = False ):
         
         self._CloseDBCursor()
         
@@ -285,15 +285,18 @@ class DB( HydrusDB.HydrusDB ):
             
             stop_time = HydrusData.GetNow() + 300
             
-            for filename in list(self._db_filenames.values()):
+            if not skip_vacuum:
                 
-                db_path = os.path.join( self._db_dir, filename )
-                
-                if HydrusDB.CanVacuum( db_path, stop_time ):
+                for filename in self._db_filenames.values():
                     
-                    HydrusData.Print( 'backing up: vacuuming ' + filename )
+                    db_path = os.path.join( self._db_dir, filename )
                     
-                    HydrusDB.VacuumDB( db_path )
+                    if HydrusDB.CanVacuum( db_path, stop_time ):
+                        
+                        HydrusData.Print( 'backing up: vacuuming ' + filename )
+                        
+                        HydrusDB.VacuumDB( db_path )
+                        
                     
                 
             
@@ -301,7 +304,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusPaths.MakeSureDirectoryExists( backup_path )
             
-            for filename in list(self._db_filenames.values()):
+            for filename in self._db_filenames.values():
                 
                 HydrusData.Print( 'backing up: copying ' + filename )
                 

@@ -566,6 +566,7 @@ class TestServer( unittest.TestCase ):
         ## backup
         
         response = service.Request( HC.POST, 'backup' )
+        response = service.Request( HC.POST, 'backup', { 'skip_vacuum' : True } )
         
         #
         
