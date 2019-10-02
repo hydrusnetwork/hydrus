@@ -1534,7 +1534,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
-        self._listbook.AddPage( 'sound', 'sound', self._SoundPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'audio and duration', 'audio and duration', self._AudioAndDurationPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default system predicates', 'default system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
@@ -1554,6 +1554,47 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         vbox.Add( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+    
+    class _AudioAndDurationPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            self._has_duration_label = wx.TextCtrl( self )
+            
+            self._has_audio_label = wx.TextCtrl( self )
+            
+            #
+            
+            self._has_duration_label.SetValue( self._new_options.GetString( 'has_duration_label' ) )
+            
+            self._has_audio_label.SetValue( self._new_options.GetString( 'has_audio_label' ) )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            rows = []
+            
+            rows.append( ( 'Label for files with duration: ', self._has_duration_label ) )
+            rows.append( ( 'Label for files with audio: ', self._has_audio_label ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetString( 'has_duration_label', self._has_duration_label.GetValue() )
+            self._new_options.SetString( 'has_audio_label', self._has_audio_label.GetValue() )
+            
         
     
     class _ColoursPanel( wx.Panel ):
@@ -3514,41 +3555,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             HC.options[ 'sort_by' ] = sort_by_choices
-            
-        
-    
-    class _SoundPanel( wx.Panel ):
-        
-        def __init__( self, parent, new_options ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._new_options = new_options
-            
-            self._has_audio_label = wx.TextCtrl( self )
-            
-            #
-            
-            self._has_audio_label.SetValue( self._new_options.GetString( 'has_audio_label' ) )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            rows = []
-            
-            rows.append( ( 'Label for files with audio: ', self._has_audio_label ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def UpdateOptions( self ):
-            
-            self._new_options.SetString( 'has_audio_label', self._has_audio_label.GetValue() )
             
         
     

@@ -4,8 +4,10 @@ from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIListBoxes
 from . import ClientGUIParsing
+from . import ClientMedia
 from . import ClientParsing
 from . import ClientSearch
+from . import ClientTags
 from . import ClientThreading
 import collections
 from . import HydrusConstants as HC
@@ -251,7 +253,7 @@ class RelatedTagsPanel( wx.Panel ):
         
         hash = m.GetHash()
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._service_key, collapse_siblings = False )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
         
         tags_to_count = collections.Counter()
         

@@ -1,14 +1,15 @@
 import collections
-from . import HydrusConstants as HC
-from . import HydrusTags
-import os
-import unittest
-from . import HydrusData
 from . import ClientCaches
 from . import ClientConstants as CC
 from . import ClientMedia
 from . import ClientSearch
+from . import ClientTags
+from . import HydrusConstants as HC
+from . import HydrusData
+from . import HydrusExceptions
 from . import HydrusGlobals as HG
+import os
+import unittest
 
 class TestMergeTagsManagers( unittest.TestCase ):
     
@@ -61,15 +62,11 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         tags_managers = ( tags_manager_1, tags_manager_2, tags_manager_3 )
         
-        tags_manager = ClientMedia.MergeTagsManagers( tags_managers )
+        tags_manager = ClientMedia.TagsManager.MergeTagsManagers( tags_managers )
         
         #
         
-        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'double page spread' }, 'volume' : { '3' }, 'chapter' : { '1', '2' }, 'page' : { '4', '5' } }
-        
-        self.assertEqual( tags_manager.GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) ), result )
-        
-        self.assertEqual( tags_manager.GetNamespaceSlice( ( 'character', ) ), frozenset( { 'character:cibo' } ) )
+        self.assertEqual( tags_manager.GetNamespaceSlice( ( 'character', ), ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ), frozenset( { 'character:cibo' } ) )
         
     
 class TestTagsManager( unittest.TestCase ):
@@ -119,92 +116,85 @@ class TestTagsManager( unittest.TestCase ):
         cls._other_service_keys_to_statuses_to_tags = other_service_keys_to_statuses_to_tags
         
     
-    def test_get_cstvcp( self ):
-        
-        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'test title' }, 'volume' : { '3' }, 'chapter' : { '2' }, 'page' : { '1' } }
-        
-        self.assertEqual( self._tags_manager.GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) ), result )
-        
-    
     def test_delete_pending( self ):
         
-        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_key ), { 'pending' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_key ), { 'petitioned' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'pending' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'petitioned' } )
         
         self._other_tags_manager.DeletePending( self._pending_service_key )
         
-        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
     
     def test_get_current( self ):
         
-        self.assertEqual( self._tags_manager.GetCurrent( self._first_key ), { 'current', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
-        self.assertEqual( self._tags_manager.GetCurrent( self._second_key ), { 'deleted', '\u2835' } )
-        self.assertEqual( self._tags_manager.GetCurrent( self._third_key ), { 'petitioned' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._first_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'current', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._second_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'deleted', '\u2835' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._third_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'petitioned' } )
         
-        self.assertEqual( self._tags_manager.GetCurrent(), { 'current', 'deleted', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned' } )
+        self.assertEqual( self._tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ), { 'current', 'deleted', '\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned' } )
         
     
     def test_get_deleted( self ):
         
-        self.assertEqual( self._tags_manager.GetDeleted( self._first_key ), { 'deleted' } )
-        self.assertEqual( self._tags_manager.GetDeleted( self._second_key ), { 'current' } )
-        self.assertEqual( self._tags_manager.GetDeleted( self._third_key ), { 'pending' } )
+        self.assertEqual( self._tags_manager.GetDeleted( self._first_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'deleted' } )
+        self.assertEqual( self._tags_manager.GetDeleted( self._second_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'current' } )
+        self.assertEqual( self._tags_manager.GetDeleted( self._third_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'pending' } )
         
-        self.assertEqual( self._tags_manager.GetDeleted(), { 'deleted', 'current', 'pending' } )
+        self.assertEqual( self._tags_manager.GetDeleted( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ), { 'deleted', 'current', 'pending' } )
         
     
     def test_get_namespace_slice( self ):
         
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( ( 'creator', 'series' ) ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( () ), frozenset() )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( ( 'creator', 'series' ), ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( [], ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ), frozenset() )
         
     
     def test_get_num_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = True, include_pending_tags = False ), 8 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = True, include_pending_tags = True ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 8 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = True, include_pending_tags = False ), 2 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = True, include_pending_tags = True ), 3 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 2 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 3 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = False ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 1 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 10 )
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 11 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = False ), 10 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = False, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, include_current_tags = True, include_pending_tags = True ), 11 )
         
     
     def test_get_pending( self ):
         
-        self.assertEqual( self._tags_manager.GetPending( self._first_key ), set() )
-        self.assertEqual( self._tags_manager.GetPending( self._second_key ), { 'pending' } )
-        self.assertEqual( self._tags_manager.GetPending( self._third_key ), set() )
+        self.assertEqual( self._tags_manager.GetPending( self._first_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._tags_manager.GetPending( self._second_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'pending' } )
+        self.assertEqual( self._tags_manager.GetPending( self._third_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertEqual( self._tags_manager.GetPending(), { 'pending' } )
+        self.assertEqual( self._tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ), { 'pending' } )
         
     
     def test_get_petitioned( self ):
         
-        self.assertEqual( self._tags_manager.GetPetitioned( self._first_key ), set() )
-        self.assertEqual( self._tags_manager.GetPetitioned( self._second_key ), { 'petitioned' } )
-        self.assertEqual( self._tags_manager.GetPetitioned( self._third_key ), set() )
+        self.assertEqual( self._tags_manager.GetPetitioned( self._first_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._tags_manager.GetPetitioned( self._second_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'petitioned' } )
+        self.assertEqual( self._tags_manager.GetPetitioned( self._third_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertEqual( self._tags_manager.GetPetitioned(), { 'petitioned' } )
+        self.assertEqual( self._tags_manager.GetPetitioned( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ), { 'petitioned' } )
         
     
     def test_get_service_keys_to_statuses_to_tags( self ):
         
-        s = self._tags_manager.GetServiceKeysToStatusesToTags()
+        s = self._tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
         
         self.assertEqual( s[ self._first_key ], self._service_keys_to_statuses_to_tags[ self._first_key ] )
         self.assertEqual( s[ self._second_key ], self._service_keys_to_statuses_to_tags[ self._second_key ] )
@@ -213,15 +203,15 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_statuses_to_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetStatusesToTags( self._first_key ), self._service_keys_to_statuses_to_tags[ self._first_key ] )
-        self.assertEqual( self._tags_manager.GetStatusesToTags( self._second_key ), self._service_keys_to_statuses_to_tags[ self._second_key ] )
-        self.assertEqual( self._tags_manager.GetStatusesToTags( self._third_key ), self._service_keys_to_statuses_to_tags[ self._third_key ] )
+        self.assertEqual( self._tags_manager.GetStatusesToTags( self._first_key, ClientTags.TAG_DISPLAY_STORAGE ), self._service_keys_to_statuses_to_tags[ self._first_key ] )
+        self.assertEqual( self._tags_manager.GetStatusesToTags( self._second_key, ClientTags.TAG_DISPLAY_STORAGE ), self._service_keys_to_statuses_to_tags[ self._second_key ] )
+        self.assertEqual( self._tags_manager.GetStatusesToTags( self._third_key, ClientTags.TAG_DISPLAY_STORAGE ), self._service_keys_to_statuses_to_tags[ self._third_key ] )
         
     
     def test_has_tag( self ):
         
-        self.assertTrue( self._tags_manager.HasTag( '\u2835' ) )
-        self.assertFalse( self._tags_manager.HasTag( 'not_exist' ) )
+        self.assertTrue( self._tags_manager.HasTag( '\u2835', ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertFalse( self._tags_manager.HasTag( 'not_exist', ClientTags.TAG_DISPLAY_STORAGE ) )
         
     
     def test_process_content_update( self ):
@@ -230,13 +220,13 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE, ) )
         
         #
         
@@ -244,13 +234,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -258,13 +248,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -272,13 +262,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -286,13 +276,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -300,13 +290,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -314,13 +304,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
         
-        self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -328,13 +318,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -342,13 +332,13 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
         
-        self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
         #
         
@@ -356,28 +346,61 @@ class TestTagsManager( unittest.TestCase ):
         
         self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         
-        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
-        self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
+        self.assertNotIn( 'hello', self._other_tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ) )
         
     
     def test_reset_service( self ):
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_key ), { 'reset_current' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_key ), { 'reset_deleted' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_key ), { 'reset_pending' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key ), { 'reset_petitioned' } )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'reset_current' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'reset_deleted' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'reset_pending' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { 'reset_petitioned' } )
         
         self._other_tags_manager.ResetService( self._reset_service_key )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_key ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
+        
+    
+class TestTagDisplayManager( unittest.TestCase ):
+    
+    def test_tag_filtering( self ):
+        
+        filter_pages = ClientTags.TagFilter()
+        
+        filter_pages.SetRule( 'page:', CC.FILTER_BLACKLIST )
+        
+        tag_display_manager = ClientTags.TagDisplayManager()
+        
+        tag_display_manager.SetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, CC.COMBINED_TAG_SERVICE_KEY, filter_pages )
+        
+        tags = { 'character:samus aran', 'series:metroid', 'page:17' }
+        
+        #
+        
+        self.assertFalse( tag_display_manager.FiltersTags( ClientTags.TAG_DISPLAY_STORAGE, CC.COMBINED_TAG_SERVICE_KEY ) )
+        
+        storage_tags = tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, CC.COMBINED_TAG_SERVICE_KEY, tags )
+        
+        self.assertEqual( storage_tags, tags )
+        
+        #
+        
+        self.assertTrue( tag_display_manager.FiltersTags( ClientTags.TAG_DISPLAY_SELECTION_LIST, CC.COMBINED_TAG_SERVICE_KEY ) )
+        
+        selection_tags = tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_SELECTION_LIST, CC.COMBINED_TAG_SERVICE_KEY, tags )
+        
+        self.assertTrue( len( selection_tags ) < len( tags ) )
+        
+        self.assertEqual( selection_tags, filter_pages.Filter( tags ) )
         
     
 class TestTagObjects( unittest.TestCase ):

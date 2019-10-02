@@ -11,6 +11,7 @@ from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUITime
 from . import ClientGUITopLevelWindows
 from . import ClientSearch
+from . import ClientTags
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -445,7 +446,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
         
-        t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
+        t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS, include_counts = True )
         
         self._tags_box.SetTagsBox( t )
         
@@ -737,17 +738,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                         tags = set()
                         
-                        siblings_manager = HG.controller.tag_siblings_manager
-                        
-                        tag_censorship_manager = HG.client_controller.tag_censorship_manager
-                        
                         for service_key in neighbouring_txt_tag_service_keys:
                             
-                            current_tags = tags_manager.GetCurrent( service_key )
-                            
-                            current_tags = siblings_manager.CollapseTags( service_key, current_tags )
-                            
-                            current_tags = tag_censorship_manager.FilterTags( service_key, current_tags )
+                            current_tags = tags_manager.GetCurrent( service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS )
                             
                             tags.update( current_tags )
                             

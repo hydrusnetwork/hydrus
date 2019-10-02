@@ -15,6 +15,7 @@ from . import ClientOptions
 from . import ClientRatings
 from . import ClientSearch
 from . import ClientServices
+from . import ClientTags
 from . import ClientThreading
 import collections
 import gc
@@ -1426,8 +1427,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT UNIQUE );' )
         
-        self._c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
-        
         self._c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
         
         self._c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );' )
@@ -1550,6 +1549,10 @@ class DB( HydrusDB.HydrusDB ):
         ClientDefaults.SetDefaultLoginManagerScripts( login_manager )
         
         self._SetJSONDump( login_manager )
+        
+        tag_display_manager = ClientTags.TagDisplayManager()
+        
+        self._SetJSONDump( tag_display_manager )
         
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
         
@@ -4145,8 +4148,6 @@ class DB( HydrusDB.HydrusDB ):
         
         all_predicates = []
         
-        tag_censorship_manager = self._controller.tag_censorship_manager
-        
         siblings_manager = HG.client_controller.tag_siblings_manager
         
         for search_tag_service_id in search_tag_service_ids:
@@ -4179,8 +4180,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                     predicates = siblings_manager.CollapsePredicates( search_tag_service_key, predicates )
                     
-                
-                predicates = tag_censorship_manager.FilterPredicates( search_tag_service_key, predicates )
                 
                 all_predicates.extend( predicates )
                 
@@ -4498,7 +4497,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             if have_ratings:
                 
@@ -4536,10 +4535,6 @@ class DB( HydrusDB.HydrusDB ):
         
     
     def _GetForceRefreshTagsManagers( self, hash_ids, hash_ids_to_current_file_service_ids = None ):
-        
-        tag_censorship_manager = self._controller.tag_censorship_manager
-        
-        #
         
         if hash_ids_to_current_file_service_ids is None:
             
@@ -4624,8 +4619,6 @@ class DB( HydrusDB.HydrusDB ):
             service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
             
             service_keys_to_statuses_to_tags.update( { service_ids_to_service_keys[ service_id ] : HydrusData.BuildKeyToSetDict( tag_data ) for ( service_id, tag_data ) in list(service_ids_to_tag_data.items()) } )
-            
-            service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
             
             tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
             
@@ -4973,8 +4966,8 @@ class DB( HydrusDB.HydrusDB ):
         
         if file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
             
-            if 'min_timestamp' in simple_preds: files_info_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_timestamp' ] ) )
-            if 'max_timestamp' in simple_preds: files_info_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_timestamp' ] ) )
+            if 'min_import_timestamp' in simple_preds: files_info_predicates.append( 'timestamp >= ' + str( simple_preds[ 'min_import_timestamp' ] ) )
+            if 'max_import_timestamp' in simple_preds: files_info_predicates.append( 'timestamp <= ' + str( simple_preds[ 'max_import_timestamp' ] ) )
             
         
         if 'min_width' in simple_preds: files_info_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
@@ -5149,6 +5142,22 @@ class DB( HydrusDB.HydrusDB ):
             specific_hash_ids = self._GetHashIds( matching_sha256_hashes )
             
             query_hash_ids = update_qhi( query_hash_ids, specific_hash_ids )
+            
+        
+        #
+        
+        modified_timestamp_predicates = []
+        
+        if 'min_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'file_modified_timestamp >= ' + str( simple_preds[ 'min_modified_timestamp' ] ) )
+        if 'max_modified_timestamp' in simple_preds: modified_timestamp_predicates.append( 'file_modified_timestamp <= ' + str( simple_preds[ 'max_modified_timestamp' ] ) )
+        
+        if len( modified_timestamp_predicates ) > 0:
+            
+            pred_string = ' AND '.join( modified_timestamp_predicates )
+            
+            modified_timestamp_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM file_modified_timestamps WHERE {};'.format( pred_string ) ) )
+            
+            query_hash_ids = update_qhi( query_hash_ids, modified_timestamp_hash_ids )
             
         
         #
@@ -7080,18 +7089,10 @@ class DB( HydrusDB.HydrusDB ):
         
         tags_to_counts = siblings_manager.CollapseTagsToCount( service_key, tags_to_counts )
         
-        tags_to_do = list(tags_to_counts.keys())
-        
-        tags_to_do = { tag for tag in tags_to_counts if tag not in search_tags }
-        
-        tag_censorship_manager = self._controller.tag_censorship_manager
-        
-        filtered_tags = tag_censorship_manager.FilterTags( service_key, tags_to_do )
-        
         inclusive = True
         pending_count = 0
         
-        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, tags_to_counts[ tag ], pending_count ) for tag in filtered_tags ]
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_count, pending_count ) for ( tag, current_count ) in tags_to_counts.items() if tag not in search_tags ]
         
         return predicates
         
@@ -7554,33 +7555,6 @@ class DB( HydrusDB.HydrusDB ):
         return self._tag_ids_to_tags_cache[ tag_id ]
         
     
-    def _GetTagCensorship( self, service_key = None ):
-        
-        if service_key is None:
-            
-            result = []
-            
-            for ( service_id, blacklist, tags ) in self._c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall():
-                
-                service = self._GetService( service_id )
-                
-                service_key = service.GetServiceKey()
-                
-                result.append( ( service_key, blacklist, tags ) )
-                
-            
-        else:
-            
-            service_id = self._GetServiceId( service_key )
-            
-            result = self._c.execute( 'SELECT blacklist, tags FROM tag_censorship WHERE service_id = ?;', ( service_id, ) ).fetchone()
-            
-            if result is None: result = ( True, [] )
-            
-        
-        return result
-        
-    
     def _GetTagId( self, tag ):
         
         tag = HydrusTags.CleanTag( tag )
@@ -7627,8 +7601,6 @@ class DB( HydrusDB.HydrusDB ):
             return statuses_to_pairs
             
         
-        tag_censorship_manager = self._controller.tag_censorship_manager
-        
         if service_key is None:
             
             service_ids_to_statuses_and_pair_ids = HydrusData.BuildKeyToListDict( ( ( service_id, ( status, child_tag_id, parent_tag_id ) ) for ( service_id, status, child_tag_id, parent_tag_id ) in self._c.execute( 'SELECT service_id, status, child_tag_id, parent_tag_id FROM tag_parents UNION SELECT service_id, status, child_tag_id, parent_tag_id FROM tag_parent_petitions;' ) ) )
@@ -7653,8 +7625,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 statuses_to_pairs = convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids )
                 
-                statuses_to_pairs = tag_censorship_manager.FilterStatusesToPairs( service_key, statuses_to_pairs )
-                
                 service_keys_to_statuses_to_pairs[ service_key ] = statuses_to_pairs
                 
             
@@ -7667,8 +7637,6 @@ class DB( HydrusDB.HydrusDB ):
             statuses_and_pair_ids = self._c.execute( 'SELECT status, child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? UNION SELECT status, child_tag_id, parent_tag_id FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
             statuses_to_pairs = convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids )
-            
-            statuses_to_pairs = tag_censorship_manager.FilterStatusesToPairs( service_key, statuses_to_pairs )
             
             return statuses_to_pairs
             
@@ -7692,8 +7660,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return statuses_to_pairs
             
-        
-        tag_censorship_manager = self._controller.tag_censorship_manager
         
         if service_key is None:
             
@@ -7719,8 +7685,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_key = service.GetServiceKey()
                 
-                statuses_to_pairs = tag_censorship_manager.FilterStatusesToPairs( service_key, statuses_to_pairs )
-                
                 service_keys_to_statuses_to_pairs[ service_key ] = statuses_to_pairs
                 
             
@@ -7733,8 +7697,6 @@ class DB( HydrusDB.HydrusDB ):
             statuses_and_pair_ids = self._c.execute( 'SELECT status, bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? UNION SELECT status, bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
             statuses_to_pairs = convert_statuses_and_pair_ids_to_statuses_to_pairs( statuses_and_pair_ids )
-            
-            statuses_to_pairs = tag_censorship_manager.FilterStatusesToPairs( service_key, statuses_to_pairs )
             
             return statuses_to_pairs
             
@@ -7952,11 +7914,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _HandleCriticalRepositoryDefinitionError( self, service_id ):
         
-        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
-        
-        definition_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM ' + repository_updates_table_name + ' NATURAL JOIN files_info WHERE mime = ?;', ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) ) )
-        
-        self._c.executemany( 'UPDATE ' + repository_updates_table_name + ' SET processed = ? WHERE hash_id = ?;', ( ( False, hash_id ) for hash_id in definition_hash_ids ) )
+        self._ReprocessRepositoryFromServiceId( service_id, ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) )
         
         self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA )
         self._ScheduleRepositoryUpdateFileMaintenance( service_id, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
@@ -9843,6 +9801,11 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
+                            if not HG.client_controller.tag_display_manager.TagOK( ClientTags.TAG_DISPLAY_STORAGE, service_key, tag ):
+                                
+                                continue
+                                
+                            
                             ultimate_mappings_ids.append( ( tag_id, hash_ids ) )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
@@ -9850,6 +9813,11 @@ class DB( HydrusDB.HydrusDB ):
                             ultimate_deleted_mappings_ids.append( ( tag_id, hash_ids ) )
                             
                         elif action == HC.CONTENT_UPDATE_PEND:
+                            
+                            if not HG.client_controller.tag_display_manager.TagOK( ClientTags.TAG_DISPLAY_STORAGE, service_key, tag ):
+                                
+                                continue
+                                
                             
                             ultimate_pending_mappings_ids.append( ( tag_id, hash_ids ) )
                             
@@ -10601,7 +10569,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'services': result = self._GetServices( *args, **kwargs )
         elif action == 'similar_files_maintenance_status': result = self._PHashesGetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
-        elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
         elif action == 'potential_duplicates_count': result = self._DuplicatesGetPotentialDuplicatesCount( *args, **kwargs )
@@ -10938,6 +10905,29 @@ class DB( HydrusDB.HydrusDB ):
         self._controller.CallBlockingToWX( None, wx_code )
         
     
+    def _ReprocessRepository( self, service_key, update_mime_types ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        self._ReprocessRepositoryFromServiceId( service_id, update_mime_types )
+        
+    
+    def _ReprocessRepositoryFromServiceId( self, service_id, update_mime_types ):
+        
+        repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+        
+        update_hash_ids = set()
+        
+        for update_mime_type in update_mime_types:
+            
+            hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE mime = ? AND processed = ?;'.format( repository_updates_table_name ), ( update_mime_type, True ) ) )
+            
+            update_hash_ids.update( hash_ids )
+            
+        
+        self._c.executemany( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( False, hash_id ) for hash_id in update_hash_ids ) )
+        
+    
     def _ResetRepository( self, service ):
         
         self._Commit()
@@ -11008,7 +10998,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
         
-        self.pub_after_job( 'clear_all_thumbnails' )
+        self.pub_after_job( 'reset_thumbnail_cache' )
         self.pub_after_job( 'notify_new_options' )
         
     
@@ -11234,22 +11224,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT INTO service_directory_file_map ( service_id, directory_id, hash_id ) VALUES ( ?, ?, ? );', ( ( service_id, directory_id, hash_id ) for hash_id in hash_ids ) )
         
     
-    def _SetTagCensorship( self, info ):
-        
-        self._c.execute( 'DELETE FROM tag_censorship;' )
-        
-        for ( service_key, blacklist, tags ) in info:
-            
-            service_id = self._GetServiceId( service_key )
-            
-            tags = list( tags )
-            
-            self._c.execute( 'INSERT OR IGNORE INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
-            
-        
-        self.pub_after_job( 'notify_new_tag_censorship' )
-        
-    
     def _SetYAMLDump( self, dump_type, dump_name, data ):
         
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
@@ -11348,433 +11322,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 310:
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS reparse_files_queue ( hash_id INTEGER PRIMARY KEY );' )
-            
-            # don't add any files yet, we'll figure out some gui first or something
-            
-            #
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'inkbunny file page' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'inkbunny file page parser', 'pixiv single file page parser - new layout' ) )
-                
-                url_class = domain_manager.GetURLClass( 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=69300276' )
-                
-                if url_class is not None:
-                    
-                    new_pixiv_parser = domain_manager.GetParser( 'pixiv single file page parser - new layout' )
-                    
-                    if new_pixiv_parser is not None:
-                        
-                        domain_manager.OverwriteParserLink( url_class, new_pixiv_parser )
-                        
-                    
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 311:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'deviant art file page parser', ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 312:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'deviant art file page', 'deviant art file page (old format)' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'danbooru gallery page parser', 'deviant art file page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 313:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'sakugabooru gallery page', 'sakugabooru file page', 'tumblr api gallery page', 'tumblr file page api', 'tumblr file page' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'newgrounds file page parser', 'sankaku file page parser', 'shimmie file page parser', 'tumblr api post page parser', 'moebooru file page parser', 'hentai foundry file page parser', 'gelbooru 0.2.0 file page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            message = 'All new tag import options now refer to the new options under _network->downloaders->manage default tag import options_. The old default tag import options under _options->importing_ are no longer referred to, and that ui will be deleted in a couple of weeks. Please refer to it now if you need to and copy over any important settings.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 314:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'moebooru file page parser', 'tumblr api post page parser - with post tags' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 315:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'artstation artist gallery page api', 'artstation artist gallery page', 'deviant art artist gallery page', 'deviant art artist gallery page - search initialisation', 'e621 gallery page - search initialisation' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'danbooru gallery page parser', 'gelbooru 0.2.x gallery page parser', 'e621 gallery page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            message = 'All gallery import pages have been converted to multi-gallery import pages! The UI is significantly different, and everything converted from your old pages should start paused. If you are lost, please check out the v316 release post!'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 316:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'imgur media page api', 'imgur media page', 'imgur single media page', 'imgur tagged media page', 'imgur subreddit single media page', 'derpibooru file page' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'imgur single or subreddit parser', 'imgur media page api parser', 'derpibooru.org file page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 317:
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( ( 'xbooru gallery page', 'artstation artist gallery page api', 'tumblr api gallery page', 'gelbooru gallery page - search initialisation', 'gelbooru gallery page' ) )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'tumblr api creator gallery page parser', 'gelbooru 0.2.x gallery page parser', 'tumblr api post page parser', 'tumblr api post page parser - with post tags', 'zzz - old parser - tumblr api post page parser', 'zzz - old parser - tumblr api post page parser - with post tags', 'rule34.paheal gallery page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 318:
-            
-            try:
-                
-                import urllib.parse
-                
-                self._controller.pub( 'splash_set_status_subtext', 'normalising some urls: initialising' )
-                
-                all_url_ids = self._STL( self._c.execute( 'SELECT url_id FROM urls;' ) )
-                
-                num_to_do = len( all_url_ids )
-                
-                for ( i, url_id ) in enumerate( all_url_ids ):
-                    
-                    ( url, ) = self._c.execute( 'SELECT url FROM urls WHERE url_id = ?;', ( url_id, ) ).fetchone()
-                    
-                    p = urllib.parse.urlparse( url )
-                    
-                    scheme = p.scheme
-                    netloc = p.netloc
-                    path = p.path
-                    params = p.params
-                    query = ClientNetworkingDomain.AlphabetiseQueryText( p.query )
-                    fragment = p.fragment
-                    
-                    r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
-                    
-                    normalised_url = r.geturl()
-                    
-                    #
-                    
-                    if normalised_url != url:
-                        
-                        # ok, it changed, so lets remap the files if needed and then delete the old record
-                        
-                        hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM url_map WHERE url_id = ?;', ( url_id, ) ) )
-                        
-                        normalised_url_id = self._GetURLId( normalised_url )
-                        
-                        self._c.executemany( 'INSERT OR IGNORE INTO url_map ( hash_id, url_id ) VALUES ( ?, ? );', ( ( hash_id, normalised_url_id ) for hash_id in hash_ids ) )
-                        
-                        self._c.execute( 'DELETE FROM url_map WHERE url_id = ?;', ( url_id, ) )
-                        
-                        self._c.execute( 'DELETE FROM urls WHERE url = ?;', ( url, ) )
-                        
-                    
-                    if i % 100 == 0:
-                        
-                        self._controller.pub( 'splash_set_status_subtext', 'normalising some urls: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to normalise urls at the db level failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 319:
-            
-            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
-            file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
-            
-            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
-                
-                try:
-                    
-                    self._controller.pub( 'splash_set_status_subtext', 'generating some new indices: ' + str( file_service_id ) + ', ' + str( tag_service_id ) )
-                    
-                    ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
-                    
-                    self._CreateIndex( cache_current_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
-                    self._CreateIndex( cache_deleted_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
-                    self._CreateIndex( cache_pending_mappings_table_name, [ 'tag_id', 'hash_id' ], unique = True )
-                    
-                except:
-                    
-                    message = 'Trying to create some new tag lookup indices failed! This is not a huge deal, particularly if you have had service errors in the past, but you might want to let hydrus dev know! Your magic failure numbers are: ' + str( ( file_service_id, tag_service_id ) )
-                    
-                    self.pub_initial_message( message )
-                    
-                
-            
-            #
-            
-            try:
-                
-                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                gugs = ClientDefaults.GetDefaultGUGs()
-                
-                domain_manager.SetGUGs( gugs )
-                
-                #
-                
-                # lots of gallery updates this week, so let's just do them all
-                
-                default_url_classes = ClientDefaults.GetDefaultURLClasses()
-                
-                overwrite_names = [ url_class.GetName() for url_class in default_url_classes if url_class.GetURLType() == HC.URL_TYPE_GALLERY ]
-                
-                domain_manager.OverwriteDefaultURLClasses( overwrite_names )
-                
-                # now clear out some failed experiments
-                
-                url_classes = domain_manager.GetURLClasses()
-                
-                url_classes = [ url_class for url_class in url_classes if 'search initialisation' not in url_class.GetName() ]
-                
-                domain_manager.SetURLClasses( url_classes )
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'artstation file page api parser', 'artstation gallery page api parser', 'hentai foundry gallery page parser', 'inkbunny gallery page parser', 'moebooru gallery page parser', 'newgrounds gallery page parser', 'pixiv static html gallery page parser', 'rule34hentai gallery page parser', 'sankaku gallery page parser', 'deviant art gallery page parser' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self._SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 320:
             
@@ -13355,6 +12902,144 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 369:
+            
+            try:
+                
+                # async processing came in 364. it truncated some data in certain large-list, slower-processing situations, so we want to reset some processing
+                # let's say 8 weeks to cover most of the problem for most people
+                
+                eight_weeks_previous = HydrusData.GetNow() - ( 8 * 7 * 86400 )
+                
+                service_ids = self._GetServiceIds( ( HC.TAG_REPOSITORY, ) )
+                
+                for service_id in service_ids:
+                    
+                    service = self._GetService( service_id )
+                    
+                    metadata = service.GetMetadata()
+                    
+                    repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+                    
+                    update_indices_to_reset = set()
+                    
+                    for ( update_index, begin, end ) in metadata.GetUpdateIndicesAndTimes():
+                        
+                        if begin > eight_weeks_previous:
+                            
+                            update_indices_to_reset.add( update_index )
+                            
+                        
+                    
+                    content_hash_ids_to_reset = set()
+                    
+                    for update_index in update_indices_to_reset:
+                        
+                        content_hash_ids = self._STS( self._c.execute( 'SELECT hash_id from {} NATURAL JOIN files_info WHERE update_index = ? AND mime = ?;'.format( repository_updates_table_name ), ( update_index, HC.APPLICATION_HYDRUS_UPDATE_CONTENT ) ) )
+                        
+                        content_hash_ids_to_reset.update( content_hash_ids )
+                        
+                    
+                    self._c.executemany( 'UPDATE {} SET processed = ? WHERE hash_id = ?;'.format( repository_updates_table_name ), ( ( False, hash_id ) for hash_id in content_hash_ids_to_reset ) )
+                    
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to rewind some processing failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            result = self._c.execute( 'SELECT 1 FROM main.sqlite_master WHERE name = ?;', ( 'tag_censorship', ) ).fetchone()
+            
+            try:
+                
+                if result is not None:
+                    
+                    tag_display_manager = ClientTags.TagDisplayManager()
+                    
+                    old_tag_censorship = self._c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall()
+                    
+                    for ( service_id, blacklist, tags ) in old_tag_censorship:
+                        
+                        try:
+                            
+                            service = self._GetService( service_id )
+                            
+                        except HydrusExceptions.DataMissing:
+                            
+                            continue
+                            
+                        
+                        service_key = service.GetServiceKey()
+                        
+                        tag_filter = ClientTags.TagFilter()
+                        
+                        if blacklist:
+                            
+                            rule_type = CC.FILTER_BLACKLIST
+                            
+                        else:
+                            
+                            rule_type = CC.FILTER_WHITELIST
+                            
+                        
+                        for tag in tags:
+                            
+                            tag_filter.SetRule( tag, rule_type )
+                            
+                        
+                        tag_display_manager.SetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key, tag_filter )
+                        
+                    
+                    self._SetJSONDump( tag_display_manager )
+                    
+                    self._c.execute( 'DROP TABLE tag_censorship;' )
+                    
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update tag censorship system to tag display system failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv file page new format (without language)', 'pixiv file page new format (with language)' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -13924,6 +13609,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'remove_duplicates_member': self._DuplicatesRemoveMediaIdMemberFromHashes( *args, **kwargs )
         elif action == 'remove_potential_pairs': self._DuplicatesRemovePotentialPairsFromHashes( *args, **kwargs )
         elif action == 'repair_client_files': self._RepairClientFiles( *args, **kwargs )
+        elif action == 'reprocess_repository': self._ReprocessRepository( *args, **kwargs )
         elif action == 'reset_repository': self._ResetRepository( *args, **kwargs )
         elif action == 'reset_potential_search_status': self._PHashesResetSearchFromHashes( *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( *args, **kwargs )
@@ -13932,7 +13618,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisables_overwrite': self._OverwriteJSONDumps( *args, **kwargs )
         elif action == 'set_password': self._SetPassword( *args, **kwargs )
         elif action == 'schedule_repository_update_file_maintenance': self._ScheduleRepositoryUpdateFileMaintenanceFromServiceKey( *args, **kwargs )
-        elif action == 'tag_censorship': self._SetTagCensorship( *args, **kwargs )
         elif action == 'update_server_services': self._UpdateServerServices( *args, **kwargs )
         elif action == 'update_services': self._UpdateServices( *args, **kwargs )
         elif action == 'vacuum': self._Vacuum( *args, **kwargs )

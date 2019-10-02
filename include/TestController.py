@@ -22,6 +22,7 @@ from . import ClientNetworkingDomain
 from . import ClientNetworkingLogin
 from . import ClientNetworkingSessions
 from . import ClientServices
+from . import ClientTags
 from . import ClientThreading
 from . import HydrusExceptions
 from . import HydrusPubSub
@@ -40,6 +41,7 @@ from . import TestClientImportSubscriptions
 from . import TestClientListBoxes
 from . import TestClientMigration
 from . import TestClientNetworking
+from . import TestClientTags
 from . import TestClientThreading
 from . import TestDialogs
 from . import TestFunctions
@@ -48,7 +50,6 @@ from . import TestHydrusNetworking
 from . import TestHydrusSerialisable
 from . import TestHydrusServer
 from . import TestHydrusSessions
-from . import TestHydrusTags
 from . import TestServerDB
 from twisted.internet import reactor
 from . import ClientCaches
@@ -206,7 +207,6 @@ class Controller( object ):
         
         self._reads[ 'local_booru_share_keys' ] = []
         self._reads[ 'messaging_sessions' ] = []
-        self._reads[ 'tag_censorship' ] = []
         self._reads[ 'options' ] = ClientDefaults.GetClientDefaultOptions()
         self._reads[ 'file_system_predicates' ] = []
         self._reads[ 'media_results' ] = []
@@ -266,7 +266,7 @@ class Controller( object ):
         
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
-        self.tag_censorship_manager = ClientCaches.TagCensorshipManager( self )
+        self.tag_display_manager = ClientTags.TagDisplayManager()
         self.tag_siblings_manager = ClientCaches.TagSiblingsManager( self )
         self.tag_parents_manager = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
@@ -652,11 +652,11 @@ class Controller( object ):
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientData ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportOptions ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientTags ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientThreading ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
             
         if run_all or self.only_run == 'db':
             

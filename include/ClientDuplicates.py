@@ -1,4 +1,5 @@
 from . import ClientConstants as CC
+from . import ClientTags
 import collections
 from . import HydrusConstants as HC
 from . import HydrusData
@@ -165,8 +166,8 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 add_content_action = HC.CONTENT_UPDATE_PEND
                 
             
-            first_tags = first_media.GetTagsManager().GetCurrentAndPending( service_key )
-            second_tags = second_media.GetTagsManager().GetCurrentAndPending( service_key )
+            first_tags = first_media.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            second_tags = second_media.GetTagsManager().GetCurrentAndPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
             
             first_tags = tag_filter.Filter( first_tags )
             second_tags = tag_filter.Filter( second_tags )

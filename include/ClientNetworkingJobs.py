@@ -10,6 +10,7 @@ from . import HydrusNetworking
 from . import HydrusThreading
 from . import HydrusText
 import os
+import re
 import requests
 import threading
 import traceback
@@ -53,6 +54,10 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
     elif status_code == 426:
         
         eclass = HydrusExceptions.NetworkVersionException
+        
+    elif status_code == 429:
+        
+        eclass = HydrusExceptions.BandwidthException
         
     elif status_code == 509:
         
@@ -1031,11 +1036,27 @@ class NetworkJob( object ):
                             
                             ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data, self.IS_HYDRUS_SERVICE )
                             
+                            if isinstance( e, HydrusExceptions.BandwidthException ):
+                                
+                                raise e
+                                
+                            
                             self._SetError( e, error_text )
                             
                         
                     
                     request_completed = True
+                    
+                except HydrusExceptions.BandwidthException as e:
+                    
+                    self._current_connection_attempt_number += 1
+                    
+                    if not self._CanReattemptRequest():
+                        
+                        raise HydrusExceptions.NetworkException( 'Ran out of bandwidth: ' + str( e ) )
+                        
+                    
+                    self._WaitOnConnectionError( 'server reported limited bandwidth' )
                     
                 except HydrusExceptions.ShouldReattemptNetworkException as e:
                     

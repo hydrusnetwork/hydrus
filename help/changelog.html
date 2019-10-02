@@ -8,6 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 370</h3></li>
+				<ul>
+					<li>tag display updates:</li>
+					<li>the old tag censorship system is now replaced by a broader tag display manager that will deal with tag storage and presentation settings. this is the first step, and some of it is not yet completely functional or as efficient as intended</li>
+					<li>management for the new tag display manager can be found under services->manage tag display. you can set per-service and all-services filters for 'multiple' display like the 'tag selection' boxes and for 'single' file views, like thumbnails and the media viewer</li>
+					<li>existing censorship rules will be added to the new manager and will apply to 'selection list' and 'single media' display rules</li>
+					<li>censorship/display rules no longer apply to underlying storage views, which are unfilterable for now, so the manage tags dialog and the autocomplete lookup will now show all tags</li>
+					<li>page and media viewer taglists now have new right-click menu options for hiding--they will provide hide options for the specific tag clicked, and its namespace more broadly, and will apply immediately to that kind of taglist (previously, this was just the tag, and launched the tag censorship edit panel)</li>
+					<li>all 'tag manager' objects behind every media object in the client now pre-compute cache layers for different tag presentation contexts. operations such as sibling collapse are now only done on file load or new siblings</li>
+					<li>for now, initial media load will take slightly longer, but various tag display updates and autocomplete tag fetches on media will be faster</li>
+					<li>changes to siblings and the new tag display rules will now trigger a reliable (although, for siblings, delayed by a few seconds) and complete tag list and thumbnail and media viewer refresh</li>
+					<li>changes to tag presentation will now correctly update collection thumbnails</li>
+					<li>some complicated sibling display and counts are now more precise</li>
+					<li>cleaned up some tag/siblings/thumb refresh notification code</li>
+					<li>cleaned up all tag manager access code</li>
+					<li>cleaned up a variety of related tag fetching, counting, and display code</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>added 'system:modified date'. it works just like system:time imported</li>
+					<li>files with duration but no audio will now have a ' ▶ ' label in the top-left of their thumbnails, like the 'has audio' one. you can edit this label under options->audio and duration. I don't really like how this looks, so maybe we'll go to icons. let me know what you think</li>
+					<li>fixed an iteration timing bug in the new asynchronous repository mappings processing that meant large lists of mappings within an update object may be occasionally truncated, leaving some mappings unprocessed. this would more affect users on slower machines running 'process now'</li>
+					<li>any tag repository content updates issued in the last eight weeks will be scheduled for reprocessing to cover the above issue and fill in gaps for most user situations. since the vast majority of the data was added as intended, they should catch up very fast</li>
+					<li>added two pixiv url classes for their new url format</li>
+					<li>the edit subs panel now recommends users break up subs with >200k urls</li>
+					<li>the 'separate' subscriptions button now has a new 'break in half' option. subscriptions that have more than 100 queries will auto-choose this to separate</li>
+					<li>the 'quality info' button for advanced users' edit subscription panels now gives the option to additionally copy the info to your clipboard in CSV format</li>
+					<li>the lists on the gallery downloader, thread watcher, subscription, and subscriptions panels now sort their progress column by ( y, x ) (given a total status of x/y). previously, this was preceded by a percent-done sort</li>
+					<li>the hydrus network engine now recognises 429 bandwidth responses</li>
+					<li>on 429 or 509 bandwidth responses, network jobs will now go through the regular reconnection delay loop and try again later (previously, they just failed)</li>
+					<li>added 'tag migration' to 'services' menu for quick-launch</li>
+					<li>tag migration's 'go' action now skips the second confirmation if you are in advanced mode</li>
+					<li>expanded the 'reset' review services button (only visible to advanced users) to allow 'softer' resets that simply reprocess definition/content without deletion (a 'filling in the gaps' command)</li>
+					<li>fixed the 'process now' review services button disable check, which was being overzealous</li>
+					<li>cleaned up some of the new repo 'caught up' checking code</li>
+					<li>improved stability of review services 'refresh account' call</li>
+					<li>the client api /manage_pages/get_page_info call now returns a list of hash_ids beside the list of hashes, in simple or not simple mode</li>
+					<li>fixed a bug where tag import options that still had a secret deleted service reference were causing tag-parse errors on import jobs</li>
+					<li>fixed some other places that were not handling service disappearance neatly</li>
+					<li>added a note to the install/backup help to mention not to use continuous cloud-sync backups on your live db directory</li>
+					<li>misc unit test refactoring</li>
+				</ul>
 				<li><h3>version 369</h3></li>
 				<ul>
 					<li>file maintenance:</li>

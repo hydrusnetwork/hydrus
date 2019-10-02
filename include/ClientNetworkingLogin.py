@@ -963,7 +963,14 @@ class LoginScriptHydrus( object ):
         
         service_key = network_context.context_data
         
-        service = engine.controller.services_manager.GetService( service_key )
+        try:
+            
+            service = engine.controller.services_manager.GetService( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return
+            
         
         base_url = service.GetBaseURL()
         

@@ -27,6 +27,7 @@ from . import ClientNetworkingLogin
 from . import ClientNetworkingSessions
 from . import ClientOptions
 from . import ClientPaths
+from . import ClientTags
 from . import ClientThreading
 import hashlib
 from . import HydrusConstants as HC
@@ -822,9 +823,20 @@ class Controller( HydrusController.HydrusController ):
         
         self.file_viewing_stats_manager = ClientCaches.FileViewingStatsManager( self )
         
-        self.pub( 'splash_set_status_subtext', 'tag censorship' )
+        self.pub( 'splash_set_status_subtext', 'tag display' )
         
-        self.tag_censorship_manager = ClientCaches.TagCensorshipManager( self )
+        tag_display_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER )
+        
+        if tag_display_manager is None:
+            
+            tag_display_manager = ClientTags.TagDisplayManager()
+            
+            tag_display_manager._dirty = True
+            
+            wx.SafeShowMessage( 'Problem loading object', 'Your tag display manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
+        self.tag_display_manager = tag_display_manager
         
         self.pub( 'splash_set_status_subtext', 'tag siblings' )
         
@@ -1279,6 +1291,13 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'serialisable', self.network_engine.session_manager )
                 
                 self.network_engine.session_manager.SetClean()
+                
+            
+            if self.tag_display_manager.IsDirty():
+                
+                self.WriteSynchronous( 'serialisable', self.tag_display_manager )
+                
+                self.tag_display_manager.SetClean()
                 
             
         

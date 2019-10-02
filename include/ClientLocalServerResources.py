@@ -1467,7 +1467,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                 
                 service_names_to_statuses_to_tags = {}
                 
-                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags()
+                service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_STORAGE )
                 
                 for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
                     

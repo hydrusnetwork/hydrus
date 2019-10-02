@@ -2017,16 +2017,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         ( file_seed_cache_status, file_seed_cache_simple_status, ( num_done, num_total ) ) = gallery_import.GetFileSeedCache().GetStatus()
         
-        if num_total > 0:
-            
-            sort_float = num_done / num_total
-            
-        else:
-            
-            sort_float = 0.0
-            
-        
-        progress = ( sort_float, num_total, num_done )
+        progress = ( num_total, num_done )
         
         pretty_progress = file_seed_cache_simple_status
         
@@ -2696,16 +2687,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         ( status, simple_status, ( num_done, num_total ) ) = watcher.GetFileSeedCache().GetStatus()
         
-        if num_total > 0:
-            
-            sort_float = num_done / num_total
-            
-        else:
-            
-            sort_float = 0.0
-            
-        
-        progress = ( sort_float, num_total, num_done )
+        progress = ( num_total, num_done )
         
         pretty_progress = simple_status
         

@@ -224,6 +224,170 @@ class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaul
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS ] = ServiceKeysToTags
 
+TAG_DISPLAY_STORAGE = 0
+TAG_DISPLAY_SIBLINGS_AND_PARENTS = 1
+TAG_DISPLAY_SINGLE_MEDIA = 2
+TAG_DISPLAY_SELECTION_LIST = 3
+
+class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER
+    SERIALISABLE_NAME = 'Tag Display Manager'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( TagFilter )
+        
+        self._tag_display_types_to_service_keys_to_tag_filters = collections.defaultdict( service_keys_to_tag_filters_defaultdict )
+        
+        self._lock = threading.Lock()
+        self._dirty = False
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_tag_display_types_to_service_keys_to_tag_filters = []
+        
+        for ( tag_display_type, service_keys_to_tag_filters ) in self._tag_display_types_to_service_keys_to_tag_filters.items():
+            
+            serialisable_service_keys_to_tag_filters = [ ( service_key.hex(), tag_filter.GetSerialisableTuple() ) for ( service_key, tag_filter ) in service_keys_to_tag_filters.items() ]
+            
+            serialisable_tag_display_types_to_service_keys_to_tag_filters.append( ( tag_display_type, serialisable_service_keys_to_tag_filters ) )
+            
+        
+        return serialisable_tag_display_types_to_service_keys_to_tag_filters
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        for ( tag_display_type, serialisable_service_keys_to_tag_filters ) in serialisable_info:
+            
+            for ( serialisable_service_key, serialisable_tag_filter ) in serialisable_service_keys_to_tag_filters:
+                
+                service_key = bytes.fromhex( serialisable_service_key )
+                tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter )
+                
+                self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ] = tag_filter
+                
+            
+        
+    
+    def SetClean( self ):
+        
+        with self._lock:
+            
+            self._dirty = False
+            
+        
+    
+    def SetDirty( self ):
+        
+        with self._lock:
+            
+            self._dirty = True
+            
+        
+    
+    def FilterTags( self, tag_display_type, service_key, tags ):
+        
+        with self._lock:
+            
+            if service_key in self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ]:
+                
+                tag_filter = self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ]
+                
+                tags = tag_filter.Filter( tags )
+                
+            
+            if service_key != CC.COMBINED_TAG_SERVICE_KEY and CC.COMBINED_TAG_SERVICE_KEY in self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ]:
+                
+                tag_filter = self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ CC.COMBINED_TAG_SERVICE_KEY ]
+                
+                tags = tag_filter.Filter( tags )
+                
+            
+            return tags
+            
+        
+    
+    def FiltersTags( self, tag_display_type, service_key ):
+        
+        with self._lock:
+            
+            if service_key in self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ]:
+                
+                return True
+                
+            
+            if service_key != CC.COMBINED_TAG_SERVICE_KEY and CC.COMBINED_TAG_SERVICE_KEY in self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ]:
+                
+                return True
+                
+            
+            return False
+            
+        
+    
+    def GetTagFilter( self, tag_display_type, service_key ):
+        
+        with self._lock:
+            
+            return self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ].Duplicate()
+            
+        
+    
+    def HideTag( self, tag_display_type, service_key, tag ):
+        
+        with self._lock:
+            
+            tag_filter = self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ]
+            
+            tag_filter.SetRule( tag, CC.FILTER_BLACKLIST )
+            
+            self._dirty = True
+            
+        
+    
+    def IsDirty( self ):
+        
+        with self._lock:
+            
+            return self._dirty
+            
+        
+    
+    def SetTagFilter( self, tag_display_type, service_key, tag_filter ):
+        
+        with self._lock:
+            
+            if tag_filter.AllowsEverything():
+                
+                if service_key in self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ]:
+                    
+                    del self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ]
+                    
+                    self._dirty = True
+                    
+                
+            else:
+                
+                self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ] = tag_filter
+                
+                self._dirty = True
+                
+            
+        
+    
+    def TagOK( self, tag_display_type, service_key, tag ):
+        
+        return len( self.FilterTags( tag_display_type, service_key, ( tag, ) ) ) > 0
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_DISPLAY_MANAGER ] = TagDisplayManager
+
 class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER

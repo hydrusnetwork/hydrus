@@ -1862,11 +1862,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
                 
                 if and_or_or == 'AND':
                     
-                    matching_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending().intersection( select_tags ) ) == len( select_tags ) }
+                    matching_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) == len( select_tags ) }
                     
                 elif and_or_or == 'OR':
                     
-                    matching_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending().intersection( select_tags ) ) > 0 }
+                    matching_media = { m for m in self._sorted_media if len( m.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ).intersection( select_tags ) ) > 0 }
                     
                 
                 media_to_deselect = self._selected_media.difference( matching_media )
@@ -2778,7 +2778,8 @@ class MediaPanelThumbnails( MediaPanel ):
         HG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
         HG.client_controller.sub( self, 'NewFileInfo', 'new_file_info' )
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
-        HG.client_controller.sub( self, 'ThumbnailsResized', 'redraw_all_thumbnails' )
+        HG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
+        HG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
         HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         HG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
@@ -4613,6 +4614,18 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def RedrawAllThumbnails( self ):
+        
+        self._DirtyAllPages()
+        
+        for m in self._collected_media:
+            
+            m.RecalcInternals()
+            
+        
+        self.Refresh()
+        
+    
     def RefreshAcceleratorTable( self ):
         
         if not self:
@@ -4701,7 +4714,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.Refresh()
         
     
-    def ThumbnailsResized( self ):
+    def ThumbnailsReset( self ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
@@ -4716,9 +4729,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._RecalculateVirtualSize()
         
-        self._DirtyAllPages()
-        
-        self.Refresh()
+        self.RedrawAllThumbnails()
         
     
     def TIMERAnimationUpdate( self ):
@@ -4999,15 +5010,9 @@ class Thumbnail( Selectable ):
         
         new_options = HG.client_controller.new_options
         
-        tm = self.GetTagsManager()
-        
-        tags = tm.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY ).union( tm.GetPending( CC.COMBINED_TAG_SERVICE_KEY ) )
+        tags = self.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
         
         if len( tags ) > 0:
-            
-            siblings_manager = HG.client_controller.tag_siblings_manager
-            
-            tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
             
             upper_tag_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
@@ -5177,13 +5182,25 @@ class Thumbnail( Selectable ):
         
         top_left_x = 0
         
-        if self.HasAudio():
+        text_icons = []
+        
+        has_audio_label = new_options.GetString( 'has_audio_label' )
+        has_duration_label = new_options.GetString( 'has_duration_label' )
+        
+        if self.HasAudio() and has_audio_label != '':
             
-            has_audio_string = new_options.GetString( 'has_audio_label' )
+            text_icons.append( has_audio_label )
+            
+        elif self.HasDuration() and has_duration_label != '':
+            
+            text_icons.append( has_duration_label )
+            
+        
+        for label in text_icons:
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             
-            ( text_width, text_height ) = dc.GetTextExtent( has_audio_string )
+            ( text_width, text_height ) = dc.GetTextExtent( label )
             
             dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
             
@@ -5191,14 +5208,17 @@ class Thumbnail( Selectable ):
             
             dc.SetPen( wx.TRANSPARENT_PEN )
             
-            box_x = thumbnail_border
+            box_x = thumbnail_border + top_left_x
             box_y = thumbnail_border
             
-            dc.DrawRectangle( box_x, box_y, text_width + 2, text_height + 2 )
+            box_width = text_width + 2
+            box_height = text_height + 2
             
-            dc.DrawText( has_audio_string, box_x + 1, box_y + 1 )
+            dc.DrawRectangle( box_x, box_y, box_width, box_height )
             
-            top_left_x += text_height + 2
+            dc.DrawText( label, box_x + 1, box_y + 1 )
+            
+            top_left_x += box_width + 2
             
         
         services_manager = HG.client_controller.services_manager

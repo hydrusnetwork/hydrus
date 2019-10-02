@@ -1,4 +1,5 @@
 from . import HydrusConstants as HC
+from . import HydrusExceptions
 from . import HydrusGlobals as HG
 import wx
 
@@ -188,17 +189,31 @@ def GetNumericalStateFromMedia( media, service_key ):
     
 def GetNumericalWidth( service_key ):
     
-    service = HG.client_controller.services_manager.GetService( service_key )
-    
-    num_stars = service.GetNumStars()
+    try:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        num_stars = service.GetNumStars()
+        
+    except HydrusExceptions.DataMissing:
+        
+        num_stars = 1
+        
     
     return 4 + 12 * num_stars
     
 def GetPenAndBrushColours( service_key, rating_state ):
     
-    service = HG.client_controller.services_manager.GetService( service_key )
-    
-    colour = service.GetColour( rating_state )
+    try:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        colour = service.GetColour( rating_state )
+        
+    except HydrusExceptions.DataMissing:
+        
+        colour = ( ( 0, 0, 0 ), ( 0, 0, 0 ) )
+        
     
     ( pen_rgb, brush_rgb ) = colour
     
@@ -209,15 +224,29 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
 def GetShape( service_key ):
     
-    service = HG.client_controller.services_manager.GetService( service_key )
-    
-    shape = service.GetShape()
+    try:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        shape = service.GetShape()
+        
+    except HydrusExceptions.DataMissing:
+        
+        shape = STAR
+        
     
     return shape
     
 def GetStars( service_key, rating_state, rating ):
     
-    service = HG.client_controller.services_manager.GetService( service_key )
+    try:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+    except HydrusExceptions.DataMissing:
+        
+        return ( STAR, 0 )
+        
     
     allow_zero = service.AllowZero()
     

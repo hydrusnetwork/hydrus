@@ -435,7 +435,18 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'hash' ] = ( hashes, hash_type )
                 
             
-            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+            if predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
+                
+                if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+                    
+                    min_label = 'min_import_timestamp'
+                    max_label = 'max_import_timestamp'
+                    
+                elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
+                    
+                    min_label = 'min_modified_timestamp'
+                    max_label = 'max_modified_timestamp'
+                    
                 
                 ( operator, age_type, age_value ) = value
                 
@@ -451,16 +462,16 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        self._common_info[ 'min_timestamp' ] = now - age
+                        self._common_info[ min_label ] = now - age
                         
                     elif operator == '>':
                         
-                        self._common_info[ 'max_timestamp' ] = now - age
+                        self._common_info[ max_label ] = now - age
                         
                     elif operator == '\u2248':
                         
-                        self._common_info[ 'min_timestamp' ] = now - int( age * 1.15 )
-                        self._common_info[ 'max_timestamp' ] = now - int( age * 0.85 )
+                        self._common_info[ min_label ] = now - int( age * 1.15 )
+                        self._common_info[ max_label ] = now - int( age * 0.85 )
                         
                     
                 elif age_type == 'date':
@@ -474,21 +485,21 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        self._common_info[ 'max_timestamp' ] = timestamp
+                        self._common_info[ max_label ] = timestamp
                         
                     elif operator == '>':
                         
-                        self._common_info[ 'min_timestamp' ] = timestamp + 86400
+                        self._common_info[ min_label ] = timestamp + 86400
                         
                     elif operator == '=':
                         
-                        self._common_info[ 'min_timestamp' ] = timestamp
-                        self._common_info[ 'max_timestamp' ] = timestamp + 86400
+                        self._common_info[ min_label ] = timestamp
+                        self._common_info[ max_label ] = timestamp + 86400
                         
                     elif operator == '\u2248':
                         
-                        self._common_info[ 'min_timestamp' ] = timestamp - 86400 * 30
-                        self._common_info[ 'max_timestamp' ] = timestamp + 86400 * 30
+                        self._common_info[ min_label ] = timestamp - 86400 * 30
+                        self._common_info[ max_label ] = timestamp + 86400 * 30
                         
                     
                 
@@ -913,7 +924,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = ( tuple( [ bytes.fromhex( serialisable_hash ) for serialisable_hash in serialisable_hashes ] ), hash_type )
             
-        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+        elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
             
             ( operator, age_type, age_value ) = serialisable_value
             
@@ -1235,9 +1246,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base += ' is ' + HydrusData.ToHumanInt( value )
                     
                 
-            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ):
                 
-                base = 'time imported'
+                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+                    
+                    base = 'time imported'
+                    
+                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
+                    
+                    base = 'modified time'
+                    
                 
                 if self._value is not None:
                     

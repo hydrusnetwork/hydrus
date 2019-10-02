@@ -6,6 +6,7 @@ from . import ClientGUIFunctions
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
 from . import ClientGUITopLevelWindows
+from . import ClientMedia
 from . import ClientSearch
 from . import ClientSerialisable
 from . import ClientTags
@@ -1552,6 +1553,8 @@ class ListBoxTags( ListBox ):
         
         self._get_current_predicates_callable = None
         
+        self._tag_display_type = ClientTags.TAG_DISPLAY_STORAGE
+        
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
         self._UpdateBackgroundColour()
@@ -1559,8 +1562,7 @@ class ListBoxTags( ListBox ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
         
-        HG.client_controller.sub( self, 'ForceTagRecalc', 'notify_new_siblings_gui' )
-        HG.client_controller.sub( self, 'ForceTagRecalc', 'notify_new_force_refresh_tags_gui' )
+        HG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
     
@@ -1723,41 +1725,59 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuTagEvent( self, command ):
         
-        from . import ClientGUITags
-        
-        if command == 'censorship':
+        if command in ( 'hide', 'hide_namespace' ):
             
-            title = 'manage tag censorship'
-            
-        elif command == 'parent':
-            
-            title = 'manage tag parents'
-            
-        elif command == 'sibling':
-            
-            title = 'manage tag siblings'
-            
-        
-        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
-            
-            if command == 'censorship':
+            if len( self._selected_terms ) == 1:
                 
                 ( tag, ) = self._selected_terms
                 
-                panel = ClientGUITags.ManageTagCensorshipPanel( dlg, tag )
+                if command == 'hide':
+                    
+                    HG.client_controller.tag_display_manager.HideTag( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tag )
+                    
+                elif command == 'hide_namespace':
+                    
+                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                    
+                    if namespace != '':
+                        
+                        namespace += ':'
+                        
+                    
+                    HG.client_controller.tag_display_manager.HideTag( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, namespace )
+                    
                 
-            elif command == 'parent':
+                HG.client_controller.pub( 'notify_new_tag_display_rules' )
                 
-                panel = ClientGUITags.ManageTagParents( dlg, self._selected_terms )
+            
+        else:
+            
+            from . import ClientGUITags
+            
+            if command == 'parent':
+                
+                title = 'manage tag parents'
                 
             elif command == 'sibling':
                 
-                panel = ClientGUITags.ManageTagSiblings( dlg, self._selected_terms )
+                title = 'manage tag siblings'
                 
             
-            dlg.SetPanel( panel )
-            
-            dlg.ShowModal()
+            with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+                
+                if command == 'parent':
+                    
+                    panel = ClientGUITags.ManageTagParents( dlg, self._selected_terms )
+                    
+                elif command == 'sibling':
+                    
+                    panel = ClientGUITags.ManageTagSiblings( dlg, self._selected_terms )
+                    
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
             
         
     
@@ -1958,14 +1978,17 @@ class ListBoxTags( ListBox ):
                         
                         text = tag
                         
+                        if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
+                            
+                            ( namespace, subtag ) = HydrusTags.SplitTag( text )
+                            
+                            ClientGUIMenus.AppendMenuItem( self, menu, 'hide "{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
+                            ClientGUIMenus.AppendMenuItem( self, menu, 'hide "{}" from here'.format( text ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
+                            
+                        
                     else:
                         
                         text = 'selection'
-                        
-                    
-                    if len( self._selected_terms ) == 1:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, menu, 'censor ' + text, 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'censorship' )
                         
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
@@ -2813,7 +2836,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     render_for_user = True
     has_counts = True
     
-    def __init__( self, parent, include_counts = True, collapse_siblings = False ):
+    def __init__( self, parent, tag_display_type, include_counts = True, show_sibling_description = False ):
         
         ListBoxTags.__init__( self, parent, height_num_chars = 12 )
         
@@ -2822,9 +2845,10 @@ class ListBoxTagsSelection( ListBoxTags ):
         self._last_media = set()
         
         self._tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+        self._tag_display_type = tag_display_type
         
         self._include_counts = include_counts
-        self._collapse_siblings = collapse_siblings
+        self._show_sibling_description = show_sibling_description
         
         self._current_tags_to_count = collections.Counter()
         self._deleted_tags_to_count = collections.Counter()
@@ -2885,11 +2909,9 @@ class ListBoxTagsSelection( ListBoxTags ):
             if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X)'
             
         
-        if not self._collapse_siblings:
+        if self._show_sibling_description:
             
-            siblings_manager = HG.client_controller.tag_siblings_manager
-            
-            sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
+            sibling = HG.client_controller.tag_siblings_manager.GetSibling( self._tag_service_key, tag )
             
             if sibling is not None:
                 
@@ -3001,7 +3023,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         media = set( media )
         media = media.difference( self._last_media )
         
-        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
+        ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._tag_service_key, self._tag_display_type )
         
         self._current_tags_to_count.update( current_tags_to_count )
         self._deleted_tags_to_count.update( deleted_tags_to_count )
@@ -3034,7 +3056,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if force_reload:
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( media, self._tag_service_key, self._tag_display_type )
             
             self._current_tags_to_count = current_tags_to_count
             self._deleted_tags_to_count = deleted_tags_to_count
@@ -3048,14 +3070,14 @@ class ListBoxTagsSelection( ListBoxTags ):
             removees = self._last_media.difference( media )
             adds = media.difference( self._last_media )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( removees, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( removees, self._tag_service_key, self._tag_display_type )
             
             self._current_tags_to_count.subtract( current_tags_to_count )
             self._deleted_tags_to_count.subtract( deleted_tags_to_count )
             self._pending_tags_to_count.subtract( pending_tags_to_count )
             self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( adds, tag_service_key = self._tag_service_key, collapse_siblings = self._collapse_siblings )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( adds, self._tag_service_key, self._tag_display_type )
             
             self._current_tags_to_count.update( current_tags_to_count )
             self._deleted_tags_to_count.update( deleted_tags_to_count )
@@ -3114,7 +3136,7 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     
     def __init__( self, parent, canvas_key ):
         
-        ListBoxTagsSelection.__init__( self, parent, include_counts = False, collapse_siblings = True )
+        ListBoxTagsSelection.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, include_counts = False )
         
         self._canvas_key = canvas_key
         
@@ -3128,7 +3150,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
     def __init__( self, parent, page_key, predicates_callable = None ):
         
-        ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = True )
+        ListBoxTagsSelection.__init__( self, parent, ClientTags.TAG_DISPLAY_SELECTION_LIST, include_counts = True )
         
         self._page_key = page_key
         self._get_current_predicates_callable = predicates_callable
@@ -3200,7 +3222,7 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
     
     def __init__( self, parent, enter_func, delete_func ):
         
-        ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = False )
+        ListBoxTagsSelection.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, include_counts = True, show_sibling_description = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func

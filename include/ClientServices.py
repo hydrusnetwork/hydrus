@@ -1138,8 +1138,8 @@ class ServiceRestricted( ServiceRemote ):
                     
                     self._SetDirty()
                     
-                    HG.client_controller.pub( 'important_dirt_to_clean' )
-                    
+                
+                HG.client_controller.pub( 'important_dirt_to_clean' )
                 
             
         
@@ -1702,8 +1702,8 @@ class ServiceRepository( ServiceRestricted ):
                     
                     iterator_dict[ 'new_files' ] = iter( content_update.GetNewFiles() )
                     iterator_dict[ 'deleted_files' ] = iter( content_update.GetDeletedFiles() )
-                    iterator_dict[ 'new_mappings' ] = iter( content_update.GetNewMappings() )
-                    iterator_dict[ 'deleted_mappings' ] = iter( content_update.GetDeletedMappings() )
+                    iterator_dict[ 'new_mappings' ] = HydrusData.SmoothOutMappingIterator( content_update.GetNewMappings(), 50 )
+                    iterator_dict[ 'deleted_mappings' ] = HydrusData.SmoothOutMappingIterator( content_update.GetDeletedMappings(), 50 )
                     iterator_dict[ 'new_parents' ] = iter( content_update.GetNewTagParents() )
                     iterator_dict[ 'deleted_parents' ] = iter( content_update.GetDeletedTagParents() )
                     iterator_dict[ 'new_siblings' ] = iter( content_update.GetNewTagSiblings() )
@@ -1903,18 +1903,27 @@ class ServiceRepository( ServiceRestricted ):
                     return self._is_mostly_caught_up
                     
                 
-                unprocessed_update_hashes = HG.client_controller.Read( 'repository_unprocessed_hashes', self._service_key )
+            else:
                 
-                if len( unprocessed_update_hashes ) == 0:
-                    
-                    self._is_mostly_caught_up = True # done them all, even if there aren't any yet to do
-                    
-                else:
-                    
-                    earliest_unsorted_update_timestamp = self._metadata.GetEarliestTimestampForTheseHashes( unprocessed_update_hashes )
-                    
-                    self._is_mostly_caught_up = earliest_unsorted_update_timestamp > two_weeks_ago
-                    
+                return self._is_mostly_caught_up
+                
+            
+            service_key = self._service_key
+            
+        
+        unprocessed_update_hashes = HG.client_controller.Read( 'repository_unprocessed_hashes', service_key )
+        
+        with self._lock:
+            
+            if len( unprocessed_update_hashes ) == 0:
+                
+                self._is_mostly_caught_up = True # done them all, even if there aren't any yet to do
+                
+            else:
+                
+                earliest_unsorted_update_timestamp = self._metadata.GetEarliestTimestampForTheseHashes( unprocessed_update_hashes )
+                
+                self._is_mostly_caught_up = earliest_unsorted_update_timestamp > two_weeks_ago
                 
             
             return self._is_mostly_caught_up
@@ -1937,12 +1946,14 @@ class ServiceRepository( ServiceRestricted ):
             
             self._SetDirty()
             
-            HG.client_controller.pub( 'important_dirt_to_clean' )
+            paused = self._paused
             
-            if not self._paused:
-                
-                HG.client_controller.pub( 'notify_new_permissions' )
-                
+        
+        HG.client_controller.pub( 'important_dirt_to_clean' )
+        
+        if not paused:
+            
+            HG.client_controller.pub( 'notify_new_permissions' )
             
         
     
@@ -1962,10 +1973,10 @@ class ServiceRepository( ServiceRestricted ):
             
             self._SetDirty()
             
-            HG.client_controller.pub( 'important_dirt_to_clean' )
-            
-            HG.client_controller.Write( 'reset_repository', self )
-            
+        
+        HG.client_controller.pub( 'important_dirt_to_clean' )
+        
+        HG.client_controller.Write( 'reset_repository', self )
         
     
     def SyncRemote( self, stop_time = None ):

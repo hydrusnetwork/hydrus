@@ -1130,6 +1130,21 @@ def RestartProcess():
     
     os.execv( exe, args )
     
+def SmoothOutMappingIterator( xs, n ):
+    
+    # de-spikifies mappings, so if there is ( tag, 20k files ), it breaks that up into manageable chunks
+    
+    chunk_weight = 0
+    chunk = []
+    
+    for ( tag_item, hash_items ) in xs:
+        
+        for chunk_of_hash_items in SplitIteratorIntoChunks( hash_items, n ):
+            
+            yield ( tag_item, chunk_of_hash_items )
+            
+        
+    
 def SplayListForDB( xs ):
     
     return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
@@ -1210,101 +1225,36 @@ def SplitMappingIteratorIntoAutothrottledChunks( iterator, starting_n, precise_t
     
     for ( tag_item, hash_items ) in iterator:
         
-        hash_item_iterator = iter( hash_items )
+        chunk.append( ( tag_item, hash_items ) )
         
-        chunk_of_hash_items = PullNFromIterator( hash_item_iterator, max( 1, n - chunk_weight ) )
+        chunk_weight += len( hash_items )
         
-        while len( chunk_of_hash_items ) > 0:
+        if chunk_weight >= n:
             
-            chunk.append( ( tag_item, chunk_of_hash_items ) )
+            time_work_started = GetNowPrecise()
             
-            chunk_weight += len( chunk_of_hash_items )
+            yield chunk
             
-            if chunk_weight >= n:
-                
-                time_work_started = GetNowPrecise()
-                
-                yield chunk
-                
-                chunk_weight = 0
-                chunk = []
-                
-                work_time = GetNowPrecise() - time_work_started
-                
-                items_per_second = n / work_time
-                
-                time_remaining = precise_time_to_stop - GetNowPrecise()
-                
-                if TimeHasPassedPrecise( precise_time_to_stop ):
-                    
-                    n = 1
-                    
-                else:
-                    
-                    expected_items_in_remaining_time = max( 1, int( time_remaining * items_per_second ) )
-                    
-                    quad_speed = n * 4
-                    
-                    n = min( quad_speed, expected_items_in_remaining_time )
-                    
-                
+            work_time = GetNowPrecise() - time_work_started
             
-            chunk_of_hash_items = PullNFromIterator( hash_item_iterator, max( 1, n - chunk_weight ) )
+            chunk_weight = 0
+            chunk = []
             
-        
-    
-    if len( chunk ) > 0:
-        
-        yield chunk
-        
-    
-def SplitMappingIteratorIntoChunks( xs, n ):
-    
-    chunk_weight = 0
-    chunk = []
-    
-    for ( tag_item, hash_items ) in xs:
-        
-        for chunk_of_hash_items in SplitIteratorIntoChunks( hash_items, n ):
+            items_per_second = n / work_time
             
-            chunk.append( ( tag_item, chunk_of_hash_items ) )
+            time_remaining = precise_time_to_stop - GetNowPrecise()
             
-            chunk_weight += len( chunk_of_hash_items )
-            
-            if chunk_weight > n:
+            if TimeHasPassedPrecise( precise_time_to_stop ):
                 
-                yield chunk
+                n = 1
                 
-                chunk_weight = 0
-                chunk = []
+            else:
                 
-            
-        
-    
-    if len( chunk ) > 0:
-        
-        yield chunk
-        
-    
-def SplitMappingListIntoChunks( xs, n ):
-    
-    chunk_weight = 0
-    chunk = []
-    
-    for ( tag_item, hash_items ) in xs:
-        
-        for chunk_of_hash_items in SplitListIntoChunks( hash_items, n ):
-            
-            chunk.append( ( tag_item, chunk_of_hash_items ) )
-            
-            chunk_weight += len( chunk_of_hash_items )
-            
-            if chunk_weight > n:
+                expected_items_in_remaining_time = max( 1, int( time_remaining * items_per_second ) )
                 
-                yield chunk
+                quad_speed = n * 4
                 
-                chunk_weight = 0
-                chunk = []
+                n = min( quad_speed, expected_items_in_remaining_time )
                 
             
         

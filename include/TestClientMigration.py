@@ -603,7 +603,7 @@ class TestMigration( unittest.TestCase ):
                 
                 if content_action == HC.CONTENT_UPDATE_ADD:
                     
-                    current_tags = t_m.GetCurrent( tag_service_key )
+                    current_tags = t_m.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     
                     for tag in tags:
                         
@@ -612,8 +612,8 @@ class TestMigration( unittest.TestCase ):
                     
                 elif content_action == HC.CONTENT_UPDATE_DELETE:
                     
-                    current_tags = t_m.GetCurrent( tag_service_key )
-                    deleted_tags = t_m.GetDeleted( tag_service_key )
+                    current_tags = t_m.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                    deleted_tags = t_m.GetDeleted( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     
                     for tag in tags:
                         
@@ -623,7 +623,7 @@ class TestMigration( unittest.TestCase ):
                     
                 elif content_action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
                     
-                    deleted_tags = t_m.GetDeleted( tag_service_key )
+                    deleted_tags = t_m.GetDeleted( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     
                     for tag in tags:
                         
@@ -632,7 +632,7 @@ class TestMigration( unittest.TestCase ):
                     
                 elif content_action == HC.CONTENT_UPDATE_PEND:
                     
-                    pending_tags = t_m.GetPending( tag_service_key )
+                    pending_tags = t_m.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     
                     for tag in tags:
                         
@@ -641,7 +641,7 @@ class TestMigration( unittest.TestCase ):
                     
                 elif content_action == HC.CONTENT_UPDATE_PETITION:
                     
-                    petitioned_tags = t_m.GetPetitioned( tag_service_key )
+                    petitioned_tags = t_m.GetPetitioned( tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     
                     for tag in tags:
                         

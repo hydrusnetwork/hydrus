@@ -1,4 +1,5 @@
 import collections
+from . import ClientTags
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
@@ -46,9 +47,9 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
             
             tags_manager = m.GetTagsManager()
             
-            current = tags_manager.GetCurrent( service_key )
-            pending = tags_manager.GetPending( service_key )
-            petitioned = tags_manager.GetPetitioned( service_key )
+            current = tags_manager.GetCurrent( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            pending = tags_manager.GetPending( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+            petitioned = tags_manager.GetPetitioned( service_key, ClientTags.TAG_DISPLAY_STORAGE )
             
             if tag not in current:
                 

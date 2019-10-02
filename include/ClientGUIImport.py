@@ -202,11 +202,10 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         siblings_manager = HG.client_controller.tag_siblings_manager
         parents_manager = HG.client_controller.tag_parents_manager
-        tag_censorship_manager = HG.client_controller.tag_censorship_manager
         
         tags = siblings_manager.CollapseTags( self._service_key, tags )
         tags = parents_manager.ExpandTags( self._service_key, tags )
-        tags = tag_censorship_manager.FilterTags( self._service_key, tags )
+        tags = HG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, self._service_key, tags )
         
         return tags
         

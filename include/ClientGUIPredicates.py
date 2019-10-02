@@ -34,6 +34,11 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             pred_classes.append( PanelPredicateSystemAgeDelta )
             pred_classes.append( PanelPredicateSystemAgeDate )
             
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
+            
+            pred_classes.append( PanelPredicateSystemModifiedDelta )
+            pred_classes.append( PanelPredicateSystemModifiedDate )
+            
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
             pred_classes.append( PanelPredicateSystemHeight )
@@ -289,6 +294,103 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:time imported' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._years, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._months, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'months' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._days, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._hours, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        wx.CallAfter( self._days.SetFocus )
+        
+    
+    def GetInfo( self ):
+        
+        info = ( self._sign.GetStringSelection(), 'delta', ( self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() ) )
+        
+        return info
+        
+    
+class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        
+        self._date = wx.adv.CalendarCtrl( self )
+        
+        wx_dt = wx.DateTime.Today()
+        
+        wx_dt.Subtract( wx.TimeSpan( 24 * 7 ) )
+        
+        self._date.SetDate( wx_dt )
+        
+        self._sign.SetStringSelection( '>' )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:modified date' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._date, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        wx_dt = self._date.GetDate()
+        
+        year = wx_dt.year
+        month = wx_dt.month + 1 # month zero indexed, wew
+        day = wx_dt.day
+        
+        info = ( self._sign.GetStringSelection(), 'date', ( year, month, day ) )
+        
+        return info
+        
+    
+class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '>' ] )
+        
+        self._years = wx.SpinCtrl( self, max = 30, size = ( 60, -1 ) )
+        self._months = wx.SpinCtrl( self, max = 60, size = ( 60, -1 ) )
+        self._days = wx.SpinCtrl( self, max = 90, size = ( 60, -1 ) )
+        self._hours = wx.SpinCtrl( self, max = 24, size = ( 60, -1 ) )
+        
+        # wew lad. replace this all with proper system pred saving on new_options in future
+        sign = '<'
+        
+        years = 0
+        months = 0
+        days = 7
+        hours = 0
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._years.SetValue( years )
+        self._months.SetValue( months )
+        self._days.SetValue( days )
+        self._hours.SetValue( hours )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:modified date' ), CC.FLAGS_VCENTER )
         hbox.Add( self._sign, CC.FLAGS_VCENTER )
         hbox.Add( self._years, CC.FLAGS_VCENTER )
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )

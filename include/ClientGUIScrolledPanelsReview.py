@@ -924,7 +924,18 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._dest_archive_path = None
         self._dest_archive_hash_type_override = None
         
-        service = HG.client_controller.services_manager.GetService( self._service_key )
+        try:
+            
+            service = HG.client_controller.services_manager.GetService( self._service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
+            
+            service = next( iter( services ) )
+            
+            self._service_key = service.GetServiceKey()
+            
         
         #
         
@@ -1263,11 +1274,20 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if result == wx.ID_YES:
             
-            message = 'Are you absolutely sure you set up the filters and everything how you wanted? Last chance to turn back.'
+            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                do_it = True
+                
+            else:
+                
+                message = 'Are you absolutely sure you set up the filters and everything how you wanted? Last chance to turn back.'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                do_it = result == wx.ID_YES
+                
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result == wx.ID_YES:
+            if do_it:
                 
                 migration_job = ClientMigration.MigrationJob( HG.client_controller, title, source, destination )
                 

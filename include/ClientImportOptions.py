@@ -514,7 +514,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         tags = siblings_manager.CollapseTags( service_key, tags )
         tags = parents_manager.ExpandTags( service_key, tags )
-        tags = HG.client_controller.tag_censorship_manager.FilterTags( service_key, tags )
+        tags = HG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, service_key, tags )
         
         return tags
         
@@ -1092,7 +1092,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
-        for ( service_key, service_tag_import_options ) in list(self._service_keys_to_service_tag_import_options.items()):
+        for ( service_key, service_tag_import_options ) in self._service_keys_to_service_tag_import_options.items():
             
             service_parsed_tags = siblings_manager.CollapseTags( service_key, parsed_tags )
             service_parsed_tags = parents_manager.ExpandTags( service_key, service_parsed_tags )

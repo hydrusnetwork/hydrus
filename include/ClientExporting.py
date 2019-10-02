@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientPaths
 from . import ClientSearch
+from . import ClientTags
 from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
@@ -47,7 +48,7 @@ def GenerateExportFilename( destination_directory, media, terms, append_number =
             
         elif term_type == 'namespace':
             
-            tags = tags_manager.GetNamespaceSlice( ( term, ) )
+            tags = tags_manager.GetNamespaceSlice( ( term, ), ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS )
             
             subtags = [ HydrusTags.SplitTag( tag )[1] for tag in tags ]
             
@@ -59,8 +60,8 @@ def GenerateExportFilename( destination_directory, media, terms, append_number =
             
             if term in ( 'tags', 'nn tags' ):
                 
-                current = tags_manager.GetCurrent()
-                pending = tags_manager.GetPending()
+                current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS )
+                pending = tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS )
                 
                 tags = list( current.union( pending ) )
                 
@@ -90,7 +91,7 @@ def GenerateExportFilename( destination_directory, media, terms, append_number =
             
             ( namespace, subtag ) = HydrusTags.SplitTag( tag )
             
-            if tags_manager.HasTag( subtag ):
+            if tags_manager.HasTag( subtag, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ):
                 
                 filename += clean_tag_text( subtag )
                 

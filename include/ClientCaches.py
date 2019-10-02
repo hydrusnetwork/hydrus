@@ -894,7 +894,7 @@ class MediaResultCache( object ):
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         HG.client_controller.sub( self, 'NewForceRefreshTags', 'notify_new_force_refresh_tags_data' )
-        HG.client_controller.sub( self, 'NewSiblings', 'notify_new_siblings_data' )
+        HG.client_controller.sub( self, 'NewTagDisplayRules', 'notify_new_tag_display_rules' )
         
     
     def AddMediaResults( self, media_results ):
@@ -978,7 +978,7 @@ class MediaResultCache( object ):
                     
                 
             
-            HG.client_controller.pub( 'notify_new_force_refresh_tags_gui' )
+            HG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
             
         
         with self._lock:
@@ -989,15 +989,17 @@ class MediaResultCache( object ):
         HG.client_controller.CallToThread( do_it, hash_ids )
         
     
-    def NewSiblings( self ):
+    def NewTagDisplayRules( self ):
         
         with self._lock:
             
             for media_result in self._hash_ids_to_media_results.values():
                 
-                media_result.GetTagsManager().NewSiblings()
+                media_result.GetTagsManager().NewTagDisplayRules()
                 
             
+        
+        HG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -1457,132 +1459,6 @@ class ServicesManager( object ):
             
         
     
-class TagCensorshipManager( object ):
-    
-    def __init__( self, controller ):
-        
-        self._controller = controller
-        
-        self.RefreshData()
-        
-        self._controller.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
-        
-    
-    def _CensorshipMatches( self, tag, blacklist, censorships ):
-        
-        if blacklist:
-            
-            return not HydrusTags.CensorshipMatch( tag, censorships )
-            
-        else:
-            
-            return HydrusTags.CensorshipMatch( tag, censorships )
-            
-        
-    
-    def GetInfo( self, service_key ):
-        
-        if service_key in self._service_keys_to_info: return self._service_keys_to_info[ service_key ]
-        else: return ( True, set() )
-        
-    
-    def RefreshData( self ):
-        
-        rows = self._controller.Read( 'tag_censorship' )
-        
-        self._service_keys_to_info = { service_key : ( blacklist, censorships ) for ( service_key, blacklist, censorships ) in rows }
-        
-    
-    def FilterPredicates( self, service_key, predicates ):
-        
-        for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
-            
-            if service_key_lookup in self._service_keys_to_info:
-                
-                ( blacklist, censorships ) = self._service_keys_to_info[ service_key_lookup ]
-                
-                predicates = [ predicate for predicate in predicates if predicate.GetType() != HC.PREDICATE_TYPE_TAG or self._CensorshipMatches( predicate.GetValue(), blacklist, censorships ) ]
-                
-            
-        
-        return predicates
-        
-    
-    def FilterStatusesToPairs( self, service_key, statuses_to_pairs ):
-        
-        for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
-            
-            if service_key_lookup in self._service_keys_to_info:
-                
-                ( blacklist, censorships ) = self._service_keys_to_info[ service_key_lookup ]
-                
-                new_statuses_to_pairs = HydrusData.default_dict_set()
-                
-                for ( status, pairs ) in statuses_to_pairs.items():
-                    
-                    new_statuses_to_pairs[ status ] = { ( one, two ) for ( one, two ) in pairs if self._CensorshipMatches( one, blacklist, censorships ) and self._CensorshipMatches( two, blacklist, censorships ) }
-                    
-                
-                statuses_to_pairs = new_statuses_to_pairs
-                
-            
-        
-        return statuses_to_pairs
-        
-    
-    def FilterServiceKeysToStatusesToTags( self, service_keys_to_statuses_to_tags ):
-        
-        if CC.COMBINED_TAG_SERVICE_KEY in self._service_keys_to_info:
-            
-            ( blacklist, censorships ) = self._service_keys_to_info[ CC.COMBINED_TAG_SERVICE_KEY ]
-            
-            for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
-                
-                statuses = list( statuses_to_tags.keys() )
-                
-                for ( status, tags ) in list( statuses_to_tags.items() ):
-                    
-                    statuses_to_tags[ status ] = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
-                    
-                
-            
-        
-        for ( service_key, ( blacklist, censorships ) ) in self._service_keys_to_info.items():
-            
-            if service_key == CC.COMBINED_TAG_SERVICE_KEY:
-                
-                continue
-                
-            
-            if service_key in service_keys_to_statuses_to_tags:
-                
-                statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
-                
-                for ( status, tags ) in list( statuses_to_tags.items() ):
-                    
-                    statuses_to_tags[ status ] = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
-                    
-                
-            
-        
-        return service_keys_to_statuses_to_tags
-        
-    
-    def FilterTags( self, service_key, tags ):
-        
-        for service_key_lookup in ( CC.COMBINED_TAG_SERVICE_KEY, service_key ):
-            
-            if service_key_lookup in self._service_keys_to_info:
-                
-                ( blacklist, censorships ) = self._service_keys_to_info[ service_key_lookup ]
-                
-                tags = { tag for tag in tags if self._CensorshipMatches( tag, blacklist, censorships ) }
-                
-            
-        
-        return tags
-        
-    
 class TagParentsManager( object ):
     
     def __init__( self, controller ):
@@ -1828,8 +1704,6 @@ class TagSiblingsManager( object ):
             
         
         self._service_keys_to_reverse_lookup[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_reverse_lookup
-        
-        self._controller.pub( 'new_siblings_gui' )
         
     
     def CollapsePredicates( self, service_key, predicates, service_strict = False ):
@@ -2083,7 +1957,7 @@ class TagSiblingsManager( object ):
                 
                 self._dirty = False
                 
-                self._controller.pub( 'notify_new_siblings_gui' )
+                self._controller.pub( 'notify_new_tag_display_rules' )
                 
             
         
@@ -2121,7 +1995,7 @@ class ThumbnailCache( object ):
         
         self._controller.CallToThreadLongRunning( self.DAEMONWaterfall )
         
-        self._controller.sub( self, 'Clear', 'clear_all_thumbnails' )
+        self._controller.sub( self, 'Clear', 'reset_thumbnail_cache' )
         self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
         
     
@@ -2471,7 +2345,7 @@ class ThumbnailCache( object ):
                 self._special_thumbs[ name ] = hydrus_bitmap
                 
             
-            self._controller.pub( 'redraw_all_thumbnails' )
+            self._controller.pub( 'notify_complete_thumbnail_reset' )
             
             self._waterfall_queue_quick = set()
             self._delayed_regeneration_queue_quick = set()

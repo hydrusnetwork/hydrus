@@ -2684,6 +2684,13 @@ class CanvasWithDetails( Canvas ):
     
     BORDER = wx.NO_BORDER
     
+    def __init__( self, parent ):
+        
+        Canvas.__init__( self, parent )
+        
+        HG.client_controller.sub( self, 'RedrawDetails', 'refresh_all_tag_presentation_gui' )
+        
+    
     def _DrawAdditionalTopMiddleInfo( self, dc, current_y ):
         
         pass
@@ -2714,9 +2721,9 @@ class CanvasWithDetails( Canvas ):
             
             tags_manager = self._current_media.GetTagsManager()
             
-            current = tags_manager.GetCurrent()
-            pending = tags_manager.GetPending()
-            petitioned = tags_manager.GetPetitioned()
+            current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
+            pending = tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
+            petitioned = tags_manager.GetPetitioned( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
             
             tags_i_want_to_display = set()
             
@@ -2921,6 +2928,11 @@ class CanvasWithDetails( Canvas ):
     def _GetNoMediaText( self ):
         
         return 'No media to display'
+        
+    
+    def RedrawDetails( self ):
+        
+        self._SetDirty()
         
     
 class CanvasWithHovers( CanvasWithDetails ):

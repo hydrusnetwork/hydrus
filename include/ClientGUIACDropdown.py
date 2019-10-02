@@ -7,6 +7,7 @@ from . import ClientGUIListBoxes
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
 from . import ClientSearch
+from . import ClientTags
 from . import ClientThreading
 from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUITopLevelWindows
@@ -199,8 +200,6 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
         
         ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
         
-        siblings_manager = HG.client_controller.tag_siblings_manager
-        
         if half_complete_subtag == '':
             
             search_text_for_current_cache = None
@@ -301,12 +300,12 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                     
                     if include_current:
                         
-                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key ) for tags_manager in group_of_tags_managers ) )
+                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ) )
                         
                     
                     if include_pending:
                         
-                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key ) for tags_manager in group_of_tags_managers ] ) )
+                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for tags_manager in group_of_tags_managers ] ) )
                         
                     
                     if job_key.IsCancelled():
@@ -328,11 +327,6 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
                     
                 
                 predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive, current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do ]
-                
-                if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
-                    
-                    predicates = siblings_manager.CollapsePredicates( tag_service_key, predicates )
-                    
                 
                 if job_key.IsCancelled():
                     

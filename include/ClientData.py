@@ -163,7 +163,14 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
             continue
             
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        try:
+            
+            service = HG.client_controller.services_manager.GetService( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            continue
+            
         
         if service.GetServiceType() == HC.LOCAL_TAG:
             
@@ -243,47 +250,6 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         
         return wx.lib.colourutils.AdjustColour( colour, 5 * intensity )
         
-    
-def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, collapse_siblings = False ):
-    
-    siblings_manager = HG.client_controller.tag_siblings_manager
-    
-    tags_managers = []
-    
-    for media in pool:
-        
-        if media.IsCollection():
-            
-            tags_managers.extend( media.GetSingletonsTagsManagers() )
-            
-        else:
-            
-            tags_managers.append( media.GetTagsManager() )
-            
-        
-    
-    current_tags_to_count = collections.Counter()
-    deleted_tags_to_count = collections.Counter()
-    pending_tags_to_count = collections.Counter()
-    petitioned_tags_to_count = collections.Counter()
-    
-    for tags_manager in tags_managers:
-        
-        statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key )
-        
-        # combined is already collapsed
-        if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY and collapse_siblings:
-            
-            statuses_to_tags = siblings_manager.CollapseStatusesToTags( tag_service_key, statuses_to_tags )
-            
-        
-        current_tags_to_count.update( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
-        deleted_tags_to_count.update( statuses_to_tags[ HC.CONTENT_STATUS_DELETED ] )
-        pending_tags_to_count.update( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
-        petitioned_tags_to_count.update( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] )
-        
-    
-    return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
 def GetSortTypeChoices():
 

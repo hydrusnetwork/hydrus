@@ -1051,11 +1051,11 @@ class ReviewServicePanel( wx.Panel ):
         
         def _RefreshAccount( self ):
             
-            def do_it():
+            def do_it( service, my_updater ):
                 
                 try:
                     
-                    self._service.SyncAccount( force = True )
+                    service.SyncAccount( force = True )
                     
                 except Exception as e:
                     
@@ -1064,7 +1064,7 @@ class ReviewServicePanel( wx.Panel ):
                     wx.CallAfter( wx.MessageBox, str( e ) )
                     
                 
-                wx.CallAfter( self._Refresh )
+                my_updater.Update()
                 
             
             if HG.client_controller.options[ 'pause_repo_sync' ]:
@@ -1084,7 +1084,7 @@ class ReviewServicePanel( wx.Panel ):
             self._refresh_account_button.Disable()
             self._refresh_account_button.SetLabelText( 'fetching\u2026' )
             
-            HG.client_controller.CallToThread( do_it )
+            HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
             
         
         def ServiceUpdated( self, service ):
@@ -1120,7 +1120,15 @@ class ReviewServicePanel( wx.Panel ):
             self._sync_processing_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncProcessingNow )
             self._pause_play_button = ClientGUICommon.BetterButton( self, 'pause', self._PausePlay )
             self._export_updates_button = ClientGUICommon.BetterButton( self, 'export updates', self._ExportUpdates )
-            self._reset_button = ClientGUICommon.BetterButton( self, 'reset processing cache', self._Reset )
+            
+            reset_menu_items = []
+            
+            reset_menu_items.append( ( 'normal', 'reprocess definitions', 'Reprocess all definitions.', self._ReprocessDefinitions ) )
+            reset_menu_items.append( ( 'normal', 'reprocess content', 'Reprocess all content.', self._ReprocessContent ) )
+            reset_menu_items.append( ( 'separator', None, None, None ) )
+            reset_menu_items.append( ( 'normal', 'complete wipe and reset', 'Reset entire repository.', self._Reset ) )
+            
+            self._reset_button = ClientGUICommon.MenuButton( self, 'reset processing', reset_menu_items )
             
             #
             
@@ -1282,11 +1290,61 @@ class ReviewServicePanel( wx.Panel ):
             HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
+        def _ReprocessDefinitions( self ):
+            
+            def do_it( service, my_updater ):
+                
+                service_key = service.GetServiceKey()
+                
+                HG.client_controller.WriteSynchronous( 'reprocess_repository', service_key, ( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, ) )
+                
+                my_updater.Update()
+                
+            
+            name = self._service.GetName()
+            
+            message = 'This will command the client to reprocess all definition updates for {}. It will not delete anything.'.format( name )
+            message += os.linesep * 2
+            message += 'This is a only useful as a debug tool for filling in \'gaps\'. If you do not understand what this does, turn back now.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
+                
+                HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
+                
+            
+        
+        def _ReprocessContent( self ):
+            
+            def do_it( service, my_updater ):
+                
+                service_key = service.GetServiceKey()
+                
+                HG.client_controller.WriteSynchronous( 'reprocess_repository', service_key, ( HC.APPLICATION_HYDRUS_UPDATE_CONTENT, ) )
+                
+                my_updater.Update()
+                
+            
+            name = self._service.GetName()
+            
+            message = 'This will command the client to reprocess all content updates for {}. It will not delete anything.'.format( name )
+            message += os.linesep * 2
+            message += 'This is a only useful as a debug tool for filling in \'gaps\'. If you do not understand what this does, turn back now.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result == wx.ID_YES:
+                
+                HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
+                
+            
+        
         def _Reset( self ):
             
             name = self._service.GetName()
             
-            message = 'This will remove all the processed information for ' + name + ' from the database, setting the \'processed\' gauge back to 0.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything that has been downloaded over again. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
+            message = 'This will delete all the processed information for ' + name + ' from the database.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything that has been downloaded over again. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -1409,7 +1467,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 processing_work_to_do = processing_value < download_value
                 
-                can_sync_process = self._service.CanSyncDownload()
+                can_sync_process = self._service.CanSyncProcess()
                 
                 if processing_work_to_do and can_sync_process:
                     

@@ -3583,7 +3583,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             queries_panel.AddSeparator()
-            queries_panel.AddButton( 'show \'quality\' info', self._GetQualityInfo, enabled_only_on_selection = True )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'show', 'Show quality info.', self._ShowQualityInfo ) )
+            menu_items.append( ( 'normal', 'copy csv data to clipboard', 'Copy quality info to clipboard.', self._CopyQualityInfo ) )
+            
+            queries_panel.AddMenuButton( 'quality info', menu_items, enabled_only_on_selection = True )
             
         
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._query_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
@@ -3885,16 +3891,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         ( file_status, simple_status, ( num_done, num_total ) ) = file_seed_cache.GetStatus()
         
-        if num_total > 0:
-            
-            sort_float = num_done / num_total
-            
-        else:
-            
-            sort_float = 0.0
-            
-        
-        items = ( sort_float, num_total, num_done )
+        items = ( num_total, num_done )
         
         pretty_items = simple_status
         
@@ -3976,9 +3973,36 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         return query_strings
         
     
-    def _GetQualityInfo( self ):
+    def _CopyQualityInfo( self ):
+        
+        data = self._GetQualityInfo()
         
         data_strings = []
+        
+        for ( name, num_inbox, num_archived, num_deleted ) in data:
+            
+            if num_archived + num_deleted > 0:
+                
+                percent = HydrusData.ConvertFloatToPercentage( num_archived / ( num_archived + num_deleted ) )
+                
+            else:
+                
+                percent = '0.0%'
+                
+            
+            data_string = '{},{},{},{},{}'.format( name, HydrusData.ToHumanInt( num_inbox ), HydrusData.ToHumanInt( num_archived ), HydrusData.ToHumanInt( num_deleted ), percent )
+            
+            data_strings.append( data_string )
+            
+        
+        text = os.linesep.join( data_strings )
+        
+        HG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _GetQualityInfo( self ):
+        
+        data = []
         
         for query in self._queries.GetData( only_selected = True ):
             
@@ -4013,11 +4037,25 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
                     
                 
             
-            data_string = query.GetHumanName() + ': inbox ' + HydrusData.ToHumanInt( num_inbox ) + ' | archive ' + HydrusData.ToHumanInt( num_archived ) + ' | deleted ' + HydrusData.ToHumanInt( num_deleted )
+            data.append( ( query.GetHumanName(), num_inbox, num_archived, num_deleted ) )
+            
+        
+        return data
+        
+    
+    def _ShowQualityInfo( self ):
+        
+        data = self._GetQualityInfo()
+        
+        data_strings = []
+        
+        for ( name, num_inbox, num_archived, num_deleted ) in data:
+            
+            data_string = '{}: inbox {} | archive {} | deleted {}'.format( name, HydrusData.ToHumanInt( num_inbox ), HydrusData.ToHumanInt( num_archived ), HydrusData.ToHumanInt( num_deleted ) )
             
             if num_archived + num_deleted > 0:
                 
-                data_string += ' | good ' + HydrusData.ConvertFloatToPercentage( num_archived / ( num_archived + num_deleted ) )
+                data_string += ' | good {}'.format( HydrusData.ConvertFloatToPercentage( num_archived / ( num_archived + num_deleted ) ) )
                 
             
             data_strings.append( data_string )
@@ -4437,6 +4475,16 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if subs_are_globally_paused:
             
+            message = 'Subscriptions do not work well if they get too large! If any sub has >200,000 items, separate it into smaller pieces immediately!'
+            
+            st = ClientGUICommon.BetterStaticText( self, message )
+            st.SetForegroundColour( ( 127, 0, 0 ) )
+            
+            vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        if subs_are_globally_paused:
+            
             message = 'SUBSCRIPTIONS ARE CURRENTLY GLOBALLY PAUSED! CHECK THE NETWORK MENU TO UNPAUSE THEM.'
             
             st = ClientGUICommon.BetterStaticText( self, message )
@@ -4650,16 +4698,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( queries_status, queries_simple_status, ( num_done, num_total ) ) = ClientImportFileSeeds.GenerateFileSeedCachesStatus( file_seed_caches )
         
-        if num_total > 0:
-            
-            sort_float = num_done / num_total
-            
-        else:
-            
-            sort_float = 0.0
-            
-        
-        items = ( sort_float, num_done, num_total )
+        items = ( num_total, num_done )
         
         pretty_items = queries_simple_status
         
@@ -5042,10 +5081,23 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        if num_queries > 2:
+        if num_queries > 100:
+            
+            message = 'This is a large subscription. It is difficult to separate it on a per-query basis, so instead the system will automatically cut it into two halves. Is this ok?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != wx.ID_YES:
+                
+                return
+                
+            
+            action = 'half'
+            
+        elif num_queries > 2:
             
             message = 'Are you sure you want to separate the selected subscriptions? Separating breaks merged subscriptions apart into smaller pieces.'
-            yes_tuples = [ ( 'break the whole subscription up into single-query subscriptions', 'whole' ), ( 'only extract some of the subscription', 'part' ) ]
+            yes_tuples = [ ( 'break it in half', 'half' ), ( 'break it all into single-query subscriptions', 'whole' ), ( 'only extract some of the subscription', 'part' ) ]
             
             with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
                 
@@ -5112,24 +5164,27 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        if want_post_merge:
+        if action != 'half':
             
-            message = 'Please enter the name for the new subscription.'
-            
-        else:
-            
-            message = 'Please enter the base name for the new subscriptions. They will be named \'[NAME]: query\'.'
-            
-        
-        with ClientGUIDialogs.DialogTextEntry( self, message, default = subscription.GetName() ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
+            if want_post_merge:
                 
-                name = dlg.GetValue()
+                message = 'Please enter the name for the new subscription.'
                 
             else:
                 
-                return
+                message = 'Please enter the base name for the new subscriptions. They will be named \'[NAME]: query\'.'
+                
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message, default = subscription.GetName() ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    name = dlg.GetValue()
+                    
+                else:
+                    
+                    return
+                    
                 
             
         
@@ -5143,7 +5198,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             final_subscriptions.extend( subscription.Separate( name ) )
             
-        else:
+        elif action == 'part':
             
             extracted_subscriptions = list( subscription.Separate( name, queries_to_extract ) )
             
@@ -5164,6 +5219,26 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 final_subscriptions.extend( extracted_subscriptions )
                 
             
+            final_subscriptions.append( subscription )
+            
+        elif action == 'half':
+            
+            queries = subscription.GetQueries()
+            
+            queries_to_extract = queries[ : len( queries ) // 2 ]
+            
+            name = subscription.GetName()
+            
+            extracted_subscriptions = list( subscription.Separate( name, queries_to_extract ) )
+            
+            primary_sub = extracted_subscriptions.pop()
+            
+            primary_sub.Merge( extracted_subscriptions )
+            
+            primary_sub.SetName( '{} (A)'.format( name ) )
+            subscription.SetName( '{} (B)'.format( name ) )
+            
+            final_subscriptions.append( primary_sub )
             final_subscriptions.append( subscription )
             
         
@@ -5237,6 +5312,124 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._subscriptions.UpdateDatas( subscriptions )
                 
+            
+        
+    
+class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, tag_display_manager ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._tag_services = ClientGUICommon.BetterNotebook( self )
+        
+        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
+        
+        self._tag_services.SetMinSize( ( min_width, -1 ) )
+        
+        #
+        
+        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) ) )
+        
+        services.sort( key = lambda s: s.GetName() )
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            name = service.GetName()
+            
+            page = self._Panel( self._tag_services, tag_display_manager, service_key )
+            
+            select = service_key == CC.COMBINED_TAG_SERVICE_KEY
+            
+            self._tag_services.AddPage( page, name, select = select )
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        intro = 'Please note this new system is under construction. It is neither completely functional nor as efficient as intended.'
+        
+        st = ClientGUICommon.BetterStaticText( self, intro )
+        
+        st.SetWrapWidth( min_width - 50 )
+        
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        tag_display_manager = ClientTags.TagDisplayManager()
+        
+        for page in self._tag_services.GetPages():
+            
+            ( service_key, tag_display_types_to_tag_filters ) = page.GetValue()
+            
+            for ( tag_display_type, tag_filter ) in tag_display_types_to_tag_filters.items():
+                
+                tag_display_manager.SetTagFilter( tag_display_type, service_key, tag_filter )
+                
+            
+        
+        return tag_display_manager
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, tag_display_manager, service_key ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            single_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key )
+            selection_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, service_key )
+            
+            self._service_key = service_key
+            
+            #
+            
+            message = 'This filters which tags will show on \'single\' file views such as the media viewer and thumbnail banners.'
+            
+            self._single_tag_filter_button = ClientGUITags.TagFilterButton( self, message, single_tag_filter )
+            
+            message = 'This filters which tags will show on \'selection\' file views such as the \'selection tags\' list on regular search pages.'
+            
+            self._selection_tag_filter_button = ClientGUITags.TagFilterButton( self, message, selection_tag_filter )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Tag filter for single file views: ', self._single_tag_filter_button ) )
+            rows.append( ( 'Tag filter for multiple file views: ', self._selection_tag_filter_button ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                message = 'These filters apply to all tag services.'
+                
+                vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def GetValue( self ):
+            
+            tag_display_types_to_tag_filters = {}
+            
+            tag_display_types_to_tag_filters[ ClientTags.TAG_DISPLAY_SINGLE_MEDIA ] = self._single_tag_filter_button.GetValue()
+            tag_display_types_to_tag_filters[ ClientTags.TAG_DISPLAY_SELECTION_LIST ] = self._selection_tag_filter_button.GetValue()
+            
+            return ( self._service_key, tag_display_types_to_tag_filters )
             
         
     

@@ -245,11 +245,6 @@ class MigrationDestinationTagService( MigrationDestination ):
         self._content_action = content_action
         
     
-    def CleanUp( self ):
-        
-        self._controller.pub( 'notify_new_force_refresh_tags_gui' )
-        
-    
 class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
     
     def DoSomeWork( self, source ):

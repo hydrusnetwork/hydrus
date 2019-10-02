@@ -1262,10 +1262,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 forced_reason = 'admin'
                 
             
-            tag_managers = [ m.GetTagsManager() for m in self._media ]
-            currents = [ tag_manager.GetCurrent( self._tag_service_key ) for tag_manager in tag_managers ]
-            pendings = [ tag_manager.GetPending( self._tag_service_key ) for tag_manager in tag_managers ]
-            petitioneds = [ tag_manager.GetPetitioned( self._tag_service_key ) for tag_manager in tag_managers ]
+            tags_managers = [ m.GetTagsManager() for m in self._media ]
+            
+            currents = [ tags_manager.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
+            pendings = [ tags_manager.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
+            petitioneds = [ tags_manager.GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
             
             num_files = len( self._media )
             
@@ -1477,12 +1478,12 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for tag in tags:
                 
-                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) ]
-                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) ]
-                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) ]
-                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) ]
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) ]
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) ]
+                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
+                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
+                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
+                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ]
                 
                 hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
                 
@@ -1579,9 +1580,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( tags ) == 0:
                 
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( self._media, tag_service_key = self._tag_service_key, collapse_siblings = False )
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( self._media, self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                 
-                tags = set( current_tags_to_count.keys() ).union( list(pending_tags_to_count.keys()) )    
+                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
                 
             
             if len( tags ) > 0:
@@ -1609,9 +1610,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     hash = m.GetHash()
                     
-                    tags_manager = m.GetTagsManager()
-                    
-                    tags = tags_manager.GetCurrent( self._tag_service_key ).union( tags_manager.GetPending( self._tag_service_key ) )
+                    tags = m.GetTagsManager().GetCurrentAndPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                     
                     sibling_correct_tags = tag_siblings_manager.CollapseTags( service_key, tags, service_strict = True )
                     
@@ -1812,14 +1811,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _RemoveTagsButton( self ):
             
-            tag_managers = [ m.GetTagsManager() for m in self._media ]
+            tags_managers = [ m.GetTagsManager() for m in self._media ]
             
             removable_tags = set()
             
-            for tag_manager in tag_managers:
+            for tags_manager in tags_managers:
                 
-                removable_tags.update( tag_manager.GetCurrent( self._tag_service_key ) )
-                removable_tags.update( tag_manager.GetPending( self._tag_service_key ) )
+                removable_tags.update( tags_manager.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
+                removable_tags.update( tags_manager.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
                 
             
             selected_tags = list( self._tags_box.GetSelectedTags() )
@@ -1986,151 +1985,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
 
-class ManageTagCensorshipPanel( ClientGUIScrolledPanels.ManagePanel ):
-    
-    def __init__( self, parent, initial_value = None ):
-        
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
-        
-        self._tag_services = ClientGUICommon.BetterNotebook( self )
-        
-        min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
-        
-        self._tag_services.SetMinSize( ( min_width, -1 ) )
-        
-        #
-        
-        services = HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-        
-        for service in services:
-            
-            service_key = service.GetServiceKey()
-            name = service.GetName()
-            
-            page = self._Panel( self._tag_services, service_key, initial_value )
-            
-            select = name == 'all known tags'
-            
-            self._tag_services.AddPage( page, name, select = select )
-            
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and the empty string (just hit enter with no text added) for all unnamespaced tags. You will have to refresh your current queries to see any changes."
-        
-        st = ClientGUICommon.BetterStaticText( self, intro )
-        
-        st.SetWrapWidth( min_width - 50 )
-        
-        
-        
-        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-    
-    def _SetSearchFocus( self ):
-        
-        page = self._tag_services.GetCurrentPage()
-        
-        if page is not None:
-            
-            page.SetTagBoxFocus()
-            
-        
-    
-    def CommitChanges( self ):
-        
-        info = [ page.GetInfo() for page in self._tag_services.GetPages() if page.HasInfo() ]
-        
-        HG.client_controller.Write( 'tag_censorship', info )
-        
-    
-    class _Panel( wx.Panel ):
-        
-        def __init__( self, parent, service_key, initial_value = None ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._service_key = service_key
-            
-            choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
-            
-            self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
-            
-            self._tags = ClientGUIListBoxes.ListBoxTagsCensorship( self )
-            
-            self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-            self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
-            
-            #
-            
-            ( blacklist, tags ) = HG.client_controller.Read( 'tag_censorship', service_key )
-            
-            if blacklist: self._blacklist.SetSelection( 0 )
-            else: self._blacklist.SetSelection( 1 )
-            
-            self._tags.AddTags( tags )
-            
-            if initial_value is not None:
-                
-                self._tag_input.SetValue( initial_value )
-                
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.Add( self._blacklist, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._tag_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def EventKeyDownTag( self, event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-                
-                tag = self._tag_input.GetValue()
-                
-                self._tags.EnterTags( { tag } )
-                
-                self._tag_input.SetValue( '' )
-                
-            else:
-                
-                event.Skip()
-                
-            
-        
-        def GetInfo( self ):
-            
-            blacklist = self._blacklist.GetSelectedClientData()
-            
-            tags = self._tags.GetClientData()
-            
-            return ( self._service_key, blacklist, tags )
-            
-        
-        def HasInfo( self ):
-            
-            ( service_key, blacklist, tags ) = self.GetInfo()
-            
-            return len( tags ) > 0
-            
-        
-        def SetTagBoxFocus( self ):
-            
-            self._tag_input.SetFocus()
-            
-        
-    
 class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, tags = None ):
@@ -3908,7 +3762,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
             tt = self._tag_filter.ToPermittedString()
             
         
-        self.SetLabelText( tt[:32] )
+        self.SetLabelText( tt[:96] )
         
         self.SetToolTip( tt )
         
