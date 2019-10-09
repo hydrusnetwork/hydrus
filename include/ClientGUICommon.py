@@ -705,9 +705,11 @@ class BufferedWindowIcon( BufferedWindow ):
     
 class CheckboxCollect( wx.Panel ):
     
-    def __init__( self, parent, management_controller = None ):
+    def __init__( self, parent, management_controller = None, silent = False ):
         
         wx.Panel.__init__( self, parent )
+        
+        # this is trash, rewrite it to deal with the media_collect object, not the management controller
         
         self._management_controller = management_controller
         
@@ -719,6 +721,8 @@ class CheckboxCollect( wx.Panel ):
             
             self._media_collect = HG.client_controller.new_options.GetDefaultCollect()
             
+        
+        self._silent = silent
         
         self._collect_comboctrl = wx.ComboCtrl( self, style = wx.CB_READONLY )
         
@@ -777,7 +781,7 @@ class CheckboxCollect( wx.Panel ):
         
         self._collect_comboctrl.SetValue( description )
         
-        if self._management_controller is not None:
+        if not self._silent and self._management_controller is not None:
             
             self._management_controller.SetVariable( 'media_collect', self._media_collect )
             

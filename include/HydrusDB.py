@@ -176,6 +176,7 @@ class HydrusDB( object ):
         self._is_first_start = False
         self._is_db_updated = False
         self._local_shutdown = False
+        self._pause_and_disconnect = False
         self._loop_finished = False
         self._ready_to_serve_requests = False
         self._could_not_initialise = False
@@ -942,6 +943,23 @@ class HydrusDB( object ):
                 self._InitDBCursor()
                 
             
+            if self._pause_and_disconnect:
+                
+                self._CloseDBCursor()
+                
+                while self._pause_and_disconnect:
+                    
+                    if self._local_shutdown or HG.model_shutdown:
+                        
+                        break
+                        
+                    
+                    time.sleep( 1 )
+                    
+                
+                self._InitDBCursor()
+                
+            
         
         self._CleanUpCaches()
         
@@ -952,6 +970,11 @@ class HydrusDB( object ):
         HydrusPaths.DeletePath( temp_path )
         
         self._loop_finished = True
+        
+    
+    def PauseAndDisconnect( self, pause_and_disconnect ):
+        
+        self._pause_and_disconnect = pause_and_disconnect
         
     
     def Read( self, action, *args, **kwargs ):

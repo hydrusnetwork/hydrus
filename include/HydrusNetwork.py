@@ -2324,32 +2324,42 @@ class ServerServiceRepository( ServerServiceRestricted ):
         
         if update_due:
             
-            HG.server_busy = True
+            locked = HG.server_busy.acquire( False )
             
-            while update_due:
+            if not locked:
                 
-                with self._lock:
-                    
-                    service_key = self._service_key
-                    
-                    begin = self._metadata.GetNextUpdateBegin()
-                    
-                
-                end = begin + HC.UPDATE_DURATION
-                
-                update_hashes = HG.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
-                
-                next_update_due = end + HC.UPDATE_DURATION + 1
-                
-                with self._lock:
-                    
-                    self._metadata.AppendUpdate( update_hashes, begin, end, next_update_due )
-                    
-                    update_due = self._metadata.UpdateDue()
-                    
+                return
                 
             
-            HG.server_busy = False
+            try:
+                
+                while update_due:
+                    
+                    with self._lock:
+                        
+                        service_key = self._service_key
+                        
+                        begin = self._metadata.GetNextUpdateBegin()
+                        
+                    
+                    end = begin + HC.UPDATE_DURATION
+                    
+                    update_hashes = HG.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
+                    
+                    next_update_due = end + HC.UPDATE_DURATION + 1
+                    
+                    with self._lock:
+                        
+                        self._metadata.AppendUpdate( update_hashes, begin, end, next_update_due )
+                        
+                        update_due = self._metadata.UpdateDue()
+                        
+                    
+                
+            finally:
+                
+                HG.server_busy.release()
+                
             
             with self._lock:
                 

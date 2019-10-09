@@ -4473,15 +4473,12 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
         
-        if subs_are_globally_paused:
-            
-            message = 'Subscriptions do not work well if they get too large! If any sub has >200,000 items, separate it into smaller pieces immediately!'
-            
-            st = ClientGUICommon.BetterStaticText( self, message )
-            st.SetForegroundColour( ( 127, 0, 0 ) )
-            
-            vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
+        message = 'Subscriptions do not work well if they get too large! If any sub has >200,000 items, separate it into smaller pieces immediately!'
+        
+        st = ClientGUICommon.BetterStaticText( self, message )
+        st.SetForegroundColour( ( 127, 0, 0 ) )
+        
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if subs_are_globally_paused:
             
@@ -6336,9 +6333,32 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._normalised_url.SetToolTip( tt )
         
-        ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = url_class.ToTuple()
+        ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = url_class.ToTuple()
+        
+        self._send_referral_url = ClientGUICommon.BetterChoice( self )
+        
+        for send_referral_url_type in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
+            
+            self._send_referral_url.Append( ClientNetworkingDomain.send_referral_url_string_lookup[ send_referral_url_type ], send_referral_url_type )
+            
+        
+        tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
+        
+        self._send_referral_url.SetToolTip( tt )
+        
+        self._referral_url_converter = ClientGUIControls.StringConverterButton( self, referral_url_converter )
+        
+        tt = 'This will generate a referral URL from the original URL. If the URL needs a referral URL, and you can infer what that would be from just this URL, this will let hydrus download this URL without having to previously visit the referral URL (e.g. letting the user drag-and-drop import). It also lets you set up alternate referral URLs for perculiar situations.'
+        
+        self._referral_url_converter.SetToolTip( tt )
+        
+        self._referral_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
         self._api_lookup_converter = ClientGUIControls.StringConverterButton( self, api_lookup_converter )
+        
+        tt = 'This will let you generate an alternate URL for the client to use for the actual download whenever it encounters a URL in this class. You must have a separate URL class to match the API type (which will link to parsers).'
+        
+        self._api_lookup_converter.SetToolTip( tt )
         
         self._api_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
@@ -6420,6 +6440,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'example url: ', self._example_url ) )
         rows.append( ( 'normalised url: ', self._normalised_url ) )
+        rows.append( ( 'send referral url?: ', self._send_referral_url ) )
+        rows.append( ( 'optional referral url converter: ', self._referral_url_converter ) )
+        rows.append( ( 'referral url: ', self._referral_url ) )
         rows.append( ( 'optional api url converter: ', self._api_lookup_converter ) )
         rows.append( ( 'api url: ', self._api_url ) )
         rows.append( ( 'next gallery page url: ', self._next_gallery_page_url ) )
@@ -6447,7 +6470,10 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
         self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
         self._url_type.Bind( wx.EVT_CHOICE, self.EventURLTypeUpdate )
+        self._send_referral_url.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._referral_url_converter.Bind( ClientGUIControls.EVT_STRING_CONVERTER, self.EventUpdate )
         self._api_lookup_converter.Bind( ClientGUIControls.EVT_STRING_CONVERTER, self.EventUpdate )
+        
         self._should_be_associated_with_files.Bind( wx.EVT_CHECKBOX, self.EventAssociationUpdate )
         
     
@@ -6734,13 +6760,15 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
+        send_referral_url = self._send_referral_url.GetValue()
+        referral_url_converter = self._referral_url_converter.GetValue()
         
         ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetValue()
         gallery_index_delta = self._next_gallery_page_delta.GetValue()
         
         example_url = self._example_url.GetValue()
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_class_key = url_class_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingDomain.URLClass( name, url_class_key = url_class_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
         return url_class
         
@@ -6834,6 +6862,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = self._example_url.GetValue()
             
+            self._referral_url_converter.SetExampleString( example_url )
             self._api_lookup_converter.SetExampleString( example_url )
             
             url_class.Test( example_url )
@@ -6844,6 +6873,50 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             normalised = url_class.Normalise( example_url )
             
             self._normalised_url.SetValue( normalised )
+            
+            if url_class.UsesAPIURL():
+                
+                self._send_referral_url.Disable()
+                self._referral_url_converter.Disable()
+                
+                self._referral_url.SetValue( 'Not used, as API converter will redirect.' )
+                
+            else:
+                
+                self._send_referral_url.Enable()
+                self._referral_url_converter.Enable()
+                
+                send_referral_url = self._send_referral_url.GetValue()
+                
+                if send_referral_url in ( ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED, ClientNetworkingDomain.SEND_REFERRAL_URL_NEVER ):
+                    
+                    self._referral_url_converter.Disable()
+                    
+                else:
+                    
+                    self._referral_url_converter.Enable()
+                    
+                
+                if send_referral_url == ClientNetworkingDomain.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED:
+                    
+                    referral_url = url_class.GetReferralURL( normalised, None )
+                    
+                    referral_url = 'normal referral url -or- {}'.format( referral_url )
+                    
+                else:
+                    
+                    referral_url = url_class.GetReferralURL( normalised, 'normal referral url' )
+                    
+                
+                if referral_url is None:
+                    
+                    self._referral_url.SetValue( 'None' )
+                    
+                else:
+                    
+                    self._referral_url.SetValue( referral_url )
+                    
+                
             
             try:
                 

@@ -1446,7 +1446,7 @@ class Canvas( wx.Window ):
         
         mime = media.GetMime()
         
-        if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
+        if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
             
             return CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW
             

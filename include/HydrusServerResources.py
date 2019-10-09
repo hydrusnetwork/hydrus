@@ -344,11 +344,6 @@ class HydrusResource( Resource ):
     
     def _checkService( self, request ):
         
-        if HG.server_busy:
-            
-            raise HydrusExceptions.ServerBusyException( 'This server is busy, please try again later.' )
-            
-        
         return request
         
     

@@ -244,61 +244,61 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( names_to_analyze ) > 0:
             
-            HG.server_busy = True
+            locked = HG.server_busy.acquire( False )
             
-        
-        for name in names_to_analyze:
-            
-            started = HydrusData.GetNowPrecise()
-            
-            self._c.execute( 'ANALYZE ' + name + ';' )
-            
-            self._c.execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
-            
-            self._c.execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
-            
-            time_took = HydrusData.GetNowPrecise() - started
-            
-            if time_took > 1:
+            if not locked:
                 
-                HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                return
                 
             
-            if HG.server_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+            try:
                 
-                break
+                for name in names_to_analyze:
+                    
+                    started = HydrusData.GetNowPrecise()
+                    
+                    self._c.execute( 'ANALYZE ' + name + ';' )
+                    
+                    self._c.execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusData.GetNow() ) )
+                    
+                    time_took = HydrusData.GetNowPrecise() - started
+                    
+                    if time_took > 1:
+                        
+                        HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                        
+                    
+                    if HG.server_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+                        
+                        break
+                        
+                    
+                
+                self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
+                
+            finally:
+                
+                HG.server_busy.release()
                 
             
-        
-        self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
-        
-        HG.server_busy = False
         
     
-    def _Backup( self, skip_vacuum = False ):
+    def _Backup( self ):
         
-        self._CloseDBCursor()
+        locked = HG.server_busy.acquire( False )
         
-        HG.server_busy = True
+        if not locked:
+            
+            HydrusData.Print( 'Could not backup because the server was locked.' )
+            
+            return
+            
         
         try:
             
-            stop_time = HydrusData.GetNow() + 300
-            
-            if not skip_vacuum:
-                
-                for filename in self._db_filenames.values():
-                    
-                    db_path = os.path.join( self._db_dir, filename )
-                    
-                    if HydrusDB.CanVacuum( db_path, stop_time ):
-                        
-                        HydrusData.Print( 'backing up: vacuuming ' + filename )
-                        
-                        HydrusDB.VacuumDB( db_path )
-                        
-                    
-                
+            self._CloseDBCursor()
             
             backup_path = os.path.join( self._db_dir, 'server_backup' )
             
@@ -327,14 +327,14 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.Print( 'backing up: copying files' )
             HydrusPaths.MirrorTree( self._files_dir, os.path.join( backup_path, 'server_files' ) )
             
-        finally:
-            
-            HG.server_busy = False
-            
             self._InitDBCursor()
             
-        
-        HydrusData.Print( 'backing up: done!' )
+            HydrusData.Print( 'backing up: done!' )
+            
+        finally:
+            
+            HG.server_busy.release()
+            
         
     
     def _CreateDB( self ):
@@ -3277,6 +3277,76 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
     
+    def _Vacuum( self ):
+        
+        locked = HG.server_busy.acquire( False )
+        
+        if not locked:
+            
+            HydrusData.Print( 'Could not vacuum because the server was locked!' )
+            
+            return
+            
+        
+        try:
+            
+            db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
+            
+            self._CloseDBCursor()
+            
+            try:
+                
+                names_done = []
+                
+                for name in db_names:
+                    
+                    if name not in self._db_filenames:
+                        
+                        continue
+                        
+                    
+                    try:
+                        
+                        db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
+                        
+                        if HydrusDB.CanVacuum( db_path ):
+                            
+                            started = HydrusData.GetNowPrecise()
+                            
+                            HydrusDB.VacuumDB( db_path )
+                            
+                            time_took = HydrusData.GetNowPrecise() - started
+                            
+                            HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
+                            
+                        else:
+                            
+                            HydrusData.Print( 'Could not vacuum ' + db_path + ' (probably due to limited disk space on db or system drive).' )
+                            
+                        
+                        names_done.append( name )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.Print( 'vacuum failed:' )
+                        
+                        HydrusData.ShowException( e )
+                        
+                        return
+                        
+                    
+                
+            finally:
+                
+                self._InitDBCursor()
+                
+            
+        finally:
+            
+            HG.server_busy.release()
+            
+        
+    
     def _VerifyAccessKey( self, service_key, access_key ):
         
         service_id = self._GetServiceId( service_key )
@@ -3312,6 +3382,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'services': result = self._ModifyServices( *args, **kwargs )
         elif action == 'session': self._AddSession( *args, **kwargs )
         elif action == 'update': self._RepositoryProcessClientToServerUpdate( *args, **kwargs )
+        elif action == 'vacuum': self._Vacuum( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result

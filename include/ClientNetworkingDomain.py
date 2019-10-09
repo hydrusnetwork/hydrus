@@ -1320,6 +1320,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetReferralURL( self, url, referral_url ):
+        
+        with self._lock:
+            
+            url_class = self._GetURLClass( url )
+            
+            if url_class is None:
+                
+                return referral_url
+                
+            else:
+                
+                return url_class.GetReferralURL( url, referral_url )
+                
+            
+        
+    
     def GetShareableCustomHeaders( self, network_context ):
         
         with self._lock:
@@ -2541,13 +2558,27 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR ] = NestedGalleryURLGenerator
 
+SEND_REFERRAL_URL_ONLY_IF_PROVIDED = 0
+SEND_REFERRAL_URL_NEVER = 1
+SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED = 2
+SEND_REFERRAL_URL_ONLY_CONVERTER = 3
+
+SEND_REFERRAL_URL_TYPES = [ SEND_REFERRAL_URL_ONLY_IF_PROVIDED, SEND_REFERRAL_URL_NEVER, SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED, SEND_REFERRAL_URL_ONLY_CONVERTER ]
+
+send_referral_url_string_lookup = {}
+
+send_referral_url_string_lookup[ SEND_REFERRAL_URL_ONLY_IF_PROVIDED ] = 'send a referral url if available'
+send_referral_url_string_lookup[ SEND_REFERRAL_URL_NEVER ] = 'never send a referral url'
+send_referral_url_string_lookup[ SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED ] = 'use the converter if no referral is available'
+send_referral_url_string_lookup[ SEND_REFERRAL_URL_ONLY_CONVERTER ] = 'always use the converter referral url'
+
 class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
     SERIALISABLE_NAME = 'URL Class'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
-    def __init__( self, name, url_class_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, can_produce_multiple_files = False, should_be_associated_with_files = True, gallery_index_type = None, gallery_index_identifier = None, gallery_index_delta = 1, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+    def __init__( self, name, url_class_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED, referral_url_converter = None, can_produce_multiple_files = False, should_be_associated_with_files = True, gallery_index_type = None, gallery_index_identifier = None, gallery_index_delta = 1, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
         
         if url_class_key is None:
             
@@ -2573,12 +2604,16 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             parameters[ 's' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
             parameters[ 'id' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '123456' ), None )
-            parameters[ 'page' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' ), '1' )
             
         
         if api_lookup_converter is None:
             
             api_lookup_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
+            
+        
+        if referral_url_converter is None:
+            
+            referral_url_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
             
         
         # if the args are not serialisable stuff, lets overwrite here
@@ -2601,6 +2636,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_components = path_components
         self._parameters = parameters
         self._api_lookup_converter = api_lookup_converter
+        
+        self._send_referral_url = send_referral_url
+        self._referral_url_converter = referral_url_converter
         
         self._gallery_index_type = gallery_index_type
         self._gallery_index_identifier = gallery_index_identifier
@@ -2712,18 +2750,20 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_path_components = [ ( string_match.GetSerialisableTuple(), default ) for ( string_match, default ) in self._path_components ]
         serialisable_parameters = [ ( key, ( string_match.GetSerialisableTuple(), default ) ) for ( key, ( string_match, default ) ) in list(self._parameters.items()) ]
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
+        serialisable_referral_url_converter = self._referral_url_converter.GetSerialisableTuple()
         
-        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
+        return ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
+        ( serialisable_url_class_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._send_referral_url, serialisable_referral_url_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._gallery_index_type, self._gallery_index_identifier, self._gallery_index_delta, self._example_url ) = serialisable_info
         
         self._url_class_key = bytes.fromhex( serialisable_url_class_key )
         self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
         self._parameters = { key : ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( key, ( serialisable_string_match, default ) ) in serialisable_parameters }
         self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
+        self._referral_url_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_referral_url_converter )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -2803,6 +2843,20 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
+            
+            send_referral_url = SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+            referral_url_converter = ClientParsing.StringConverter( example_string = 'https://hostname.com/post/page.php?id=123456&s=view' )
+            
+            serialisable_referrel_url_converter = referral_url_converter.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, send_referral_url, serialisable_referrel_url_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url )
+            
+            return ( 7, new_serialisable_info )
             
         
     
@@ -2945,6 +2999,43 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
         
         return r.geturl()
+        
+    
+    def GetReferralURL( self, url, referral_url ):
+        
+        if self._send_referral_url == SEND_REFERRAL_URL_ONLY_IF_PROVIDED:
+            
+            return referral_url
+            
+        elif self._send_referral_url == SEND_REFERRAL_URL_NEVER:
+            
+            return None
+            
+        elif self._send_referral_url in ( SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED, SEND_REFERRAL_URL_ONLY_CONVERTER ):
+            
+            try:
+                
+                converted_referral_url = self._referral_url_converter.Convert( url )
+                
+            except HydrusExceptions.StringConvertException:
+                
+                return referral_url
+                
+            
+            p1 = self._send_referral_url == SEND_REFERRAL_URL_ONLY_CONVERTER
+            p2 = self._send_referral_url == SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED and referral_url is None
+            
+            if p1 or p2:
+                
+                return converted_referral_url
+                
+            else:
+                
+                return referral_url
+                
+            
+        
+        return referral_url
         
     
     def GetSafeSummary( self ):
@@ -3126,7 +3217,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url )
+        return ( self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._send_referral_url, self._referral_url_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url )
         
     
     def UsesAPIURL( self ):

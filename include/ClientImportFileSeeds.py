@@ -1826,7 +1826,16 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                     continue
                     
                 
-                file_seed.Normalise()
+                try:
+                    
+                    file_seed.Normalise()
+                    
+                except HydrusExceptions.URLClassException:
+                    
+                    # this is some borked 'https://' url that makes no sense
+                    
+                    continue
+                    
                 
                 new_file_seeds.append( file_seed )
                 
@@ -2119,16 +2128,23 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             inbox_hashes = HG.client_controller.Read( 'in_inbox', file_seed_hashes )
             
             hashes = []
+            hashes_seen = set()
             
             for file_seed in eligible_file_seeds:
                 
                 hash = file_seed.GetHash()
+                
+                if hash in hashes_seen:
+                    
+                    continue
+                    
                 
                 in_inbox = hash in inbox_hashes
                 
                 if file_seed.ShouldPresent( file_import_options, in_inbox = in_inbox ):
                     
                     hashes.append( hash )
+                    hashes_seen.add( hash )
                     
                 
             

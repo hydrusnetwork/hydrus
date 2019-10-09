@@ -934,6 +934,25 @@ class MediaList( object ):
     
     def __init__( self, file_service_key, media_results ):
         
+        hashes_seen = set()
+        
+        media_results_dedupe = []
+        
+        for media_result in media_results:
+            
+            hash = media_result.GetHash()
+            
+            if hash in hashes_seen:
+                
+                continue
+                
+            
+            media_results_dedupe.append( media_result )
+            hashes_seen.add( hash )
+            
+        
+        media_results = media_results_dedupe
+        
         self._file_service_key = file_service_key
         
         self._hashes = set()
@@ -2638,7 +2657,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     tags_manager = x.GetTagsManager()
                     
-                    return len( tags_manager.GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) )
+                    return len( tags_manager.GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MIME:
@@ -2654,7 +2673,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     fvsm = x.GetFileViewingStatsManager()
                     
-                    return ( fvsm.media_views, fvsm.media_viewtime )
+                    # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
+                    
+                    return fvsm.media_views
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MEDIA_VIEWTIME:
@@ -2663,7 +2684,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     fvsm = x.GetFileViewingStatsManager()
                     
-                    return ( fvsm.media_viewtime, fvsm.media_views )
+                    # do not do views as a secondary sort here, to allow for user secondary sort to help out
+                    
+                    return fvsm.media_viewtime
                     
                 
             
@@ -2675,7 +2698,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), ClientTags.TAG_DISPLAY_SIBLINGS_AND_PARENTS ) for namespace in namespaces ]
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), ClientTags.TAG_DISPLAY_SINGLE_MEDIA ) for namespace in namespaces ]
                 
             
         elif sort_metadata == 'rating':

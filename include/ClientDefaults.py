@@ -99,8 +99,6 @@ def GetClientDefaultOptions():
     options[ 'pause_repo_sync' ] = False
     options[ 'pause_subs_sync' ] = False
     
-    options[ 'rating_dialog_position' ] = ( False, None )
-    
     return options
     
 def GetDefaultCheckerOptions( name ):

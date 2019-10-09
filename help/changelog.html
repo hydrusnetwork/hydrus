@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 371</h3></li>
+				<ul>
+					<li>the edit tag filter panel now has load/save/delete buttons at the top to manage tag filter favourites. it starts with a handful of examples</li>
+					<li>sorting thumbnails by num tags or namespaces now uses the 'single' tag display context</li>
+					<li>the 'sort by media views/viewtime' sorts now do not put the other (viewtime/views) as an implicit secondary sort, so as to better let the user's secondary sort be used</li>
+					<li>highlighting a downloader should now not be able to create a page with duplicate thumbnails</li>
+					<li>all thumbnail pages now do an addition de-dupe check when they are created with media</li>
+					<li>when a gallery page parser now adds new urls to a file import list, urls that are invalid will now be skipped (previously, they threw an error and failed the parse</li>
+					<li>fixed a bug where if a default collect is set, pages without a collect (e.g. download pages) would nonetheless initialise with collected+sorted initial media on session load</li>
+					<li>file imports now publish the same 'refresh existing media metadata' call as the file maintenance system, meaning if the import already exists in the gui session as an 'unknown thumb', it should now refresh itself correctly</li>
+					<li>if the media canvas is called to display an invalid media (due to mime mixup or a faulty parse that slips through), it should now better recognise that and skip/dump out</li>
+					<li>fixed import of videos that have 'Duration:' in their title metadata</li>
+					<li>improved the error reporting when the old options object fails to save</li>
+					<li>removed some old ratings dialog position options storage that was causing errors on certain ratings dialog ok events</li>
+					<li>url classes now support options regarding the 'referer' http header they send (their referral url). you can set an optional converter to generate a referral url based on the url class's url and choose to always use the given referrer if available, never use a referrer, use the converter if no referrer is available, or always use the converter</li>
+					<li>the network report mode now reports on referral urls used in requests</li>
+					<li>the 'quoted' referral url (a unicode workaround) is now only applied if the referral url cannot be encoded to latin-1</li>
+					<li>the janitorial petitions processing page now lets you copy tags and left/right tags of pairs with a right-click on selected checkbox rows</li>
+					<li>cleaned a little server code</li>
+					<li>improved how the server sets and releases its 'currently busy' mode</li>
+					<li>the server no longer does <5min vacuums in a backup command</li>
+					<li>added a specific 'vacuum' server POST command that forces a full vacuum</li>
+					<li>added 'lock_on' and 'lock_off' server POST commands to lock the server and shut down the db, and restart</li>
+					<li>the new vacuum, lock_on, lock_off, and a 'is server busy?' check commands are added to the services->admin menu</li>
+					<li>added 'pause and disconnect' ability to the database mainloop</li>
+					<li>added some unit tests for url classes and the new referral url conversions and server commands</li>
+					<li>cleaned some of the thumbnail banner/icon drawing code</li>
+					<li>some misc label fixes</li>
+				</ul>
 				<li><h3>version 370</h3></li>
 				<ul>
 					<li>tag display updates:</li>

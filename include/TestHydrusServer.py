@@ -563,10 +563,26 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        ## backup
+        response = service.Request( HC.GET, 'busy' )
+        
+        self.assertEqual( response, b'0' )
+        
+        response = service.Request( HC.POST, 'lock_on' )
+        
+        response = service.Request( HC.GET, 'busy' )
+        
+        self.assertEqual( response, b'1' )
+        
+        response = service.Request( HC.POST, 'lock_off' )
+        
+        response = service.Request( HC.GET, 'busy' )
+        
+        self.assertEqual( response, b'0' )
+        
+        #
         
         response = service.Request( HC.POST, 'backup' )
-        response = service.Request( HC.POST, 'backup', { 'skip_vacuum' : True } )
+        response = service.Request( HC.POST, 'vacuum' )
         
         #
         

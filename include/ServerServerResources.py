@@ -9,6 +9,7 @@ from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusServerResources
 from . import ServerFiles
+import threading
 
 class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
     
@@ -25,7 +26,7 @@ class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
         
         request.setHeader( 'Server', self._server_version_string )
         
-        if HG.server_busy:
+        if HG.server_busy.locked():
             
             return b'1'
             
@@ -36,6 +37,8 @@ class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
         
     
 class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
+    
+    BLOCKED_WHEN_BUSY = True
     
     def _callbackParseGETArgs( self, request ):
         
@@ -104,6 +107,16 @@ class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
             
         
         request.parsed_request_args = parsed_request_args
+        
+        return request
+        
+    
+    def _checkService( self, request ):
+        
+        if self.BLOCKED_WHEN_BUSY and HG.server_busy.locked():
+            
+            raise HydrusExceptions.ServerBusyException( 'This server is busy, please try again later.' )
+            
         
         return request
         
@@ -378,9 +391,7 @@ class HydrusResourceRestrictedBackup( HydrusResourceRestricted ):
         # check permission here since this is an asynchronous job
         request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
         
-        skip_vacuum = request.parsed_request_args.GetValue( 'skip_vacuum', bool, False )
-        
-        HG.server_controller.Write( 'backup', skip_vacuum )
+        HG.server_controller.Write( 'backup' )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -398,6 +409,54 @@ class HydrusResourceRestrictedIP( HydrusResourceRestricted ):
         body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'ip' : ip, 'timestamp' : timestamp } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceRestrictedLockOn( HydrusResourceRestricted ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        # check permission here since no db work
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        
+        locked = HG.server_busy.acquire( False )
+        
+        if not locked:
+            
+            raise HydrusExceptions.BadRequestException( 'The server was already locked!' )
+            
+        
+        HG.server_controller.db.PauseAndDisconnect( True )
+        
+        # shut down db, wait until it is done?
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceRestrictedLockOff( HydrusResourceRestricted ):
+    
+    BLOCKED_WHEN_BUSY = False
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        # check permission here since no db work
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        
+        try:
+            
+            HG.server_busy.release()
+            
+        except threading.ThreadError:
+            
+            raise HydrusExceptions.BadRequestException( 'The server is not busy!' )
+            
+        
+        HG.server_controller.db.PauseAndDisconnect( False )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
         
@@ -640,6 +699,20 @@ class HydrusResourceRestrictedMetadataUpdate( HydrusResourceRestricted ):
         body = HydrusNetwork.DumpHydrusArgsToNetworkBytes( { 'metadata_slice' : metadata_slice } )
         
         response_context = HydrusServerResources.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceRestrictedVacuum( HydrusResourceRestricted ):
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        # check permission here since this is an asynchronous job
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+        
+        HG.server_controller.Write( 'vacuum' )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
         

@@ -238,12 +238,34 @@ class NetworkJob( object ):
                 headers[ 'User-Agent' ] = 'hydrus client/' + str( HC.NETWORK_VERSION )
                 
             
-            if self._referral_url is not None:
+            referral_url = self.engine.domain_manager.GetReferralURL( self._url, self._referral_url )
+            
+            if HG.network_report_mode:
                 
-                headers[ 'referer' ] = urllib.parse.quote( self._referral_url, "!#$%&'()*+,/:;=?@[]~" ) # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
+                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( self._url, os.linesep, self._referral_url, os.linesep, referral_url ) )
                 
             
-            for ( key, value ) in list(self._additional_headers.items()):
+            if referral_url is not None:
+                
+                try:
+                    
+                    referral_url.encode( 'latin-1' )
+                    
+                except UnicodeEncodeError:
+                    
+                    # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
+                    referral_url = urllib.parse.quote( referral_url, "!#$%&'()*+,/:;=?@[]~" )
+                    
+                    if HG.network_report_mode:
+                        
+                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( self._url, os.linesep, referral_url ) )
+                        
+                    
+                
+                headers[ 'referer' ] = referral_url
+                
+            
+            for ( key, value ) in self._additional_headers.items():
                 
                 headers[ key ] = value
                 

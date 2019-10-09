@@ -938,6 +938,8 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
+    SHOW_COLLECT = True
+    
     def __init__( self, parent, page, controller, management_controller ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
@@ -954,12 +956,19 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self._media_sort = ClientGUICommon.ChoiceSort( self, management_controller = self._management_controller )
         
-        self._media_collect = ClientGUICommon.CheckboxCollect( self, management_controller = self._management_controller )
+        silent_collect = not self.SHOW_COLLECT
+        
+        self._media_collect = ClientGUICommon.CheckboxCollect( self, management_controller = self._management_controller, silent = silent_collect )
+        
+        if not self.SHOW_COLLECT:
+            
+            self._media_collect.Hide()
+            
         
     
     def GetMediaCollect( self ):
         
-        if self._media_collect.IsShown():
+        if self.SHOW_COLLECT:
             
             return self._media_collect.GetValue()
             
@@ -1045,6 +1054,8 @@ def WaitOnDupeFilterJob( job_key ):
     HG.client_controller.pub( 'refresh_dupe_page_numbers' )
     
 class ManagementPanelDuplicateFilter( ManagementPanel ):
+    
+    SHOW_COLLECT = False
     
     def __init__( self, parent, page, controller, management_controller ):
         
@@ -1178,7 +1189,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         #
         
         self._media_sort.Hide()
-        self._media_collect.Hide()
         
         distance_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1642,6 +1652,8 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_DUPLICATE_FILTER ] = Manageme
 
 class ManagementPanelImporter( ManagementPanel ):
     
+    SHOW_COLLECT = False
+    
     def __init__( self, parent, page, controller, management_controller ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
@@ -1704,8 +1716,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._media_collect.Hide()
         
         self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1875,8 +1885,6 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._media_collect.Hide()
         
         vbox.Add( self._gallery_downloader_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._highlighted_gallery_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2527,8 +2535,6 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
         
         vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._media_collect.Hide()
         
         vbox.Add( self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._highlighted_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3251,8 +3257,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._media_collect.Hide()
-        
         vbox.Add( self._simple_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
@@ -3619,8 +3623,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         vbox.Add( self._media_sort, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._media_collect.Hide()
-        
         vbox.Add( self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
@@ -3845,6 +3847,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
+        
+        self._contents.Bind( wx.EVT_RIGHT_DOWN, self.EventRowRightClick )
         
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         
@@ -4368,6 +4372,71 @@ class ManagementPanelPetitions( ManagementPanel ):
         with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerAccount(), ) ) as dlg:
             
             dlg.ShowModal()
+            
+        
+    
+    def EventRowRightClick( self, event ):
+        
+        selected_indices = self._contents.GetSelections()
+        
+        selected_contents = []
+        
+        for i in selected_indices:
+            
+            content = self._contents.GetClientData( i )
+            
+            selected_contents.append( content )
+            
+        
+        copyable_items_a = []
+        copyable_items_b = []
+        
+        for content in selected_contents:
+            
+            content_type = content.GetContentType()
+            
+            if content_type == HC.CONTENT_TYPE_MAPPINGS:
+                
+                ( tag, hashes ) = content.GetContentData()
+                
+                copyable_items_a.append( tag )
+                
+            elif content_type in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
+                
+                ( tag_a, tag_b ) = content.GetContentData()
+                
+                copyable_items_a.append( tag_a )
+                copyable_items_b.append( tag_b )
+                
+            
+        
+        copyable_items_a = HydrusData.DedupeList( copyable_items_a )
+        copyable_items_b = HydrusData.DedupeList( copyable_items_b )
+        
+        if len( copyable_items_a ) + len( copyable_items_b ) > 0:
+            
+            menu = wx.Menu()
+            
+            for copyable_items in [ copyable_items_a, copyable_items_b ]:
+                
+                if len( copyable_items ) > 0:
+                    
+                    if len( copyable_items ) == 1:
+                        
+                        tag = copyable_items[0]
+                        
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'copy {}'.format( tag ), 'Copy this tag.', HG.client_controller.pub, 'clipboard', 'text', tag )
+                        
+                    else:
+                        
+                        text = os.linesep.join( copyable_items )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'copy {} tags'.format( HydrusData.ToHumanInt( len( copyable_items ) ) ), 'Copy this tag.', HG.client_controller.pub, 'clipboard', 'text', text )
+                        
+                    
+                
+            
+            HG.client_controller.PopupMenu( self, menu )
             
         
     

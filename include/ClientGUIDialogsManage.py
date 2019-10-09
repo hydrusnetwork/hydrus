@@ -61,22 +61,12 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         self._hashes = set()
         
-        for m in media: self._hashes.update( m.GetHashes() )
-        
-        ( remember, position ) = HC.options[ 'rating_dialog_position' ]
-        
-        if remember and position is not None:
+        for m in media:
             
-            my_position = 'custom'
-            
-            wx.CallAfter( self.SetPosition, position )
-            
-        else:
-            
-            my_position = 'topleft'
+            self._hashes.update( m.GetHashes() )
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files', position = my_position )
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files', position = 'topleft' )
         
         #
         
@@ -145,17 +135,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             if len( service_keys_to_content_updates ) > 0:
                 
                 HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                
-            
-            ( remember, position ) = HC.options[ 'rating_dialog_position' ]
-            
-            current_position = self.GetPosition()
-            
-            if remember and position != current_position:
-                
-                HC.options[ 'rating_dialog_position' ] = ( remember, current_position )
-                
-                HG.client_controller.Write( 'save_options', HC.options )
                 
             
         finally:

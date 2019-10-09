@@ -24,6 +24,7 @@ from . import ClientNetworkingSessions
 from . import ClientServices
 from . import ClientTags
 from . import ClientThreading
+from . import HydrusDB
 from . import HydrusExceptions
 from . import HydrusPubSub
 from . import HydrusSessions
@@ -187,6 +188,7 @@ class Controller( object ):
         HG.server_controller = self
         HG.test_controller = self
         
+        self.db = self
         self.gui = self
         
         self._call_to_threads = []
@@ -587,6 +589,11 @@ class Controller( object ):
     def PageClosedButNotDestroyed( self, page_key ):
         
         return False
+        
+    
+    def PauseAndDisconnect( self, pause_and_disconnect ):
+        
+        pass
         
     
     def Read( self, name, *args, **kwargs ):

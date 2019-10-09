@@ -6,6 +6,7 @@ from . import ClientNetworkingDomain
 from . import ClientNetworkingJobs
 from . import ClientNetworkingLogin
 from . import ClientNetworkingSessions
+from . import ClientParsing
 from . import ClientServices
 import collections
 from . import HydrusConstants as HC
@@ -218,6 +219,91 @@ class TestBandwidthManager( unittest.TestCase ):
     def test_can_continue( self ):
         
         pass
+        
+    
+class TestNetworkingDomain( unittest.TestCase ):
+    
+    def test_url_classes( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        match_subdomains = False
+        keep_matched_subdomains = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        parameters = {}
+        
+        parameters[ 's' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
+        parameters[ 'id' ] = ( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '123456' ), None )
+        
+        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        #
+        
+        referral_url = 'https://testbooru.cx/gallery/tags=samus_aran'
+        good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        unnormalised_good_url_1 = 'https://testbooru.cx/post/page.php?id=123456&s=view&additional_gumpf=stuff'
+        unnormalised_good_url_2 = 'https://testbooru.cx/post/page.php?s=view&id=123456'
+        bad_url = 'https://wew.lad/123456'
+        
+        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        self.assertEqual( url_class.Matches( example_url ), True )
+        self.assertEqual( url_class.Matches( bad_url ), False )
+        
+        self.assertEqual( url_class.Normalise( unnormalised_good_url_1 ), good_url )
+        self.assertEqual( url_class.Normalise( unnormalised_good_url_2 ), good_url )
+        
+        self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), referral_url )
+        self.assertEqual( url_class.GetReferralURL( good_url, None ), None )
+        
+        #
+        
+        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_NEVER
+        
+        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), None )
+        self.assertEqual( url_class.GetReferralURL( good_url, None ), None )
+        
+        #
+        
+        converted_referral_url = good_url.replace( 'testbooru.cx', 'replace.com' )
+        
+        transformations = []
+        
+        transformations.append( ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( 'testbooru.cx', 'replace.com' ) ) )
+        
+        referral_url_converter = ClientParsing.StringConverter( transformations, good_url )
+        
+        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED
+        
+        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), referral_url )
+        self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
+        
+        #
+        
+        send_referral_url = ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_CONVERTER
+        
+        url_class = ClientNetworkingDomain.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), converted_referral_url )
+        self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
         
     
 class TestNetworkingEngine( unittest.TestCase ):

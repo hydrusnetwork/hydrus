@@ -5008,6 +5008,8 @@ class Thumbnail( Selectable ):
         
         HG.client_controller.bitmap_manager.ReleaseBitmap( wx_bmp )
         
+        TEXT_BORDER = 1
+        
         new_options = HG.client_controller.new_options
         
         tags = self.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
@@ -5043,12 +5045,17 @@ class Thumbnail( Selectable ):
                     
                     ( text_width, text_height ) = gc.GetTextExtent( upper_summary )
                     
-                    top_left_x = int( ( width - text_width ) // 2 )
-                    top_left_y = thumbnail_border
+                    box_x = thumbnail_border
+                    box_y = thumbnail_border
+                    box_width = width - ( thumbnail_border * 2 )
+                    box_height = text_height + 2
                     
-                    gc.DrawRectangle( thumbnail_border, top_left_y, width - ( thumbnail_border * 2 ), text_height + 1 )
+                    gc.DrawRectangle( box_x, box_y, box_width, box_height )
                     
-                    gc.DrawText( upper_summary, top_left_x, top_left_y )
+                    text_x = ( width - text_width ) // 2
+                    text_y = box_y + TEXT_BORDER
+                    
+                    gc.DrawText( upper_summary, text_x, text_y )
                     
                 
                 if len( lower_summary ) > 0:
@@ -5065,12 +5072,17 @@ class Thumbnail( Selectable ):
                     
                     ( text_width, text_height ) = gc.GetTextExtent( lower_summary )
                     
-                    top_left_x = width - text_width - thumbnail_border
-                    top_left_y = height - text_height - thumbnail_border
+                    box_width = text_width + ( TEXT_BORDER * 2 )
+                    box_height = text_height + ( TEXT_BORDER * 2 )
+                    box_x = width - box_width - thumbnail_border
+                    box_y = height - text_height - thumbnail_border
                     
-                    gc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_width + 1, text_height + 1 )
+                    gc.DrawRectangle( box_x, box_y, box_width, box_height )
                     
-                    gc.DrawText( lower_summary, top_left_x, top_left_y )
+                    text_x = box_x + TEXT_BORDER
+                    text_y = box_y + TEXT_BORDER
+                    
+                    gc.DrawText( lower_summary, text_x, text_y )
                     
                 
                 del gc
@@ -5211,12 +5223,15 @@ class Thumbnail( Selectable ):
             box_x = thumbnail_border + top_left_x
             box_y = thumbnail_border
             
-            box_width = text_width + 2
-            box_height = text_height + 2
+            box_width = text_width + ( TEXT_BORDER * 2 )
+            box_height = text_height + ( TEXT_BORDER * 2 )
             
             dc.DrawRectangle( box_x, box_y, box_width, box_height )
             
-            dc.DrawText( label, box_x + 1, box_y + 1 )
+            text_x = box_x + TEXT_BORDER
+            text_y = box_y + TEXT_BORDER
+            
+            dc.DrawText( label, text_x, text_y )
             
             top_left_x += box_width + 2
             

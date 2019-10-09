@@ -59,13 +59,13 @@ def GetFFMPEGVersion():
         
     except FileNotFoundError:
         
-        return 'no ffmpeg found'
+        return 'no ffmpeg found at path "{}"'.format( FFMPEG_PATH )
         
     except Exception as e:
         
         HydrusData.ShowException( e )
         
-        return 'unable to execute ffmpeg'
+        return 'unable to execute ffmpeg at path "{}"'.format( FFMPEG_PATH )
         
     
     ( stdout, stderr ) = process.communicate()
@@ -388,7 +388,8 @@ def ParseFFMPEGDuration( lines ):
     #   Duration: 00:00:02.46, start: 0.033000, bitrate: 1069 kb/s
     try:
         
-        line = [ l for l in lines if 'Duration:' in l ][0]
+        # had a vid with 'Duration:' in title, ha ha, so now a regex
+        line = [ l for l in lines if re.search( r'^\s*Duration:', l ) is not None ][0]
         
         if 'Duration: N/A' in line:
             

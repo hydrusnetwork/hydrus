@@ -326,6 +326,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'favourite_tag_filters' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        #
+        
         self._dictionary[ 'tag_summary_generators' ] = HydrusSerialisable.SerialisableDictionary()
         
         namespace_info = []
@@ -752,6 +756,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFavouriteTagFilters( self ):
+        
+        with self._lock:
+            
+            return dict( self._dictionary[ 'favourite_tag_filters' ] )
+            
+        
+    
     def GetFrameLocation( self, frame_key ):
         
         with self._lock:
@@ -979,6 +991,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDefaultFileImportOptions( self, options_type, file_import_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_file_import_options' ][ options_type ] = file_import_options
+            
+        
+    
     def SetDefaultSort( self, media_sort ):
         
         with self._lock:
@@ -1019,11 +1039,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultFileImportOptions( self, options_type, file_import_options ):
+    def SetFavouriteTagFilters( self, names_to_tag_filters ):
         
         with self._lock:
             
-            self._dictionary[ 'default_file_import_options' ][ options_type ] = file_import_options
+            self._dictionary[ 'favourite_tag_filters' ] = HydrusSerialisable.SerialisableDictionary( names_to_tag_filters )
             
         
     

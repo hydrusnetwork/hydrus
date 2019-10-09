@@ -742,13 +742,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _BackupService( self, service_key ):
+    def _BackupServer( self, service_key ):
         
-        def do_it():
+        def do_it( service ):
             
             started = HydrusData.GetNow()
-            
-            service = self._controller.services_manager.GetService( service_key )
             
             service.Request( HC.POST, 'backup' )
             
@@ -781,7 +779,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if result == wx.ID_YES:
             
-            self._controller.CallToThread( do_it )
+            service = self._controller.services_manager.GetService( service_key )
+            
+            self._controller.CallToThread( do_it, service )
             
         
     
@@ -2144,7 +2144,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( self, submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
-                        ClientGUIMenus.AppendMenuItem( self, submenu, 'make a backup', 'Command the server to temporarily pause and back up its database.', self._BackupService, service_key )
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'backup server', 'Command the server to temporarily pause and back up its database.', self._BackupServer, service_key )
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum server', 'Command the server to temporarily pause and vacuum its database.', self._VacuumServer, service_key )
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'server/db lock: on', 'Command the server to lock itself and disconnect its db.', self._LockServer, service_key, True )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'server/db lock: test', 'See if the server is currently busy.', self._TestServerBusy, service_key )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'server/db lock: off', 'Command the server to unlock itself and resume its db.', self._LockServer, service_key, False )
                         
                     
                     ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
@@ -2639,6 +2646,43 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.CallLaterWXSafe( self, last_session_save_period_minutes * 60, self.SaveLastSession )
         
         self._clipboard_watcher_repeating_job = self._controller.CallRepeatingWXSafe( self, 1.0, 1.0, self.REPEATINGClipboardWatcher )
+        
+    
+    def _LockServer( self, service_key, lock ):
+        
+        def do_it( service, lock ):
+            
+            if lock:
+                
+                command = 'lock_on'
+                done_message = 'Server locked!'
+                
+            else:
+                
+                command = 'lock_off'
+                done_message = 'Server unlocked!'
+                
+            
+            service.Request( HC.POST, command )
+            
+            HydrusData.ShowText( done_message )
+            
+        
+        if lock:
+            
+            message = 'This will tell the server to lock and disconnect its database, in case you wish to make a db backup using an external program. It will not be able to serve any requests as long as it is locked. It may get funky if it is locked for hours and hours--if you need it paused for that long, I recommend just shutting it down instead.'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result != wx.ID_YES:
+                
+                return
+                
+            
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        self._controller.CallToThread( do_it, service, lock )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -4119,6 +4163,31 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def _TestServerBusy( self, service_key ):
+        
+        def do_it( service ):
+            
+            result_bytes = service.Request( HC.GET, 'busy' )
+            
+            if result_bytes == b'1':
+                
+                HydrusData.ShowText( 'server is busy' )
+                
+            elif result_bytes == b'0':
+                
+                HydrusData.ShowText( 'server is not busy' )
+                
+            else:
+                
+                HydrusData.ShowText( 'server responded in a way I do not understand' )
+                
+            
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        self._controller.CallToThread( do_it, service )
+        
+    
     def _UnclosePage( self, closed_page_index = None ):
         
         if closed_page_index is None:
@@ -4194,6 +4263,49 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif result == wx.ID_NO:
             
             self._controller.Write( 'vacuum', maintenance_mode = HC.MAINTENANCE_FORCED, force_vacuum = True )
+            
+        
+    
+    def _VacuumServer( self, service_key ):
+        
+        def do_it( service ):
+            
+            started = HydrusData.GetNow()
+            
+            service.Request( HC.POST, 'vacuum' )
+            
+            HydrusData.ShowText( 'Server vacuum started!' )
+            
+            time.sleep( 10 )
+            
+            result_bytes = service.Request( HC.GET, 'busy' )
+            
+            while result_bytes == b'1':
+                
+                if HG.view_shutdown:
+                    
+                    return
+                    
+                
+                time.sleep( 10 )
+                
+                result_bytes = service.Request( HC.GET, 'busy' )
+                
+            
+            it_took = HydrusData.GetNow() - started
+            
+            HydrusData.ShowText( 'Server vacuum done in ' + HydrusData.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
+            
+        
+        message = 'This will tell the server to lock and vacuum its database files. It may take some time to complete, during which time it will not be able to serve any requests.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == wx.ID_YES:
+            
+            service = self._controller.services_manager.GetService( service_key )
+            
+            self._controller.CallToThread( do_it, service )
             
         
     

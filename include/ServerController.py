@@ -465,11 +465,6 @@ class Controller( HydrusController.HydrusController ):
     
     def SyncRepositories( self ):
         
-        if HG.server_busy:
-            
-            return
-            
-        
         repositories = [ service for service in self._services if service.GetServiceType() in HC.REPOSITORIES ]
         
         for service in repositories:

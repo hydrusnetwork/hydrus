@@ -9,6 +9,7 @@ from . import ClientGUIDialogsQuick
 from . import ClientGUIFunctions
 from . import ClientGUIListBoxes
 from . import ClientGUIListCtrl
+from . import ClientGUIMenus
 from . import ClientGUITopLevelWindows
 from . import ClientGUIScrolledPanels
 from . import ClientGUIScrolledPanelsEdit
@@ -39,6 +40,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        self._prefer_blacklist = prefer_blacklist
         self._namespaces = namespaces
         
         #
@@ -46,6 +48,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
+        #
+        
+        self._load_favourite = ClientGUICommon.BetterButton( self, 'load', self._LoadFavourite )
+        self._save_favourite = ClientGUICommon.BetterButton( self, 'save', self._SaveFavourite )
+        self._delete_favourite = ClientGUICommon.BetterButton( self, 'delete', self._DeleteFavourite )
         
         #
         
@@ -60,7 +68,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        if prefer_blacklist:
+        if self._prefer_blacklist:
             
             self._notebook.AddPage( self._blacklist_panel, 'blacklist' )
             self._notebook.AddPage( self._whitelist_panel, 'whitelist' )
@@ -72,39 +80,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._notebook.AddPage( self._advanced_panel, 'advanced' )
-        
-        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in list(tag_filter.GetTagSlicesToRules().items()) if rule == CC.FILTER_BLACKLIST ]
-        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in list(tag_filter.GetTagSlicesToRules().items()) if rule == CC.FILTER_WHITELIST ]
-        
-        self._advanced_blacklist.AddTags( blacklist_tag_slices )
-        self._advanced_whitelist.AddTags( whitelist_tag_slices )
-        
-        ( whitelist_possible, blacklist_possible ) = self._GetWhiteBlacklistsPossible()
-        
-        selection_tests = []
-        
-        if prefer_blacklist:
-            
-            selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
-            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
-            selection_tests.append( ( True, self._advanced_panel ) )
-            
-        else:
-            
-            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
-            selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
-            selection_tests.append( ( True, self._advanced_panel ) )
-            
-        
-        for ( test, page ) in selection_tests:
-            
-            if test:
-                
-                self._notebook.SelectPage( page )
-                
-                break
-                
-            
         
         #
         
@@ -127,6 +102,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._load_favourite, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._save_favourite, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._delete_favourite, CC.FLAGS_SMALL_INDENT )
+        
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -150,7 +132,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._test_input.Bind( wx.EVT_TEXT, self.EventTestText )
         
-        self._UpdateStatus()
+        self.SetValue( tag_filter )
         
     
     def _AdvancedAddBlacklist( self, tag_slice ):
@@ -300,6 +282,48 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         blacklist = set( self._advanced_blacklist.GetClientData() )
         
         return not blacklist.isdisjoint( test_slices )
+        
+    
+    def _DeleteFavourite( self ):
+        
+        def do_it( name ):
+            
+            names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+            
+            if name in names_to_tag_filters:
+                
+                message = 'Delete "{}"?'.format( name )
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != wx.ID_YES:
+                    
+                    return
+                    
+                
+                del names_to_tag_filters[ name ]
+                
+                HG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                
+            
+        
+        names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+        
+        menu = wx.Menu()
+        
+        if len( names_to_tag_filters ) == 0:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, 'no favourites set!' )
+            
+        else:
+            
+            for ( name, tag_filter ) in names_to_tag_filters.items():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, name, 'delete {}'.format( name ), do_it, name )
+                
+            
+        
+        HG.client_controller.PopupMenu( self, menu )
         
     
     def _GetWhiteBlacklistsPossible( self ):
@@ -491,6 +515,57 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         whitelist_panel.SetSizer( vbox )
         
         return whitelist_panel
+        
+    
+    def _LoadFavourite( self ):
+        
+        names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+        
+        menu = wx.Menu()
+        
+        if len( names_to_tag_filters ) == 0:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, 'no favourites set!' )
+            
+        else:
+            
+            for ( name, tag_filter ) in names_to_tag_filters.items():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, name, 'load {}'.format( name ), self.SetValue, tag_filter )
+                
+            
+        
+        HG.client_controller.PopupMenu( self, menu )
+        
+    
+    def _SaveFavourite( self ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the favourite.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+                
+                name = dlg.GetValue()
+                tag_filter = self.GetValue()
+                
+                if name in names_to_tag_filters:
+                    
+                    message = '"{}" already exists! Overwrite?'.format( name )
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != wx.ID_YES:
+                        
+                        return
+                        
+                    
+                
+                names_to_tag_filters[ name ] = tag_filter
+                
+                HG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                
+            
         
     
     def _ShowHelp( self ):
@@ -850,6 +925,44 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return tag_filter
+        
+    
+    def SetValue( self, tag_filter ):
+        
+        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_BLACKLIST ]
+        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_WHITELIST ]
+        
+        self._advanced_blacklist.SetTags( blacklist_tag_slices )
+        self._advanced_whitelist.SetTags( whitelist_tag_slices )
+        
+        ( whitelist_possible, blacklist_possible ) = self._GetWhiteBlacklistsPossible()
+        
+        selection_tests = []
+        
+        if self._prefer_blacklist:
+            
+            selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
+            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
+            selection_tests.append( ( True, self._advanced_panel ) )
+            
+        else:
+            
+            selection_tests.append( ( whitelist_possible, self._whitelist_panel ) )
+            selection_tests.append( ( blacklist_possible, self._blacklist_panel ) )
+            selection_tests.append( ( True, self._advanced_panel ) )
+            
+        
+        for ( test, page ) in selection_tests:
+            
+            if test:
+                
+                self._notebook.SelectPage( page )
+                
+                break
+                
+            
+        
+        self._UpdateStatus()
         
     
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):

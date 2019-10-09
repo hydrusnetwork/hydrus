@@ -1515,6 +1515,51 @@ class DB( HydrusDB.HydrusDB ):
         
         new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
         
+        names_to_tag_filters = {}
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'diaper', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'gore', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'guro', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'scat', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'vore', CC.FILTER_BLACKLIST )
+        
+        names_to_tag_filters[ 'example blacklist' ] = tag_filter
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+        
+        names_to_tag_filters[ 'basic namespaces only' ] = tag_filter
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
+        tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+        
+        names_to_tag_filters[ 'basic booru tags only' ] = tag_filter
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'title:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'filename:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'source:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'booru:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'url:', CC.FILTER_BLACKLIST )
+        
+        names_to_tag_filters[ 'exclude long/spammy namespaces' ] = tag_filter
+        
+        new_options.SetFavouriteTagFilters( names_to_tag_filters )
+        
         self._SetJSONDump( new_options )
         
         list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
@@ -8027,6 +8072,10 @@ class DB( HydrusDB.HydrusDB ):
             
             status = CC.STATUS_SUCCESSFUL_AND_NEW
             
+            self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+            
+            self._controller.pub( 'new_file_info', set( ( hash, ) ) )
+            
         
         if HG.file_import_report_mode:
             
@@ -10996,7 +11045,17 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SaveOptions( self, options ):
         
-        self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
+        try:
+            
+            self._c.execute( 'UPDATE options SET options = ?;', ( options, ) )
+            
+        except:
+            
+            HydrusData.Print( 'Failed options save dump:' )
+            HydrusData.Print( options )
+            
+            raise
+            
         
         self.pub_after_job( 'reset_thumbnail_cache' )
         self.pub_after_job( 'notify_new_options' )
@@ -13035,6 +13094,70 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 370:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                names_to_tag_filters = {}
+                
+                tag_filter = ClientTags.TagFilter()
+                
+                tag_filter.SetRule( 'diaper', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'gore', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'guro', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'scat', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'vore', CC.FILTER_BLACKLIST )
+                
+                names_to_tag_filters[ 'example blacklist' ] = tag_filter
+                
+                tag_filter = ClientTags.TagFilter()
+                
+                tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+                
+                names_to_tag_filters[ 'basic namespaces only' ] = tag_filter
+                
+                tag_filter = ClientTags.TagFilter()
+                
+                tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'creator:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'studio:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( 'character:', CC.FILTER_WHITELIST )
+                tag_filter.SetRule( '', CC.FILTER_WHITELIST )
+                
+                names_to_tag_filters[ 'basic booru tags only' ] = tag_filter
+                
+                tag_filter = ClientTags.TagFilter()
+                
+                tag_filter.SetRule( 'title:', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'filename:', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'source:', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'booru:', CC.FILTER_BLACKLIST )
+                tag_filter.SetRule( 'url:', CC.FILTER_BLACKLIST )
+                
+                names_to_tag_filters[ 'exclude long/spammy namespaces' ] = tag_filter
+                
+                new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                
+                self._SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to save new default favourite tag filters failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

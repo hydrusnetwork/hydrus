@@ -3436,7 +3436,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._save_page_sort_on_change = wx.CheckBox( self )
             
-            self._default_media_collect = ClientGUICommon.CheckboxCollect( self )
+            self._default_media_collect = ClientGUICommon.CheckboxCollect( self, silent = True )
             
             self._sort_by = wx.ListBox( self )
             self._sort_by.Bind( wx.EVT_LEFT_DCLICK, self.EventRemoveSortBy )
@@ -3932,7 +3932,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_repository ) )
             rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
-            rows.append( ( 'By default, search non-local tags in write-autocomplete: ', self._show_all_tags_in_autocomplete ) )
+            rows.append( ( 'By default, search \'all known files\' in \'write\' tag autocomplete inputs: ', self._show_all_tags_in_autocomplete ) )
             rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
             rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
             rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
