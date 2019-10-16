@@ -6393,6 +6393,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url.SetMinSize( ( example_url_width, -1 ) )
         
+        self._send_referral_url.SetValue( send_referral_url )
+        
         ( gallery_index_type, gallery_index_identifier, gallery_index_delta ) = url_class.GetGalleryIndexValues()
         
         # this preps it for the upcoming update

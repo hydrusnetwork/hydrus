@@ -201,11 +201,18 @@ class HydrusController( object ):
             daemon.shutdown()
             
         
+        started = HydrusData.GetNow()
+        
         while True in ( daemon.is_alive() for daemon in self._daemons ):
             
             self._ReportShutdownDaemonsStatus()
             
             time.sleep( 0.1 )
+            
+            if HydrusData.TimeHasPassed( started + 30 ):
+                
+                break
+                
             
         
         self._daemons = []

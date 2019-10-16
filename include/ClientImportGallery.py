@@ -568,6 +568,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return len( self._file_seed_cache ) + len( self._gallery_seed_log )
+            
+        
+    
     def GetOptions( self ):
         
         with self._lock:
@@ -1228,6 +1236,14 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return len( self._gallery_imports )
+            
+        
+    
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return sum( ( gallery_import.GetNumSeeds() for gallery_import in self._gallery_imports ) )
             
         
     

@@ -75,7 +75,7 @@ def VideoHasAudio( path ):
     
     try:
         
-        process = subprocess.Popen( cmd, bufsize = 65536, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
+        process = subprocess.Popen( cmd, bufsize = 65536, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
     except FileNotFoundError as e:
         

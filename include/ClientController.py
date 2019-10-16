@@ -508,10 +508,7 @@ class Controller( HydrusController.HydrusController ):
             self.ShutdownView()
             self.ShutdownModel()
             
-            if not HG.shutting_down_due_to_already_running:
-                
-                HydrusData.CleanRunningFile( self.db_dir, 'client' )
-                
+            HydrusData.CleanRunningFile( self.db_dir, 'client' )
             
         else:
             
@@ -1512,6 +1509,15 @@ class Controller( HydrusController.HydrusController ):
             
             self.CheckAlreadyRunning()
             
+        except HydrusExceptions.ShutdownException:
+            
+            self._DestroySplash()
+            
+            return
+            
+        
+        try:
+            
             self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( self.db_dir, 'client' )
             
             HydrusData.RecordRunningStart( self.db_dir, 'client' )
@@ -1568,10 +1574,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'splash_set_title_text', 'cleaning up\u2026' )
             
-            if not HG.shutting_down_due_to_already_running:
-                
-                HydrusData.CleanRunningFile( self.db_dir, 'client' )
-                
+            HydrusData.CleanRunningFile( self.db_dir, 'client' )
             
         except ( HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ):
             

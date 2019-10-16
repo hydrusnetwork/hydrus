@@ -591,7 +591,7 @@ class Page( wx.SplitterWindow ):
             
             # I used to do:
             # y = -1 * self._preview_panel.GetSize()[1]
-            # but that crept 4 pixels smaller every time, I assume due to sash caret height
+            # but that crept 4 pixels smaller every time, I assume due to sash nub height
             
             ( sps_x, sps_y ) = self._search_preview_split.GetClientSize()
             
@@ -605,6 +605,15 @@ class Page( wx.SplitterWindow ):
             
         
         return ( x, y )
+        
+    
+    def GetTotalWeight( self ):
+        
+        num_hashes = len( self.GetHashes() )
+        num_seeds = self._management_controller.GetNumSeeds()
+        
+        # hashes are smaller, but seeds tend to need more cpu, so we'll just say 1:1 for now
+        return num_hashes + num_seeds
         
     
     def IsMultipleWatcherPage( self ):
@@ -2155,6 +2164,13 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def GetTotalWeight( self ):
+        
+        total_weight = sum( ( page.GetTotalWeight() for page in self._GetPages() ) )
+        
+        return total_weight
+        
+    
     def HasMediaPageName( self, page_name, only_my_level = False ):
         
         media_pages = self._GetMediaPages( only_my_level )
@@ -2383,7 +2399,7 @@ class PagesNotebook( wx.Notebook ):
         WARNING_TOTAL_PAGES = self._controller.new_options.GetInteger( 'total_pages_warning' )
         MAX_TOTAL_PAGES = 200
         
-        ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
+        ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self._controller.gui.GetTotalPageCounts()
         
         if total_active_page_count + total_closed_page_count >= WARNING_TOTAL_PAGES:
             
@@ -2776,9 +2792,24 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            media_results = self._controller.Read( 'media_results', hashes, sorted = True )
+            def wx_finish( page, media_results ):
+                
+                if not page:
+                    
+                    return
+                    
+                
+                page.GetMediaPanel().AddMediaResults( page.GetPageKey(), media_results )
+                
             
-            page.GetMediaPanel().AddMediaResults( page.GetPageKey(), media_results )
+            def do_it( page, hashes ):
+                
+                media_results = self._controller.Read( 'media_results', hashes, sorted = True )
+                
+                wx.CallAfter( wx_finish, page, media_results )
+                
+            
+            HG.client_controller.CallToThread( do_it, page, hashes )
             
         
         return page

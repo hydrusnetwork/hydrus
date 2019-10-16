@@ -232,12 +232,13 @@ def DAEMONSynchroniseSubscriptions( controller ):
             
             p1 = controller.options[ 'pause_subs_sync' ]
             p2 = HydrusThreading.IsThreadShuttingDown()
+            p3 = controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
             
-            if p1 or p2:
+            if p1 or p2 or p3:
                 
                 if HG.subscription_report_mode:
                     
-                    HydrusData.ShowText( 'Subscriptions cancelling. Global sub pause is ' + str( p1 ) + ' and sub daemon thread shutdown status is ' + str( p2 ) + '.' )
+                    HydrusData.ShowText( 'Subscriptions cancelling. Global sub pause is {}, sub daemon thread shutdown status is {}, and global network pause is {}.'.format( p1, p2, p3 ) )
                     
                 
                 if p2:

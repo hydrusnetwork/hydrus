@@ -230,6 +230,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         return self._file_seed_cache
         
     
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return len( self._file_seed_cache )
+            
+        
+    
     def GetStatus( self ):
         
         with self._lock:

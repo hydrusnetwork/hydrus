@@ -314,6 +314,14 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return sum( ( watcher.GetNumSeeds() for watcher in self._watchers ) )
+            
+        
+    
     def GetNumWatchers( self ):
         
         with self._lock:
@@ -1096,6 +1104,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             file_import_options.SetPresentationOptions( True, False, False )
             
             return self._file_seed_cache.GetPresentedHashes( file_import_options )
+            
+        
+    
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return len( self._file_seed_cache ) + len( self._gallery_seed_log )
             
         
     

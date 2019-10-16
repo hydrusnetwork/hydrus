@@ -37,6 +37,7 @@ from . import HydrusGlobals as HG
 from . import HydrusTags
 from . import HydrusThreading
 import os
+import random
 import time
 import traceback
 import wx
@@ -830,6 +831,49 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return self._keys[ name ]
         
     
+    def GetNumSeeds( self ):
+        
+        try:
+            
+            if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+                
+                hdd_import = self._serialisables[ 'hdd_import' ]
+                
+                return hdd_import.GetNumSeeds()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+                
+                simple_downloader_import = self._serialisables[ 'simple_downloader_import' ]
+                
+                return simple_downloader_import.GetNumSeeds()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+                
+                multiple_gallery_import = self._serialisables[ 'multiple_gallery_import' ]
+                
+                return multiple_gallery_import.GetNumSeeds()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+                
+                multiple_watcher_import = self._serialisables[ 'multiple_watcher_import' ]
+                
+                return multiple_watcher_import.GetNumSeeds()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+                
+                urls_import = self._serialisables[ 'urls_import' ]
+                
+                return urls_import.GetNumSeeds()
+                
+            
+        except KeyError:
+            
+            return 0
+            
+        
+        return 0
+        
+    
     def GetPageName( self ):
         
         return self._page_name
@@ -877,7 +921,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
         except KeyError:
             
-            return ( 0 , 0 )
+            return ( 0, 0 )
             
         
         return ( 0, 0 )
@@ -939,6 +983,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     SHOW_COLLECT = True
+    TAG_DISPLAY_TYPE = ClientTags.TAG_DISPLAY_SELECTION_LIST
     
     def __init__( self, parent, page, controller, management_controller ):
         
@@ -987,7 +1032,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key )
+        t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, self.TAG_DISPLAY_TYPE )
         
         tags_box.SetTagsBox( t )
         
@@ -3715,6 +3760,8 @@ management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URLS ] = ManagementPan
 
 class ManagementPanelPetitions( ManagementPanel ):
     
+    TAG_DISPLAY_TYPE = ClientTags.TAG_DISPLAY_STORAGE
+    
     def __init__( self, parent, page, controller, management_controller ):
         
         self._petition_service_key = management_controller.GetKey( 'petition_service' )
@@ -3779,6 +3826,10 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._petition_panel = ClientGUICommon.StaticBox( self, 'petition' )
         
+        self._num_files_to_show = ClientGUICommon.NoneableSpinCtrl( self._petition_panel, message = 'number of files to show', min = 1 )
+        
+        self._num_files_to_show.SetValue( 256 )
+        
         self._action_text = ClientGUICommon.BetterStaticText( self._petition_panel, label = '' )
         
         self._reason_text = ClientGUICommon.SaneMultilineTextCtrl( self._petition_panel, style = wx.TE_READONLY )
@@ -3828,6 +3879,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         sort_hbox.Add( self._sort_by_right, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         
         self._petition_panel.Add( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( self._num_files_to_show, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4210,7 +4262,16 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if content.HasHashes():
                 
-                self._ShowHashes( content.GetHashes() )
+                hashes = content.GetHashes()
+                
+                num_files_to_show = self._num_files_to_show.GetValue()
+                
+                if num_files_to_show is not None and len( hashes ) > num_files_to_show:
+                    
+                    hashes = random.sample( hashes, num_files_to_show )
+                    
+                
+                self._ShowHashes( hashes )
                 
             
         
@@ -4523,7 +4584,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, predicates_callable = self._current_predicates_box.GetPredicates )
+            t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, self.TAG_DISPLAY_TYPE, predicates_callable = self._current_predicates_box.GetPredicates )
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
@@ -4533,7 +4594,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         else:
             
-            t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key )
+            t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key, self.TAG_DISPLAY_TYPE )
             
         
         tags_box.SetTagsBox( t )

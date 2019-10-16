@@ -464,6 +464,14 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return len( self._file_seed_cache ) + len( self._gallery_seed_log )
+            
+        
+    
     def GetStatus( self ):
         
         with self._lock:
@@ -910,6 +918,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return ( self._files_network_job, self._gallery_network_job )
+            
+        
+    
+    def GetNumSeeds( self ):
+        
+        with self._lock:
+            
+            return len( self._file_seed_cache ) + len( self._gallery_seed_log )
             
         
     

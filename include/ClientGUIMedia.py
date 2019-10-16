@@ -603,7 +603,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledCanvas ):
         
         self._due_a_forced_selection_pub = False
         
-        self._PublishSelectionChange()
+        self._PublishSelectionChange( force_reload = True )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         

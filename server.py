@@ -119,6 +119,11 @@ try:
     
     action = ServerController.ProcessStartingAction( db_dir, action )
     
+    if action == 'exit':
+        
+        sys.exit( 0 )
+        
+    
 except Exception as e:
     
     import traceback

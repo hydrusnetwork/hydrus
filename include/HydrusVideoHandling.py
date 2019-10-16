@@ -55,7 +55,7 @@ def GetFFMPEGVersion():
         
         sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
         
-        process = subprocess.Popen( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
+        process = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
     except FileNotFoundError:
         
@@ -144,7 +144,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
     try:
         
-        process = subprocess.Popen( cmd, bufsize = 10**5, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        process = subprocess.Popen( cmd, bufsize = 10**5, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
     except FileNotFoundError as e:
         
@@ -760,7 +760,7 @@ class VideoRendererFFMPEG( object ):
         
         try:
             
-            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **sbp_kwargs )
+            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
             
         except FileNotFoundError as e:
             

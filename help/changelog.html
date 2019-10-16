@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 372</h3></li>
+				<ul>
+					<li>petitions processing page:</li>
+					<li>the selection taglist now displays the raw 'storage' tag view, before siblings are applied</li>
+					<li>added a noneable spinctrl to control how many files are shown on a petition row double-click. it samples randomly and defaults to 256</li>
+					<li>I think I fixed the issue where the petitions taglist sometimes hangs on to some old tags after a petition process event</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>you can now customise the animation scanbar height and nub width under options->media</li>
+					<li>all users now see the number of open pages in the pages menu</li>
+					<li>added approx total session 'weight' to the pages menu. this is an early test and will do more and update more frequently in future</li>
+					<li>added add/remove tag to favourites to the taglist right-click menu</li>
+					<li>collapsed the taglist right-click menu a little, as it was getting a bit tall</li>
+					<li>added https://gitgud.io/koto/hydrus-archive-delete, a web browser archive/delete filter, to client api help</li>
+					<li>added clipboard import/export buttons to the edit tag filter panel for the new favourites</li>
+					<li>added 'open in a new page' to media viewer right-click menus, just to put the current single media in a new page</li>
+					<li>fixed the url class edit panel not initialising with the new referral options correctly</li>
+					<li>the call that publishes new subscription/import folder media to pages now does so more politely to the gui when the db is busy</li>
+					<li>subscriptions will no longer start if global network traffice is paused</li>
+					<li>the 'hard-replace siblings/parents' action under manage tags is now a local-only operation for tag repositories. clients with unusual sibling and parent application will no longer affect the repos they sync with</li>
+					<li>on program shutdown, if a daemon takes more than thirty seconds to shutdown (which can happen in odd situations, like if a subscription run is paused by global network traffic pause, leading to shutdown deadlock), the client will stop waiting and continue with other shutdown tasks</li>
+					<li>fixed an error with client 'already running' fast exit</li>
+					<li>fixed a different error with server 'already running' exit choice</li>
+					<li>updated some ffmpeg calls to fix certain OS problems</li>
+					<li>fixed a help link to todolist recommendation and added link to new ptr guidelines</li>
+				</ul>
 				<li><h3>version 371</h3></li>
 				<ul>
 					<li>the edit tag filter panel now has load/save/delete buttons at the top to manage tag filter favourites. it starts with a handful of examples</li>
@@ -28,7 +54,7 @@
 					<li>the janitorial petitions processing page now lets you copy tags and left/right tags of pairs with a right-click on selected checkbox rows</li>
 					<li>cleaned a little server code</li>
 					<li>improved how the server sets and releases its 'currently busy' mode</li>
-					<li>the server no longer does <5min vacuums in a backup command</li>
+					<li>the server no longer does &lt;5min vacuums in a backup command</li>
 					<li>added a specific 'vacuum' server POST command that forces a full vacuum</li>
 					<li>added 'lock_on' and 'lock_off' server POST commands to lock the server and shut down the db, and restart</li>
 					<li>the new vacuum, lock_on, lock_off, and a 'is server busy?' check commands are added to the services->admin menu</li>

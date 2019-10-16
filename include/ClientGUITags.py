@@ -51,6 +51,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._import_favourite = ClientGUICommon.BetterButton( self, 'import', self._ImportFavourite )
+        self._export_favourite = ClientGUICommon.BetterButton( self, 'export', self._ExportFavourite )
         self._load_favourite = ClientGUICommon.BetterButton( self, 'load', self._LoadFavourite )
         self._save_favourite = ClientGUICommon.BetterButton( self, 'save', self._SaveFavourite )
         self._delete_favourite = ClientGUICommon.BetterButton( self, 'delete', self._DeleteFavourite )
@@ -104,6 +106,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
+        hbox.Add( self._import_favourite, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._export_favourite, CC.FLAGS_SMALL_INDENT )
         hbox.Add( self._load_favourite, CC.FLAGS_SMALL_INDENT )
         hbox.Add( self._save_favourite, CC.FLAGS_SMALL_INDENT )
         hbox.Add( self._delete_favourite, CC.FLAGS_SMALL_INDENT )
@@ -326,6 +330,27 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         HG.client_controller.PopupMenu( self, menu )
         
     
+    def _ExportFavourite( self ):
+        
+        names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+        
+        menu = wx.Menu()
+        
+        if len( names_to_tag_filters ) == 0:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, 'no favourites set!' )
+            
+        else:
+            
+            for ( name, tag_filter ) in names_to_tag_filters.items():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, name, 'load {}'.format( name ), HG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
+                
+            
+        
+        HG.client_controller.PopupMenu( self, menu )
+        
+    
     def _GetWhiteBlacklistsPossible( self ):
         
         blacklist_tag_slices = self._advanced_blacklist.GetClientData()
@@ -339,6 +364,68 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         blacklist_possible = nothing_is_whitelisted
         
         return ( whitelist_possible, blacklist_possible )
+        
+    
+    def _ImportFavourite( self ):
+        
+        try:
+            
+            raw_text = HG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            wx.MessageBox( str( e ) )
+            
+            return
+            
+        
+        try:
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text )
+            
+        except Exception as e:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+            return
+            
+        
+        if not isinstance( obj, ClientTags.TagFilter ):
+            
+            wx.MessageBox( 'That object was not a Tag Filter! It seemed to be a "{}".'.format( type( obj ) ) )
+            
+            return
+            
+        
+        tag_filter = obj
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the favourite.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+                
+                name = dlg.GetValue()
+                
+                if name in names_to_tag_filters:
+                    
+                    message = '"{}" already exists! Overwrite?'.format( name )
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != wx.ID_YES:
+                        
+                        return
+                        
+                    
+                
+                names_to_tag_filters[ name ] = tag_filter
+                
+                HG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                
+                self.SetValue( tag_filter )
+                
+            
         
     
     def _InitAdvancedPanel( self ):
@@ -1801,18 +1888,12 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     return
                     
                 
-                if self._i_am_local_tag_service:
-                    
-                    addee_action = HC.CONTENT_UPDATE_ADD
-                    removee_action = HC.CONTENT_UPDATE_DELETE
-                    reason = None
-                    
-                else:
-                    
-                    addee_action = HC.CONTENT_UPDATE_PEND
-                    removee_action = HC.CONTENT_UPDATE_PETITION
-                    reason = 'automatic sibling/parent replace from manage tags'
-                    
+                # this no longer does pend/petition for repos, making it local-only
+                # therefore, clients' unusual siblings no longer affect the tag repo
+                
+                addee_action = HC.CONTENT_UPDATE_ADD
+                removee_action = HC.CONTENT_UPDATE_DELETE
+                reason = None
                 
                 content_updates = []
                 

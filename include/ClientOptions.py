@@ -250,6 +250,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'number_of_gui_session_backups' ] = 10
         
+        self._dictionary[ 'integers' ][ 'animated_scanbar_height' ] = 20
+        self._dictionary[ 'integers' ][ 'animated_scanbar_nub_width' ] = 10
+        
         #
         
         self._dictionary[ 'keys' ] = {}

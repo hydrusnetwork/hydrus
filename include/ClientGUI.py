@@ -273,6 +273,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._delayed_dialog_lock = threading.Lock()
         
+        self._last_total_page_weight = None
+        
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
         self._last_clipboard_watched_text = ''
@@ -1551,14 +1553,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             menu = wx.Menu()
             
-            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                ( total_active_page_count, total_closed_page_count ) = self.GetTotalPageCounts()
-                
-                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ToHumanInt( total_active_page_count ) + ' pages open', 'You have this many pages open.' )
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
+            ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self.GetTotalPageCounts()
+            
+            self._last_total_page_weight = total_active_weight + total_closed_weight
+            
+            ClientGUIMenus.AppendMenuLabel( menu, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ), 'You have this many pages open.' )
+            ClientGUIMenus.AppendMenuLabel( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( self._last_total_page_weight ) ), 'Your session is this heavy.' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
             
@@ -4761,7 +4763,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         total_closed_page_count = len( self._closed_pages )
         
-        return ( total_active_page_count, total_closed_page_count )
+        total_active_weight = self._notebook.GetTotalWeight()
+        total_closed_weight = sum( ( page.GetTotalWeight() for ( time_closed, page ) in self._closed_pages ) )
+        
+        return ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight )
         
     
     def IShouldRegularlyUpdate( self, window ):
@@ -4981,7 +4986,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        dest_page = self._notebook.PresentImportedFilesToPage( hashes, page_name )
+        self._notebook.PresentImportedFilesToPage( hashes, page_name )
         
     
     def ProcessApplicationCommand( self, command ):

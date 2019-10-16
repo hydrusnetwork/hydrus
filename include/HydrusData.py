@@ -60,6 +60,13 @@ def CalculateScoreFromRating( count, rating ):
     
 def CleanRunningFile( db_path, instance ):
     
+    # just to be careful
+    
+    if HG.shutting_down_due_to_already_running:
+        
+        return
+        
+    
     path = os.path.join( db_path, instance + '_running' )
     
     try:

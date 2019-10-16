@@ -57,9 +57,6 @@ if HC.PLATFORM_WINDOWS:
     
 ID_TIMER_HOVER_SHOW = wx.NewId()
 
-ANIMATED_SCANBAR_HEIGHT = 20
-ANIMATED_SCANBAR_CARET_WIDTH = 10
-
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
 def CalculateCanvasMediaSize( media, canvas_size ):
@@ -68,7 +65,9 @@ def CalculateCanvasMediaSize( media, canvas_size ):
     
     if ShouldHaveAnimationBar( media ):
         
-        canvas_height -= ANIMATED_SCANBAR_HEIGHT
+        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        
+        canvas_height -= animated_scanbar_height
         
     
     if media.GetMime() == HC.APPLICATION_FLASH:
@@ -221,7 +220,9 @@ def CalculateMediaContainerSize( media, zoom, action ):
         
         if ShouldHaveAnimationBar( media ):
             
-            media_height += ANIMATED_SCANBAR_HEIGHT
+            animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+            
+            media_height += animated_scanbar_height
             
         
         return ( media_width, media_height )
@@ -796,6 +797,8 @@ class AnimationBar( wx.Window ):
         
         #
         
+        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        
         if buffer_indices is not None:
             
             ( start_index, rendered_to_index, end_index ) = buffer_indices
@@ -817,13 +820,13 @@ class AnimationBar( wx.Window ):
                 
                 if rendered_to_x > start_x:
                     
-                    dc.DrawRectangle( start_x, 0, rendered_to_x - start_x, ANIMATED_SCANBAR_HEIGHT )
+                    dc.DrawRectangle( start_x, 0, rendered_to_x - start_x, animated_scanbar_height )
                     
                 else:
                     
-                    dc.DrawRectangle( start_x, 0, my_width - start_x, ANIMATED_SCANBAR_HEIGHT )
+                    dc.DrawRectangle( start_x, 0, my_width - start_x, animated_scanbar_height )
                     
-                    dc.DrawRectangle( 0, 0, rendered_to_x, ANIMATED_SCANBAR_HEIGHT )
+                    dc.DrawRectangle( 0, 0, rendered_to_x, animated_scanbar_height )
                     
                 
             
@@ -835,22 +838,24 @@ class AnimationBar( wx.Window ):
                 
                 if end_x > rendered_to_x:
                     
-                    dc.DrawRectangle( rendered_to_x, 0, end_x - rendered_to_x, ANIMATED_SCANBAR_HEIGHT )
+                    dc.DrawRectangle( rendered_to_x, 0, end_x - rendered_to_x, animated_scanbar_height )
                     
                 else:
                     
-                    dc.DrawRectangle( rendered_to_x, 0, my_width - rendered_to_x, ANIMATED_SCANBAR_HEIGHT )
+                    dc.DrawRectangle( rendered_to_x, 0, my_width - rendered_to_x, animated_scanbar_height )
                     
-                    dc.DrawRectangle( 0, 0, end_x, ANIMATED_SCANBAR_HEIGHT )
+                    dc.DrawRectangle( 0, 0, end_x, animated_scanbar_height )
                     
                 
             
         
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
         
-        caret_x = self._GetXFromFrameIndex( current_frame_index, width_offset = ANIMATED_SCANBAR_CARET_WIDTH )
+        animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
         
-        dc.DrawRectangle( caret_x, 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
+        nub_x = self._GetXFromFrameIndex( current_frame_index, width_offset = animated_scanbar_nub_width )
+        
+        dc.DrawRectangle( nub_x, 0, animated_scanbar_nub_width, animated_scanbar_height )
         
         #
         
@@ -918,9 +923,11 @@ class AnimationBar( wx.Window ):
                 
                 ( x, y ) = event.GetPosition()
                 
-                compensated_x_position = x - ( ANIMATED_SCANBAR_CARET_WIDTH / 2 )
+                animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
                 
-                proportion = ( compensated_x_position ) / ( my_width - ANIMATED_SCANBAR_CARET_WIDTH )
+                compensated_x_position = x - ( animated_scanbar_nub_width / 2 )
+                
+                proportion = ( compensated_x_position ) / ( my_width - animated_scanbar_nub_width )
                 
                 if proportion < 0: proportion = 0
                 if proportion > 1: proportion = 1
@@ -1873,6 +1880,20 @@ class Canvas( wx.Window ):
         self.Refresh()
         
     
+    def _ShowMediaInNewPage( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        hash = self._current_media.GetHash()
+        
+        hashes = { hash }
+        
+        HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
+        
+    
     def _SizeAndPositionMediaContainer( self ):
         
         if self._current_media is None:
@@ -2590,7 +2611,8 @@ class CanvasPanel( Canvas ):
             
             open_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'open in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
             ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
             
             show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
@@ -5065,7 +5087,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             open_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'open in external program', 'Open this file in the default external program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in external program', 'Open this file in the default external program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
             ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
             
             show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
@@ -5193,7 +5216,9 @@ class MediaContainer( wx.Window ):
                     
                     ( x, y ) = media_initial_size
                     
-                    media_initial_size = ( x, y - ANIMATED_SCANBAR_HEIGHT )
+                    animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+                    
+                    media_initial_size = ( x, y - animated_scanbar_height )
                     
                 
                 if self._media.GetMime() == HC.APPLICATION_FLASH:
@@ -5287,10 +5312,12 @@ class MediaContainer( wx.Window ):
                 
                 if ShouldHaveAnimationBar( self._media ) and not is_open_externally:
                     
-                    media_height -= ANIMATED_SCANBAR_HEIGHT
+                    animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
                     
-                    self._animation_bar.SetSize( ( my_width, ANIMATED_SCANBAR_HEIGHT ) )
-                    self._animation_bar.SetPosition( ( 0, my_height - ANIMATED_SCANBAR_HEIGHT ) )
+                    media_height -= animated_scanbar_height
+                    
+                    self._animation_bar.SetSize( ( my_width, animated_scanbar_height ) )
+                    self._animation_bar.SetPosition( ( 0, my_height - animated_scanbar_height ) )
                     
                 
                 self._media_window.SetSize( ( media_width, media_height ) )
@@ -5543,7 +5570,9 @@ class EmbedButton( wx.Window ):
                 # animations will have the animation bar space underneath in this case, so colour it in
                 dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
                 
-                dc.DrawRectangle( 0, y - ANIMATED_SCANBAR_HEIGHT, x, ANIMATED_SCANBAR_HEIGHT )
+                animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+                
+                dc.DrawRectangle( 0, y - animated_scanbar_height, x, animated_scanbar_height )
                 
             
             ( thumb_width, thumb_height ) = self._thumbnail_bmp.GetSize()

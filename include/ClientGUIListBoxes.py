@@ -1808,9 +1808,11 @@ class ListBoxTags( ListBox ):
             
             menu = wx.Menu()
             
+            copy_menu = wx.Menu()
+            
+            selected_tags = set()
+            
             if len( self._selected_terms ) > 0:
-                
-                selected_tags = set()
                 
                 for term in self._selected_terms:
                     
@@ -1856,9 +1858,9 @@ class ListBoxTags( ListBox ):
                     
                     current_predicates = self._get_current_predicates_callable()
                     
-                    ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
-                    
                     if current_predicates is not None:
+                        
+                        ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
                         
                         if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
                             
@@ -1894,11 +1896,13 @@ class ListBoxTags( ListBox ):
                         
                     
                 
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                if self._page_key is not None:
+                if len( selected_tags ) > 0:
                     
-                    if len( selected_tags ) > 0:
+                    ClientGUIMenus.AppendSeparator( menu )
+                    
+                    if self._page_key is not None:
+                        
+                        select_menu = wx.Menu()
                         
                         tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_tags )
                         
@@ -1918,82 +1922,128 @@ class ListBoxTags( ListBox ):
                                 
                             
                         
-                        label = 'select files with "{}"'.format( tags_sorted_to_show_on_menu_string )
+                        if len( selected_tags ) == 1:
+                            
+                            label = 'files with "{}"'.format( tags_sorted_to_show_on_menu_string )
+                            
+                        else:
+                            
+                            label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                            
                         
-                        ClientGUIMenus.AppendMenuItem( self, menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_tags ) )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_tags ) )
                         
                         if len( selected_tags ) > 1:
                             
-                            label = 'select files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
+                            label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
                             
-                            ClientGUIMenus.AppendMenuItem( self, menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_tags ) )
+                            ClientGUIMenus.AppendMenuItem( self, select_menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_tags ) )
                             
                         
-                    
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'copy ' + selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_terms' )
-                
-                if len( self._selected_terms ) == 1:
-                    
-                    ( namespace, subtag ) = HydrusTags.SplitTag( selection_string )
-                    
-                    if namespace != '':
-                        
-                        sub_selection_string = '"' + subtag
-                        
-                        ClientGUIMenus.AppendMenuItem( self, menu, 'copy ' + sub_selection_string, 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                        ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
                         
                     
-                else:
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_terms' )
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'copy selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                    if len( self._selected_terms ) == 1:
+                        
+                        ( namespace, subtag ) = HydrusTags.SplitTag( selection_string )
+                        
+                        if namespace != '':
+                            
+                            sub_selection_string = '"' + subtag
+                            
+                            ClientGUIMenus.AppendMenuItem( self, copy_menu, sub_selection_string, 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                            
+                        
+                    else:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                        
                     
                 
             
             if len( self._ordered_terms ) > len( self._selected_terms ):
                 
-                ClientGUIMenus.AppendSeparator( menu )
+                ClientGUIMenus.AppendSeparator( copy_menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'copy all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
                 
                 if self.has_counts:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'copy all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
                     
                 
             
-            if self.can_spawn_new_windows and len( self._selected_terms ) > 0:
+            if len( self._ordered_terms ) > 0:
                 
-                term_types = [ type( term ) for term in self._selected_terms ]
+                ClientGUIMenus.AppendMenu( menu, copy_menu, 'copy' )
                 
-                if str in term_types or str in term_types:
+            
+            if len( selected_tags ) == 1:
+                
+                ( tag, ) = selected_tags
+                
+                if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
+                    
+                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                    
+                    hide_menu = wx.Menu()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
+                    ClientGUIMenus.AppendMenuItem( self, hide_menu, '"{}" from here'.format( tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
+                    
+                    ClientGUIMenus.AppendMenu( menu, hide_menu, 'hide' )
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
-                    if len( self._selected_terms ) == 1:
-                        
-                        ( tag, ) = self._selected_terms
-                        
-                        text = tag
-                        
-                        if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
-                            
-                            ( namespace, subtag ) = HydrusTags.SplitTag( text )
-                            
-                            ClientGUIMenus.AppendMenuItem( self, menu, 'hide "{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
-                            ClientGUIMenus.AppendMenuItem( self, menu, 'hide "{}" from here'.format( text ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
-                            
-                        
-                    else:
-                        
-                        text = 'selection'
-                        
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+                
+                def set_favourite_tags( favourite_tags ):
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                    HG.client_controller.new_options.SetStringList( 'favourite_tags', favourite_tags )
                     
+                    HG.client_controller.pub( 'notify_new_favourite_tags' )
+                    
+                
+                if tag in favourite_tags:
+                    
+                    favourite_tags.remove( tag )
+                    
+                    label = 'remove "{}" from favourites'.format( tag )
+                    description = 'Remove this tag from your favourites'
+                    
+                else:
+                    
+                    favourite_tags.append( tag )
+                    
+                    label = 'add "{}" to favourites'.format( tag )
+                    description = 'Add this tag from your favourites'
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, label, description, set_favourite_tags, favourite_tags )
+                
+            
+            if len( selected_tags ) > 0 and self.can_spawn_new_windows:
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                if len( selected_tags ) == 1:
+                    
+                    ( tag, ) = selected_tags
+                    
+                    text = tag
+                    
+                else:
+                    
+                    text = 'selection'
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
                 
             
             HG.client_controller.PopupMenu( self, menu )
@@ -3148,9 +3198,9 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     
 class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
     
-    def __init__( self, parent, page_key, predicates_callable = None ):
+    def __init__( self, parent, page_key, tag_display_type, predicates_callable = None ):
         
-        ListBoxTagsSelection.__init__( self, parent, ClientTags.TAG_DISPLAY_SELECTION_LIST, include_counts = True )
+        ListBoxTagsSelection.__init__( self, parent, tag_display_type, include_counts = True )
         
         self._page_key = page_key
         self._get_current_predicates_callable = predicates_callable

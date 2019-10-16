@@ -3224,6 +3224,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_zooms = wx.TextCtrl( self )
             self._media_zooms.Bind( wx.EVT_TEXT, self.EventZoomsChanged )
             
+            self._animated_scanbar_height = wx.SpinCtrl( self, min = 1, max = 255 )
+            self._animated_scanbar_nub_width = wx.SpinCtrl( self, min = 1, max = 63 )
+            
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
             self._media_viewer_options = ClientGUIListCtrl.SaneListCtrlForSingleObject( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', -1 ) ], activation_callback = self.EditMediaViewerOptions )
@@ -3239,6 +3242,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._anchor_and_hide_canvas_drags.SetValue( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.SetValue( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
+            self._animated_scanbar_height.SetValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
+            self._animated_scanbar_nub_width.SetValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
@@ -3268,6 +3273,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
+            rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
+            rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
             rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
@@ -3369,6 +3376,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.GetValue() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.GetValue() )
             self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.GetValue() )
+            
+            self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.GetValue() )
+            self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.GetValue() )
             
             try:
                 

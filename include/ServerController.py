@@ -24,7 +24,7 @@ def ProcessStartingAction( db_dir, action ):
         
         if already_running:
             
-            HydrusData.Print( 'The server is already running. Would you like to [s]top it, [r]estart it, or e[x]it?' )
+            HydrusData.Print( 'The server is already running. Would you like to [s]top it, [r]estart it here, or e[x]it?' )
             
             answer = input()
             
@@ -42,9 +42,7 @@ def ProcessStartingAction( db_dir, action ):
                     
                 
             
-            HG.shutting_down_due_to_already_running = True
-            
-            raise HydrusExceptions.ShutdownException( 'Exiting!' )
+            return 'exit'
             
         else:
             
