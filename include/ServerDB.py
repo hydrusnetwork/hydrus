@@ -564,7 +564,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            hashed_account_key = hashlib.sha256( access_key ).digest()
+            hashed_access_key = hashlib.sha256( access_key ).digest()
             
             account_type = self._GetAccountTypeFromCache( service_id, account_type_id )
             
@@ -576,7 +576,7 @@ class DB( HydrusDB.HydrusDB ):
             
             dictionary_string = dictionary.DumpToString()
             
-            self._c.execute( 'INSERT INTO accounts ( service_id, account_key, hashed_access_key, account_type_id, created, expires, dictionary_string ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( account_key ), sqlite3.Binary( hashed_account_key ), account_type_id, created, expires, dictionary_string ) )
+            self._c.execute( 'INSERT INTO accounts ( service_id, account_key, hashed_access_key, account_type_id, created, expires, dictionary_string ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( account_key ), sqlite3.Binary( hashed_access_key ), account_type_id, created, expires, dictionary_string ) )
             
         else:
             
@@ -1010,6 +1010,8 @@ class DB( HydrusDB.HydrusDB ):
         
         account_ids_to_accounts = {}
         
+        account_ids_to_hashed_access_keys = {}
+        
         for ( session_key, service_id, account_id, expires ) in results:
             
             if service_id not in service_ids_to_service_keys:
@@ -1028,7 +1030,16 @@ class DB( HydrusDB.HydrusDB ):
             
             account = account_ids_to_accounts[ account_id ]
             
-            sessions.append( ( session_key, service_key, account, expires ) )
+            if account_id not in account_ids_to_hashed_access_keys:
+                
+                ( hashed_access_key, ) = self._c.execute( 'SELECT hashed_access_key FROM accounts WHERE account_id = ?;', ( account_id, ) ).fetchone()
+                
+                account_ids_to_hashed_access_keys[ account_id ] = hashed_access_key
+                
+            
+            hashed_access_key = account_ids_to_hashed_access_keys[ account_id ]
+            
+            sessions.append( ( session_key, service_key, account, hashed_access_key, expires ) )
             
         
         return sessions
