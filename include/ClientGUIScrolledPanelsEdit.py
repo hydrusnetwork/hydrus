@@ -39,7 +39,10 @@ from . import HydrusTags
 from . import HydrusText
 from . import LogicExpressionQueryParser
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -49,7 +52,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( self._account_type_key, title, permissions, bandwidth_rules ) = account_type.ToTuple()
         
-        self._title = wx.TextCtrl( self )
+        self._title = QW.QLineEdit( self )
         
         permission_choices = self._GeneratePermissionChoices( service_type )
         
@@ -65,7 +68,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( label, action ) in action_rows:
                 
-                choice_control.Append( label, ( content_type, action ) )
+                choice_control.addItem( label, (content_type, action) )
                 
             
             if content_type in permissions:
@@ -107,13 +110,13 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._permissions_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( t_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._bandwidth_rules_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, t_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._bandwidth_rules_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _GeneratePermissionChoices( self, service_type ):
@@ -164,14 +167,15 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._input_text = wx.TextCtrl( self )
+        self._input_text = QW.QLineEdit( self )
         
-        self._result_preview = wx.TextCtrl( self, style =  wx.TE_MULTILINE )
-        self._result_preview.SetEditable( False )
+        self._result_preview = QW.QPlainTextEdit()
+        self._result_preview.setReadOnly( True )
         
-        size = ClientGUIFunctions.ConvertTextToPixels( self._result_preview, ( 64, 6 ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._result_preview, ( 64, 6 ) )
         
-        self._result_preview.SetInitialSize( size )
+        self._result_preview.setMinimumWidth( width )
+        self._result_preview.setMinimumHeight( height )
         
         self._current_predicates = []
         
@@ -179,7 +183,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         if initial_string is not None:
             
-            self._input_text.SetValue( initial_string )
+            self._input_text.setText( initial_string )
             
         
         #
@@ -191,7 +195,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         summary = 'Enter a complicated tag search here as text, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and this should turn it into hydrus-compatible search predicates.'
         summary += os.linesep * 2
@@ -205,19 +209,19 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         
         st.SetWrapWidth( width )
         
-        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._UpdateText()
         
-        self._input_text.Bind( wx.EVT_TEXT, self.EventUpdateText )
+        self._input_text.textChanged.connect( self.EventUpdateText )
         
     
     def _UpdateText( self ):
         
-        text = self._input_text.GetValue()
+        text = self._input_text.text()
         
         self._current_predicates = []
         
@@ -290,11 +294,11 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._result_preview.SetValue( output )
-        self._result_preview.SetForegroundColour( colour )
+        self._result_preview.setPlainText( output )
+        QP.SetForegroundColour( self._result_preview, colour )
         
     
-    def EventUpdateText( self, event ):
+    def EventUpdateText( self, text ):
         
         self._UpdateText()
         
@@ -319,7 +323,7 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._bandwidth_rules_ctrl = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         if summary != '':
             
@@ -327,12 +331,12 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             st.SetWrapWidth( 250 )
             
-            vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.Add( self._bandwidth_rules_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._bandwidth_rules_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -346,9 +350,9 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._checkboxes = ClientGUICommon.BetterCheckListBox( self )
+        self._checkboxes = QP.CheckListBox( self )
         
-        self._checkboxes.SetMinSize( ( 320, 420 ) )
+        self._checkboxes.setMinimumSize( QP.TupleToQSize( (320,420) ) )
         
         try:
             
@@ -378,11 +382,11 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -396,10 +400,10 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._name = wx.TextCtrl( self )
-        self._value = wx.TextCtrl( self )
-        self._domain = wx.TextCtrl( self )
-        self._path = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
+        self._value = QW.QLineEdit( self )
+        self._domain = QW.QLineEdit( self )
+        self._path = QW.QLineEdit( self )
         
         expires_panel = ClientGUICommon.StaticBox( self, 'expires' )
         
@@ -409,10 +413,10 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name.SetValue( name )
-        self._value.SetValue( value )
-        self._domain.SetValue( domain )
-        self._path.SetValue( path )
+        self._name.setText( name )
+        self._value.setText( value )
+        self._domain.setText( domain )
+        self._path.setText( path )
         
         self._expires = expires
         
@@ -430,7 +434,7 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         expires_panel.Add( self._expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         expires_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -441,25 +445,25 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( expires_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, expires_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
         self._UpdateExpiresText()
         
-        self._expires_time_delta.Bind( ClientGUITime.EVT_TIME_DELTA, self.EventTimeDelta )
+        self._expires_time_delta.timeDeltaChanged.connect( self.EventTimeDelta )
         
     
     def _UpdateExpiresText( self ):
         
-        self._expires_st.SetLabelText( HydrusData.ConvertTimestampToPrettyExpires( self._expires ) )
-        self._expires_st_utc.SetLabelText( str( self._expires ) )
+        self._expires_st.setText( HydrusData.ConvertTimestampToPrettyExpires(self._expires) )
+        self._expires_st_utc.setText( str(self._expires) )
         
     
-    def EventTimeDelta( self, event ):
+    def EventTimeDelta( self ):
         
         time_delta = self._expires_time_delta.GetValue()
         
@@ -472,10 +476,10 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
-        value = self._value.GetValue()
-        domain = self._domain.GetValue()
-        path = self._path.GetValue()
+        name = self._name.text()
+        value = self._value.text()
+        domain = self._domain.text()
+        path = self._path.text()
         expires = self._expires
         
         return ( name, value, domain, path, expires )
@@ -531,12 +535,12 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ConvertDataToListCtrlTuples( self, url_class ):
@@ -569,7 +573,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear default tag import options for all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             url_classes_to_clear = self._list_ctrl.GetData( only_selected = True )
             
@@ -623,7 +627,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     url_class_key = url_class.GetMatchKey()
                     
@@ -697,7 +701,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -722,7 +726,7 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
             HydrusData.ShowException( e )
             
@@ -752,9 +756,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._InitialisePermittedActionChoices( suggested_file_service_key = suggested_file_service_key )
         
-        self._action_radio = ClientGUICommon.BetterRadioBox( self, choices = self._permitted_action_choices, style = wx.RA_SPECIFY_ROWS )
+        self._action_radio = ClientGUICommon.BetterRadioBox( self, choices = self._permitted_action_choices, vertical = True )
         
-        self._action_radio.SetSelection( 0 )
+        self._action_radio.Select( 0 )
         
         self._reason_panel = ClientGUICommon.StaticBox( self, 'reason' )
         
@@ -769,37 +773,37 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         permitted_reason_choices.append( ( 'custom', None ) )
         
-        self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, style = wx.RA_SPECIFY_ROWS )
+        self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, vertical = True )
         
-        self._reason_radio.SetSelection( 0 )
+        self._reason_radio.Select( 0 )
         
-        self._custom_reason = wx.TextCtrl( self._reason_panel )
+        self._custom_reason = QW.QLineEdit( self._reason_panel )
         
         #
         
         ( file_service_key, hashes, description ) = self._action_radio.GetValue()
         
-        self._simple_description.SetLabel( description )
+        self._simple_description.setText( description )
         
         if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
             if len( self._permitted_action_choices ) == 1:
                 
-                self._action_radio.Hide()
+                self._action_radio.hide()
                 
             else:
                 
-                self._simple_description.Hide()
+                self._simple_description.hide()
                 
             
         else:
             
-            self._action_radio.Hide()
-            self._reason_panel.Hide()
+            self._action_radio.hide()
+            self._reason_panel.hide()
             
         
-        self._action_radio.Bind( wx.EVT_RADIOBOX, self.EventRadio )
-        self._reason_radio.Bind( wx.EVT_RADIOBOX, self.EventRadio )
+        self._action_radio.radioBoxChanged.connect( self._UpdateControls )
+        self._reason_radio.radioBoxChanged.connect( self._UpdateControls )
         
         self._UpdateControls()
         
@@ -817,13 +821,13 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._simple_description, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._action_radio, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._reason_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._simple_description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._action_radio, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._reason_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _GetReason( self ):
@@ -832,7 +836,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if reason is None:
             
-            reason = self._custom_reason.GetValue()
+            reason = self._custom_reason.text()
             
         
         return reason
@@ -935,29 +939,24 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if reason_permitted:
             
-            self._reason_radio.Enable()
+            self._reason_radio.setEnabled( True )
             
         else:
             
-            self._reason_radio.Disable()
-            self._custom_reason.Disable()
+            self._reason_radio.setEnabled( False )
+            self._custom_reason.setEnabled( False )
             
         
         reason = self._reason_radio.GetValue()
         
         if reason is None:
             
-            self._custom_reason.Enable()
+            self._custom_reason.setEnabled( True )
             
         else:
             
-            self._custom_reason.Disable()
+            self._custom_reason.setEnabled( False )
             
-        
-    
-    def EventRadio( self, event ):
-        
-        self._UpdateControls()
         
     
     def GetValue( self ):
@@ -1037,19 +1036,20 @@ class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = QW.QTabWidget( self )
         
         self._url_classes_panel = EditURLClassesPanel( self._notebook, url_classes )
         self._network_contexts_to_custom_header_dicts_panel = EditNetworkContextCustomHeadersPanel( self._notebook, network_contexts_to_custom_header_dicts )
         
-        self._notebook.AddPage( self._url_classes_panel, 'url classes', select = True )
-        self._notebook.AddPage( self._network_contexts_to_custom_header_dicts_panel, 'custom headers', select = False )
+        self._notebook.addTab( self._url_classes_panel, 'url classes' )
+        self._notebook.setCurrentWidget( self._url_classes_panel )
+        self._notebook.addTab( self._network_contexts_to_custom_header_dicts_panel, 'custom headers' )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -1076,7 +1076,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = QW.QTabWidget( self )
         
         #
         
@@ -1134,16 +1134,17 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook.AddPage( self._gug_display_list_ctrl_panel, 'downloaders selector', select = True )
-        self._notebook.AddPage( self._url_display_list_ctrl_panel, 'media viewer urls', select = False )
+        self._notebook.addTab( self._gug_display_list_ctrl_panel, 'downloaders selector' )
+        self._notebook.setCurrentWidget( self._gug_display_list_ctrl_panel )
+        self._notebook.addTab( self._url_display_list_ctrl_panel, 'media viewer urls' )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ConvertGUGDisplayDataToListCtrlTuples( self, data ):
@@ -1208,11 +1209,11 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Show "{}" in the main selector list?'.format( name )
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the first list?' )
+            result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the first list?', check_for_cancelled = True )
             
-            if result in ( wx.ID_YES, wx.ID_NO ):
+            if not closed_by_user:
                 
-                display = result == wx.ID_YES
+                display = result == QW.QDialog.Accepted
                 
                 self._gug_display_list_ctrl.DeleteDatas( ( data, ) )
                 
@@ -1239,11 +1240,11 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Show ' + url_class_name + ' in the media viewer?'
             
-            result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the media viewer?' )
+            result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the media viewer?', check_for_cancelled = True )
             
-            if result in ( wx.ID_YES, wx.ID_NO ):
+            if not closed_by_user:
                 
-                display = result == wx.ID_YES
+                display = result == QW.QDialog.Accepted
                 
                 self._url_display_list_ctrl.DeleteDatas( ( data, ) )
                 
@@ -1313,18 +1314,18 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._sync_archive = wx.CheckBox( self )
+        self._sync_archive = QW.QCheckBox( self )
         
         self._sync_urls_action = ClientGUICommon.BetterChoice( self )
         
-        self._sync_urls_action.Append( 'sync nothing', None )
+        self._sync_urls_action.addItem( 'sync nothing', None )
         
         if self._duplicate_action == HC.DUPLICATE_BETTER:
             
-            self._sync_urls_action.Append( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
+            self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY], HC.CONTENT_MERGE_ACTION_COPY )
             
         
-        self._sync_urls_action.Append( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        self._sync_urls_action.addItem( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         
         #
         
@@ -1344,13 +1345,13 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._rating_service_actions.Sort()
         
-        self._sync_archive.SetValue( sync_archive )
+        self._sync_archive.setChecked( sync_archive )
         
         #
         
         if self._duplicate_action in ( HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE ) and not for_custom_action:
             
-            self._sync_urls_action.Disable()
+            self._sync_urls_action.setEnabled( False )
             
             self._sync_urls_action.SetValue( None )
             
@@ -1369,10 +1370,10 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( tag_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( rating_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, tag_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, rating_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         rows = []
         
@@ -1381,9 +1382,9 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddRating( self ):
@@ -1406,7 +1407,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( choice_tuples ) == 0:
             
-            wx.MessageBox( 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
+            QW.QMessageBox.critical( self, 'Error', 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
             
         else:
             
@@ -1476,7 +1477,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( choice_tuples ) == 0:
             
-            wx.MessageBox( 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
+            QW.QMessageBox.critical( self, 'Error', 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
             
         else:
             
@@ -1528,7 +1529,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg_3.SetPanel( panel )
                 
-                if dlg_3.ShowModal() == wx.ID_OK:
+                if dlg_3.exec() == QW.QDialog.Accepted:
                     
                     tag_filter = panel.GetValue()
                     
@@ -1573,7 +1574,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             for service_key in self._rating_service_actions.GetData( only_selected = True ):
                 
@@ -1588,7 +1589,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             for service_key in self._tag_service_actions.GetData( only_selected = True ):
                 
@@ -1671,7 +1672,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg_3.SetPanel( panel )
                 
-                if dlg_3.ShowModal() == wx.ID_OK:
+                if dlg_3.exec() == QW.QDialog.Accepted:
                     
                     tag_filter = panel.GetValue()
                     
@@ -1693,7 +1694,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, ( action, tag_filter ) ) in self._service_keys_to_tag_options.items() ]
         rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._service_keys_to_rating_options.items() ]
-        sync_archive = self._sync_archive.GetValue()
+        sync_archive = self._sync_archive.isChecked()
         sync_urls_action = self._sync_urls_action.GetValue()
         
         duplicate_action_options = ClientDuplicates.DuplicateActionOptions( tag_service_actions, rating_service_actions, sync_archive, sync_urls_action )
@@ -1707,27 +1708,27 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         pre_import_panel = ClientGUICommon.StaticBox( self, 'pre-import checks' )
         
-        self._exclude_deleted = wx.CheckBox( pre_import_panel )
+        self._exclude_deleted = QW.QCheckBox( pre_import_panel )
         
-        self._do_not_check_known_urls_before_importing = wx.CheckBox( pre_import_panel )
-        self._do_not_check_hashes_before_importing = wx.CheckBox( pre_import_panel )
+        self._do_not_check_known_urls_before_importing = QW.QCheckBox( pre_import_panel )
+        self._do_not_check_hashes_before_importing = QW.QCheckBox( pre_import_panel )
         
         tt = 'If hydrus recognises a file\'s URL or hash, it can decide to skip downloading it if it believes it already has it or previously deleted it.'
         tt += os.linesep * 2
         tt += 'This is usually a great way to reduce bandwidth, but if you believe the clientside url mappings or serverside hashes are inaccurate and the file is being wrongly skipped, turn these on to force a download.'
         
-        self._do_not_check_known_urls_before_importing.SetToolTip( tt )
-        self._do_not_check_hashes_before_importing.SetToolTip( tt )
+        self._do_not_check_known_urls_before_importing.setToolTip( tt )
+        self._do_not_check_hashes_before_importing.setToolTip( tt )
         
-        self._allow_decompression_bombs = wx.CheckBox( pre_import_panel )
+        self._allow_decompression_bombs = QW.QCheckBox( pre_import_panel )
         
         self._min_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
         self._min_size.SetValue( 5 * 1024 )
@@ -1748,31 +1749,31 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         post_import_panel = ClientGUICommon.StaticBox( self, 'post-import actions' )
         
-        self._auto_archive = wx.CheckBox( post_import_panel )
-        self._associate_source_urls = wx.CheckBox( post_import_panel )
+        self._auto_archive = QW.QCheckBox( post_import_panel )
+        self._associate_source_urls = QW.QCheckBox( post_import_panel )
         
         tt = 'If the parser discovers and additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
         tt += os.linesep * 2
         tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
         
-        self._associate_source_urls.SetToolTip( tt )
+        self._associate_source_urls.setToolTip( tt )
         
         #
         
         presentation_panel = ClientGUICommon.StaticBox( self, 'presentation options' )
         
-        self._present_new_files = wx.CheckBox( presentation_panel )
-        self._present_already_in_inbox_files = wx.CheckBox( presentation_panel )
-        self._present_already_in_archive_files = wx.CheckBox( presentation_panel )
+        self._present_new_files = QW.QCheckBox( presentation_panel )
+        self._present_already_in_inbox_files = QW.QCheckBox( presentation_panel )
+        self._present_already_in_archive_files = QW.QCheckBox( presentation_panel )
         
         #
         
         ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
         
-        self._exclude_deleted.SetValue( exclude_deleted )
-        self._do_not_check_known_urls_before_importing.SetValue( do_not_check_known_urls_before_importing )
-        self._do_not_check_hashes_before_importing.SetValue( do_not_check_hashes_before_importing )
-        self._allow_decompression_bombs.SetValue( allow_decompression_bombs )
+        self._exclude_deleted.setChecked( exclude_deleted )
+        self._do_not_check_known_urls_before_importing.setChecked( do_not_check_known_urls_before_importing )
+        self._do_not_check_hashes_before_importing.setChecked( do_not_check_hashes_before_importing )
+        self._allow_decompression_bombs.setChecked( allow_decompression_bombs )
         self._min_size.SetValue( min_size )
         self._max_size.SetValue( max_size )
         self._max_gif_size.SetValue( max_gif_size )
@@ -1783,16 +1784,16 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ( automatic_archive, associate_source_urls ) = file_import_options.GetPostImportOptions()
         
-        self._auto_archive.SetValue( automatic_archive )
-        self._associate_source_urls.SetValue( associate_source_urls )
+        self._auto_archive.setChecked( automatic_archive )
+        self._associate_source_urls.setChecked( associate_source_urls )
         
         #
         
         ( present_new_files, present_already_in_inbox_files, present_already_in_archive_files ) = file_import_options.GetPresentationOptions()
         
-        self._present_new_files.SetValue( present_new_files )
-        self._present_already_in_inbox_files.SetValue( present_already_in_inbox_files )
-        self._present_already_in_archive_files.SetValue( present_already_in_archive_files )
+        self._present_new_files.setChecked( present_new_files )
+        self._present_already_in_inbox_files.setChecked( present_already_in_inbox_files )
+        self._present_already_in_archive_files.setChecked( present_already_in_archive_files )
         
         #
         
@@ -1807,8 +1808,8 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            self._do_not_check_known_urls_before_importing.Hide()
-            self._do_not_check_hashes_before_importing.Hide()
+            self._do_not_check_known_urls_before_importing.setVisible( False )
+            self._do_not_check_hashes_before_importing.setVisible( False )
             
         
         rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
@@ -1834,7 +1835,7 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            self._associate_source_urls.Hide()
+            self._associate_source_urls.setVisible( False )
             
         
         gridbox = ClientGUICommon.WrapInGrid( post_import_panel, rows )
@@ -1855,14 +1856,14 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ShowHelp( self ):
@@ -1889,27 +1890,27 @@ For regular import pages, 'presentation' means if the imported file's thumbnail 
 
 If you have a very large (10k+ files) file import page, consider hiding some or all of its thumbs to reduce ui lag and increase overall import speed.'''
         
-        wx.MessageBox( help_message )
+        QW.QMessageBox.information( self, 'Information', help_message )
         
     
     def GetValue( self ):
         
-        exclude_deleted = self._exclude_deleted.GetValue()
-        do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.GetValue()
-        do_not_check_hashes_before_importing = self._do_not_check_hashes_before_importing.GetValue()
-        allow_decompression_bombs = self._allow_decompression_bombs.GetValue()
+        exclude_deleted = self._exclude_deleted.isChecked()
+        do_not_check_known_urls_before_importing = self._do_not_check_known_urls_before_importing.isChecked()
+        do_not_check_hashes_before_importing = self._do_not_check_hashes_before_importing.isChecked()
+        allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
         min_size = self._min_size.GetValue()
         max_size = self._max_size.GetValue()
         max_gif_size = self._max_gif_size.GetValue()
         min_resolution = self._min_resolution.GetValue()
         max_resolution = self._max_resolution.GetValue()
         
-        automatic_archive = self._auto_archive.GetValue()
-        associate_source_urls = self._associate_source_urls.GetValue()
+        automatic_archive = self._auto_archive.isChecked()
+        associate_source_urls = self._associate_source_urls.isChecked()
         
-        present_new_files = self._present_new_files.GetValue()
-        present_already_in_inbox_files = self._present_already_in_inbox_files.GetValue()
-        present_already_in_archive_files = self._present_already_in_archive_files.GetValue()
+        present_new_files = self._present_new_files.isChecked()
+        present_already_in_inbox_files = self._present_already_in_inbox_files.isChecked()
+        present_already_in_archive_files = self._present_already_in_archive_files.isChecked()
         
         file_import_options = ClientImportOptions.FileImportOptions()
         
@@ -1928,36 +1929,36 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_info = info
         
-        self._remember_size = wx.CheckBox( self, label = 'remember size' )
-        self._remember_position = wx.CheckBox( self, label = 'remember position' )
+        self._remember_size = QW.QCheckBox( 'remember size', self )
+        self._remember_position = QW.QCheckBox( 'remember position', self )
         
         self._last_size = ClientGUICommon.NoneableSpinCtrl( self, 'last size', none_phrase = 'none set', min = 100, max = 1000000, unit = None, num_dimensions = 2 )
         self._last_position = ClientGUICommon.NoneableSpinCtrl( self, 'last position', none_phrase = 'none set', min = -1000000, max = 1000000, unit = None, num_dimensions = 2 )
         
         self._default_gravity_x = ClientGUICommon.BetterChoice( self )
         
-        self._default_gravity_x.Append( 'by default, expand to width of parent', 1 )
-        self._default_gravity_x.Append( 'by default, expand width as much as needed', -1 )
+        self._default_gravity_x.addItem( 'by default, expand to width of parent', 1 )
+        self._default_gravity_x.addItem( 'by default, expand width as much as needed', -1 )
         
         self._default_gravity_y = ClientGUICommon.BetterChoice( self )
         
-        self._default_gravity_y.Append( 'by default, expand to height of parent', 1 )
-        self._default_gravity_y.Append( 'by default, expand height as much as needed', -1 )
+        self._default_gravity_y.addItem( 'by default, expand to height of parent', 1 )
+        self._default_gravity_y.addItem( 'by default, expand height as much as needed', -1 )
         
         self._default_position = ClientGUICommon.BetterChoice( self )
         
-        self._default_position.Append( 'by default, position off the top-left corner of parent', 'topleft' )
-        self._default_position.Append( 'by default, position centered on the parent', 'center' )
+        self._default_position.addItem( 'by default, position off the top-left corner of parent', 'topleft')
+        self._default_position.addItem( 'by default, position centered on the parent', 'center')
         
-        self._maximised = wx.CheckBox( self, label = 'start maximised' )
-        self._fullscreen = wx.CheckBox( self, label = 'start fullscreen' )
+        self._maximised = QW.QCheckBox( 'start maximised', self )
+        self._fullscreen = QW.QCheckBox( 'start fullscreen', self )
         
         #
         
         ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._original_info
         
-        self._remember_size.SetValue( remember_size )
-        self._remember_position.SetValue( remember_position )
+        self._remember_size.setChecked( remember_size )
+        self._remember_position.setChecked( remember_position )
         
         self._last_size.SetValue( last_size )
         self._last_position.SetValue( last_position )
@@ -1969,35 +1970,35 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._default_position.SetValue( default_position )
         
-        self._maximised.SetValue( maximised )
-        self._fullscreen.SetValue( fullscreen )
+        self._maximised.setChecked( maximised )
+        self._fullscreen.setChecked( fullscreen )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         text = 'Setting frame location info for ' + name + '.'
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._remember_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._remember_position, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._last_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._last_position, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._default_gravity_x, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._default_gravity_y, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._default_position, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._maximised, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._fullscreen, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._remember_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._remember_position, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._last_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._last_position, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._default_gravity_x, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._default_gravity_y, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._default_position, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._maximised, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._fullscreen, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
         
         ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = self._original_info
         
-        remember_size = self._remember_size.GetValue()
-        remember_position = self._remember_position.GetValue()
+        remember_size = self._remember_size.isChecked()
+        remember_position = self._remember_position.isChecked()
         
         last_size = self._last_size.GetValue()
         last_position = self._last_position.GetValue()
@@ -2009,8 +2010,8 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         default_position = self._default_position.GetValue()
         
-        maximised = self._maximised.GetValue()
-        fullscreen = self._fullscreen.GetValue()
+        maximised = self._maximised.isChecked()
+        fullscreen = self._fullscreen.isChecked()
         
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
@@ -2023,21 +2024,23 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_gug = gug
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
-        self._url_template = wx.TextCtrl( self )
+        self._url_template = QW.QLineEdit( self )
         
         min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._url_template, 74 )
         
-        self._url_template.SetMinClientSize( ( min_width, -1 ) )
+        QP.SetMinClientSize( self._url_template, (min_width,-1) )
         
-        self._replacement_phrase = wx.TextCtrl( self )
-        self._search_terms_separator = wx.TextCtrl( self )
-        self._initial_search_text = wx.TextCtrl( self )
-        self._example_search_text = wx.TextCtrl( self )
+        self._replacement_phrase = QW.QLineEdit( self )
+        self._search_terms_separator = QW.QLineEdit( self )
+        self._initial_search_text = QW.QLineEdit( self )
+        self._example_search_text = QW.QLineEdit( self )
         
-        self._example_url = wx.TextCtrl( self, style = wx.TE_READONLY )
-        self._matched_url_class = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._example_url = QW.QLineEdit( self )
+        self._example_url.setReadOnly( True )
+        self._matched_url_class = QW.QLineEdit( self )
+        self._matched_url_class.setReadOnly( True )
         
         #
         
@@ -2047,12 +2050,12 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         initial_search_text = gug.GetInitialSearchText()
         
-        self._name.SetValue( name )
-        self._url_template.SetValue( url_template )
-        self._replacement_phrase.SetValue( replacement_phrase )
-        self._search_terms_separator.SetValue( search_terms_separator )
-        self._initial_search_text.SetValue( initial_search_text )
-        self._example_search_text.SetValue( example_search_text )
+        self._name.setText( name )
+        self._url_template.setText( url_template )
+        self._replacement_phrase.setText( replacement_phrase )
+        self._search_terms_separator.setText( search_terms_separator )
+        self._initial_search_text.setText( initial_search_text )
+        self._example_search_text.setText( example_search_text )
         
         self._UpdateExampleURL()
         
@@ -2071,29 +2074,29 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._url_template.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self._replacement_phrase.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self._search_terms_separator.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self._example_search_text.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._url_template.textChanged.connect( self._UpdateExampleURL )
+        self._replacement_phrase.textChanged.connect( self._UpdateExampleURL )
+        self._search_terms_separator.textChanged.connect( self._UpdateExampleURL )
+        self._example_search_text.textChanged.connect( self._UpdateExampleURL )
         
     
     def _GetValue( self ):
         
         gug_key = self._original_gug.GetGUGKey()
-        name = self._name.GetValue()
-        url_template = self._url_template.GetValue()
-        replacement_phrase = self._replacement_phrase.GetValue()
-        search_terms_separator = self._search_terms_separator.GetValue()
-        initial_search_text = self._initial_search_text.GetValue()
-        example_search_text = self._example_search_text.GetValue()
+        name = self._name.text()
+        url_template = self._url_template.text()
+        replacement_phrase = self._replacement_phrase.text()
+        search_terms_separator = self._search_terms_separator.text()
+        initial_search_text = self._initial_search_text.text()
+        example_search_text = self._example_search_text.text()
         
         gug = ClientNetworkingDomain.GalleryURLGenerator( name, gug_key = gug_key, url_template = url_template, replacement_phrase = replacement_phrase, search_terms_separator = search_terms_separator, initial_search_text = initial_search_text, example_search_text = example_search_text )
         
@@ -2110,20 +2113,20 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
             
-            self._example_url.SetValue( example_url )
+            self._example_url.setText( example_url )
             
         except ( HydrusExceptions.GUGException, HydrusExceptions.URLClassException ) as e:
             
             reason = str( e )
             
-            self._example_url.SetValue( 'Could not generate - ' + reason )
+            self._example_url.setText( 'Could not generate - ' + reason )
             
             example_url = None
             
         
         if example_url is None:
             
-            self._matched_url_class.SetValue( '' )
+            self._matched_url_class.setText( '' )
             
         else:
             
@@ -2138,13 +2141,8 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
                 url_class_text = 'Matched ' + url_class.GetName() + ' url class.'
                 
             
-            self._matched_url_class.SetValue( url_class_text )
+            self._matched_url_class.setText( url_class_text )
             
-        
-    
-    def EventUpdate( self, event ):
-        
-        self._UpdateExampleURL()
         
     
     def GetValue( self ):
@@ -2174,9 +2172,9 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._available_gugs.sort( key = lambda g: g.GetName() )
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
-        self._initial_search_text = wx.TextCtrl( self )
+        self._initial_search_text = QW.QLineEdit( self )
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -2197,8 +2195,8 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         initial_search_text = ngug.GetInitialSearchText()
         
-        self._name.SetValue( name )
-        self._initial_search_text.SetValue( initial_search_text )
+        self._name.setText( name )
+        self._initial_search_text.setText( initial_search_text )
         
         gug_keys_and_names = ngug.GetGUGKeysAndNames()
         
@@ -2215,12 +2213,12 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._gug_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._gug_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddGUG( self, gug ):
@@ -2239,7 +2237,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( choice_tuples ) == 0:
             
-            wx.MessageBox( 'No remaining gugs available!' )
+            QW.QMessageBox.critical( self, 'Error', 'No remaining gugs available!' )
             
             return
             
@@ -2250,7 +2248,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 chosen_gugs = panel.GetValue()
                 
@@ -2289,8 +2287,8 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     def GetValue( self ):
         
         gug_key = self._original_ngug.GetGUGKey()
-        name = self._name.GetValue()
-        initial_search_text = self._initial_search_text.GetValue()
+        name = self._name.text()
+        initial_search_text = self._initial_search_text.text()
         
         gug_keys_and_names = self._gug_list_ctrl.GetData()
         
@@ -2313,13 +2311,13 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = QW.QTabWidget( self )
         
         #
         
@@ -2373,17 +2371,18 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook.AddPage( self._gug_list_ctrl_panel, 'gallery url generators', select = True )
-        self._notebook.AddPage( self._ngug_list_ctrl_panel, 'nested gallery url generators', select = False )
+        self._notebook.addTab( self._gug_list_ctrl_panel, 'gallery url generators' )
+        self._notebook.setCurrentWidget( self._gug_list_ctrl_panel )
+        self._notebook.addTab( self._ngug_list_ctrl_panel, 'nested gallery url generators' )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddNewGUG( self ):
@@ -2396,7 +2395,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 gug = panel.GetValue()
                 
@@ -2419,7 +2418,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 ngug = panel.GetValue()
                 
@@ -2521,7 +2520,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             for deletee in deletees:
                 
@@ -2549,7 +2548,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result != wx.ID_YES:
+                    if result != QW.QDialog.Accepted:
                         
                         break
                         
@@ -2570,7 +2569,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._gug_list_ctrl.DeleteDatas( ( gug, ) )
                     
@@ -2602,7 +2601,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._ngug_list_ctrl.DeleteDatas( ( ngug, ) )
                     
@@ -2666,16 +2665,16 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for action in possible_actions:
             
-            self._media_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
+            self._media_show_action.addItem( CC.media_viewer_action_string_lookup[ action], action )
             
             if action != CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                self._preview_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
+                self._preview_show_action.addItem( CC.media_viewer_action_string_lookup[ action], action )
                 
             
         
-        self._media_show_action.Bind( wx.EVT_CHOICE, self.EventActionChange )
-        self._preview_show_action.Bind( wx.EVT_CHOICE, self.EventActionChange )
+        self._media_show_action.currentIndexChanged.connect( self.EventActionChange )
+        self._preview_show_action.currentIndexChanged.connect( self.EventActionChange )
         
         self._media_scale_up = ClientGUICommon.BetterChoice( self )
         self._media_scale_down = ClientGUICommon.BetterChoice( self )
@@ -2686,28 +2685,28 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = CC.media_viewer_scale_string_lookup[ scale_action ]
             
-            self._media_scale_up.Append( text, scale_action )
-            self._preview_scale_up.Append( text, scale_action )
+            self._media_scale_up.addItem( text, scale_action )
+            self._preview_scale_up.addItem( text, scale_action )
             
-            self._media_scale_down.Append( text, scale_action )
-            self._preview_scale_down.Append( text, scale_action )
+            self._media_scale_down.addItem( text, scale_action )
+            self._preview_scale_down.addItem( text, scale_action )
             
         
-        self._exact_zooms_only = wx.CheckBox( self, label = 'only permit half and double zooms' )
-        self._exact_zooms_only.SetToolTip( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise. The \'canvas fit\' zoom will still be inserted.' )
+        self._exact_zooms_only = QW.QCheckBox( 'only permit half and double zooms', self )
+        self._exact_zooms_only.setToolTip( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise. The \'canvas fit\' zoom will still be inserted.' )
         
         self._scale_up_quality = ClientGUICommon.BetterChoice( self )
         
         for zoom in ( CC.ZOOM_NEAREST, CC.ZOOM_LINEAR, CC.ZOOM_CUBIC, CC.ZOOM_LANCZOS4 ):
             
-            self._scale_up_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
+            self._scale_up_quality.addItem( CC.zoom_string_lookup[ zoom], zoom )
             
         
         self._scale_down_quality = ClientGUICommon.BetterChoice( self )
         
         for zoom in ( CC.ZOOM_NEAREST, CC.ZOOM_LINEAR, CC.ZOOM_AREA ):
             
-            self._scale_down_quality.Append( CC.zoom_string_lookup[ zoom ], zoom )
+            self._scale_down_quality.addItem( CC.zoom_string_lookup[ zoom], zoom )
             
         
         #
@@ -2720,32 +2719,32 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preview_scale_up.SetValue( preview_scale_up )
         self._preview_scale_down.SetValue( preview_scale_down )
         
-        self._exact_zooms_only.SetValue( exact_zooms_only )
+        self._exact_zooms_only.setChecked( exact_zooms_only )
         
         self._scale_up_quality.SetValue( scale_up_quality )
         self._scale_down_quality.SetValue( scale_down_quality )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         text = 'Setting media view options for ' + HC.mime_string_lookup[ self._mime ] + '.'
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( ClientGUICommon.WrapInText( self._media_show_action, self, 'media viewer show action:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( ClientGUICommon.WrapInText( self._preview_show_action, self, 'preview show action:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._media_show_action,self,'media viewer show action:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._preview_show_action,self,'preview show action:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         if possible_actions == CC.no_support:
             
-            self._media_scale_up.Hide()
-            self._media_scale_down.Hide()
-            self._preview_scale_up.Hide()
-            self._preview_scale_down.Hide()
+            self._media_scale_up.hide()
+            self._media_scale_down.hide()
+            self._preview_scale_up.hide()
+            self._preview_scale_down.hide()
             
-            self._exact_zooms_only.Hide()
+            self._exact_zooms_only.setVisible( False )
             
-            self._scale_up_quality.Hide()
-            self._scale_down_quality.Hide()
+            self._scale_up_quality.hide()
+            self._scale_down_quality.hide()
             
         else:
             
@@ -2758,56 +2757,56 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            vbox.Add( self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.Add( ClientGUICommon.BetterStaticText( self, 'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.'), CC.FLAGS_VCENTER )
             
-            vbox.Add( ClientGUICommon.WrapInText( self._scale_up_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.Add( ClientGUICommon.WrapInText( self._scale_down_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._scale_up_quality,self,'>100% (interpolation) quality:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._scale_down_quality,self,'<100% (decimation) quality:'), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
         if self._mime == HC.APPLICATION_FLASH:
             
-            self._scale_up_quality.Disable()
-            self._scale_down_quality.Disable()
+            self._scale_up_quality.setEnabled( False )
+            self._scale_down_quality.setEnabled( False )
             
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
-    def EventActionChange( self, event ):
+    def EventActionChange( self, index ):
         
         if self._media_show_action.GetValue() in CC.no_support and self._preview_show_action.GetValue() in CC.no_support:
             
-            self._media_scale_up.Disable()
-            self._media_scale_down.Disable()
-            self._preview_scale_up.Disable()
-            self._preview_scale_down.Disable()
+            self._media_scale_up.setEnabled( False )
+            self._media_scale_down.setEnabled( False )
+            self._preview_scale_up.setEnabled( False )
+            self._preview_scale_down.setEnabled( False )
             
-            self._exact_zooms_only.Disable()
+            self._exact_zooms_only.setEnabled( False )
             
-            self._scale_up_quality.Disable()
-            self._scale_down_quality.Disable()
+            self._scale_up_quality.setEnabled( False )
+            self._scale_down_quality.setEnabled( False )
             
         else:
             
-            self._media_scale_up.Enable()
-            self._media_scale_down.Enable()
-            self._preview_scale_up.Enable()
-            self._preview_scale_down.Enable()
+            self._media_scale_up.setEnabled( True )
+            self._media_scale_down.setEnabled( True )
+            self._preview_scale_up.setEnabled( True )
+            self._preview_scale_down.setEnabled( True )
             
-            self._exact_zooms_only.Enable()
+            self._exact_zooms_only.setEnabled( True )
             
-            self._scale_up_quality.Enable()
-            self._scale_down_quality.Enable()
+            self._scale_up_quality.setEnabled( True )
+            self._scale_down_quality.setEnabled( True )
             
         
         if self._mime == HC.APPLICATION_FLASH:
             
-            self._scale_up_quality.Disable()
-            self._scale_down_quality.Disable()
+            self._scale_up_quality.setEnabled( False )
+            self._scale_down_quality.setEnabled( False )
             
         
     
@@ -2821,7 +2820,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         preview_scale_up = self._preview_scale_up.GetValue()
         preview_scale_down = self._preview_scale_down.GetValue()
         
-        exact_zooms_only = self._exact_zooms_only.GetValue()
+        exact_zooms_only = self._exact_zooms_only.isChecked()
         
         scale_up_quality = self._scale_up_quality.GetValue()
         scale_down_quality = self._scale_down_quality.GetValue()
@@ -2844,34 +2843,34 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for ct in limited_types:
             
-            self._context_type.Append( CC.network_context_type_string_lookup[ ct ], ct )
+            self._context_type.addItem( CC.network_context_type_string_lookup[ ct], ct )
             
         
         self._context_type_info = ClientGUICommon.BetterStaticText( self )
         
-        self._context_data_text = wx.TextCtrl( self )
+        self._context_data_text = QW.QLineEdit( self )
         
         self._context_data_services = ClientGUICommon.BetterChoice( self )
         
         for service in HG.client_controller.services_manager.GetServices( HC.REPOSITORIES ):
             
-            self._context_data_services.Append( service.GetName(), service.GetServiceKey() )
+            self._context_data_services.addItem( service.GetName(), service.GetServiceKey() )
             
         
         self._context_data_subscriptions = ClientGUICommon.BetterChoice( self )
         
-        self._context_data_none = wx.CheckBox( self, label = 'No specific data--acts as default.' )
+        self._context_data_none = QW.QCheckBox( 'No specific data--acts as default.', self )
         
         if not allow_default:
             
-            self._context_data_none.Hide()
+            self._context_data_none.setVisible( False )
             
         
         names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
         for name in names:
             
-            self._context_data_subscriptions.Append( name, name )
+            self._context_data_subscriptions.addItem( name, name )
             
         
         #
@@ -2884,13 +2883,13 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if network_context.context_data is None:
             
-            self._context_data_none.SetValue( True )
+            self._context_data_none.setChecked( True )
             
         else:
             
             if context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
-                self._context_data_text.SetValue( network_context.context_data )
+                self._context_data_text.setText( network_context.context_data )
                 
             elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -2904,65 +2903,60 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._context_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._context_type_info, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._context_data_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._context_data_services, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._context_data_subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._context_data_none, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._context_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._context_type_info, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._context_data_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._context_data_services, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._context_data_subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._context_data_none, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._context_type.Bind( wx.EVT_CHOICE, self.EventContextTypeChanged )
+        self._context_type.currentIndexChanged.connect( self._Update )
         
     
     def _Update( self ):
         
-        self._context_type_info.SetLabelText( CC.network_context_type_description_lookup[ self._context_type.GetValue() ] )
+        self._context_type_info.setText( CC.network_context_type_description_lookup[self._context_type.GetValue()] )
         
         context_type = self._context_type.GetValue()
         
-        self._context_data_text.Disable()
-        self._context_data_services.Disable()
-        self._context_data_subscriptions.Disable()
+        self._context_data_text.setEnabled( False )
+        self._context_data_services.setEnabled( False )
+        self._context_data_subscriptions.setEnabled( False )
         
         if context_type in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_WATCHER_PAGE ):
             
-            self._context_data_none.SetValue( True )
+            self._context_data_none.setChecked( True )
             
         else:
             
-            self._context_data_none.SetValue( False )
+            self._context_data_none.setChecked( False )
             
             if context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
-                self._context_data_text.Enable()
+                self._context_data_text.setEnabled( True )
                 
             elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
-                self._context_data_services.Enable()
+                self._context_data_services.setEnabled( True )
                 
             elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
                 
-                self._context_data_subscriptions.Enable()
+                self._context_data_subscriptions.setEnabled( True )
                 
             
-        
-    
-    def EventContextTypeChanged( self, event ):
-        
-        self._Update()
         
     
     def GetValue( self ):
         
         context_type = self._context_type.GetValue()
         
-        if self._context_data_none.GetValue() == True:
+        if self._context_data_none.isChecked():
             
             context_data = None
             
@@ -2970,7 +2964,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
-                context_data = self._context_data_text.GetValue()
+                context_data = self._context_data_text.text()
                 
             elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -3019,11 +3013,11 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _Add( self ):
@@ -3040,7 +3034,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 ( network_context, key, value, approved, reason ) = panel.GetValue()
                 
@@ -3082,7 +3076,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._list_ctrl.DeleteDatas( ( data, ) )
                     
@@ -3120,51 +3114,51 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._network_context = ClientGUICommon.NetworkContextButton( self, network_context, limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN ), allow_default = False )
             
-            self._key = wx.TextCtrl( self )
-            self._value = wx.TextCtrl( self )
+            self._key = QW.QLineEdit( self )
+            self._value = QW.QLineEdit( self )
             
             self._approved = ClientGUICommon.BetterChoice( self )
             
             for a in ( ClientNetworkingDomain.VALID_APPROVED, ClientNetworkingDomain.VALID_DENIED, ClientNetworkingDomain.VALID_UNKNOWN ):
                 
-                self._approved.Append( ClientNetworkingDomain.valid_str_lookup[ a ], a )
+                self._approved.addItem( ClientNetworkingDomain.valid_str_lookup[ a], a )
                 
             
-            self._reason = wx.TextCtrl( self )
+            self._reason = QW.QLineEdit( self )
             
             width = ClientGUIFunctions.ConvertTextToPixelWidth( self._reason, 60 )
-            self._reason.SetMinSize( ( width, -1 ) )
+            self._reason.setMinimumWidth( width )
             
             #
             
-            self._key.SetValue( key )
+            self._key.setText( key )
             
-            self._value.SetValue( value )
+            self._value.setText( value )
             
             self._approved.SetValue( approved )
             
-            self._reason.SetValue( reason )
+            self._reason.setText( reason )
             
             #
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._network_context, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._key, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._value, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._approved, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._reason, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._network_context, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._key, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._value, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._approved, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._reason, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self.SetSizer( vbox )
+            self.widget().setLayout( vbox )
             
         
         def GetValue( self ):
             
             network_context = self._network_context.GetValue()
-            key = self._key.GetValue()
-            value = self._value.GetValue()
+            key = self._key.text()
+            value = self._value.text()
             approved = self._approved.GetValue()
-            reason = self._reason.GetValue()
+            reason = self._reason.text()
             
             return ( network_context, key, value, approved, reason )
             
@@ -3180,11 +3174,11 @@ class EditNoneableIntegerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._value.SetValue( value )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._value, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._value, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -3218,11 +3212,11 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( regex_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, regex_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _Add( self ):
@@ -3231,13 +3225,13 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 regex_phrase = dlg.GetValue()
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'Enter description.' ) as dlg_2:
                     
-                    if dlg_2.ShowModal() == wx.ID_OK:
+                    if dlg_2.exec() == QW.QDialog.Accepted:
                         
                         description = dlg_2.GetValue()
                         
@@ -3245,7 +3239,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                         
                         if row in current_data:
                             
-                            wx.MessageBox( 'That regex and description are already in the list!' )
+                            QW.QMessageBox.warning( self, 'Warning', 'That regex and description are already in the list!' )
                             
                             return
                             
@@ -3277,15 +3271,15 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     regex_phrase = dlg.GetValue()
                     
                     with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
                         
-                        if dlg_2.ShowModal() == wx.ID_OK:
+                        if dlg_2.exec() == QW.QDialog.Accepted:
                             
-                            description = dlg_2.GetValue()
+                            description = dlg_2.value()
                             
                             edited_row = ( regex_phrase, description )
                             
@@ -3341,16 +3335,16 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for panel in self._panels:
             
-            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -3377,16 +3371,16 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUICommon.StaticBox.__init__( self, parent, 'basic information' )
             
-            self._name = wx.TextCtrl( self )
-            self._port = wx.SpinCtrl( self, min = 1, max = 65535 )
+            self._name = QW.QLineEdit( self )
+            self._port = QP.MakeQSpinBox( self, min=1, max=65535 )
             self._upnp_port = ClientGUICommon.NoneableSpinCtrl( self, 'external upnp port', none_phrase = 'do not forward port', min = 1, max = 65535 )
             
             self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )
             
             #
             
-            self._name.SetValue( name )
-            self._port.SetValue( port )
+            self._name.setText( name )
+            self._port.setValue( port )
             
             upnp_port = dictionary[ 'upnp_port' ]
             
@@ -3396,7 +3390,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             bandwidth_text = bandwidth_tracker.GetCurrentMonthSummary()
             
-            self._bandwidth_tracker_st.SetLabelText( bandwidth_text )
+            self._bandwidth_tracker_st.setText( bandwidth_text )
             
             #
             
@@ -3416,8 +3410,8 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             dictionary_part = {}
             
-            name = self._name.GetValue()
-            port = self._port.GetValue()
+            name = self._name.text()
+            port = self._port.value()
             
             upnp_port = self._upnp_port.GetValue()
             
@@ -3427,11 +3421,11 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    class _ServiceRestrictedPanel( wx.Panel ):
+    class _ServiceRestrictedPanel( QW.QWidget ):
         
         def __init__( self, parent, dictionary ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             bandwidth_rules = dictionary[ 'bandwidth_rules' ]
             
@@ -3439,11 +3433,11 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._bandwidth_rules, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            self.SetSizer( vbox )
+            self.setLayout( vbox )
             
         
         def GetValue( self ):
@@ -3462,7 +3456,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUICommon.StaticBox.__init__( self, parent, 'file repository' )
             
-            self._log_uploader_ips = wx.CheckBox( self )
+            self._log_uploader_ips = QW.QCheckBox( self )
             self._max_storage = ClientGUIControls.NoneableBytesControl( self, initial_value = 5 * 1024 * 1024 * 1024 )
             
             #
@@ -3470,7 +3464,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             log_uploader_ips = dictionary[ 'log_uploader_ips' ]
             max_storage = dictionary[ 'max_storage' ]
             
-            self._log_uploader_ips.SetValue( log_uploader_ips )
+            self._log_uploader_ips.setChecked( log_uploader_ips )
             self._max_storage.SetValue( max_storage )
             
             #
@@ -3489,7 +3483,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             dictionary_part = {}
             
-            log_uploader_ips = self._log_uploader_ips.GetValue()
+            log_uploader_ips = self._log_uploader_ips.isChecked()
             max_storage = self._max_storage.GetValue()
             
             dictionary_part[ 'log_uploader_ips' ] = log_uploader_ips
@@ -3517,7 +3511,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             bandwidth_text = bandwidth_tracker.GetCurrentMonthSummary()
             
-            self._bandwidth_tracker_st.SetLabelText( bandwidth_text )
+            self._bandwidth_tracker_st.setText( bandwidth_text )
             
             #
             
@@ -3549,7 +3543,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         self._delay_st = ClientGUICommon.BetterStaticText( self )
         
         #
@@ -3614,9 +3608,9 @@ If you are not experienced with subscriptions, I strongly suggest you set these 
 
 If you want to get all of an artist's files from a site, use the manual gallery download page first. A good routine is to check that you have the right search text and it all works correctly and that you know what tags you want, and then once that big queue is fully downloaded synced, start a new sub with the same settings to continue checking for anything posted in future.'''
         
-        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
+        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalPixmaps.help, QW.QMessageBox.information, None, 'Information', message )
         
-        help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox_1 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about file limits -->', QG.QColor( 0, 0, 255 ) )
         
         message = '''****Hitting the normal/periodic limit may or may not be a big deal****
 
@@ -3630,9 +3624,9 @@ If 1 is true, you might want to increase its periodic limit a little, or speed u
 
 But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--the maintainer for the site's download parser (hydrus dev or whoever), would be interested in knowing what has happened so they can roll out a fix.'.'''
         
-        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
+        help_button = ClientGUICommon.BetterBitmapButton( self._file_limits_panel, CC.GlobalPixmaps.help, QW.QMessageBox.information, None, 'Information', message )
         
-        help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about hitting the normal file limit -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox_2 = ClientGUICommon.WrapInText( help_button, self._file_limits_panel, 'help about hitting the normal file limit -->', QG.QColor( 0, 0, 255 ) )
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -3643,35 +3637,35 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             limits_max = 1000
             
         
-        self._initial_file_limit = wx.SpinCtrl( self._file_limits_panel, min = 1, max = limits_max )
-        self._initial_file_limit.SetToolTip( 'The first sync will add no more than this many URLs.' )
+        self._initial_file_limit = QP.MakeQSpinBox( self._file_limits_panel, min=1, max=limits_max )
+        self._initial_file_limit.setToolTip( 'The first sync will add no more than this many URLs.' )
         
-        self._periodic_file_limit = wx.SpinCtrl( self._file_limits_panel, min = 1, max = limits_max )
-        self._periodic_file_limit.SetToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
+        self._periodic_file_limit = QP.MakeQSpinBox( self._file_limits_panel, min=1, max=limits_max )
+        self._periodic_file_limit.setToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
         
         self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'presentation' )
         
-        self._show_a_popup_while_working = wx.CheckBox( self._file_presentation_panel )
-        self._show_a_popup_while_working.SetToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' )
+        self._show_a_popup_while_working = QW.QCheckBox( self._file_presentation_panel )
+        self._show_a_popup_while_working.setToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' )
         
-        self._publish_files_to_popup_button = wx.CheckBox( self._file_presentation_panel )
-        self._publish_files_to_page = wx.CheckBox( self._file_presentation_panel )
+        self._publish_files_to_popup_button = QW.QCheckBox( self._file_presentation_panel )
+        self._publish_files_to_page = QW.QCheckBox( self._file_presentation_panel )
         self._publish_label_override = ClientGUICommon.NoneableTextCtrl( self._file_presentation_panel, none_phrase = 'no, use subscription name' )
-        self._merge_query_publish_events = wx.CheckBox( self._file_presentation_panel )
+        self._merge_query_publish_events = QW.QCheckBox( self._file_presentation_panel )
         
         tt = 'This is great to merge multiple subs to a combined location!'
         
-        self._publish_label_override.SetToolTip( tt )
+        self._publish_label_override.setToolTip( tt )
         
         tt = 'If unchecked, each query will produce its own \'subscription_name: query\' button or page.'
         
-        self._merge_query_publish_events.SetToolTip( tt )
+        self._merge_query_publish_events.setToolTip( tt )
         
         #
         
         self._control_panel = ClientGUICommon.StaticBox( self, 'control' )
         
-        self._paused = wx.CheckBox( self._control_panel )
+        self._paused = QW.QCheckBox( self._control_panel )
         
         #
         
@@ -3682,24 +3676,24 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         self._queries.AddDatas( queries )
         
         self._queries.Sort()
         
-        self._initial_file_limit.SetValue( initial_file_limit )
-        self._periodic_file_limit.SetValue( periodic_file_limit )
+        self._initial_file_limit.setValue( initial_file_limit )
+        self._periodic_file_limit.setValue( periodic_file_limit )
         
         ( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events ) = subscription.GetPresentationOptions()
         
-        self._show_a_popup_while_working.SetValue( show_a_popup_while_working )
-        self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
-        self._publish_files_to_page.SetValue( publish_files_to_page )
+        self._show_a_popup_while_working.setChecked( show_a_popup_while_working )
+        self._publish_files_to_popup_button.setChecked( publish_files_to_popup_button )
+        self._publish_files_to_page.setChecked( publish_files_to_page )
         self._publish_label_override.SetValue( publish_label_override )
-        self._merge_query_publish_events.SetValue( merge_query_publish_events )
+        self._merge_query_publish_events.setChecked( merge_query_publish_events )
         
-        self._paused.SetValue( paused )
+        self._paused.setChecked( paused )
         
         #
         
@@ -3746,18 +3740,18 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._name,self,'name: '), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_limits_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._UpdateDelayText()
         
@@ -3776,7 +3770,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 query = panel.GetValue()
                 
@@ -3784,7 +3778,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
                 
                 if query_text in self._GetCurrentQueryTexts():
                     
-                    wx.MessageBox( 'You already have a query for "' + query_text + '", so nothing new has been added.' )
+                    QW.QMessageBox.warning( self, 'Warning', 'You already have a query for "'+query_text+'", so nothing new has been added.' )
                     
                     return
                     
@@ -3934,7 +3928,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_query = panel.GetValue()
                     
@@ -3942,7 +3936,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
                     
                     if edited_query_text != old_query.GetQueryText() and edited_query_text in self._GetCurrentQueryTexts():
                         
-                        wx.MessageBox( 'You already have a query for "' + edited_query_text + '"! The edit you just made will not be saved.' )
+                        QW.QMessageBox.warning( self, 'Warning', 'You already have a query for "'+edited_query_text+'"! The edit you just made will not be saved.' )
                         
                         break
                         
@@ -4063,7 +4057,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         message = os.linesep.join( data_strings )
         
-        wx.MessageBox( message )
+        QW.QMessageBox.information( self, 'Information', message )
         
     
     def _ListCtrlCanCheckNow( self ):
@@ -4124,7 +4118,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != wx.ID_YES:
+        if result != QW.QDialog.Accepted:
             
             return
             
@@ -4135,7 +4129,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -4170,7 +4164,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
                     message += 'Were new and will be added.'
                     
                 
-                wx.MessageBox( message )
+                QW.QMessageBox.information( self, 'Information', message )
                 
             
             queries = [ ClientImportSubscriptions.SubscriptionQuery( query_text ) for query_text in new_query_texts ]
@@ -4179,7 +4173,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
         except:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
         
     
@@ -4201,7 +4195,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             selected_queries = self._queries.GetData( only_selected = True )
             
@@ -4253,12 +4247,12 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             status = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
             
         
-        self._delay_st.SetLabelText( status )
+        self._delay_st.setText( status )
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
         subscription = ClientImportSubscriptions.Subscription( name )
         
@@ -4266,10 +4260,10 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         queries = self._queries.GetData()
         
-        initial_file_limit = self._initial_file_limit.GetValue()
-        periodic_file_limit = self._periodic_file_limit.GetValue()
+        initial_file_limit = self._initial_file_limit.value()
+        periodic_file_limit = self._periodic_file_limit.value()
         
-        paused = self._paused.GetValue()
+        paused = self._paused.isChecked()
         
         checker_options = self._checker_options.GetValue()
         file_import_options = self._file_import_options.GetValue()
@@ -4277,11 +4271,11 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         
         subscription.SetTuple( gug_key_and_name, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
-        show_a_popup_while_working = self._show_a_popup_while_working.GetValue()
-        publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
-        publish_files_to_page = self._publish_files_to_page.GetValue()
+        show_a_popup_while_working = self._show_a_popup_while_working.isChecked()
+        publish_files_to_popup_button = self._publish_files_to_popup_button.isChecked()
+        publish_files_to_page = self._publish_files_to_page.isChecked()
         publish_label_override = self._publish_label_override.GetValue()
-        merge_query_publish_events = self._merge_query_publish_events.GetValue()
+        merge_query_publish_events = self._merge_query_publish_events.isChecked()
         
         subscription.SetPresentationOptions( show_a_popup_while_working, publish_files_to_popup_button, publish_files_to_page, publish_label_override, merge_query_publish_events )
         
@@ -4300,12 +4294,12 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         st_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._status_st, 50 )
         
-        self._status_st.SetMinSize( ( st_width, -1 ) )
+        self._status_st.setMinimumWidth( st_width )
         
         self._display_name = ClientGUICommon.NoneableTextCtrl( self, none_phrase = 'show query text' )
-        self._query_text = wx.TextCtrl( self )
-        self._check_now = wx.CheckBox( self )
-        self._paused = wx.CheckBox( self )
+        self._query_text = QW.QLineEdit( self )
+        self._check_now = QW.QCheckBox( self )
+        self._paused = QW.QCheckBox( self )
         
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, HG.client_controller )
         
@@ -4324,11 +4318,11 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._display_name.SetValue( display_name )
         
-        self._query_text.SetValue( query_text )
+        self._query_text.setText( query_text )
         
-        self._check_now.SetValue( check_now )
+        self._check_now.setChecked( check_now )
         
-        self._paused.SetValue( paused )
+        self._paused.setChecked( paused )
         
         self._file_seed_cache = self._original_query.GetFileSeedCache().Duplicate()
         
@@ -4349,36 +4343,37 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
+        self._check_now.clicked.connect( self._UpdateStatus )
+        self._paused.clicked.connect( self._UpdateStatus )
         
         self._UpdateStatus()
         
-        self._query_text.SetSelection( -1, -1 ) # select all
+        self._query_text.selectAll()
         
-        wx.CallAfter( self._query_text.SetFocus )
+        QP.CallAfter( self._query_text.setFocus, QC.Qt.OtherFocusReason )
         
     
     def _GetValue( self ):
         
         query = self._original_query.Duplicate()
         
-        query.SetQueryAndSeeds( self._query_text.GetValue(), self._file_seed_cache, self._gallery_seed_log )
+        query.SetQueryAndSeeds( self._query_text.text(), self._file_seed_cache, self._gallery_seed_log )
         
-        query.SetPaused( self._paused.GetValue() )
+        query.SetPaused( self._paused.isChecked() )
         
-        query.SetCheckNow( self._check_now.GetValue() )
+        query.SetCheckNow( self._check_now.isChecked() )
         
         query.SetDisplayName( self._display_name.GetValue() )
         
@@ -4391,12 +4386,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query = self._GetValue()
         
-        self._status_st.SetLabelText( 'next check: ' + query.GetNextCheckStatusString() )
-        
-    
-    def EventUpdate( self, event ):
-        
-        self._UpdateStatus()
+        self._status_st.setText( 'next check: '+query.GetNextCheckStatusString() )
         
     
     def GetValue( self ):
@@ -4420,9 +4410,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -4469,30 +4459,30 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
         
         message = 'Subscriptions do not work well if they get too large! If any sub has >200,000 items, separate it into smaller pieces immediately!'
         
         st = ClientGUICommon.BetterStaticText( self, message )
-        st.SetForegroundColour( ( 127, 0, 0 ) )
+        QP.SetForegroundColour( st, ( 127, 0, 0 ) )
         
-        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if subs_are_globally_paused:
             
             message = 'SUBSCRIPTIONS ARE CURRENTLY GLOBALLY PAUSED! CHECK THE NETWORK MENU TO UNPAUSE THEM.'
             
             st = ClientGUICommon.BetterStaticText( self, message )
-            st.SetForegroundColour( ( 127, 0, 0 ) )
+            QP.SetForegroundColour( st, (127,0,0) )
             
-            vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.Add( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddSubscription( self, subscription ):
@@ -4770,7 +4760,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                wx.MessageBox( 'That was not a subscription--it was a: ' + type( obj ).__name__ )
+                QW.QMessageBox.warning( self, 'Warning', 'That was not a subscription--it was a: '+type(obj).__name__ )
                 
             
         
@@ -4789,7 +4779,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_subscription = panel.GetValue()
                 
@@ -4828,9 +4818,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                result = dlg.ShowModal()
+                result = dlg.exec()
                 
-                if result == wx.ID_OK:
+                if result == QW.QDialog.Accepted:
                     
                     self._subscriptions.DeleteDatas( ( subscription, ) )
                     
@@ -4840,7 +4830,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._subscriptions.AddDatas( ( edited_subscription, ) )
                     
-                elif result == wx.ID_CANCEL:
+                elif dlg.WasCancelled():
                     
                     break
                     
@@ -4867,7 +4857,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             original_subs = self._subscriptions.GetData( only_selected = True )
             
@@ -4902,7 +4892,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( mergeable_groups ) == 0:
                 
-                wx.MessageBox( 'Unfortunately, none of those subscriptions appear to be mergeable!' )
+                QW.QMessageBox.information( self, 'Information', 'Unfortunately, none of those subscriptions appear to be mergeable!' )
                 
                 return
                 
@@ -4932,7 +4922,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         name = dlg.GetValue()
                         
@@ -4980,7 +4970,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             subscriptions = self._subscriptions.GetData( only_selected = True )
             
@@ -5035,11 +5025,11 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 search_text = dlg.GetValue()
                 
-                self._subscriptions.SelectNone()
+                self._subscriptions.clearSelection()
                 
                 selectee_subscriptions = []
                 
@@ -5062,7 +5052,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( subscriptions ) != 1:
             
-            wx.MessageBox( 'Separate only works if one subscription is selected!' )
+            QW.QMessageBox.critical( self, 'Error', 'Separate only works if one subscription is selected!' )
             
             return
             
@@ -5073,7 +5063,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if num_queries <= 1:
             
-            wx.MessageBox( 'Separate only works if the selected subscription has more than one query!' )
+            QW.QMessageBox.critical( self, 'Error', 'Separate only works if the selected subscription has more than one query!' )
             
             return
             
@@ -5084,7 +5074,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return
                 
@@ -5098,7 +5088,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_YES:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     action = dlg.GetValue()
                     
@@ -5127,7 +5117,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     queries_to_extract = panel.GetValue()
                     
@@ -5149,7 +5139,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_YES:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         want_post_merge = dlg.GetValue()
                         
@@ -5174,7 +5164,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, message, default = subscription.GetName() ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     name = dlg.GetValue()
                     
@@ -5266,7 +5256,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 checker_options = panel.GetValue()
                 
@@ -5298,7 +5288,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 tag_import_options = panel.GetValue()
                 
@@ -5322,7 +5312,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         min_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._tag_services, 100 )
         
-        self._tag_services.SetMinSize( ( min_width, -1 ) )
+        self._tag_services.setMinimumWidth( min_width )
         
         #
         
@@ -5339,12 +5329,13 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             select = service_key == CC.COMBINED_TAG_SERVICE_KEY
             
-            self._tag_services.AddPage( page, name, select = select )
+            self._tag_services.addTab( page, name )
+            if select: self._tag_services.setCurrentWidget( page )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         intro = 'Please note this new system is under construction. It is neither completely functional nor as efficient as intended.'
         
@@ -5352,10 +5343,10 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         st.SetWrapWidth( min_width - 50 )
         
-        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -5375,11 +5366,11 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         return tag_display_manager
         
     
-    class _Panel( wx.Panel ):
+    class _Panel( QW.QWidget ):
         
         def __init__( self, parent, tag_display_manager, service_key ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             single_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key )
             selection_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, service_key )
@@ -5405,18 +5396,18 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
             if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
                 message = 'These filters apply to all tag services.'
                 
-                vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, gridbox )
             
-            self.SetSizer( vbox )
+            self.setLayout( vbox )
             
         
         def GetValue( self ):
@@ -5442,14 +5433,14 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        help_button.SetToolTip( 'Show help regarding these tag options.' )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button.setToolTip( 'Show help regarding these tag options.' )
         
         #
         
         default_panel = ClientGUICommon.StaticBox( self, 'default options' )
         
-        self._is_default = wx.CheckBox( default_panel )
+        self._is_default = QW.QCheckBox( default_panel )
         
         tt = 'If this is checked, the client will refer to the defaults (as set under "network->downloaders->manage default tag import options") for the appropriate tag import options at the time of import.'
         tt += os.linesep * 2
@@ -5457,20 +5448,20 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += os.linesep * 2
         tt += 'But if you are doing a one-time import that has some unusual tag rules, uncheck this and set those specific rules here.'
         
-        self._is_default.SetToolTip( tt )
+        self._is_default.setToolTip( tt )
         
         self._load_default_options = ClientGUICommon.BetterButton( default_panel, 'load one of the default options', self._LoadDefaultOptions )
         
         #
         
-        self._specific_options_panel = wx.Panel( self )
+        self._specific_options_panel = QW.QWidget( self )
         
         #
         
         downloader_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'fetch options' )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
         
         tag_blacklist = tag_import_options.GetTagBlacklist()
         
@@ -5479,16 +5470,16 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the simple blacklist and hit ok. It is worth doing a small test, just to make sure it is all set up how you want.'
         
         self._tag_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, is_blacklist = True )
-        self._tag_filter_button.SetToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
+        self._tag_filter_button.setToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
         
-        self._services_vbox = wx.BoxSizer( wx.VERTICAL )
+        self._services_vbox = QP.VBoxLayout()
         
         #
         
-        self._is_default.SetValue( tag_import_options.IsDefault() )
+        self._is_default.setChecked( tag_import_options.IsDefault() )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
         self._InitialiseServices( tag_import_options )
         
@@ -5505,7 +5496,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not allow_default_selection:
             
-            default_panel.Hide()
+            default_panel.hide()
             
         
         #
@@ -5522,31 +5513,31 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not self._show_downloader_options:
             
-            downloader_options_panel.Hide()
+            downloader_options_panel.hide()
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self._specific_options_panel.SetSizer( vbox )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
+        self._specific_options_panel.setLayout( vbox )
         
         #
         
-        self._is_default.Bind( wx.EVT_CHECKBOX, self.EventIsDefault )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_button, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self._is_default.clicked.connect( self._UpdateIsDefault )
         
         self._UpdateIsDefault()
         
@@ -5565,7 +5556,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
             
-            self._services_vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( self._services_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
     
@@ -5614,12 +5605,12 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetValue( self, tag_import_options ):
         
-        self._is_default.SetValue( tag_import_options.IsDefault() )
+        self._is_default.setChecked( tag_import_options.IsDefault() )
         
         self._tag_filter_button.SetValue( tag_import_options.GetTagBlacklist() )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
         for ( service_key, panel ) in list(self._service_keys_to_service_tag_import_options_panels.items()):
             
@@ -5647,26 +5638,21 @@ You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my
 
 Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default tag import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
         
-        wx.MessageBox( message )
+        QW.QMessageBox.information( self, 'Information', message )
         
     
     def _UpdateIsDefault( self ):
         
-        is_default = self._is_default.GetValue()
+        is_default = self._is_default.isChecked()
         
         show_specific_options = not is_default
         
-        self._specific_options_panel.Enable( show_specific_options )
-        
-    
-    def EventIsDefault( self, event ):
-        
-        self._UpdateIsDefault()
+        self._specific_options_panel.setEnabled( show_specific_options )
         
     
     def GetValue( self ):
         
-        is_default = self._is_default.GetValue()
+        is_default = self._is_default.isChecked()
         
         if is_default:
             
@@ -5674,10 +5660,10 @@ Please note that once you know what tags you like, you can (and should) set up t
             
         else:
             
-            fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.GetValue()
-            fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.GetValue()
+            fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.isChecked()
+            fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.isChecked()
             
-            service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in list(self._service_keys_to_service_tag_import_options_panels.items()) }
+            service_keys_to_service_tag_import_options = {service_key : panel.GetValue() for (service_key, panel) in list( self._service_keys_to_service_tag_import_options_panels.items() )}
             
             tag_blacklist = self._tag_filter_button.GetValue()
             
@@ -5693,8 +5679,8 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._list = wx.ListBox( self )
-        self._list.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
+        self._list = QW.QListWidget( self )
+        self._list.itemDoubleClicked.connect( self.EventSelect )
         
         max_width = max( ( len( label ) for ( label, value ) in choice_tuples ) )
         
@@ -5703,7 +5689,7 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         
         l_size = ClientGUIFunctions.ConvertTextToPixels( self._list, ( width_chars, height_chars ) )
         
-        self._list.SetMinClientSize( l_size )
+        QP.SetMinClientSize( self._list, l_size )
         
         #
         
@@ -5730,11 +5716,14 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for ( i, ( label, value ) ) in enumerate( choice_tuples ):
             
-            self._list.Append( label, value )
+            item = QW.QListWidgetItem()
+            item.setText( label )
+            item.setData( QC.Qt.UserRole, value )
+            self._list.addItem( item )
             
             if value_to_select is not None and value_to_select == value:
                 
-                self._list.Select( i )
+                QP.ListWidgetSetSelection( self._list, i )
                 
                 selected_a_value = True
                 
@@ -5742,28 +5731,28 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not selected_a_value:
             
-            self._list.Select( 0 )
+            QP.ListWidgetSetSelection( self._list, 0 )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
-    def EventSelect( self, event ):
+    def EventSelect( self, item ):
         
-        self.GetParent().DoOK()
+        self.parentWidget().DoOK()
         
     
     def GetValue( self ):
         
-        selection = self._list.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._list ) 
         
-        return self._list.GetClientData( selection )
+        return QP.GetClientData( self._list, selection )
         
     
 class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -5774,7 +5763,7 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._data = None
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         first_focused = False
         
@@ -5782,26 +5771,26 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             button = ClientGUICommon.BetterButton( self, text, self._ButtonChoice, data )
             
-            button.SetToolTip( tooltip )
+            button.setToolTip( tooltip )
             
-            vbox.Add( button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             if not first_focused:
                 
-                wx.CallAfter( button.SetFocus )
+                QP.CallAfter( button.setFocus, QC.Qt.OtherFocusReason)
                 
                 first_focused = True
                 
             
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ButtonChoice( self, data ):
         
         self._data = data
         
-        self.GetParent().DoOK()
+        self.parentWidget().DoOK()
         
     
     def GetValue( self ):
@@ -5829,13 +5818,13 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = self._GetCogIconMenuItems()
         
-        cog_button = ClientGUICommon.MenuBitmapButton( main_box, CC.GlobalBMPs.cog, menu_items )
+        cog_button = ClientGUICommon.MenuBitmapButton( main_box, CC.GlobalPixmaps.cog, menu_items )
         
         #
         
         downloader_options_panel = ClientGUICommon.StaticBox( main_box, 'tag parsing' )
         
-        self._get_tags_checkbox = wx.CheckBox( downloader_options_panel, label = 'get tags' )
+        self._get_tags_checkbox = QW.QCheckBox( 'get tags', downloader_options_panel )
         
         if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -5852,10 +5841,10 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._get_tags_filter_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, get_tags_filter )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._get_tags_checkbox, CC.FLAGS_VCENTER )
-        hbox.Add( self._get_tags_filter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._get_tags_checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._get_tags_filter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         downloader_options_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -5865,24 +5854,24 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._get_tags_checkbox.SetValue( get_tags )
+        self._get_tags_checkbox.setChecked( get_tags )
         
         #
         
         if not show_downloader_options:
             
-            downloader_options_panel.Hide()
+            downloader_options_panel.hide()
             
         
         main_box.Add( cog_button, CC.FLAGS_LONE_BUTTON )
         main_box.Add( downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         main_box.Add( self._additional_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( main_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, main_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._UpdateAdditionalTagsButtonLabel()
         
@@ -5890,7 +5879,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._get_tags_checkbox.Bind( wx.EVT_CHECKBOX, self.EventGetTagsCheckbox )
+        self._get_tags_checkbox.clicked.connect( self._UpdateGetTags )
         
     
     def _DoAdditionalTags( self ):
@@ -5899,7 +5888,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogInputTags( self, self._service_key, list( self._additional_tags ), message = message ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._additional_tags = dlg.GetTags()
                 
@@ -5926,7 +5915,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._only_add_existing_tags_filter = panel.GetValue()
                 
@@ -5966,26 +5955,21 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         button_label = HydrusData.ToHumanInt( len( self._additional_tags ) ) + ' additional tags'
         
-        self._additional_button.SetLabelText( button_label )
+        self._additional_button.setText( button_label )
         
     
     def _UpdateGetTags( self ):
         
-        get_tags = self._get_tags_checkbox.GetValue()
+        get_tags = self._get_tags_checkbox.isChecked()
         
         should_enable_filter = get_tags
         
-        self._get_tags_filter_button.Enable( should_enable_filter )
-        
-    
-    def EventGetTagsCheckbox( self, event ):
-        
-        self._UpdateGetTags()
+        self._get_tags_filter_button.setEnabled( should_enable_filter )
         
     
     def GetValue( self ):
         
-        get_tags = self._get_tags_checkbox.GetValue()
+        get_tags = self._get_tags_checkbox.isChecked()
         
         get_tags_filter = self._get_tags_filter_button.GetValue()
         
@@ -5998,7 +5982,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter ) = service_tag_import_options.ToTuple()
         
-        self._get_tags_checkbox.SetValue( get_tags )
+        self._get_tags_checkbox.setChecked( get_tags )
         
         self._get_tags_filter_button.SetValue( get_tags_filter )
         
@@ -6015,7 +5999,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         show_panel = ClientGUICommon.StaticBox( self, 'shows' )
         
-        self._show = wx.CheckBox( show_panel )
+        self._show = QW.QCheckBox( show_panel )
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
@@ -6024,25 +6008,26 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._namespaces_listbox = ClientGUIListBoxes.QueueListBox( edit_panel, 8, self._ConvertNamespaceToListBoxString, self._AddNamespaceInfo, self._EditNamespaceInfo )
         
-        self._separator = wx.TextCtrl( edit_panel )
+        self._separator = QW.QLineEdit( edit_panel )
         
         example_panel = ClientGUICommon.StaticBox( self, 'example' )
         
-        self._example_tags = wx.TextCtrl( example_panel, style = wx.TE_MULTILINE )
+        self._example_tags = QW.QPlainTextEdit( example_panel )
         
-        self._test_result = wx.TextCtrl( example_panel, style = wx.TE_READONLY )
+        self._test_result = QW.QLineEdit( example_panel )
+        self._test_result.setReadOnly( True )
         
         #
         
         ( background_colour, text_colour, namespace_info, separator, example_tags, show ) = tag_summary_generator.ToTuple()
         
-        self._show.SetValue( show )
+        self._show.setChecked( show )
         
         self._background_colour.SetValue( background_colour )
         self._text_colour.SetValue( text_colour )
         self._namespaces_listbox.AddDatas( namespace_info )
-        self._separator.SetValue( separator )
-        self._example_tags.SetValue( os.linesep.join( example_tags ) )
+        self._separator.setText( separator )
+        self._example_tags.setPlainText( os.linesep.join( example_tags ) )
         
         self._UpdateTest()
         
@@ -6072,20 +6057,20 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         example_panel.Add( self._example_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         example_panel.Add( self._test_result, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( show_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, show_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._show.Bind( wx.EVT_CHECKBOX, self.EventChange )
-        self._separator.Bind( wx.EVT_TEXT, self.EventChange )
-        self._example_tags.Bind( wx.EVT_TEXT, self.EventChange )
-        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventChange )
+        self._show.clicked.connect( self._UpdateTest )
+        self._separator.textChanged.connect( self._UpdateTest )
+        self._example_tags.textChanged.connect( self._UpdateTest )
+        self._namespaces_listbox.listBoxChanged.connect( self._UpdateTest )
         
     
     def _AddNamespaceInfo( self ):
@@ -6126,7 +6111,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message, namespace, allow_blank = True ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 namespace = dlg.GetValue()
                 
@@ -6140,7 +6125,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message, prefix, allow_blank = True ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 prefix = dlg.GetValue()
                 
@@ -6154,7 +6139,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message, separator, allow_blank = True ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 separator = dlg.GetValue()
                 
@@ -6173,25 +6158,18 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_summary_generator = self.GetValue()
         
-        self._test_result.SetValue( tag_summary_generator.GenerateExampleSummary() )
-        
-    
-    def EventChange( self, event ):
-        
-        self._UpdateTest()
-        
-        event.Skip()
+        self._test_result.setText( tag_summary_generator.GenerateExampleSummary() )
         
     
     def GetValue( self ):
         
-        show = self._show.GetValue()
+        show = self._show.isChecked()
         
         background_colour = self._background_colour.GetValue()
         text_colour = self._text_colour.GetValue()
         namespace_info = self._namespaces_listbox.GetData()
-        separator = self._separator.GetValue()
-        example_tags = HydrusTags.CleanTags( HydrusText.DeserialiseNewlinedTexts( self._example_tags.GetValue() ) )
+        separator = self._separator.text()
+        example_tags = HydrusTags.CleanTags( HydrusText.DeserialiseNewlinedTexts( self._example_tags.toPlainText() ) )
         
         return ClientGUITags.TagSummaryGenerator( background_colour, text_colour, namespace_info, separator, example_tags, show )
         
@@ -6215,11 +6193,11 @@ class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._tag_summary_generator = panel.GetValue()
                 
-                self.SetLabelText( self._tag_summary_generator.GenerateExampleSummary() )
+                self.setText( self._tag_summary_generator.GenerateExampleSummary() )
                 
             
         
@@ -6234,26 +6212,28 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     def __init__( self, parent, url_class ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+
+        self._update_already_in_progress = False # Used to avoid infinite recursion on control updates.
         
         self._original_url_class = url_class
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
         self._url_type = ClientGUICommon.BetterChoice( self )
         
         for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE, HC.URL_TYPE_FILE ):
             
-            self._url_type.Append( HC.url_type_string_lookup[ url_type ], url_type )
+            self._url_type.addItem( HC.url_type_string_lookup[ url_type ], url_type )
             
         
         self._preferred_scheme = ClientGUICommon.BetterChoice( self )
         
-        self._preferred_scheme.Append( 'http', 'http' )
-        self._preferred_scheme.Append( 'https', 'https' )
+        self._preferred_scheme.addItem( 'http', 'http' )
+        self._preferred_scheme.addItem( 'https', 'https' )
         
-        self._netloc = wx.TextCtrl( self )
+        self._netloc = QW.QLineEdit( self )
         
-        self._match_subdomains = wx.CheckBox( self )
+        self._match_subdomains = QW.QCheckBox( self )
         
         tt = 'Should this class apply to subdomains as well?'
         tt += os.linesep * 2
@@ -6261,25 +6241,25 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += os.linesep * 2
         tt += 'Any subdomain starting with \'www\' is automatically matched, so do not worry about having to account for that.'
         
-        self._match_subdomains.SetToolTip( tt )
+        self._match_subdomains.setToolTip( tt )
         
-        self._keep_matched_subdomains = wx.CheckBox( self )
+        self._keep_matched_subdomains = QW.QCheckBox( self )
         
         tt = 'Should this url keep its matched subdomains when it is normalised?'
         tt += os.linesep * 2
         tt += 'This is typically useful for direct file links that are often served on a numbered CDN subdomain like \'img3.example.com\' but are also valid on the neater main domain.'
         
-        self._keep_matched_subdomains.SetToolTip( tt )
+        self._keep_matched_subdomains.setToolTip( tt )
         
-        self._can_produce_multiple_files = wx.CheckBox( self )
+        self._can_produce_multiple_files = QW.QCheckBox( self )
         
         tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
         tt += os.linesep * 2
         tt += 'Most booru-type Post URLs only produce one file per URL and should not have this checked. Checking this avoids some bad logic where the client would falsely think it if it had seen one file at the URL, it had seen them all, but it then means the client has to download those pages\' content again whenever it sees them (so it can check against the direct File URLs, which are always considered one-file each).'
         
-        self._can_produce_multiple_files.SetToolTip( tt )
+        self._can_produce_multiple_files.setToolTip( tt )
         
-        self._should_be_associated_with_files = wx.CheckBox( self )
+        self._should_be_associated_with_files = QW.QCheckBox( self )
         
         tt = 'If checked, the client will try to remember this url with any files it ends up importing. It will present this url in \'known urls\' ui across the program.'
         tt += os.linesep * 2
@@ -6287,7 +6267,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += os.linesep * 2
         tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for booru gallery or thread urls, which alter regularly, but is for static Post URLs or some fixed doujin galleries.'
         
-        self._should_be_associated_with_files.SetToolTip( tt )
+        self._should_be_associated_with_files.setToolTip( tt )
         
         #
         
@@ -6317,21 +6297,22 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._next_gallery_page_choice = ClientGUICommon.BetterChoice( self._next_gallery_page_panel )
         
-        self._next_gallery_page_delta = wx.SpinCtrl( self._next_gallery_page_panel, min = 1, max = 65536 )
+        self._next_gallery_page_delta = QP.MakeQSpinBox( self._next_gallery_page_panel, min=1, max=65536 )
         
         #
         
-        self._example_url = wx.TextCtrl( self )
+        self._example_url = QW.QLineEdit( self )
         
         self._example_url_classes = ClientGUICommon.BetterStaticText( self )
         
-        self._normalised_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._normalised_url = QW.QLineEdit( self )
+        self._normalised_url.setReadOnly( True )
         
         tt = 'The same url can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/some-changing-tags-here" can be appended and then altered at a later date. In order to collapse all the different expressions of a url down to a single comparable form, the client will \'normalise\' them based on the essential definitions in their url class. Parameters will be alphebatised and non-defined elements will be removed.'
         tt += os.linesep * 2
         tt += 'All normalisation will switch to the preferred scheme, but the alphabetisation of parameters and stripping out of non-defined elements will only occur if this url is associated with files or uses an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex transformation into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
         
-        self._normalised_url.SetToolTip( tt )
+        self._normalised_url.setToolTip( tt )
         
         ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = url_class.ToTuple()
         
@@ -6339,47 +6320,50 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for send_referral_url_type in ClientNetworkingDomain.SEND_REFERRAL_URL_TYPES:
             
-            self._send_referral_url.Append( ClientNetworkingDomain.send_referral_url_string_lookup[ send_referral_url_type ], send_referral_url_type )
+            self._send_referral_url.addItem( ClientNetworkingDomain.send_referral_url_string_lookup[ send_referral_url_type ], send_referral_url_type )
             
         
         tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
         
-        self._send_referral_url.SetToolTip( tt )
+        self._send_referral_url.setToolTip( tt )
         
         self._referral_url_converter = ClientGUIControls.StringConverterButton( self, referral_url_converter )
         
         tt = 'This will generate a referral URL from the original URL. If the URL needs a referral URL, and you can infer what that would be from just this URL, this will let hydrus download this URL without having to previously visit the referral URL (e.g. letting the user drag-and-drop import). It also lets you set up alternate referral URLs for perculiar situations.'
         
-        self._referral_url_converter.SetToolTip( tt )
+        self._referral_url_converter.setToolTip( tt )
         
-        self._referral_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._referral_url = QW.QLineEdit()
+        self._referral_url.setReadOnly( True )
         
         self._api_lookup_converter = ClientGUIControls.StringConverterButton( self, api_lookup_converter )
         
         tt = 'This will let you generate an alternate URL for the client to use for the actual download whenever it encounters a URL in this class. You must have a separate URL class to match the API type (which will link to parsers).'
         
-        self._api_lookup_converter.SetToolTip( tt )
+        self._api_lookup_converter.setToolTip( tt )
         
-        self._api_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._api_url = QW.QLineEdit( self )
+        self._api_url.setReadOnly( True )
         
-        self._next_gallery_page_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._next_gallery_page_url = QW.QLineEdit( self )
+        self._next_gallery_page_url.setReadOnly( True )
         
         #
         
         name = url_class.GetName()
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         self._url_type.SetValue( url_type )
         
         self._preferred_scheme.SetValue( preferred_scheme )
         
-        self._netloc.SetValue( netloc )
+        self._netloc.setText( netloc )
         
-        self._match_subdomains.SetValue( match_subdomains )
-        self._keep_matched_subdomains.SetValue( keep_matched_subdomains )
-        self._can_produce_multiple_files.SetValue( can_produce_multiple_files )
-        self._should_be_associated_with_files.SetValue( should_be_associated_with_files )
+        self._match_subdomains.setChecked( match_subdomains )
+        self._keep_matched_subdomains.setChecked( keep_matched_subdomains )
+        self._can_produce_multiple_files.setChecked( can_produce_multiple_files )
+        self._should_be_associated_with_files.setChecked( should_be_associated_with_files )
         
         self._path_components.AddDatas( path_components )
         
@@ -6387,21 +6371,21 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parameters.Sort()
         
-        self._example_url.SetValue( example_url )
+        self._example_url.setText( example_url )
         
         example_url_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._example_url, 75 )
         
-        self._example_url.SetMinSize( ( example_url_width, -1 ) )
+        self._example_url.setMinimumWidth( example_url_width )
         
         self._send_referral_url.SetValue( send_referral_url )
         
         ( gallery_index_type, gallery_index_identifier, gallery_index_delta ) = url_class.GetGalleryIndexValues()
         
         # this preps it for the upcoming update
-        self._next_gallery_page_choice.Append( 'initialisation', ( gallery_index_type, gallery_index_identifier ) )
-        self._next_gallery_page_choice.Select( 0 )
+        self._next_gallery_page_choice.addItem( 'initialisation', ( gallery_index_type, gallery_index_identifier ) )
+        self._next_gallery_page_choice.setCurrentIndex( 0 )
         
-        self._next_gallery_page_delta.SetValue( gallery_index_delta )
+        self._next_gallery_page_delta.setValue( gallery_index_delta )
         
         self._UpdateControls()
         
@@ -6416,10 +6400,10 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._next_gallery_page_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._next_gallery_page_delta, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._next_gallery_page_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._next_gallery_page_delta, CC.FLAGS_VCENTER )
         
         self._next_gallery_page_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -6451,39 +6435,41 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._example_url_classes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._next_gallery_page_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_url_classes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._preferred_scheme.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._netloc.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
-        self._next_gallery_page_choice.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._next_gallery_page_delta.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
-        self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
-        self._url_type.Bind( wx.EVT_CHOICE, self.EventURLTypeUpdate )
-        self._send_referral_url.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._referral_url_converter.Bind( ClientGUIControls.EVT_STRING_CONVERTER, self.EventUpdate )
-        self._api_lookup_converter.Bind( ClientGUIControls.EVT_STRING_CONVERTER, self.EventUpdate )
+        self._preferred_scheme.currentIndexChanged.connect( self._UpdateControls )
+        self._netloc.textChanged.connect( self._UpdateControls )
+        self._match_subdomains.clicked.connect( self._UpdateControls )
+        self._keep_matched_subdomains.clicked.connect( self._UpdateControls )
+        self._can_produce_multiple_files.clicked.connect( self._UpdateControls )
+        self._next_gallery_page_choice.currentIndexChanged.connect( self._UpdateControls )
+        self._next_gallery_page_delta.valueChanged.connect( self._UpdateControls )
+        self._example_url.textChanged.connect( self._UpdateControls )
+        self._path_components.listBoxChanged.connect( self._UpdateControls )
+        self._url_type.currentIndexChanged.connect( self.EventURLTypeUpdate )
+        self._send_referral_url.currentIndexChanged.connect( self._UpdateControls )
+        self._referral_url_converter.stringConverterUpdate.connect( self._UpdateControls )
+        self._api_lookup_converter.stringConverterUpdate.connect( self._UpdateControls )
         
-        self._should_be_associated_with_files.Bind( wx.EVT_CHECKBOX, self.EventAssociationUpdate )
+        self._should_be_associated_with_files.clicked.connect( self.EventAssociationUpdate )
         
     
     def _AddParameters( self ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = 'key', allow_blank = False ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', placeholder = 'key', allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 key = dlg.GetValue()
                 
@@ -6497,7 +6483,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if key in existing_keys:
             
-            wx.MessageBox( 'That key already exists!' )
+            QW.QMessageBox.critical( self, 'Error', 'That key already exists!' )
             
             return
             
@@ -6510,13 +6496,13 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 string_match = panel.GetValue()
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'Enter optional \'default\' value for this parameter, which will be filled in if missing. Leave blank for none (recommended).', allow_blank = True ) as dlg_default:
                     
-                    if dlg_default.ShowModal() == wx.ID_OK:
+                    if dlg_default.exec() == QW.QDialog.Accepted:
                         
                         default = dlg_default.GetValue()
                         
@@ -6526,7 +6512,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                             
                         elif not string_match.Matches( default ):
                             
-                            wx.MessageBox( 'That default does not match the given rule! Clearing it to none!' )
+                            QW.QMessageBox.warning( self, 'Warning', 'That default does not match the given rule! Clearing it to none!' )
                             
                             default = None
                             
@@ -6612,7 +6598,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = original_key, allow_blank = False ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     key = dlg.GetValue()
                     
@@ -6628,7 +6614,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if key in existing_keys:
                     
-                    wx.MessageBox( 'That key already exists!' )
+                    QW.QMessageBox.critical( self, 'Error', 'That key already exists!' )
                     
                     return
                     
@@ -6640,7 +6626,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     string_match = panel.GetValue()
                     
@@ -6651,9 +6637,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     with ClientGUIDialogs.DialogTextEntry( self, 'Enter optional \'default\' value for this parameter, which will be filled in if missing. Leave blank for none (recommended).', default = original_default, allow_blank = True ) as dlg_default:
                         
-                        if dlg_default.ShowModal() == wx.ID_OK:
+                        if dlg_default.exec() == QW.QDialog.Accepted:
                             
-                            default = dlg_default.GetValue()
+                            default = dlg_default.value()
                             
                             if default == '':
                                 
@@ -6661,7 +6647,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                                 
                             elif not string_match.Matches( default ):
                                 
-                                wx.MessageBox( 'That default does not match the given rule! Clearing it to none!' )
+                                QW.QMessageBox.warning( self, 'Warning', 'That default does not match the given rule! Clearing it to none!' )
                                 
                                 default = None
                                 
@@ -6700,7 +6686,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 new_string_match = panel.GetValue()
                 
@@ -6711,9 +6697,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'Enter optional \'default\' value for this path component, which will be filled in if missing. Leave blank for none (recommended).', default = default, allow_blank = True ) as dlg_default:
                     
-                    if dlg_default.ShowModal() == wx.ID_OK:
+                    if dlg_default.exec() == QW.QDialog.Accepted:
                         
-                        new_default = dlg_default.GetValue()
+                        new_default = dlg_default.value()
                         
                         if new_default == '':
                             
@@ -6721,14 +6707,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                             
                         elif not string_match.Matches( new_default ):
                             
-                            wx.MessageBox( 'That default does not match the given rule! Clearing it to none!' )
+                            QW.QMessageBox.warning( self, 'Warning', 'That default does not match the given rule! Clearing it to none!' )
                             
                             new_default = None
                             
                         
                         new_row = ( new_string_match, new_default )
                         
-                        wx.CallAfter( self._UpdateControls ) # seems sometimes this doesn't kick in naturally
+                        QP.CallAfter( self._UpdateControls ) # seems sometimes this doesn't kick in naturally
                         
                         return new_row
                         
@@ -6751,14 +6737,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     def _GetValue( self ):
         
         url_class_key = self._original_url_class.GetMatchKey()
-        name = self._name.GetValue()
+        name = self._name.text()
         url_type = self._url_type.GetValue()
         preferred_scheme = self._preferred_scheme.GetValue()
-        netloc = self._netloc.GetValue()
-        match_subdomains = self._match_subdomains.GetValue()
-        keep_matched_subdomains = self._keep_matched_subdomains.GetValue()
-        can_produce_multiple_files = self._can_produce_multiple_files.GetValue()
-        should_be_associated_with_files = self._should_be_associated_with_files.GetValue()
+        netloc = self._netloc.text()
+        match_subdomains = self._match_subdomains.isChecked()
+        keep_matched_subdomains = self._keep_matched_subdomains.isChecked()
+        can_produce_multiple_files = self._can_produce_multiple_files.isChecked()
+        should_be_associated_with_files = self._should_be_associated_with_files.isChecked()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
@@ -6766,9 +6752,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         referral_url_converter = self._referral_url_converter.GetValue()
         
         ( gallery_index_type, gallery_index_identifier ) = self._next_gallery_page_choice.GetValue()
-        gallery_index_delta = self._next_gallery_page_delta.GetValue()
+        gallery_index_delta = self._next_gallery_page_delta.value()
         
-        example_url = self._example_url.GetValue()
+        example_url = self._example_url.text()
         
         url_class = ClientNetworkingDomain.URLClass( name, url_class_key = url_class_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
@@ -6779,9 +6765,13 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # we need to regen possible next gallery page choices before we fetch current value and update everything else
         
+        if self._update_already_in_progress: return # Could use blockSignals but this way I don't have to block signals on individual controls
+
+        self._update_already_in_progress = True
+        
         if self._url_type.GetValue() == HC.URL_TYPE_GALLERY:
             
-            self._next_gallery_page_panel.Enable()
+            self._next_gallery_page_panel.setEnabled( True )
             
             choices = [ ( 'no next gallery page info set', ( None, None ) ) ]
             
@@ -6803,11 +6793,11 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             existing_choice = self._next_gallery_page_choice.GetValue()
             
-            self._next_gallery_page_choice.Clear()
+            self._next_gallery_page_choice.clear()
             
             for ( name, data ) in choices:
                 
-                self._next_gallery_page_choice.Append( name, data )
+                self._next_gallery_page_choice.addItem( name, data )
                 
             
             self._next_gallery_page_choice.SetValue( existing_choice ) # this should fail to ( None, None )
@@ -6816,16 +6806,16 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if gallery_index_type is None:
                 
-                self._next_gallery_page_delta.Disable()
+                self._next_gallery_page_delta.setEnabled( False )
                 
             else:
                 
-                self._next_gallery_page_delta.Enable()
+                self._next_gallery_page_delta.setEnabled( True )
                 
             
         else:
             
-            self._next_gallery_page_panel.Disable()
+            self._next_gallery_page_panel.setEnabled( False )
             
         
         #
@@ -6836,67 +6826,67 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if url_type == HC.URL_TYPE_POST:
             
-            self._can_produce_multiple_files.Enable()
+            self._can_produce_multiple_files.setEnabled( True )
             
         else:
             
-            self._can_produce_multiple_files.Disable()
+            self._can_produce_multiple_files.setEnabled( False )
             
         
         if url_class.ClippingIsAppropriate():
             
-            if self._match_subdomains.GetValue():
+            if self._match_subdomains.isChecked():
                 
-                self._keep_matched_subdomains.Enable()
+                self._keep_matched_subdomains.setEnabled( True )
                 
             else:
                 
-                self._keep_matched_subdomains.SetValue( False )
-                self._keep_matched_subdomains.Disable()
+                self._keep_matched_subdomains.setChecked( False )
+                self._keep_matched_subdomains.setEnabled( False )
                 
             
         else:
             
-            self._keep_matched_subdomains.Disable()
+            self._keep_matched_subdomains.setEnabled( False )
             
         
         try:
             
-            example_url = self._example_url.GetValue()
+            example_url = self._example_url.text()
             
             self._referral_url_converter.SetExampleString( example_url )
             self._api_lookup_converter.SetExampleString( example_url )
             
             url_class.Test( example_url )
             
-            self._example_url_classes.SetLabelText( 'Example matches ok!' )
-            self._example_url_classes.SetForegroundColour( ( 0, 128, 0 ) )
+            self._example_url_classes.setText( 'Example matches ok!' )
+            QP.SetForegroundColour( self._example_url_classes, (0,128,0) )
             
             normalised = url_class.Normalise( example_url )
             
-            self._normalised_url.SetValue( normalised )
+            self._normalised_url.setText( normalised )
             
             if url_class.UsesAPIURL():
                 
-                self._send_referral_url.Disable()
-                self._referral_url_converter.Disable()
+                self._send_referral_url.setEnabled( False )
+                self._referral_url_converter.setEnabled( False )
                 
-                self._referral_url.SetValue( 'Not used, as API converter will redirect.' )
+                self._referral_url.setText( 'Not used, as API converter will redirect.' )
                 
             else:
                 
-                self._send_referral_url.Enable()
-                self._referral_url_converter.Enable()
+                self._send_referral_url.setEnabled( True )
+                self._referral_url_converter.setEnabled( True )
                 
                 send_referral_url = self._send_referral_url.GetValue()
                 
                 if send_referral_url in ( ClientNetworkingDomain.SEND_REFERRAL_URL_ONLY_IF_PROVIDED, ClientNetworkingDomain.SEND_REFERRAL_URL_NEVER ):
                     
-                    self._referral_url_converter.Disable()
+                    self._referral_url_converter.setEnabled( False )
                     
                 else:
                     
-                    self._referral_url_converter.Enable()
+                    self._referral_url_converter.setEnabled( True )
                     
                 
                 if send_referral_url == ClientNetworkingDomain.SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED:
@@ -6912,11 +6902,11 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if referral_url is None:
                     
-                    self._referral_url.SetValue( 'None' )
+                    self._referral_url.setText( 'None' )
                     
                 else:
                     
-                    self._referral_url.SetValue( referral_url )
+                    self._referral_url.setText( referral_url )
                     
                 
             
@@ -6931,13 +6921,13 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     api_lookup_url = 'none set'
                     
                 
-                self._api_url.SetValue( api_lookup_url )
+                self._api_url.setText( api_lookup_url )
                 
             except HydrusExceptions.StringConvertException as e:
                 
                 reason = str( e )
                 
-                self._api_url.SetValue( 'Could not convert - ' + reason )
+                self._api_url.setText( 'Could not convert - ' + reason )
                 
             
             try:
@@ -6951,30 +6941,31 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     next_gallery_page_url = 'none set'
                     
                 
-                self._next_gallery_page_url.SetValue( next_gallery_page_url )
+                self._next_gallery_page_url.setText( next_gallery_page_url )
                 
             except Exception as e:
                 
                 reason = str( e )
                 
-                self._next_gallery_page_url.SetValue( 'Could not convert - ' + reason )
+                self._next_gallery_page_url.setText( 'Could not convert - ' + reason )
                 
             
         except HydrusExceptions.URLClassException as e:
             
             reason = str( e )
             
-            self._example_url_classes.SetLabelText( 'Example does not match - ' + reason )
-            self._example_url_classes.SetForegroundColour( ( 128, 0, 0 ) )
+            self._example_url_classes.setText( 'Example does not match - '+reason )
+            QP.SetForegroundColour( self._example_url_classes, (128,0,0) )
             
-            self._normalised_url.SetValue( '' )
-            self._api_url.SetValue( '' )
-            
+            self._normalised_url.setText( '' )
+            self._api_url.setText( '' )
+
+        self._update_already_in_progress = False
         
     
-    def EventAssociationUpdate( self, event ):
+    def EventAssociationUpdate( self ):
         
-        if self._should_be_associated_with_files.GetValue() == True:
+        if self._should_be_associated_with_files.isChecked():
             
             if self._url_type.GetValue() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
@@ -6982,7 +6973,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back off.'
                 
-                wx.MessageBox( message )
+                QW.QMessageBox.information( self, 'Information', message )
                 
             
         else:
@@ -6993,29 +6984,20 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back on.'
                 
-                wx.MessageBox( message )
-                
+                QW.QMessageBox.information( self, 'Information', message )
             
         
-        event.Skip()
-        
-    
-    def EventUpdate( self, event ):
-        
-        self._UpdateControls()
-        
-    
     def EventURLTypeUpdate( self, event ):
         
         url_type = self._url_type.GetValue()
         
         if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
             
-            self._should_be_associated_with_files.SetValue( True )
+            self._should_be_associated_with_files.setChecked( True )
             
         else:
             
-            self._should_be_associated_with_files.SetValue( False )
+            self._should_be_associated_with_files.setChecked( False )
             
         
         self._UpdateControls()
@@ -7027,7 +7009,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            url_class.Test( self._example_url.GetValue() )
+            url_class.Test( self._example_url.text() )
             
         except HydrusExceptions.URLClassException:
             
@@ -7049,12 +7031,12 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
-        self._url_class_checker = wx.TextCtrl( self )
-        self._url_class_checker.Bind( wx.EVT_TEXT, self.EventURLClassCheckerText )
+        self._url_class_checker = QW.QLineEdit( self )
+        self._url_class_checker.textChanged.connect( self.EventURLClassCheckerText )
         
         self._url_class_checker_st = ClientGUICommon.BetterStaticText( self )
         
@@ -7082,18 +7064,18 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        url_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        url_hbox = QP.HBoxLayout()
         
-        url_hbox.Add( self._url_class_checker, CC.FLAGS_EXPAND_BOTH_WAYS )
-        url_hbox.Add( self._url_class_checker_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( url_hbox, self._url_class_checker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( url_hbox, self._url_class_checker_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( url_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, url_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
@@ -7110,7 +7092,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 url_class = panel.GetValue()
                 
@@ -7156,7 +7138,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._list_ctrl.DeleteDatas( ( url_class, ) )
                     
@@ -7187,7 +7169,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateURLClassCheckerText( self ):
         
-        url = self._url_class_checker.GetValue()
+        url = self._url_class_checker.text()
         
         if url == '':
             
@@ -7222,10 +7204,10 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._url_class_checker_st.SetLabelText( text )
+        self._url_class_checker_st.setText( text )
         
     
-    def EventURLClassCheckerText( self, event ):
+    def EventURLClassCheckerText( self, text ):
         
         self._UpdateURLClassCheckerText()
         
@@ -7253,7 +7235,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = QW.QTabWidget( self )
         
         #
         
@@ -7322,23 +7304,23 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._notebook.AddPage( self._parser_list_ctrl_panel, 'parser links' )
-        self._notebook.AddPage( self._api_pairs_list_ctrl, 'api link review' )
+        self._notebook.addTab( self._parser_list_ctrl_panel, 'parser links' )
+        self._notebook.addTab( self._api_pairs_list_ctrl, 'api link review' )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ClearParser( self ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Clear all the selected linked parsers?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             for data in self._parser_list_ctrl.GetData( only_selected = True ):
                 
@@ -7408,7 +7390,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( self._parsers ) == 0:
             
-            wx.MessageBox( 'Unfortunately, you do not have any parsers, so none can be linked to your url classes. Please create some!' )
+            QW.QMessageBox.information( self, 'Information', 'Unfortunately, you do not have any parsers, so none can be linked to your url classes. Please create some!' )
             
             return
             

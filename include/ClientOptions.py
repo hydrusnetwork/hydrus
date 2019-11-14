@@ -11,7 +11,8 @@ from . import HydrusSerialisable
 from . import HydrusTags
 import os
 import threading
-import wx
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -133,6 +134,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'autocomplete_results_fetch_automatically' ] = True
         
+        self._dictionary[ 'booleans' ][ 'autocomplete_float_main_gui' ] = True
+        self._dictionary[ 'booleans' ][ 'autocomplete_float_frames' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -167,7 +171,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] = ( 83, 98, 103 ) # Gunmetal
         self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_BACKGROUND ] = ( 52, 52, 52 ) # 20% flat gray
         self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_TEXT ] = ( 112, 128, 144 ) # Slate Gray
-        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_TAGS_BOX ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_TAGS_BOX ] = ( 35, 38, 41 )
         
         #
         
@@ -476,14 +480,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'media_view' ][ HC.IMAGE_TIFF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, image_zoom_info )
         self._dictionary[ 'media_view' ][ HC.IMAGE_ICON ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, image_zoom_info )
         
-        if HC.PLATFORM_WINDOWS:
-            
-            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, flash_zoom_info )
-            
-        else:
-            
-            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
-            
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         
         self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         self._dictionary[ 'media_view' ][ HC.APPLICATION_PSD ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
@@ -700,7 +697,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             ( r, g, b ) = self._dictionary[ 'colours' ][ colourset ][ colour_type ]
             
-            return wx.Colour( r, g, b )
+            return QG.QColor( r, g, b )
             
         
     
@@ -981,9 +978,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if isinstance( colour, wx.Colour ):
+            if isinstance( colour, QG.QColor ):
                 
-                ( r, g, b, a ) = colour.Get()
+                ( r, g, b, a ) = colour.toTuple()
                 
             else:
                 

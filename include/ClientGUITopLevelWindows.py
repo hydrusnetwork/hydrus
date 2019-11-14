@@ -8,42 +8,22 @@ from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
 import os
-import wx
-
-( OKEvent, EVT_OK ) = wx.lib.newevent.NewCommandEvent()
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
+from . import QtPorting as QP
 
 CHILD_POSITION_PADDING = 24
-FUZZY_PADDING = 15
+FUZZY_PADDING = 10
 
 def GetDisplayPosition( window ):
     
-    display_index = wx.Display.GetFromWindow( window )
-    
-    if display_index == wx.NOT_FOUND:
-        
-        display_index = 0 # default to primary
-        
-    
-    display = wx.Display( display_index )
-    
-    rect = display.GetClientArea()
-    
-    return tuple( rect.GetPosition() )
+    return QW.QApplication.desktop().availableGeometry( window ).topLeft()
     
 def GetDisplaySize( window ):
     
-    display_index = wx.Display.GetFromWindow( window )
-    
-    if display_index == wx.NOT_FOUND:
-        
-        display_index = 0 # default to primary
-        
-    
-    display = wx.Display( display_index )
-    
-    rect = display.GetClientArea()
-    
-    return tuple( rect.GetSize() )
+    return QW.QApplication.desktop().availableGeometry( window ).size()
     
 def GetSafePosition( position ):
     
@@ -53,11 +33,19 @@ def GetSafePosition( position ):
     # so choose a test position that's a little more lenient
     ( test_x, test_y ) = ( p_x + FUZZY_PADDING, p_y + FUZZY_PADDING )
     
-    display_index = wx.Display.GetFromPoint( ( test_x, test_y ) )
+    screen = QW.QApplication.screenAt( QC.QPoint( test_x, test_y ) )
     
-    if display_index == wx.NOT_FOUND:
+    if screen:
+    
+        display_index = QW.QApplication.screens().index( screen )
         
-        return wx.DefaultPosition
+    else:
+        
+        display_index = None
+    
+    if display_index is None:
+        
+        return ( -1, -1 )
         
     else:
         
@@ -68,7 +56,7 @@ def GetSafeSize( tlw, min_size, gravity ):
     
     ( min_width, min_height ) = min_size
     
-    parent = tlw.GetParent()
+    parent = tlw.parentWidget()
     
     if parent is None:
         
@@ -77,7 +65,7 @@ def GetSafeSize( tlw, min_size, gravity ):
         
     else:
         
-        ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
+        ( parent_window_width, parent_window_height ) = parent.window().size().toTuple()
         
         ( width_gravity, height_gravity ) = gravity
         
@@ -104,10 +92,10 @@ def GetSafeSize( tlw, min_size, gravity ):
             
         
     
-    ( display_width, display_height ) = GetDisplaySize( tlw )
+    display_size = GetDisplaySize( tlw )
     
-    width = min( display_width, width )
-    height = min( display_height, height )
+    width = min( display_size.width(), width )
+    height = min( display_size.height(), height )
     
     return ( width, height )
     
@@ -117,20 +105,35 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
-    if not tlw.IsMaximized() and not tlw.IsFullScreen():
+    if not tlw.isMaximized() and not tlw.isFullScreen():
         
-        ( current_width, current_height ) = tlw.GetSize()
+        ( current_width, current_height ) = tlw.size().toTuple()
         
         ( desired_delta_width, desired_delta_height ) = desired_size_delta
         
-        desired_width = current_width + desired_delta_width + FUZZY_PADDING
-        desired_height = current_height + desired_delta_height + FUZZY_PADDING
+        desired_width = current_width
+        
+        if desired_delta_width > 0:
+            
+            desired_width = current_width + desired_delta_width + FUZZY_PADDING
+            
+        
+        desired_height = current_height
+        
+        if desired_delta_height > 0:
+            
+            desired_height = current_height + desired_delta_height + FUZZY_PADDING
+            
         
         ( width, height ) = GetSafeSize( tlw, ( desired_width, desired_height ), default_gravity )
         
         if width > current_width or height > current_height:
             
-            tlw.SetSize( ( width, height ) )
+            size = QC.QSize( width, height )
+            
+            tlw.resize( size )
+            
+            #tlw.setMinimumSize( tlw.sizeHint() )
             
             SlideOffScreenTLWUpAndLeft( tlw )
             
@@ -138,17 +141,18 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
     
 def MouseIsOnMyDisplay( window ):
     
-    window_display_index = wx.Display.GetFromWindow( window )
+    window_handle = window.window().windowHandle()
     
-    mouse_display_index = wx.Display.GetFromPoint( wx.GetMousePosition() )
+    if window_handle is None:
+        
+        return False
+        
     
-    return window_display_index == mouse_display_index
+    window_screen = window_handle.screen()
     
-def PostSizeChangedEvent( window ):
+    mouse_screen = QW.QApplication.screenAt( QG.QCursor.pos() )
     
-    event = CC.SizeChangedEvent( -1 )
-    
-    wx.QueueEvent( window.GetEventHandler(), event )
+    return mouse_screen is window_screen
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
@@ -156,16 +160,16 @@ def SaveTLWSizeAndPosition( tlw, frame_key ):
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
-    maximised = tlw.IsMaximized()
-    fullscreen = tlw.IsFullScreen()
+    maximised = tlw.isMaximized()
+    fullscreen = tlw.isFullScreen()
     
     if not ( maximised or fullscreen ):
         
-        safe_position = GetSafePosition( tuple( tlw.GetPosition() ) )
+        safe_position = GetSafePosition( ( tlw.x(), tlw.y() ) )
         
-        if safe_position != wx.DefaultPosition:
+        if safe_position != ( -1, -1 ):
             
-            last_size = tuple( tlw.GetSize() )
+            last_size = tlw.size().toTuple()
             last_position = safe_position
             
         
@@ -178,28 +182,27 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
-    parent = tlw.GetParent()
+    parent = tlw.parentWidget()
     
     if remember_size and last_size is not None:
         
         ( width, height ) = last_size
         
+        tlw.resize( QC.QSize( width, height ) )
+        
     else:
         
-        ( min_width, min_height ) = tlw.GetEffectiveMinSize()
-        
-        min_width += FUZZY_PADDING
-        min_height += FUZZY_PADDING
+        ( min_width, min_height ) = QP.GetEffectiveMinSize( tlw )
         
         ( width, height ) = GetSafeSize( tlw, ( min_width, min_height ), default_gravity )
         
     
-    tlw.SetInitialSize( ( width, height ) )
+    tlw.resize( QC.QSize( width, height ) )
     
     min_width = min( 240, width )
     min_height = min( 240, height )
     
-    tlw.SetMinSize( ( min_width, min_height ) )
+    tlw.setMinimumSize( QP.TupleToQSize( ( min_width, min_height ) ) )
     
     #
     
@@ -207,64 +210,70 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
         
         safe_position = GetSafePosition( last_position )
         
-        tlw.SetPosition( safe_position )
+        if safe_position != QC.QPoint( -1, -1 ):
+            
+            tlw.move( QP.TupleToQPoint( safe_position ) )
+            
         
     elif default_position == 'topleft':
         
         if parent is not None:
             
-            if isinstance( parent, wx.TopLevelWindow ):
+            if isinstance( parent, QW.QWidget ):
                 
-                parent_tlp = parent
+                parent_tlp = parent.window()
                 
             else:
                 
-                parent_tlp = parent.GetTopLevelParent()
+                parent_tlp = parent
                 
             
-            ( parent_x, parent_y ) = parent_tlp.GetPosition()
+            ( parent_x, parent_y ) = parent_tlp.pos().toTuple()
             
-            tlw.SetPosition( ( parent_x + CHILD_POSITION_PADDING, parent_y + CHILD_POSITION_PADDING ) )
+            tlw.move( QP.TupleToQPoint( ( parent_x + CHILD_POSITION_PADDING, parent_y + CHILD_POSITION_PADDING ) ) )
             
         else:
             
             safe_position = GetSafePosition( ( 0 + CHILD_POSITION_PADDING, 0 + CHILD_POSITION_PADDING ) )
             
-            tlw.SetPosition( safe_position )
+            if safe_position != QC.QPoint( -1, -1 ):
+                
+                tlw.move( QP.TupleToQPoint( safe_position ) )
+                
             
         
         SlideOffScreenTLWUpAndLeft( tlw )
         
     elif default_position == 'center':
         
-        wx.CallAfter( tlw.Center )
+        QP.CallAfter( QP.Center, tlw )
         
     
-    # if these aren't callafter, the size and pos calls don't stick if a restore event happens
+    # Comment from before the Qt port: if these aren't callafter, the size and pos calls don't stick if a restore event happens
     
     if maximised:
         
-        wx.CallAfter( tlw.Maximize )
+        QP.CallAfter( tlw.showMaximized )
         
     
-    if fullscreen:
+    if fullscreen and not HC.PLATFORM_OSX:
         
-        wx.CallAfter( tlw.ShowFullScreen, True, wx.FULLSCREEN_ALL )
+        QP.CallAfter( tlw.showFullScreen )
         
     
 def SlideOffScreenTLWUpAndLeft( tlw ):
     
-    ( tlw_width, tlw_height ) = tlw.GetSize()
-    ( tlw_x, tlw_y ) = tlw.GetPosition()
+    ( tlw_width, tlw_height ) = tlw.size().toTuple()
+    ( tlw_x, tlw_y ) = tlw.pos().toTuple()
     
     tlw_right = tlw_x + tlw_width
     tlw_bottom = tlw_y + tlw_height
     
-    ( display_width, display_height ) = GetDisplaySize( tlw )
-    ( display_x, display_y ) = GetDisplayPosition( tlw )
+    display_size = GetDisplaySize( tlw )
+    display_pos = GetDisplayPosition( tlw )
     
-    display_right = display_x + display_width
-    display_bottom = display_y + display_height
+    display_right = display_pos.x() + display_size.width()
+    display_bottom = display_pos.y() + display_size.height()
     
     move_x = tlw_right > display_right
     move_y = tlw_bottom > display_bottom
@@ -274,40 +283,41 @@ def SlideOffScreenTLWUpAndLeft( tlw ):
         delta_x = min( display_right - tlw_right, 0 )
         delta_y = min( display_bottom - tlw_bottom, 0 )
         
-        tlw.SetPosition( ( tlw_x + delta_x, tlw_y + delta_y ) )
+        tlw.move( QP.TupleToQPoint( (tlw_x+delta_x,tlw_y+delta_y) ) )
         
     
-class NewDialog( wx.Dialog ):
+class NewDialog( QP.Dialog ):
     
-    def __init__( self, parent, title, style_override = None ):
+    def __init__( self, parent, title ):
         
-        if style_override is None:
-            
-            style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
-            
-            if not HC.PLATFORM_LINUX and parent is not None:
-                
-                style |= wx.FRAME_FLOAT_ON_PARENT
-                
-            
-        else:
-            
-            style = style_override
-            
-        
-        wx.Dialog.__init__( self, parent, title = title, style = style )
+        QP.Dialog.__init__( self, parent )
+        self.setWindowTitle( title )
         
         self._consumed_esc_to_cancel = False
         
+        self._last_move_pub = 0.0
+        
         self._new_options = HG.client_controller.new_options
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self.SetIcon( HG.client_controller.frame_icon )
+        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
         HG.client_controller.ResetIdleTimer()
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        
+    
+    def moveEvent( self, event ):
+        
+        if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
+            
+            HG.client_controller.pub( 'top_level_window_move_event' )
+            
+            self._last_move_pub = HydrusData.GetNowPrecise()
+            
+        
+        event.ignore()
         
     
     def _CanCancel( self ):
@@ -332,7 +342,7 @@ class NewDialog( wx.Dialog ):
     
     def _TryEndModal( self, value ):
         
-        if not self.IsModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
+        if not self.isModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
             
             return
             
@@ -342,15 +352,16 @@ class NewDialog( wx.Dialog ):
             return
             
         
-        if value == wx.ID_CANCEL:
+        if value == QW.QDialog.Rejected:
             
             if not self._CanCancel():
                 
                 return
                 
+            self.SetCancelled( True )
             
         
-        if value == wx.ID_OK:
+        if value == QW.QDialog.Accepted:
             
             if not self._CanOK():
                 
@@ -364,7 +375,7 @@ class NewDialog( wx.Dialog ):
         
         try:
             
-            self.EndModal( value )
+            self.done( value )
             
         except Exception as e:
             
@@ -378,7 +389,7 @@ class NewDialog( wx.Dialog ):
             
             try:
                 
-                self.Close()
+                self.close()
                 
             except:
                 
@@ -387,7 +398,7 @@ class NewDialog( wx.Dialog ):
             
             try:
                 
-                self.Destroy()
+                self.deleteLater()
                 
             except:
                 
@@ -398,99 +409,97 @@ class NewDialog( wx.Dialog ):
     
     def CleanBeforeDestroy( self ):
         
-        parent = self.GetParent()
-        
-        if parent is not None and not ClientGUIFunctions.GetTLP( parent ) == HG.client_controller.gui:
-            
-            wx.CallAfter( parent.SetFocus )
-            
+        pass
         
     
     def DoOK( self ):
         
-        self._TryEndModal( wx.ID_OK )
-        
-    
-    def EventCharHook( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        obj = event.GetEventObject()
-        
-        event_from_us = obj is not None and ClientGUIFunctions.IsWXAncestor( obj, self )
-        
-        if event_from_us and key == wx.WXK_ESCAPE and not self._consumed_esc_to_cancel:
-            
-            self._consumed_esc_to_cancel = True
-            
-            self._TryEndModal( wx.ID_CANCEL )
-            
-        else:
-            
-            event.Skip()
-            
+        self._TryEndModal( QW.QDialog.Accepted )
         
     
     def EventClose( self, event ):
         
-        if not self:
+        if not self or not QP.isValid( self ):
             
             return
             
-        
-        self._TryEndModal( wx.ID_CANCEL )
+        self._TryEndModal( QW.QDialog.Rejected )
         
     
-    def EventDialogButton( self, event ):
+    def EventDialogButtonApply( self ):
         
-        if not self:
+        if not self or not QP.isValid( self ):
             
             return
             
         
-        event_id = event.GetId()
-        
-        if event_id == wx.ID_ANY:
-            
-            event.Skip()
-            
-            return
-            
-        
-        event_object = event.GetEventObject()
+        event_object = self.sender()
         
         if event_object is not None:
             
-            tlp = event_object.GetTopLevelParent()
+            tlp = event_object.window()
             
             if tlp != self:
                 
-                event.Skip()
-                
                 return
                 
-            
-        
-        self._TryEndModal( event_id )
+        self._TryEndModal( QW.QDialog.Accepted )
+
+
+    def EventDialogButtonCancel( self ):
+
+        if not self or not QP.isValid( self ):
+            return
+
+        event_object = self.sender()
+
+        if event_object is not None:
+
+            tlp = event_object.window()
+
+            if tlp != self:
+                return
+
+        self._TryEndModal( QW.QDialog.Rejected )
         
     
-    def EventOK( self, event ):
+    def EventOK( self ):
         
-        if not self:
+        if not self or not QP.isValid( self ):
             
             return
             
         
-        self._TryEndModal( wx.ID_OK )
+        self._TryEndModal( QW.QDialog.Accepted )
+        
+    
+    def keyPressEvent( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        current_focus = QW.QApplication.focusWidget()
+        
+        event_from_us = current_focus is not None and ClientGUIFunctions.IsQtAncestor( current_focus, self )
+        
+        if event_from_us and key == QC.Qt.Key_Escape and not self._consumed_esc_to_cancel:
+            
+            self._consumed_esc_to_cancel = True
+            
+            self._TryEndModal( QW.QDialog.Rejected )
+            
+        else:
+            
+            QP.Dialog.keyPressEvent( self, event )
+            
         
     
 class DialogThatResizes( NewDialog ):
     
-    def __init__( self, parent, title, frame_key, style_override = None ):
+    def __init__( self, parent, title, frame_key ):
         
         self._frame_key = frame_key
         
-        NewDialog.__init__( self, parent, title, style_override = style_override )
+        NewDialog.__init__( self, parent, title )
         
     
     def _SaveOKPosition( self ):
@@ -500,17 +509,14 @@ class DialogThatResizes( NewDialog ):
     
 class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
-    def __init__( self, parent, title, frame_key = 'regular_dialog', style_override = None, hide_buttons = False ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
         
         self._panel = None
         self._hide_buttons = hide_buttons
         
-        DialogThatResizes.__init__( self, parent, title, frame_key, style_override = style_override )
+        DialogThatResizes.__init__( self, parent, title, frame_key )
         
         self._InitialiseButtons()
-        
-        self.Bind( EVT_OK, self.EventOK )
-        self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
         
     
     def _CanCancel( self ):
@@ -543,71 +549,49 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
             
         
     
-    def EventChildSizeChanged( self, event ):
-        
-        if self._panel is not None:
-            
-            # the min size here is to compensate for wx.Notebook and anything else that don't update virtualsize on page change
-            
-            ( current_panel_width, current_panel_height ) = self._panel.GetSize()
-            ( desired_panel_width, desired_panel_height ) = self._panel.GetVirtualSize()
-            ( min_panel_width, min_panel_height ) = self._panel.GetEffectiveMinSize()
-            
-            desired_delta_width = max( 0, desired_panel_width - current_panel_width, min_panel_width - current_panel_width )
-            desired_delta_height = max( 0, desired_panel_height - current_panel_height, min_panel_height - current_panel_height )
-            
-            if desired_delta_width > 0 or desired_delta_height > 0:
-                
-                ExpandTLWIfPossible( self, self._frame_key, ( desired_delta_width, desired_delta_height ) )
-                
-            
-        
-    
     def SetPanel( self, panel ):
         
         self._panel = panel
         
+        if hasattr( self._panel, 'okSignal'): self._panel.okSignal.connect( self.EventOK )
+        
         buttonbox = self._GetButtonBox()
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         if buttonbox is not None:
             
-            vbox.Add( buttonbox, CC.FLAGS_BUTTON_SIZER )
+            QP.AddToLayout( vbox, buttonbox, CC.FLAGS_BUTTON_SIZER )
             
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         SetInitialTLWSizeAndPosition( self, self._frame_key )
-        
-        self._panel.SetupScrolling( scrollIntoView = False ) # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
-        
-        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherent virtual size
         
     
 class DialogNullipotent( DialogThatTakesScrollablePanel ):
     
     def _GetButtonBox( self ):
         
-        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        buttonbox = QP.HBoxLayout()
         
-        buttonbox.Add( self._close, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttonbox, self._close )
         
         return buttonbox
         
     
     def _InitialiseButtons( self ):
         
-        self._close = wx.Button( self, id = wx.ID_OK, label = 'close' )
-        self._close.Bind( wx.EVT_BUTTON, self.EventOK )
+        self._close = QW.QPushButton( 'close', self )
+        self._close.clicked.connect( self.EventOK )
         
         if self._hide_buttons:
             
-            self._close.Hide()
+            self._close.setVisible( False )
             
-            self.Bind( wx.EVT_CLOSE, self.EventOK ) # the close event no longer goes to the default button, since it is hidden, wew
+            self._widget_event_filter.EVT_CLOSE( lambda ev: self.EventOK() ) # the close event no longer goes to the default button, since it is hidden, wew
             
         
     
@@ -625,7 +609,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanel ):
             
             if len( message ) > 0:
                 
-                wx.MessageBox( message )
+                QW.QMessageBox.critical( self, 'Error', message )
                 
             
             return False
@@ -636,30 +620,30 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
     
     def _GetButtonBox( self ):
         
-        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        buttonbox = QP.HBoxLayout()
         
-        buttonbox.Add( self._apply, CC.FLAGS_VCENTER )
-        buttonbox.Add( self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttonbox, self._apply )
+        QP.AddToLayout( buttonbox, self._cancel )
         
         return buttonbox
         
     
     def _InitialiseButtons( self ):
         
-        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-        self._apply.Bind( wx.EVT_BUTTON, self.EventDialogButton )
+        self._apply = QW.QPushButton( 'apply', self )
+        QP.SetForegroundColour( self._apply, (0,128,0) )
+        self._apply.clicked.connect( self.EventDialogButtonApply )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        self._cancel.Bind( wx.EVT_BUTTON, self.EventDialogButton )
+        self._cancel = QW.QPushButton( 'cancel', self )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
+        self._cancel.clicked.connect( self.EventDialogButtonCancel )
         
         if self._hide_buttons:
             
-            self._apply.Hide()
-            self._cancel.Hide()
+            self._apply.setVisible( False )
+            self._cancel.setVisible( False )
             
-            self.Bind( wx.EVT_CLOSE, self.EventClose ) # the close event no longer goes to the default button, since it is hidden, wew
+            self._widget_event_filter.EVT_CLOSE( self.EventClose ) # the close event no longer goes to the default button, since it is hidden, wew
             
         
     
@@ -672,7 +656,7 @@ class DialogEdit( DialogApplyCancel ):
     
     def _ReadyToClose( self, value ):
         
-        if value != wx.ID_OK:
+        if value != QW.QDialog.Accepted:
             
             return True
             
@@ -689,7 +673,7 @@ class DialogEdit( DialogApplyCancel ):
             
             if len( message ) > 0:
                 
-                wx.MessageBox( message )
+                QW.QMessageBox.critical( self, 'Error', message )
                 
             
             return False
@@ -700,7 +684,7 @@ class DialogManage( DialogApplyCancel ):
     
     def _ReadyToClose( self, value ):
         
-        if value != wx.ID_OK:
+        if value != QW.QDialog.Accepted:
             
             return True
             
@@ -717,7 +701,7 @@ class DialogManage( DialogApplyCancel ):
             
             if len( message ) > 0:
                 
-                wx.MessageBox( message )
+                QW.QMessageBox.critical( self, 'Error', message )
                 
             
             return False
@@ -726,9 +710,9 @@ class DialogManage( DialogApplyCancel ):
     
 class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
     
-    def __init__( self, parent, title, frame_key = 'regular_center_dialog', style_override = None ):
+    def __init__( self, parent, title, frame_key = 'regular_center_dialog' ):
         
-        DialogThatTakesScrollablePanel.__init__( self, parent, title, frame_key = frame_key, style_override = style_override )
+        DialogThatTakesScrollablePanel.__init__( self, parent, title, frame_key = frame_key )
         
     
     def _GetButtonBox( self ):
@@ -741,83 +725,140 @@ class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
         pass
         
     
-class Frame( wx.Frame ):
+class Frame( QW.QWidget ):
     
-    def __init__( self, parent, title, float_on_parent = True ):
+    def __init__( self, parent, title ):
         
-        style = wx.DEFAULT_FRAME_STYLE
+        QW.QWidget.__init__( self, parent )
         
-        if float_on_parent:
-            
-            style |= wx.FRAME_FLOAT_ON_PARENT
-            
+        self.setWindowTitle( title )
         
-        wx.Frame.__init__( self, parent, title = title, style = style )
+        self.setWindowFlags( QC.Qt.Window )
+        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
         self._new_options = HG.client_controller.new_options
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        self._last_move_pub = 0.0
         
-        self.SetIcon( HG.client_controller.frame_icon )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self.Bind( wx.EVT_CLOSE, self.EventAboutToClose )
+        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
+        
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_CLOSE( self.EventAboutToClose )
+        self._widget_event_filter.EVT_MOVE( self.EventMove )
         
         HG.client_controller.ResetIdleTimer()
         
     
     def CleanBeforeDestroy( self ):
         
-        parent = self.GetParent()
-        
-        if parent is not None and not ClientGUIFunctions.GetTLP( parent ) == HG.client_controller.gui:
-            
-            wx.CallAfter( parent.SetFocus )
-            
+        pass
         
     
     def EventAboutToClose( self, event ):
         
         self.CleanBeforeDestroy()
         
-        event.Skip()
+        return True # was: event.ignore()
+        
+    
+    def EventMove( self, event ):
+        
+        if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
+            
+            HG.client_controller.pub( 'top_level_window_move_event' )
+            
+            self._last_move_pub = HydrusData.GetNowPrecise()
+            
+        
+        return True # was: event.ignore()
+        
+    
+class MainFrame( QW.QMainWindow ):
+
+    def __init__( self, parent, title ):
+
+        QW.QMainWindow.__init__( self, parent )
+        
+        self.setWindowTitle( title )
+        
+        self._new_options = HG.client_controller.new_options
+        
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
+        
+        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
+        
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_CLOSE( self.EventAboutToClose )
+        
+        HG.client_controller.ResetIdleTimer()
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        pass
+        
+    
+    def EventAboutToClose( self, event ):
+        
+        self.CleanBeforeDestroy()
+        
+        return True # was: event.ignore()
         
     
 class FrameThatResizes( Frame ):
     
-    def __init__( self, parent, title, frame_key, float_on_parent = True ):
+    def __init__( self, parent, title, frame_key ):
         
         self._frame_key = frame_key
         
-        Frame.__init__( self, parent, title, float_on_parent )
+        Frame.__init__( self, parent, title )
         
-        self.Bind( wx.EVT_SIZE, self.EventSizeAndPositionChanged )
-        self.Bind( wx.EVT_MOVE_END, self.EventSizeAndPositionChanged )
-        self.Bind( wx.EVT_CLOSE, self.EventSizeAndPositionChanged )
-        self.Bind( wx.EVT_MAXIMIZE, self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_CLOSE( self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
         
     
     def EventSizeAndPositionChanged( self, event ):
         
-        SaveTLWSizeAndPosition( self, self._frame_key )
+        if not self.isMinimized(): SaveTLWSizeAndPosition( self, self._frame_key )
         
-        event.Skip()
+        return True # was: event.ignore()
+        
+    
+class MainFrameThatResizes( MainFrame ):
+
+    def __init__( self, parent, title, frame_key ):
+        
+        self._frame_key = frame_key
+
+        MainFrame.__init__( self, parent, title )
+
+        self._widget_event_filter.EVT_SIZE( self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_MOVE_END( self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_CLOSE( self.EventSizeAndPositionChanged )
+        self._widget_event_filter.EVT_MAXIMIZE( self.EventSizeAndPositionChanged )
+
+    def EventSizeAndPositionChanged( self, event ):
+        
+        if not self.isMinimized(): SaveTLWSizeAndPosition( self, self._frame_key )
+
+        return True # was: event.ignore()
         
     
 class FrameThatTakesScrollablePanel( FrameThatResizes ):
     
-    def __init__( self, parent, title, frame_key = 'regular_dialog', float_on_parent = True ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog' ):
         
         self._panel = None
         
-        FrameThatResizes.__init__( self, parent, title, frame_key, float_on_parent )
+        FrameThatResizes.__init__( self, parent, title, frame_key )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'close' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventClose )
-        
-        self.Bind( EVT_OK, self.EventClose )
-        self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
-        
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._ok = QW.QPushButton( 'close', self )
+        self._ok.clicked.connect( self.EventClose )
         
     
     def CleanBeforeDestroy( self ):
@@ -830,43 +871,23 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
             
         
     
-    def EventCharHook( self, event ):
+    def keyPressEvent( self, event ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key == wx.WXK_ESCAPE:
+        if key == QC.Qt.Key_Escape:
             
-            self.Close()
+            self.close()
             
         else:
             
-            event.Skip()
+            event.ignore()
             
         
     
-    def EventClose( self, event ):
+    def EventClose( self ):
         
-        self.Close()
-        
-    
-    def EventChildSizeChanged( self, event ):
-        
-        if self._panel is not None:
-            
-            # the min size here is to compensate for wx.Notebook and anything else that don't update virtualsize on page change
-            
-            ( current_panel_width, current_panel_height ) = self._panel.GetSize()
-            ( desired_panel_width, desired_panel_height ) = self._panel.GetVirtualSize()
-            ( min_panel_width, min_panel_height ) = self._panel.GetEffectiveMinSize()
-            
-            desired_delta_width = max( 0, desired_panel_width - current_panel_width, min_panel_width - current_panel_width )
-            desired_delta_height = max( 0, desired_panel_height - current_panel_height, min_panel_height - current_panel_height )
-            
-            if desired_delta_width > 0 or desired_delta_height > 0:
-                
-                ExpandTLWIfPossible( self, self._frame_key, ( desired_delta_width, desired_delta_height ) )
-                
-            
+        self.close()
         
     
     def GetPanel( self ):
@@ -878,19 +899,17 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         
         self._panel = panel
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        if hasattr( self._panel, 'okSignal' ): self._panel.okSignal.connect( self.EventClose )
         
-        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
+        vbox = QP.VBoxLayout()
         
-        self.SetSizer( vbox )
+        QP.AddToLayout( vbox, self._panel )
+        QP.AddToLayout( vbox, self._ok, CC.FLAGS_LONE_BUTTON )
+        
+        self.setLayout( vbox )
         
         SetInitialTLWSizeAndPosition( self, self._frame_key )
         
-        self.Show( True )
-        
-        self._panel.SetupScrolling( scrollIntoView = False ) # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
-        
-        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherent virtual size
+        self.show()
         
     

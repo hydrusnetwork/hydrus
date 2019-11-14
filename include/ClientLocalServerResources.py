@@ -1272,7 +1272,7 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         try:
             
-            ( normalised_url, result_text ) = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
+            ( normalised_url, result_text ) = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
             
         except HydrusExceptions.URLClassException as e:
             
@@ -1668,7 +1668,7 @@ class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClien
         
         try:
             
-            HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it, page_key )
+            HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it, page_key )
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1689,7 +1689,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClient
             return HG.client_controller.gui.GetCurrentSessionPageAPIInfoDict()
             
         
-        page_info_dict = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it )
+        page_info_dict = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
         
         body_dict = { 'pages' : page_info_dict }
         
@@ -1713,7 +1713,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( HydrusResourceCli
         
         simple = request.parsed_request_args.GetValue( 'simple', bool, default_value = True )
         
-        page_info_dict = HG.client_controller.CallBlockingToWX( HG.client_controller.gui, do_it, page_key, simple )
+        page_info_dict = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it, page_key, simple )
         
         if page_info_dict is None:
             

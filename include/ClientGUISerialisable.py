@@ -11,7 +11,10 @@ from . import HydrusGlobals as HG
 from . import HydrusPaths
 from . import HydrusSerialisable
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -21,19 +24,20 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._payload_obj = payload_obj
         
-        self._filepicker = wx.FilePickerCtrl( self, style = wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, wildcard = 'PNG (*.png)|*.png' )
+        self._filepicker = QP.FilePickerCtrl( self, wildcard = 'PNG (*.png)' )
+        self._filepicker.SetSaveMode( True )
         
         flp_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._filepicker, 64 )
         
-        self._filepicker.SetMinSize( ( flp_width, -1 ) )
+        self._filepicker.setMinimumWidth( flp_width )
         
-        self._title = wx.TextCtrl( self )
+        self._title = QW.QLineEdit( self )
         
-        self._payload_description = wx.TextCtrl( self )
+        self._payload_description = QW.QLineEdit( self )
         
-        self._text = wx.TextCtrl( self )
+        self._text = QW.QLineEdit( self )
         
-        self._width = wx.SpinCtrl( self, min = 100, max = 4096 )
+        self._width = QP.MakeQSpinBox( self, min=100, max=4096 )
         
         self._export = ClientGUICommon.BetterButton( self, 'export', self.Export )
         
@@ -50,11 +54,11 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             payload_description += ' - ' + HydrusData.ToHumanBytes( len( payload_bytes ) )
             
         
-        self._payload_description.SetValue( payload_description )
+        self._payload_description.setText( payload_description )
         
-        self._payload_description.Disable()
+        self._payload_description.setEnabled( False )
         
-        self._width.SetValue( 512 )
+        self._width.setValue( 512 )
         
         last_png_export_dir = HG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
         
@@ -71,11 +75,11 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             name = payload_description
             
         
-        self._title.SetValue( name )
+        self._title.setText( name )
         
         if description is not None:
             
-            self._text.SetValue( description )
+            self._text.setText( description )
             
         
         if last_png_export_dir is not None:
@@ -104,10 +108,10 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.SetSizer( gridbox )
+        self.widget().setLayout( gridbox )
         
-        self._filepicker.Bind( wx.EVT_FILEPICKER_CHANGED, self.EventChanged )
-        self._title.Bind( wx.EVT_TEXT, self.EventChanged )
+        self._filepicker.filePickerChanged.connect( self._Update )
+        self._title.textChanged.connect( self._Update )
         
     
     def _Update( self ):
@@ -121,39 +125,39 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             problems.append( 'select a path' )
             
         
-        if self._title.GetValue() == '':
+        if path is not None and not os.path.exists( os.path.dirname( path ) ):
+            
+            problems.append( 'please select a directory that exists' )
+            
+        
+        if self._title.text() == '':
             
             problems.append( 'set a title' )
             
         
         if len( problems ) == 0:
             
-            self._export.SetLabelText( 'export' )
+            self._export.setText( 'export' )
             
-            self._export.Enable()
+            self._export.setEnabled( True )
             
         else:
             
-            self._export.SetLabelText( ' and '.join( problems ) )
+            self._export.setText( ' and '.join(problems) )
             
-            self._export.Disable()
+            self._export.setEnabled( False )
             
-        
-    
-    def EventChanged( self, event ):
-        
-        self._Update()
         
     
     def Export( self ):
         
-        width = self._width.GetValue()
+        width = self._width.value()
         
-        payload_description = self._payload_description.GetValue()
+        payload_description = self._payload_description.text()
         payload_bytes = ClientSerialisable.GetPayloadBytes( self._payload_obj )
         
-        title = self._title.GetValue()
-        text = self._text.GetValue()
+        title = self._title.text()
+        text = self._text.text()
         path = self._filepicker.GetPath()
         
         if path is not None and path != '':
@@ -170,9 +174,9 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientSerialisable.DumpToPng( width, payload_bytes, title, payload_description, text, path )
         
-        self._export.SetLabelText( 'done!' )
+        self._export.setText( 'done!' )
         
-        HG.client_controller.CallLaterWXSafe( self._export, 2.0, self._export.SetLabelText, 'export' )
+        HG.client_controller.CallLaterQtSafe(self._export, 2.0, self._export.setText, 'export')
         
     
 class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -183,13 +187,13 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._payload_objs = payload_objs
         
-        self._directory_picker = wx.DirPickerCtrl( self )
+        self._directory_picker = QP.DirPickerCtrl( self )
         
         dp_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._directory_picker, 52 )
         
-        self._directory_picker.SetMinSize( ( dp_width, -1 ) )
+        self._directory_picker.setMinimumWidth( dp_width )
         
-        self._width = wx.SpinCtrl( self, min = 100, max = 4096 )
+        self._width = QP.MakeQSpinBox( self, min=100, max=4096 )
         
         self._export = ClientGUICommon.BetterButton( self, 'export', self.Export )
         
@@ -202,7 +206,7 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._directory_picker.SetPath( last_png_export_dir )
             
         
-        self._width.SetValue( 512 )
+        self._width.setValue( 512 )
         
         self._Update()
         
@@ -216,9 +220,9 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.SetSizer( gridbox )
+        self.widget().setLayout( gridbox )
         
-        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventChanged )
+        self._directory_picker.dirPickerChanged.connect( self._Update )
         
     
     def _Update( self ):
@@ -234,26 +238,21 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( problems ) == 0:
             
-            self._export.SetLabelText( 'export' )
+            self._export.setText( 'export' )
             
-            self._export.Enable()
+            self._export.setEnabled( True )
             
         else:
             
-            self._export.SetLabelText( ' and '.join( problems ) )
+            self._export.setText( ' and '.join(problems) )
             
-            self._export.Disable()
+            self._export.setEnabled( False )
             
-        
-    
-    def EventChanged( self, event ):
-        
-        self._Update()
         
     
     def Export( self ):
         
-        width = self._width.GetValue()
+        width = self._width.value()
         
         directory = self._directory_picker.GetPath()
         
@@ -280,8 +279,8 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             ClientSerialisable.DumpToPng( width, payload_bytes, title, payload_description, text, path )
             
         
-        self._export.SetLabelText( 'done!' )
+        self._export.setText( 'done!' )
         
-        HG.client_controller.CallLaterWXSafe( self._export, 2.0, self._export.SetLabelText, 'export' )
+        HG.client_controller.CallLaterQtSafe(self._export, 2.0, self._export.setText, 'export')
         
     

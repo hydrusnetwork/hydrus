@@ -6,12 +6,14 @@ import threading
 import traceback
 import weakref
 from . import HydrusGlobals as HG
+import time
 
 class HydrusPubSub( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller, valid_callable ):
         
         self._controller = controller
+        self._valid_callable = valid_callable
         
         self._doing_work = False
         
@@ -35,9 +37,9 @@ class HydrusPubSub( object ):
                 
                 objects = self._topics_to_objects[ topic ]
                 
-                for object in objects:
+                for obj in objects:
                     
-                    if not object:
+                    if obj is None or not self._valid_callable( obj ):
                         
                         continue
                         
@@ -46,9 +48,9 @@ class HydrusPubSub( object ):
                     
                     for method_name in method_names:
                         
-                        if hasattr( object, method_name ):
+                        if hasattr( obj, method_name ):
                             
-                            callable = getattr( object, method_name )
+                            callable = getattr( obj, method_name )
                             
                             callables.append( callable )
                             
@@ -73,9 +75,9 @@ class HydrusPubSub( object ):
         
         # only do one list of callables at a time
         # we don't want to map a topic to its callables until the previous topic's callables have been fully executed
-        # e.g. when we start a message with a pubsub, it'll take a while (in independant thread-time) for wx to create
+        # e.g. when we start a message with a pubsub, it'll take a while (in independant thread-time) for Qt to create
         # the dialog and hence map the new callable to the topic. this was leading to messages not being updated
-        # because the (short) processing thread finished and entirely pubsubbed before wx had a chance to boot the
+        # because the (short) processing thread finished and entirely pubsubbed before Qt had a chance to boot the
         # message.
         
         self._doing_work = True

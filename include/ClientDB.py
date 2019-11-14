@@ -44,7 +44,8 @@ import sqlite3
 import stat
 import time
 import traceback
-import wx
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 YAML_DUMP_ID_SINGLE = 0
 YAML_DUMP_ID_REMOTE_BOORU = 1
@@ -2000,7 +2001,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusData.DebugPrint( message )
         
-        wx.SafeShowMessage( 'hydrus db failed', message )
+        self._controller.SafeShowCriticalMessage( 'hydrus db failed', message )
         
     
     def _DuplicatesAddPotentialDuplicates( self, media_id, potential_duplicate_media_ids_and_distances ):
@@ -4479,7 +4480,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.TAG_SERVICES:
             
@@ -4542,7 +4543,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL, min_current_count = num_not_local ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
             if have_ratings:
                 
@@ -10787,7 +10788,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'The boot will fail once you click ok. If you do not know what happened and how to fix this, please take a screenshot and contact hydrus dev.'
             
-            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            self._controller.SafeShowCriticalMessage( 'Error', message )
             
             raise Exception( 'Master database was invalid!' )
             
@@ -10800,7 +10801,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
             
             self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
             self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
@@ -10835,7 +10836,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
             
             for service_id in tag_service_ids:
                 
@@ -10872,7 +10873,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
             
             self._CreateDBCaches()
             
@@ -10907,7 +10908,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
             
             self._RegenerateACCache()
             
@@ -10924,7 +10925,7 @@ class DB( HydrusDB.HydrusDB ):
             message += os.linesep * 2
             message += 'If you do not already know what caused this, it was likely a hard drive fault--either due to a recent abrupt power cut or actual hardware failure. Check \'help my db is broke.txt\' in the install_dir/db directory as soon as you can.'
             
-            self._controller.CallBlockingToWX( self._controller, wx.MessageBox, message )
+            self._controller.CallBlockingToQt( self._controller.app, QW.QMessageBox.warning, None, 'Warning', message )
             
             new_options = ClientOptions.ClientOptions()
             
@@ -10936,22 +10937,22 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ReportOverupdatedDB( self, version ):
         
-        def wx_code():
+        def qt_code():
             
-            wx.MessageBox( 'This client\'s database is version ' + HydrusData.ToHumanInt( version ) + ', but the software is version ' + HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) + '! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
+            QW.QMessageBox.warning( None, 'Warning', 'This client\'s database is version '+HydrusData.ToHumanInt(version)+', but the software is version '+HydrusData.ToHumanInt(HC.SOFTWARE_VERSION)+'! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
             
         
-        self._controller.CallBlockingToWX( None, wx_code )
+        self._controller.CallBlockingToQt(None, qt_code)
         
     
     def _ReportUnderupdatedDB( self, version ):
         
-        def wx_code():
+        def qt_code():
             
-            wx.MessageBox( 'This client\'s database is version ' + HydrusData.ToHumanInt( version ) + ', but the software is significantly later, ' + HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) + '! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
+            QW.QMessageBox.warning( None, 'Warning', 'This client\'s database is version '+HydrusData.ToHumanInt(version)+', but the software is significantly later, '+HydrusData.ToHumanInt(HC.SOFTWARE_VERSION)+'! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.' )
             
         
-        self._controller.CallBlockingToWX( None, wx_code )
+        self._controller.CallBlockingToQt(None, qt_code)
         
     
     def _ReprocessRepository( self, service_key, update_mime_types ):
@@ -11130,6 +11131,8 @@ class DB( HydrusDB.HydrusDB ):
                 backup_depth = HG.client_controller.new_options.GetInteger( 'number_of_gui_session_backups' )
                 
             
+            now = HydrusData.GetNow()
+            
             if store_backups:
                 
                 existing_timestamps = self._STL( self._c.execute( 'SELECT timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) )
@@ -11138,10 +11141,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 deletee_timestamps = existing_timestamps[ : - backup_depth ] # keep highest n values
                 
-                if len( deletee_timestamps ) > 0:
-                    
-                    self._c.executemany( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', [ ( dump_type, dump_name, timestamp ) for timestamp in deletee_timestamps ] )
-                    
+                deletee_timestamps.append( now ) # if save gets spammed twice in one second, we'll overwrite
+                
+                self._c.executemany( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', [ ( dump_type, dump_name, timestamp ) for timestamp in deletee_timestamps ] )
                 
             else:
                 
@@ -11152,7 +11154,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, HydrusData.GetNow(), dump_buffer ) )
+                self._c.execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, now, dump_buffer ) )
                 
             except:
                 
@@ -12049,7 +12051,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 344:
             
-            def wx_thumb_delete_warning():
+            def qt_thumb_delete_warning():
                 
                 message = 'The client now only uses one thumbnail per file (previously it needed two). Your \'resized\' thumbnails will now be deleted. This is a significant step that could take some time to complete. It will also significantly impact your next backup run.'
                 message += os.linesep * 2
@@ -12057,10 +12059,10 @@ class DB( HydrusDB.HydrusDB ):
                 message += os.linesep * 2
                 message += 'BTW: If you previously put your resized thumbnails on an SSD but not your \'full-size\' ones, you should check the \'migrate database\' dialog once the client boots so you can move the remaining thumbnail directories to fast storage.'
                 
-                wx.MessageBox( message )
+                QW.QMessageBox.warning( None, 'Warning', message )
                 
             
-            self._controller.CallBlockingToWX( None, wx_thumb_delete_warning )
+            self._controller.CallBlockingToQt(None, qt_thumb_delete_warning)
             
             new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
             
@@ -12163,7 +12165,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if num_possible_resized_paths > 0:
                     
-                    def wx_thumb_delete_warning_reattempt():
+                    def qt_thumb_delete_warning_reattempt():
                         
                         message = 'It appears that the update code from last week\'s release, 345, did not successfully delete all your old (and now unneeded) resized thumbnail directories.'
                         message += os.linesep * 2
@@ -12173,10 +12175,10 @@ class DB( HydrusDB.HydrusDB ):
                         message += os.linesep * 2
                         message += 'I will now attempt to delete these directories again, this time with fixed permissions. If you are not ready to do this, kill the hydrus process now.'
                         
-                        wx.MessageBox( message )
+                        QW.QMessageBox.warning( None, 'Warning', message )
                         
                     
-                    self._controller.CallBlockingToWX( None, wx_thumb_delete_warning_reattempt )
+                    self._controller.CallBlockingToQt(None, qt_thumb_delete_warning_reattempt)
                     
                     for ( i, full_path ) in enumerate( possible_resized_paths ):
                         
@@ -12312,7 +12314,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             except:
                 
-                wx.SafeShowMessage( 'When trying to update, I could not create a new local tag cache! Error information will follow. Please let hydrus dev know!' )
+                self._controller.SafeShowCriticalMessage( 'problem updating!', 'When trying to update, I could not create a new local tag cache! Error information will follow. Please let hydrus dev know!' )
                 
                 raise
                 
@@ -12880,7 +12882,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             def ask_what_to_do():
                                 
-                                message = 'The PTR is no longer run by hydrus dev! A user on the discord has kindly offered to host it relieve the bandwidth issues. A new janitorial team will also help deal with the piled-up petitions. Please see the v368 release post for more information, or check here:'
+                                message = 'The PTR is no longer run by hydrus dev! A user on the discord has kindly offered to host it to relieve the bandwidth issues. A new janitorial team will also help deal with the piled-up petitions. Please see the v368 release post for more information, or check here:'
                                 message += os.linesep * 2
                                 message += 'https://hydrus.tumblr.com/post/187561442294'
                                 message += os.linesep * 2
@@ -12893,9 +12895,9 @@ class DB( HydrusDB.HydrusDB ):
                                 return result
                                 
                             
-                            result = self._controller.CallBlockingToWX( None, ask_what_to_do )
+                            result = self._controller.CallBlockingToQt( None, ask_what_to_do )
                             
-                            if result == wx.ID_YES:
+                            if result == QW.QDialog.Accepted:
                                 
                                 do_transfer = True
                                 

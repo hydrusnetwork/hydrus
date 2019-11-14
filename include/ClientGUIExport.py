@@ -21,7 +21,10 @@ import os
 import stat
 import time
 import traceback
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -45,14 +48,14 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders.AddDatas( export_folders )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         intro = 'Here you can set the client to regularly export a certain query to a particular location.'
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._export_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._export_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddFolder( self ):
@@ -76,7 +79,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 export_folder = panel.GetValue()
                 
@@ -151,7 +154,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_export_folder = panel.GetValue()
                     
@@ -195,19 +198,19 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._path_box = ClientGUICommon.StaticBox( self, 'name and location' )
         
-        self._name = wx.TextCtrl( self._path_box )
+        self._name = QW.QLineEdit( self._path_box )
         
-        self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
+        self._path = QP.DirPickerCtrl( self._path_box )
         
         #
         
         self._type_box = ClientGUICommon.StaticBox( self, 'type of export' )
         
         self._type = ClientGUICommon.BetterChoice( self._type_box )
-        self._type.Append( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
-        self._type.Append( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
+        self._type.addItem( 'regular', HC.EXPORT_FOLDER_TYPE_REGULAR )
+        self._type.addItem( 'synchronise', HC.EXPORT_FOLDER_TYPE_SYNCHRONISE )
         
-        self._delete_from_client_after_export = wx.CheckBox( self._type_box )
+        self._delete_from_client_after_export = QW.QCheckBox( self._type_box )
         
         #
         
@@ -227,39 +230,39 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._period = ClientGUITime.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
-        self._run_regularly = wx.CheckBox( self._period_box )
+        self._run_regularly = QW.QCheckBox( self._period_box )
         
-        self._paused = wx.CheckBox( self._period_box )
+        self._paused = QW.QCheckBox( self._period_box )
         
-        self._run_now = wx.CheckBox( self._period_box )
+        self._run_now = QW.QCheckBox( self._period_box )
         
         #
         
         self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
         
-        self._pattern = wx.TextCtrl( self._phrase_box )
+        self._pattern = QW.QLineEdit( self._phrase_box )
         
         self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         self._path.SetPath( path )
         
         self._type.SetValue( export_type )
         
-        self._delete_from_client_after_export.SetValue( delete_from_client_after_export )
+        self._delete_from_client_after_export.setChecked( delete_from_client_after_export )
         
         self._period.SetValue( period )
         
-        self._run_regularly.SetValue( run_regularly )
+        self._run_regularly.setChecked( run_regularly )
         
-        self._paused.SetValue( paused )
+        self._paused.setChecked( paused )
         
-        self._run_now.SetValue( run_now )
+        self._run_now.setChecked( run_now )
         
-        self._pattern.SetValue( phrase )
+        self._pattern.setText( phrase )
         
         #
         
@@ -296,7 +299,7 @@ If you select synchronise, be careful!'''
         self._type_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._query_box.Add( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._query_box.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._query_box.Add( self._searchbox )
         
         self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -310,55 +313,55 @@ If you select synchronise, be careful!'''
         
         self._period_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        phrase_hbox = QP.HBoxLayout()
         
-        phrase_hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        phrase_hbox.Add( self._examples, CC.FLAGS_VCENTER )
+        QP.AddToLayout( phrase_hbox, self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( phrase_hbox, self._examples, CC.FLAGS_VCENTER )
         
         self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._UpdateTypeDeleteUI()
         
-        self._type.Bind( wx.EVT_CHOICE, self.EventTypeChoice )
-        self._delete_from_client_after_export.Bind( wx.EVT_CHECKBOX, self.EventDeleteFilesAfterExport )
+        self._type.currentIndexChanged.connect( self._UpdateTypeDeleteUI )
+        self._delete_from_client_after_export.clicked.connect( self.EventDeleteFilesAfterExport )
         
     
     def _UpdateTypeDeleteUI( self ):
         
         if self._type.GetValue() == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
             
-            self._delete_from_client_after_export.Disable()
+            self._delete_from_client_after_export.setEnabled( False )
             
-            if self._delete_from_client_after_export.GetValue():
+            if self._delete_from_client_after_export.isChecked():
                 
-                self._delete_from_client_after_export.SetValue( False )
+                self._delete_from_client_after_export.setChecked( False )
                 
             
         else:
             
-            self._delete_from_client_after_export.Enable()
+            self._delete_from_client_after_export.setEnabled( True )
             
         
     
     def CanOK( self ):
         
-        if self._delete_from_client_after_export.GetValue():
+        if self._delete_from_client_after_export.isChecked():
             
             message = 'You have set this export folder to delete the files from the client after export! Are you absolutely sure this is what you want?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return False
                 
@@ -367,28 +370,23 @@ If you select synchronise, be careful!'''
         return True
         
     
-    def EventDeleteFilesAfterExport( self, event ):
+    def EventDeleteFilesAfterExport( self ):
         
-        if self._delete_from_client_after_export.GetValue():
+        if self._delete_from_client_after_export.isChecked():
             
-            wx.MessageBox( 'This will delete the exported files from your client after the export! If you do not know what this means, uncheck it!' )
+            QW.QMessageBox.warning( self, 'Warning', 'This will delete the exported files from your client after the export! If you do not know what this means, uncheck it!' )
             
-        
-    
-    def EventTypeChoice( self, event ):
-        
-        self._UpdateTypeDeleteUI()
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
         path = self._path.GetPath()
         
         export_type = self._type.GetValue()
         
-        delete_from_client_after_export = self._delete_from_client_after_export.GetValue()
+        delete_from_client_after_export = self._delete_from_client_after_export.isChecked()
         
         file_search_context = self._searchbox.GetFileSearchContext()
         
@@ -396,18 +394,16 @@ If you select synchronise, be careful!'''
         
         file_search_context.SetPredicates( predicates )
         
-        run_regularly = self._run_regularly.GetValue()
+        run_regularly = self._run_regularly.isChecked()
         
         period = self._period.GetValue()
-        
-        phrase = self._pattern.GetValue()
-        
+               
         if self._path.GetPath() in ( '', None ):
             
             raise HydrusExceptions.VetoException( 'You must enter a folder path to export to!' )
             
         
-        phrase = self._pattern.GetValue()
+        phrase = self._pattern.text()
         
         try:
             
@@ -418,9 +414,9 @@ If you select synchronise, be careful!'''
             raise HydrusExceptions.VetoException( 'Could not parse that export phrase! ' + str( e ) )
             
         
-        run_now = self._run_now.GetValue()
+        run_now = self._run_now.isChecked()
         
-        paused = self._paused.GetValue()
+        paused = self._paused.isChecked()
         
         export_folder = ClientExporting.ExportFolder( name, path = path, export_type = export_type, delete_from_client_after_export = delete_from_client_after_export, file_search_context = file_search_context, run_regularly = run_regularly, period = period, phrase = phrase, last_checked = self._last_checked, paused = paused, run_now = run_now )
         
@@ -450,7 +446,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.SetTagsBox( t )
         
-        self._tags_box.SetMinSize( ( 220, 300 ) )
+        self._tags_box.setMinimumSize( QP.TupleToQSize( (220,300) ) )
         
         columns = [ ( 'number', 8 ), ( 'mime', 20 ), ( 'expected path', -1 ) ]
         
@@ -460,37 +456,37 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
         
-        self._directory_picker = wx.DirPickerCtrl( self._export_path_box )
-        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
+        self._directory_picker = QP.DirPickerCtrl( self._export_path_box )
+        self._directory_picker.dirPickerChanged.connect( self._RefreshPaths )
         
-        self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
-        self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
+        self._open_location = QW.QPushButton( 'open this location', self._export_path_box )
+        self._open_location.clicked.connect( self.EventOpenLocation )
         
         self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
         
-        self._pattern = wx.TextCtrl( self._filenames_box )
+        self._pattern = QW.QLineEdit( self._filenames_box )
         
-        self._update = wx.Button( self._filenames_box, label = 'update' )
-        self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
+        self._update = QW.QPushButton( 'update', self._filenames_box )
+        self._update.clicked.connect( self._RefreshPaths )
         
         self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
         
-        self._delete_files_after_export = wx.CheckBox( self, label = 'delete files from client after export?' )
-        self._delete_files_after_export.SetForegroundColour( wx.Colour( 127, 0, 0 ) )
+        self._delete_files_after_export = QW.QCheckBox( 'delete files from client after export?', self )
+        QP.SetForegroundColour( self._delete_files_after_export, QG.QColor( 127, 0, 0 ) )
         
-        self._export_symlinks = wx.CheckBox( self, label = 'EXPERIMENTAL: export symlinks' )
-        self._export_symlinks.SetForegroundColour( wx.Colour( 127, 0, 0 ) )
+        self._export_symlinks = QW.QCheckBox( 'EXPERIMENTAL: export symlinks', self )
+        QP.SetForegroundColour( self._export_symlinks, QG.QColor( 127, 0, 0 ) )
         
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         
         self._export_tag_txts_services_button = ClientGUICommon.BetterButton( self, 'set .txt services', self._SetTxtServices )
         
-        self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
-        self._export_tag_txts.SetToolTip( text )
-        self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
+        self._export_tag_txts = QW.QCheckBox( 'export tags to .txt files?', self )
+        self._export_tag_txts.setToolTip( text )
+        self._export_tag_txts.clicked.connect( self.EventExportTagTxtsChanged )
         
-        self._export = wx.Button( self, label = 'export' )
-        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        self._export = QW.QPushButton( 'export', self )
+        self._export.clicked.connect( self._DoExport )
         
         #
         
@@ -500,74 +496,73 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         phrase = new_options.GetString( 'export_phrase' )
         
-        self._pattern.SetValue( phrase )
+        self._pattern.setText( phrase )
         
         if len( self._neighbouring_txt_tag_service_keys ) > 0:
             
-            self._export_tag_txts.SetValue( True )
+            self._export_tag_txts.setChecked( True )
             
         
         self._paths.SetData( list( enumerate( flat_media ) ) )
         
-        self._delete_files_after_export.SetValue( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
-        self._delete_files_after_export.Bind( wx.EVT_CHECKBOX, self.EventDeleteFilesChanged )
+        self._delete_files_after_export.setChecked( HG.client_controller.new_options.GetBoolean( 'delete_files_after_export' ) )
+        self._delete_files_after_export.clicked.connect( self.EventDeleteFilesChanged )
         
         if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            self._export_symlinks.Hide()
+            self._export_symlinks.setVisible( False )
             
         
         #
         
-        top_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        top_hbox = QP.HBoxLayout()
         
-        top_hbox.Add( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        top_hbox.Add( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( top_hbox, self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( top_hbox, self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._open_location, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._open_location, CC.FLAGS_VCENTER )
         
         self._export_path_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._update, CC.FLAGS_VCENTER )
-        hbox.Add( self._examples, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._update, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._examples, CC.FLAGS_VCENTER )
         
         self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        txt_hbox = QP.HBoxLayout()
         
-        txt_hbox.Add( self._export_tag_txts_services_button, CC.FLAGS_VCENTER )
-        txt_hbox.Add( self._export_tag_txts, CC.FLAGS_VCENTER )
+        QP.AddToLayout( txt_hbox, self._export_tag_txts_services_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( txt_hbox, self._export_tag_txts, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.Add( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._export_symlinks, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( txt_hbox, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._delete_files_after_export, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._export_symlinks, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, txt_hbox, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._export, CC.FLAGS_LONE_BUTTON )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._RefreshTags()
         
         self._UpdateTxtButton()
         
-        wx.CallAfter( self._export.SetFocus )
+        QP.CallAfter( self._export.setFocus, QC.Qt.OtherFocusReason)
         
-        self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
-        self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
+        self._paths.itemSelectionChanged.connect( self._RefreshTags )
         
         if do_export_and_then_quit:
             
-            wx.CallAfter( self._DoExport, True )
+            QP.CallAfter( self._DoExport, True )
             
         
     
@@ -607,8 +602,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DoExport( self, quit_afterwards = False ):
         
-        delete_afterwards = self._delete_files_after_export.GetValue()
-        export_symlinks = self._export_symlinks.GetValue() and not delete_afterwards
+        delete_afterwards = self._delete_files_after_export.isChecked()
+        export_symlinks = self._export_symlinks.isChecked() and not delete_afterwards
         
         if quit_afterwards:
             
@@ -622,9 +617,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
-                self.GetParent().Close()
+                self.parentWidget().close()
                 
                 return
                 
@@ -635,7 +630,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return
                 
@@ -643,9 +638,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._RefreshPaths()
         
-        export_tag_txts = self._export_tag_txts.GetValue()
+        export_tag_txts = self._export_tag_txts.isChecked()
         
-        if self._export_tag_txts.GetValue():
+        if self._export_tag_txts.isChecked():
             
             neighbouring_txt_tag_service_keys = self._neighbouring_txt_tag_service_keys
             
@@ -658,7 +653,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         HydrusPaths.MakeSureDirectoryExists( directory )
         
-        pattern = self._pattern.GetValue()
+        pattern = self._pattern.text()
         
         HG.client_controller.new_options.SetString( 'export_phrase', pattern )
         
@@ -668,41 +663,41 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         except Exception as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
         
         client_files_manager = HG.client_controller.client_files_manager
         
-        self._export.Disable()
+        self._export.setEnabled( False )
         
         to_do = self._paths.GetData()
         
         num_to_do = len( to_do )
         
-        def wx_update_label( text ):
+        def qt_update_label( text ):
             
-            if not self or not self._export:
+            if not QP.isValid( self ) or not QP.isValid( self._export ) or not self._export:
                 
                 return
                 
             
-            self._export.SetLabel( text )
+            self._export.setText( text )
             
         
-        def wx_done( quit_afterwards ):
+        def qt_done( quit_afterwards ):
             
-            if not self or not self._export:
+            if not QP.isValid( self ) or not QP.isValid( self._export ) or not self._export:
                 
                 return
                 
             
-            self._export.Enable()
+            self._export.setEnabled( True )
             
             if quit_afterwards:
                 
-                wx.CallAfter( self.GetParent().Close )
+                QP.CallAfter( self.parentWidget().close() )
                 
             
         
@@ -714,7 +709,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 try:
                     
-                    wx.CallAfter( wx_update_label, HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do ) )
+                    QP.CallAfter( qt_update_label, HydrusData.ConvertValueRangeToPrettyString(index+1,num_to_do) )
                     
                     hash = media.GetHash()
                     mime = media.GetMime()
@@ -772,7 +767,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 except:
                     
-                    wx.CallAfter( wx.MessageBox, 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                    QP.CallAfter( QW.QMessageBox.information, self, 'Information', 'Encountered a problem while attempting to export file with index '+str(ordering_index+1)+':'+os.linesep*2+traceback.format_exc() )
                     
                     break
                     
@@ -782,7 +777,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if delete_afterwards:
                 
-                wx.CallAfter( wx_update_label, 'deleting' )
+                QP.CallAfter( qt_update_label, 'deleting' )
                 
                 deletee_hashes = { media.GetHash() for ( ordering_index, media ) in to_do }
                 
@@ -798,13 +793,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
             
-            wx.CallAfter( wx_update_label, 'done!' )
+            QP.CallAfter( qt_update_label, 'done!' )
             
             time.sleep( 1 )
             
-            wx.CallAfter( wx_update_label, 'export' )
+            QP.CallAfter( qt_update_label, 'export' )
             
-            wx.CallAfter( wx_done, quit_afterwards )
+            QP.CallAfter( qt_done, quit_afterwards )
             
         
         HG.client_controller.CallToThread( do_it, directory, neighbouring_txt_tag_service_keys, delete_afterwards, export_symlinks, quit_afterwards )
@@ -819,7 +814,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         directory = self._directory_picker.GetPath()
         
-        pattern = self._pattern.GetValue()
+        pattern = self._pattern.text()
         
         terms = ClientExporting.ParseExportPhrase( pattern )
         
@@ -846,7 +841,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _RefreshPaths( self ):
         
-        pattern = self._pattern.GetValue()
+        pattern = self._pattern.text()
         dir_path = self._directory_picker.GetPath()
         
         if pattern == self._last_phrase_used and dir_path == self._last_dir_used:
@@ -893,7 +888,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._neighbouring_txt_tag_service_keys = panel.GetValue()
                 
@@ -903,7 +898,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( self._neighbouring_txt_tag_service_keys ) == 0:
             
-            self._export_tag_txts.SetValue( False )
+            self._export_tag_txts.setChecked( False )
             
         
         self._UpdateTxtButton()
@@ -911,13 +906,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _UpdateTxtButton( self ):
         
-        if self._export_tag_txts.GetValue():
+        if self._export_tag_txts.isChecked():
             
-            self._export_tag_txts_services_button.Enable()
+            self._export_tag_txts_services_button.setEnabled( True )
             
         else:
             
-            self._export_tag_txts_services_button.Disable()
+            self._export_tag_txts_services_button.setEnabled( False )
             
         
         if len( self._neighbouring_txt_tag_service_keys ) == 0:
@@ -931,7 +926,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             tt = ', '.join( names )
             
         
-        self._export_tag_txts_services_button.SetToolTip( tt )
+        self._export_tag_txts_services_button.setToolTip( tt )
         
     
     def EventExport( self, event ):
@@ -939,21 +934,21 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._DoExport()
         
     
-    def EventDeleteFilesChanged( self, event ):
+    def EventDeleteFilesChanged( self ):
         
-        value = self._delete_files_after_export.GetValue()
+        value = self._delete_files_after_export.isChecked()
         
         HG.client_controller.new_options.SetBoolean( 'delete_files_after_export', value )
         
         if value:
             
-            self._export_symlinks.SetValue( False )
+            self._export_symlinks.setChecked( False )
             
         
     
-    def EventExportTagTxtsChanged( self, event ):
+    def EventExportTagTxtsChanged( self ):
         
-        turning_on = self._export_tag_txts.GetValue()
+        turning_on = self._export_tag_txts.isChecked()
         
         self._UpdateTxtButton()
         
@@ -967,24 +962,13 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def EventOpenLocation( self, event ):
+    def EventOpenLocation( self ):
         
         directory = self._directory_picker.GetPath()
         
         if directory is not None and directory != '':
             
             HydrusPaths.LaunchDirectory( directory )
-            
-        
-    
-    def EventRecalcPaths( self, event ):
-        
-        self._RefreshPaths()
-        
-    
-    def EventSelectPath( self, event ):
-        
-        self._RefreshTags()
         
         
     

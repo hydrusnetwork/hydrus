@@ -6,7 +6,10 @@ from . import ClientImporting
 from . import ClientImportOptions
 from . import HydrusData
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
     
@@ -14,10 +17,10 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        help_button.SetToolTip( 'Show help regarding these checker options.' )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
+        help_button.setToolTip( 'Show help regarding these checker options.' )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         from . import ClientDefaults
         
@@ -44,13 +47,13 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._death_file_velocity = VelocityCtrl( self, min_unit_value, max_unit_value, min_time_delta, days = True, hours = True, minutes = True, per_phrase = 'in', unit = 'files' )
         
-        self._flat_check_period_checkbox = wx.CheckBox( self )
+        self._flat_check_period_checkbox = QW.QCheckBox( self )
         
         #
         
         self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
         
-        self._intended_files_per_check = wx.SpinCtrl( self._reactive_check_panel, min = 1, max = 1000 )
+        self._intended_files_per_check = QP.MakeQSpinBox( self._reactive_check_panel, min=1, max=1000 )
         
         self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
         
@@ -105,40 +108,35 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( defaults_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._reactive_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._static_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, defaults_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._reactive_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._static_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._flat_check_period_checkbox.Bind( wx.EVT_CHECKBOX, self.EventFlatPeriodCheck )
+        self._flat_check_period_checkbox.clicked.connect( self.EventFlatPeriodCheck )
         
     
     def _UpdateEnabledControls( self ):
         
-        if self._flat_check_period_checkbox.GetValue() == True:
+        if self._flat_check_period_checkbox.isChecked():
             
-            self._reactive_check_panel.Hide()
-            self._static_check_panel.Show()
+            self._reactive_check_panel.hide()
+            self._static_check_panel.show()
             
         else:
             
-            self._reactive_check_panel.Show()
-            self._static_check_panel.Hide()
-            
+            self._reactive_check_panel.show()
+            self._static_check_panel.hide()
         
-        self.Layout()
         
-        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
-        
-    
-    def EventFlatPeriodCheck( self, event ):
+    def EventFlatPeriodCheck( self ):
         
         self._UpdateEnabledControls()
         
@@ -147,14 +145,14 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = checker_options.ToTuple()
         
-        self._intended_files_per_check.SetValue( intended_files_per_check )
+        self._intended_files_per_check.setValue( intended_files_per_check )
         self._never_faster_than.SetValue( never_faster_than )
         self._never_slower_than.SetValue( never_slower_than )
         self._death_file_velocity.SetValue( death_file_velocity )
         
         self._flat_check_period.SetValue( never_faster_than )
         
-        self._flat_check_period_checkbox.SetValue( never_faster_than == never_slower_than )
+        self._flat_check_period_checkbox.setChecked( never_faster_than == never_slower_than )
         
         self._UpdateEnabledControls()
         
@@ -177,16 +175,16 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         help += os.linesep * 2
         help += 'If you are still not comfortable with how this system works, the \'reasonable defaults\' are good fallbacks. Most of the time, setting some reasonable rules and leaving checkers to do their work is the best way to deal with this stuff, rather than obsessing over the exact perfect values you want for each situation.'
         
-        wx.MessageBox( help )
+        QW.QMessageBox.information( self, 'Information', help )
         
     
     def GetValue( self ):
         
         death_file_velocity = self._death_file_velocity.GetValue()
         
-        intended_files_per_check = self._intended_files_per_check.GetValue()
+        intended_files_per_check = self._intended_files_per_check.value()
         
-        if self._flat_check_period_checkbox.GetValue() == True:
+        if self._flat_check_period_checkbox.isChecked():
             
             never_faster_than = self._flat_check_period.GetValue()
             never_slower_than = never_faster_than
@@ -200,13 +198,13 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         return ClientImportOptions.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
         
     
-( TimeDeltaEvent, EVT_TIME_DELTA ) = wx.lib.newevent.NewCommandEvent()
+class TimeDeltaButton( QW.QPushButton ):
 
-class TimeDeltaButton( wx.Button ):
+    timeDeltaChanged = QC.Signal()
     
     def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False ):
         
-        wx.Button.__init__( self, parent )
+        QW.QPushButton.__init__( self, parent )
         
         self._min = min
         self._show_days = days
@@ -217,9 +215,9 @@ class TimeDeltaButton( wx.Button ):
         
         self._value = self._min
         
-        self.SetLabelText( 'initialising' )
+        self.setText( 'initialising' )
         
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.clicked.connect( self.EventButton )
         
     
     def _RefreshLabel( self ):
@@ -235,10 +233,10 @@ class TimeDeltaButton( wx.Button ):
             text = HydrusData.TimeDeltaToPrettyTimeDelta( value )
             
         
-        self.SetLabelText( text )
+        self.setText( text )
         
     
-    def EventButton( self, event ):
+    def EventButton( self ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit time delta' ) as dlg:
             
@@ -252,15 +250,13 @@ class TimeDeltaButton( wx.Button ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 value = panel.GetValue()
                 
                 self.SetValue( value )
                 
-                new_event = TimeDeltaEvent( 0 )
-                
-                wx.QueueEvent( self.GetEventHandler(), new_event )
+                self.timeDeltaChanged.emit()
                 
             
         
@@ -276,14 +272,14 @@ class TimeDeltaButton( wx.Button ):
         
         self._RefreshLabel()
         
-        self.GetParent().Layout()
         
+class TimeDeltaCtrl( QW.QWidget ):
     
-class TimeDeltaCtrl( wx.Panel ):
+    timeDeltaChanged = QC.Signal()
     
     def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False, monthly_label = 'monthly' ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._min = min
         self._show_days = days
@@ -292,54 +288,54 @@ class TimeDeltaCtrl( wx.Panel ):
         self._show_seconds = seconds
         self._monthly_allowed = monthly_allowed
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
         if self._show_days:
             
-            self._days = wx.SpinCtrl( self, min = 0, max = 3653, size = ( 50, -1 ) )
-            self._days.Bind( wx.EVT_SPINCTRL, self.EventChange )
+            self._days = QP.MakeQSpinBox( self, min=0, max=3653, width = 50 )
+            self._days.valueChanged.connect( self.EventChange )
             
-            hbox.Add( self._days, CC.FLAGS_VCENTER )
-            hbox.Add( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._days, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_VCENTER )
             
         
         if self._show_hours:
             
-            self._hours = wx.SpinCtrl( self, min = 0, max = 23, size = ( 45, -1 ) )
-            self._hours.Bind( wx.EVT_SPINCTRL, self.EventChange )
+            self._hours = QP.MakeQSpinBox( self, min=0, max=23, width = 45 )
+            self._hours.valueChanged.connect( self.EventChange )
             
-            hbox.Add( self._hours, CC.FLAGS_VCENTER )
-            hbox.Add( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._hours, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_VCENTER )
             
         
         if self._show_minutes:
             
-            self._minutes = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
-            self._minutes.Bind( wx.EVT_SPINCTRL, self.EventChange )
+            self._minutes = QP.MakeQSpinBox( self, min=0, max=59, width = 45 )
+            self._minutes.valueChanged.connect( self.EventChange )
             
-            hbox.Add( self._minutes, CC.FLAGS_VCENTER )
-            hbox.Add( ClientGUICommon.BetterStaticText( self, 'minutes' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._minutes, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'minutes'), CC.FLAGS_VCENTER )
             
         
         if self._show_seconds:
             
-            self._seconds = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
-            self._seconds.Bind( wx.EVT_SPINCTRL, self.EventChange )
+            self._seconds = QP.MakeQSpinBox( self, min=0, max=59, width = 45 )
+            self._seconds.valueChanged.connect( self.EventChange )
             
-            hbox.Add( self._seconds, CC.FLAGS_VCENTER )
-            hbox.Add( ClientGUICommon.BetterStaticText( self, 'seconds' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._seconds, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'seconds'), CC.FLAGS_VCENTER )
             
         
         if self._monthly_allowed:
             
-            self._monthly = wx.CheckBox( self )
-            self._monthly.Bind( wx.EVT_CHECKBOX, self.EventChange )
+            self._monthly = QW.QCheckBox( self )
+            self._monthly.clicked.connect( self.EventChange )
             
-            hbox.Add( self._monthly, CC.FLAGS_VCENTER )
-            hbox.Add( ClientGUICommon.BetterStaticText( self, monthly_label ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._monthly, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,monthly_label), CC.FLAGS_VCENTER )
             
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
     
     def _UpdateEnables( self ):
@@ -350,49 +346,49 @@ class TimeDeltaCtrl( wx.Panel ):
             
             if self._show_days:
                 
-                self._days.Disable()
+                self._days.setEnabled( False )
                 
             
             if self._show_hours:
                 
-                self._hours.Disable()
+                self._hours.setEnabled( False )
                 
             
             if self._show_minutes:
                 
-                self._minutes.Disable()
+                self._minutes.setEnabled( False )
                 
             
             if self._show_seconds:
                 
-                self._seconds.Disable()
+                self._seconds.setEnabled( False )
                 
             
         else:
             
             if self._show_days:
                 
-                self._days.Enable()
+                self._days.setEnabled( True )
                 
             
             if self._show_hours:
                 
-                self._hours.Enable()
+                self._hours.setEnabled( True )
                 
             
             if self._show_minutes:
                 
-                self._minutes.Enable()
+                self._minutes.setEnabled( True )
                 
             
             if self._show_seconds:
                 
-                self._seconds.Enable()
+                self._seconds.setEnabled( True )
                 
             
         
     
-    def EventChange( self, event ):
+    def EventChange( self ):
         
         value = self.GetValue()
         
@@ -403,14 +399,12 @@ class TimeDeltaCtrl( wx.Panel ):
         
         self._UpdateEnables()
         
-        new_event = TimeDeltaEvent( 0 )
-        
-        wx.QueueEvent( self.GetEventHandler(), new_event )
+        self.timeDeltaChanged.emit()
         
     
     def GetValue( self ):
         
-        if self._monthly_allowed and self._monthly.GetValue():
+        if self._monthly_allowed and self._monthly.isChecked():
             
             return None
             
@@ -419,22 +413,22 @@ class TimeDeltaCtrl( wx.Panel ):
         
         if self._show_days:
             
-            value += self._days.GetValue() * 86400
+            value += self._days.value() * 86400
             
         
         if self._show_hours:
             
-            value += self._hours.GetValue() * 3600
+            value += self._hours.value() * 3600
             
         
         if self._show_minutes:
             
-            value += self._minutes.GetValue() * 60
+            value += self._minutes.value() * 60
             
         
         if self._show_seconds:
             
-            value += self._seconds.GetValue()
+            value += self._seconds.value()
             
         
         return value
@@ -446,11 +440,11 @@ class TimeDeltaCtrl( wx.Panel ):
             
             if value is None:
                 
-                self._monthly.SetValue( True )
+                self._monthly.setChecked( True )
                 
             else:
                 
-                self._monthly.SetValue( False )
+                self._monthly.setChecked( False )
                 
             
         
@@ -463,49 +457,49 @@ class TimeDeltaCtrl( wx.Panel ):
             
             if self._show_days:
                 
-                self._days.SetValue( value // 86400 )
+                self._days.setValue( value // 86400 )
                 
                 value %= 86400
                 
             
             if self._show_hours:
                 
-                self._hours.SetValue( value // 3600 )
+                self._hours.setValue( value // 3600 )
                 
                 value %= 3600
                 
             
             if self._show_minutes:
                 
-                self._minutes.SetValue( value // 60 )
+                self._minutes.setValue( value // 60 )
                 
                 value %= 60
                 
             
             if self._show_seconds:
                 
-                self._seconds.SetValue( value )
+                self._seconds.setValue( value )
                 
             
         
         self._UpdateEnables()
         
     
-class VelocityCtrl( wx.Panel ):
+class VelocityCtrl( QW.QWidget ):
     
     def __init__( self, parent, min_unit_value, max_unit_value, min_time_delta, days = False, hours = False, minutes = False, seconds = False, per_phrase = 'per', unit = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._num = wx.SpinCtrl( self, min = min_unit_value, max = max_unit_value, size = ( 60, -1 ) )
+        self._num = QP.MakeQSpinBox( self, min=min_unit_value, max=max_unit_value, width = 60 )
         
         self._times = TimeDeltaCtrl( self, min = min_time_delta, days = days, hours = hours, minutes = minutes, seconds = seconds )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
-        hbox.Add( self._num, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_VCENTER )
         
         mid_text = per_phrase
         
@@ -514,28 +508,30 @@ class VelocityCtrl( wx.Panel ):
             mid_text = unit + ' ' + mid_text
             
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, mid_text ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,mid_text), CC.FLAGS_VCENTER )
         
-        hbox.Add( self._times, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._times, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
     
     def GetValue( self ):
         
-        num = self._num.GetValue()
+        num = self._num.value()
         time_delta = self._times.GetValue()
         
         return ( num, time_delta )
         
     
-    def SetToolTip( self, text ):
+    def setToolTip( self, text ):
         
-        wx.Panel.SetToolTip( self, text )
+        QW.QWidget.setToolTip( self, text )
         
-        for c in self.GetChildren():
+        for c in self.children():
             
-            c.SetToolTip( text )
+            if isinstance( c, QW.QWidget ):
+                
+                c.setToolTip( text )
             
         
     
@@ -543,7 +539,7 @@ class VelocityCtrl( wx.Panel ):
         
         ( num, time_delta ) = velocity
         
-        self._num.SetValue( num )
+        self._num.setValue( num )
         
         self._times.SetValue( time_delta )
         

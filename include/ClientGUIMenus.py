@@ -2,146 +2,132 @@ import collections
 from . import HydrusData
 from . import HydrusGlobals as HG
 import os
-import wx
-
-menus_to_submenus = collections.defaultdict( set )
-menus_to_menu_item_data = collections.defaultdict( set )
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
+from . import QtPorting as QP
 
 def AppendMenu( menu, submenu, label ):
     
     label = SanitiseLabel( label )
     
-    menu.AppendSubMenu( submenu, label )
+    submenu.setTitle( label )
+    menu.addMenu( submenu )
     
-    menus_to_submenus[ menu ].add( submenu )
-    
-def AppendMenuBitmapItem( event_handler, menu, label, description, bitmap, callable, *args, **kwargs ):
-    
-    label = SanitiseLabel( label )
-    
-    menu_item = wx.MenuItem( menu, wx.ID_ANY, label )
-    
-    menu_item.SetHelp( description )
-    
-    menu_item.SetBitmap( bitmap )
-    
-    menu.Append( menu_item )
-    
-    BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
-    
-    return menu_item
-    
-def AppendMenuCheckItem( event_handler, menu, label, description, initial_value, callable, *args, **kwargs ):
+def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **kwargs ):
     
     label = SanitiseLabel( label )
     
-    menu_item = menu.AppendCheckItem( wx.ID_ANY, label, description )
+    menu_item = QW.QAction( menu )
     
-    menu_item.Check( initial_value )
+    menu_item.setText( label )
     
-    BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
+    menu_item.setToolTip( description )
+    menu_item.setWhatsThis( description )
+    
+    menu_item.setIcon( QG.QIcon( bitmap ) )
+    
+    menu.addAction(menu_item)
+    
+    BindMenuItem( menu_item, callable, *args, **kwargs )
     
     return menu_item
     
-def AppendMenuItem( event_handler, menu, label, description, callable, *args, **kwargs ):
+def AppendMenuCheckItem( menu, label, description, initial_value, callable, *args, **kwargs ):
     
     label = SanitiseLabel( label )
     
-    menu_item = menu.Append( wx.ID_ANY, label, description )
+    menu_item = QW.QAction( menu )
+
+    menu_item.setText( label )
     
-    BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
+    menu_item.setToolTip( description )
+    menu_item.setWhatsThis( description )
+    
+    menu_item.setCheckable( True )
+    menu_item.setChecked( initial_value )
+
+    menu.addAction( menu_item )
+    
+    BindMenuItem( menu_item, callable, *args, **kwargs )
     
     return menu_item
     
-def AppendMenuLabel( menu, label, description = None ):
+def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
+    
+    label = SanitiseLabel( label )
+    
+    menu_item = QW.QAction( menu )
+
+    menu_item.setText( label )
+    
+    menu_item.setToolTip( description )
+    menu_item.setWhatsThis( description )
+
+    menu.addAction( menu_item )
+    
+    BindMenuItem( menu_item, callable, *args, **kwargs )
+    
+    return menu_item
+    
+def AppendMenuLabel( menu, label, description = '' ):
     
     if description is None:
         
         description = ''
         
+    menu_item = QW.QAction( menu )
+
+    menu_item.setText( label )
     
-    menu_item = menu.Append( wx.ID_ANY, label, description )
+    menu_item.setToolTip( description )
+    menu_item.setWhatsThis( description )
+
+    menu.addAction( menu_item )
     
     return menu_item
     
 def AppendSeparator( menu ):
     
-    num_items = menu.GetMenuItemCount()
+    num_items = len( menu.actions() )
     
     if num_items > 0:
         
-        last_item = menu.FindItemByPosition( num_items - 1 )
+        last_item = menu.actions()[-1]
         
-        if not last_item.IsSeparator():
+        if not last_item.isSeparator():
             
-            menu.AppendSeparator()
+            menu.addSeparator()
             
         
     
-def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
+def BindMenuItem( menu_item, callable, *args, **kwargs ):
     
     event_callable = GetEventCallable( callable, *args, **kwargs )
     
-    event_handler.Bind( wx.EVT_MENU, event_callable, source = menu_item )
-    
-    menus_to_menu_item_data[ menu ].add( ( menu_item, event_handler ) )
-    
-def CreateMenu():
-    
-    menu = wx.Menu()
-    
-    return menu
-    
-def UnbindMenuItems( menu ):
-    
-    menu_item_data = menus_to_menu_item_data[ menu ]
-    
-    del menus_to_menu_item_data[ menu ]
-    
-    for ( menu_item, event_handler ) in menu_item_data:
-        
-        if not event_handler: # under some circumstances, this has been deleted before the menu was
-            
-            continue
-            
-        
-        event_handler.Unbind( wx.EVT_MENU, source = menu_item )
-        
-    
-    if menu in menus_to_submenus:
-        
-        submenus = menus_to_submenus[ menu ]
-        
-        for submenu in submenus:
-            
-            UnbindMenuItems( submenu )
-            
-            submenu.is_dead = True
-            
-        
-        del menus_to_submenus[ menu ]
-        
+    menu_item.triggered.connect( event_callable )
     
 def DestroyMenu( window, menu ):
     
-    UnbindMenuItems( menu )
-    
-    menu.is_dead = True
-    
+    # The below check does not seem to be necessary with Qt and just leads to spurious error messages. Keeping it in commented for future reference in case some kind of check turns out to be necessary.
     # if the window we just popupmenu'd on is dead now (i.e. it died while the menu was open), destroying the menu will cause a crash and letting the event continue will cause a crash
     
-    if not window:
+    #if not window:
         
-        message = 'A window just died before its menu could be safely destroyed! If an exception were not raised here, the program would crash! If you know you did something tricky, please avoid this in future. If you think you did something normal, please let hydrus dev know.'
+    #    message = 'A window just died before its menu could be safely destroyed! If an exception were not raised here, the program would crash! If you know you did something tricky, please avoid this in future. If you think you did something normal, please let hydrus dev know.'
         
-        raise Exception( message )
+    #    raise Exception( message )
         
     
-    menu.Destroy()
+    if QP.isValid( menu ):
+        
+        menu.deleteLater()
+        
     
 def GetEventCallable( callable, *args, **kwargs ):
     
-    def event_callable( event ):
+    def event_callable( checked_state ):
         
         if HG.menu_profile_mode:
             
@@ -158,12 +144,6 @@ def GetEventCallable( callable, *args, **kwargs ):
         
     
     return event_callable
-    
-def MenuIsDead( menu ):
-    
-    # doing 'if menu' doesn't work for the deadobject test, wew
-    
-    return hasattr( menu, 'is_dead' )
     
 def SanitiseLabel( label ):
     

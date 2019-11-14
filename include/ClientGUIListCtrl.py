@@ -10,10 +10,10 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 import os
-import wx
-from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
-
-( ListCtrlEvent, EVT_LIST_CTRL ) = wx.lib.newevent.NewCommandEvent()
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 def SafeNoneInt( value ):
     
@@ -22,502 +22,21 @@ def SafeNoneInt( value ):
 def SafeNoneStr( value ):
     
     return '' if value is None else value
+           
     
-# This used to be ColumnSorterMixin, but it was crashing on sort-click on clients with many pages open
-# I've disabled it for now because it was still catching people. The transition to BetterListCtrl will nuke the whole thing eventually.
-class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
+class BetterListCtrl( QW.QTreeWidget ):
     
-    def __init__( self, parent, height, columns, delete_key_callback = None, activation_callback = None ):
-        
-        num_columns = len( columns )
-        
-        wx.ListCtrl.__init__( self, parent, style = wx.LC_REPORT )
-        ListCtrlAutoWidthMixin.__init__( self )
-        
-        self.itemDataMap = {}
-        self._data_indices_to_sort_indices = {}
-        self._data_indices_to_sort_indices_dirty = False
-        self._next_data_index = 0
-        
-        resize_column = 1
-        
-        for ( i, ( name, width ) ) in enumerate( columns ):
-            
-            self.InsertColumn( i, name, width = width )
-            
-            if width == -1:
-                
-                resize_column = i + 1
-                
-            
-        
-        self.setResizeColumn( resize_column )
-        
-        self.SetMinSize( ( -1, height ) )
-        
-        self._delete_key_callback = delete_key_callback
-        self._activation_callback = activation_callback
-        
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        self.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventItemActivated )
-        
-        self.Bind( wx.EVT_LIST_COL_BEGIN_DRAG, self.EventBeginColDrag )
-        
+    listCtrlChanged = QC.Signal()
     
-    def _GetIndexFromDataIndex( self, data_index ):
-        
-        if self._data_indices_to_sort_indices_dirty:
-            
-            self._data_indices_to_sort_indices = { self.GetItemData( index ) : index for index in range( self.GetItemCount() ) }
-            
-            self._data_indices_to_sort_indices_dirty = False
-            
-        
-        try:
-            
-            return self._data_indices_to_sort_indices[ data_index ]
-            
-        except KeyError:
-            
-            raise HydrusExceptions.DataMissing( 'Data not found!' )
-            
-        
-    
-    def Append( self, display_tuple, sort_tuple ):
-        
-        index = wx.ListCtrl.Append( self, display_tuple )
-        
-        data_index = self._next_data_index
-        
-        self.SetItemData( index, data_index )
-        
-        self.itemDataMap[ data_index ] = list( sort_tuple )
-        self._data_indices_to_sort_indices[ data_index ] = index
-        
-        self._next_data_index += 1
-        
-    
-    def DeleteItem( self, *args, **kwargs ):
-        
-        wx.ListCtrl.DeleteItem( self, *args, **kwargs )
-        
-        self._data_indices_to_sort_indices_dirty = True
-        
-    
-    def EventBeginColDrag( self, event ):
-        
-        # resizeCol is not zero-indexed
-        
-        if event.GetColumn() == self._resizeCol - 1:
-            
-            last_column = self.GetColumnCount()
-            
-            if self._resizeCol != last_column:
-                
-                self.setResizeColumn( last_column )
-                
-            else:
-                
-                event.Veto()
-                
-                return
-                
-            
-        
-        event.Skip()
-        
-    
-    def EventItemActivated( self, event ):
-        
-        if self._activation_callback is not None:
-            
-            self._activation_callback()
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in CC.DELETE_KEYS:
-            
-            if self._delete_key_callback is not None:
-                
-                self._delete_key_callback()
-                
-            
-        elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
-            
-            self.SelectAll()
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def GetAllSelected( self ):
-        
-        indices = []
-        
-        i = self.GetFirstSelected()
-        
-        while i != -1:
-            
-            indices.append( i )
-            
-            i = self.GetNextSelected( i )
-            
-        
-        return indices
-        
-    
-    def GetClientData( self, index = None ):
-        
-        if index is None:
-            
-            data_indicies = [ self.GetItemData( index ) for index in range( self.GetItemCount() ) ]
-            
-            datas = [ tuple( self.itemDataMap[ data_index ] ) for data_index in data_indicies ]
-            
-            return datas
-            
-        else:
-            
-            data_index = self.GetItemData( index )
-            
-            return tuple( self.itemDataMap[ data_index ] )
-            
-        
-    
-    def GetIndexFromClientData( self, data, column_index = None ):
-        
-        for index in range( self.GetItemCount() ):
-            
-            client_data = self.GetClientData( index )
-            
-            if column_index is None:
-                
-                comparison_data = client_data
-                
-            else:
-                
-                comparison_data = client_data[ column_index ]
-                
-            
-            if comparison_data == data:
-                
-                return index
-                
-            
-        
-        raise HydrusExceptions.DataMissing( 'Data not found!' )
-        
-    
-    def GetSecondarySortValues( self, col, key1, key2 ):
-        
-        # This overrides the ColumnSortedMixin. Just spam the whole tuple back.
-        
-        return ( self.itemDataMap[ key1 ], self.itemDataMap[ key2 ] )
-        
-    
-    def GetListCtrl( self ):
-        
-        return self
-        
-    
-    def GetSelectedClientData( self ):
-        
-        indices = self.GetAllSelected()
-        
-        results = []
-        
-        for index in indices:
-            
-            results.append( self.GetClientData( index ) )
-            
-        
-        return results
-        
-    
-    def HasClientData( self, data, column_index = None ):
-        
-        try:
-            
-            index = self.GetIndexFromClientData( data, column_index )
-            
-            return True
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-    
-    def OnSortOrderChanged( self ):
-        
-        self._data_indices_to_sort_indices_dirty = True
-        
-    
-    def RemoveAllSelected( self ):
-        
-        indices = self.GetAllSelected()
-        
-        self.RemoveIndices( indices )
-        
-    
-    def RemoveIndices( self, indices ):
-        
-        indices.sort()
-        
-        indices.reverse() # so we don't screw with the indices of deletees below
-        
-        for index in indices:
-            
-            self.DeleteItem( index )
-            
-        
-    
-    def SelectAll( self ):
-        
-        currently_selected = set( self.GetAllSelected() )
-        
-        currently_not_selected = [ index for index in range( self.GetItemCount() ) if index not in currently_selected ]
-        
-        for index in currently_not_selected:
-            
-            self.Select( index )
-            
-        
-    
-    def UpdateRow( self, index, display_tuple, sort_tuple ):
-        
-        column = 0
-        
-        for value in display_tuple:
-            
-            self.SetItem( index, column, value )
-            
-            column += 1
-            
-        
-        data_index = self.GetItemData( index )
-        
-        self.itemDataMap[ data_index ] = list( sort_tuple )
-        
-    
-class SaneListCtrlForSingleObject( SaneListCtrl ):
-    
-    def __init__( self, *args, **kwargs ):
-        
-        # this could one day just take column parameters that the user can pick
-        # it could just take obj in append or whatever and generate column tuples off that
-        
-        self._data_indices_to_objects = {}
-        self._objects_to_data_indices = {}
-        
-        SaneListCtrl.__init__( self, *args, **kwargs )
-        
-    
-    def Append( self, display_tuple, sort_tuple, obj ):
-        
-        self._data_indices_to_objects[ self._next_data_index ] = obj
-        self._objects_to_data_indices[ obj ] = self._next_data_index
-        
-        SaneListCtrl.Append( self, display_tuple, sort_tuple )
-        
-    
-    def GetIndexFromObject( self, obj ):
-        
-        try:
-            
-            data_index = self._objects_to_data_indices[ obj ]
-            
-            index = self._GetIndexFromDataIndex( data_index )
-            
-            return index
-            
-        except KeyError:
-            
-            raise HydrusExceptions.DataMissing( 'Data not found!' )
-            
-        
-    
-    def GetObject( self, index ):
-        
-        data_index = self.GetItemData( index )
-        
-        return self._data_indices_to_objects[ data_index ]
-        
-    
-    def GetObjects( self, only_selected = False ):
-        
-        if only_selected:
-            
-            indicies = self.GetAllSelected()
-            
-        else:
-            
-            indicies = list( range( self.GetItemCount() ) )
-            
-        
-        data_indicies = [ self.GetItemData( index ) for index in indicies ]
-        
-        datas = [ self._data_indices_to_objects[ data_index ] for data_index in data_indicies ]
-        
-        return datas
-        
-    
-    def HasObject( self, obj ):
-        
-        try:
-            
-            index = self.GetIndexFromObject( obj )
-            
-            return True
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-    
-    def SetNonDupeName( self, obj ):
-        
-        # when column population is handled here, we can tuck this into normal append/update calls internally
-        
-        current_names = { o.GetName() for o in self.GetObjects() if o is not obj }
-        
-        HydrusSerialisable.SetNonDupeName( obj, current_names )
-        
-    
-    def UpdateRow( self, index, display_tuple, sort_tuple, obj ):
-        
-        SaneListCtrl.UpdateRow( self, index, display_tuple, sort_tuple )
-        
-        data_index = self.GetItemData( index )
-        
-        self._data_indices_to_objects[ data_index ] = obj
-        self._objects_to_data_indices[ obj ] = data_index
-        
-    
-class SaneListCtrlPanel( wx.Panel ):
-    
-    def __init__( self, parent ):
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        self._listctrl = None
-        
-        self._button_infos = []
-        
-    
-    def _SomeSelected( self ):
-        
-        return self._listctrl.GetSelectedItemCount() > 0
-        
-    
-    def _UpdateButtons( self ):
-        
-        for ( button, enabled_check_func ) in self._button_infos:
-            
-            if enabled_check_func():
-                
-                button.Enable()
-                
-            else:
-                
-                button.Disable()
-                
-            
-        
-    
-    def AddButton( self, label, clicked_func, enabled_only_on_selection = False, enabled_check_func = None ):
-        
-        button = ClientGUICommon.BetterButton( self, label, clicked_func )
-        
-        self._buttonbox.Add( button, CC.FLAGS_VCENTER )
-        
-        if enabled_only_on_selection:
-            
-            enabled_check_func = self._SomeSelected
-            
-        
-        if enabled_check_func is not None:
-            
-            self._button_infos.append( ( button, enabled_check_func ) )
-            
-        
-    
-    def AddWindow( self, window ):
-        
-        self._buttonbox.Add( window, CC.FLAGS_VCENTER )
-        
-    
-    def EventContentChanged( self, event ):
-        
-        if not self._listctrl:
-            
-            return
-            
-        
-        self._UpdateButtons()
-        
-        event.Skip()
-        
-    
-    def EventSelectionChanged( self, event ):
-        
-        if not self._listctrl:
-            
-            return
-            
-        
-        self._UpdateButtons()
-        
-        event.Skip()
-        
-    
-    def SetListCtrl( self, listctrl ):
-        
-        self._listctrl = listctrl
-        
-        self._vbox.Add( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._vbox.Add( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( self._vbox )
-        
-        self._listctrl.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectionChanged )
-        self._listctrl.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectionChanged )
-        
-        self._listctrl.Bind( wx.EVT_LIST_INSERT_ITEM, self.EventContentChanged )
-        self._listctrl.Bind( wx.EVT_LIST_DELETE_ITEM, self.EventContentChanged )
-        self._listctrl.Bind( wx.EVT_LIST_DELETE_ALL_ITEMS, self.EventContentChanged )
-        
-    
-class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
-    
-    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, activation_callback = None, style = None ):
-        
-        if style is None:
-            
-            style = wx.LC_REPORT
-            
-        else:
-            
-            style = wx.LC_REPORT | style
-            
-        
-        wx.ListCtrl.__init__( self, parent, style = style )
-        ListCtrlAutoWidthMixin.__init__( self )
+    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, activation_callback = None, style = None ):           
+        
+        QW.QTreeWidget.__init__( self, parent )
+        
+        self.setAlternatingRowColors( True )
+        self.setColumnCount( len(columns) )
+        self.setSortingEnabled( False ) # Keeping the custom sort implementation. It would be better to use Qt's native sorting in the future so sort indicators are displayed on the headers as expected.
+        self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self.setRootIsDecorated( False )
         
         self._data_to_tuples_func = data_to_tuples_func
         
@@ -534,7 +53,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        total_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, sizing_column_initial_width_num_chars )
+        sizing_column_initial_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
+        total_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
         
         resize_column = 1
         
@@ -548,28 +68,33 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
             else:
                 
-                width = ClientGUIFunctions.ConvertTextToPixelWidth( self, width_num_chars )
+                width = self.fontMetrics().boundingRect( 'x' * width_num_chars ).width()
                 
                 total_width += width
                 
             
-            self.InsertColumn( i, name, width = width )
+            self.headerItem().setText( i, name )
+            self.setColumnWidth( i, width )
             
+        # Technically this is the previous behavior, but the two commented lines might work better in some cases (?)
+        self.header().setStretchLastSection( False )
+        self.header().setSectionResizeMode( resize_column - 1 , QW.QHeaderView.Stretch )
+        #self.setColumnWidth( resize_column - 1, sizing_column_initial_width )
+        #self.header().setStretchLastSection( True )
         
-        self.setResizeColumn( resize_column )
-        
-        self.SetInitialSize( ( total_width, -1 ) )
+        self.setMinimumWidth( total_width )
         
         self.GrowShrinkColumnsHeight( height_num_chars )
         
         self._delete_key_callback = delete_key_callback
         self._activation_callback = activation_callback
         
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        self.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventItemActivated )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
+        self.itemDoubleClicked.connect( self.EventItemActivated )
         
-        self.Bind( wx.EVT_LIST_COL_BEGIN_DRAG, self.EventBeginColDrag )
-        self.Bind( wx.EVT_LIST_COL_CLICK, self.EventColumnClick )
+        self.header().setSectionsClickable( True )
+        self.header().sectionClicked.connect( self.EventColumnClick )
         
     
     def _AddDataInfo( self, data_info ):
@@ -581,7 +106,15 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             return
             
         
-        index = self.Append( display_tuple )
+        append_item = QW.QTreeWidgetItem()
+        
+        for i in range( len( display_tuple ) ):
+            
+            append_item.setText( i, display_tuple[i] )
+            
+        self.addTopLevelItem( append_item )
+        
+        index = self.topLevelItemCount() - 1 
         
         self._indices_to_data_info[ index ] = data_info
         self._data_to_indices[ data ] = index
@@ -608,18 +141,13 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         return ( display_tuple, sort_tuple )
         
     
-    def _GetSelected( self ):
+    def _GetSelected( self ):           
         
         indices = []
         
-        i = self.GetFirstSelected()
-        
-        while i != -1:
+        for i in range( self.topLevelItemCount() ):
             
-            indices.append( i )
-            
-            i = self.GetNextSelected( i )
-            
+            if self.topLevelItem( i ).isSelected(): indices.append( i )
         
         return indices
         
@@ -676,12 +204,16 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         selected_data_quick = set( self.GetData( only_selected = True ) )
         
+        # The lack of clearSelection below caused erroneous behavior when using the move up/down buttons in the string transformations dialog, so added it.
+        # The commented out code should be a no-op after the Qt port, leaving it just in case.
+        """
         selected_indices = self._GetSelected()
         
         for selected_index in selected_indices:
             
-            self.Select( selected_index, False )
-            
+            self.topLevelItem( selected_index ).setSelected( True )
+        """
+        self.clearSelection()
         
         sorted_data_info = self._SortDataInfo()
         
@@ -700,7 +232,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             if data in selected_data_quick:
                 
-                self.Select( index )
+                self.topLevelItem( index ).setSelected( True )
                 
             
         
@@ -709,11 +241,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for ( column_index, value ) in enumerate( display_tuple ):
             
-            existing_value = self.GetItem( index, column_index )
+            existing_value = self.topLevelItem( index ).text( column_index )
             
             if existing_value != value:
                 
-                self.SetItem( index, column_index, value )
+                self.topLevelItem( index ).setText( column_index, value )
                 
             
         
@@ -727,14 +259,15 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        self.listCtrlChanged.emit()
         
     
     def AddMenuCallable( self, menu_callable ):
         
         self._menu_callable = menu_callable
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self.setContextMenuPolicy( QC.Qt.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.EventShowMenu )
         
     
     def DeleteDatas( self, datas ):
@@ -743,6 +276,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         deletees.sort( reverse = True )
         
+        # The below comment is most probably obsolote (from before the Qt port), but keeping it just in case it is not and also as an explanation.
+        #
         # I am not sure, but I think if subsequent deleteitems occur in the same event, the event processing of the first is forced!!
         # this means that button checking and so on occurs for n-1 times on an invalid indices structure in this thing before correcting itself in the last one
         # if a button update then tests selected data against the invalid index and a selection is on the i+1 or whatever but just got bumped up into invalid area, we are exception city
@@ -752,7 +287,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for ( index, data ) in deletees:
             
-            self.DeleteItem( index )
+            self.takeTopLevelItem( index )
             
         
         for ( index, data ) in deletees:
@@ -764,7 +299,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._RecalculateIndicesAfterDelete()
         
-        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        self.listCtrlChanged.emit()
         
     
     def DeleteSelected( self ):
@@ -777,7 +312,9 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             ( data, display_tuple, sort_tuple ) = self._indices_to_data_info[ index ]
             
-            self.DeleteItem( index )
+            item = self.takeTopLevelItem( index )
+            
+            del item
             
             del self._data_to_indices[ data ]
             
@@ -786,36 +323,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._RecalculateIndicesAfterDelete()
         
-        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        self.listCtrlChanged.emit()
         
     
-    def EventBeginColDrag( self, event ):
-        
-        # resizeCol is not zero-indexed
-        
-        if event.GetColumn() == self._resizeCol - 1:
-            
-            last_column = self.GetColumnCount()
-            
-            if self._resizeCol != last_column:
+    def EventColumnClick( self, col ):
                 
-                self.setResizeColumn( last_column )
-                
-            else:
-                
-                event.Veto()
-                
-                return
-                
-            
-        
-        event.Skip()
-        
-    
-    def EventColumnClick( self, event ):
-        
-        col = event.GetColumn()
-        
         if col == self._sort_column:
             
             self._sort_asc = not self._sort_asc
@@ -830,15 +342,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._SortAndRefreshRows()
         
     
-    def EventItemActivated( self, event ):
+    def EventItemActivated( self, item, column ):
         
         if self._activation_callback is not None:
             
             self._activation_callback()
-            
-        else:
-            
-            event.Skip()
             
         
     
@@ -850,21 +358,19 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             self.ProcessDeleteAction()
             
-        elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
+        elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == QC.Qt.ControlModifier:
             
-            self.SelectAll()
+            self.selectAll()
             
         else:
             
-            event.Skip()
+            return True # was: event.ignore()
             
         
     
-    def EventShowMenu( self, event ):
+    def EventShowMenu( self ):
         
-        wx.CallAfter( self._ShowMenu )
-        
-        event.Skip() # let the right click event go through before doing menu, in case selection should happen
+        QP.CallAfter( self._ShowMenu )
         
     
     def GetData( self, only_selected = False ):
@@ -900,11 +406,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
         
-        existing_min_width = self.GetMinClientSize()[0]
+        existing_min_width = self.minimumWidth()
         
         ( width_gumpf, ideal_client_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
         
-        self.SetMinClientSize( ( existing_min_width, ideal_client_height ) )
+        QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
         
     
     def HasData( self, data ):
@@ -914,12 +420,12 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def HasOneSelected( self ):
         
-        return self.GetSelectedItemCount() == 1
+        return len( self.selectedItems() ) == 1
         
     
     def HasSelected( self ):
         
-        return self.GetSelectedItemCount() > 0
+        return len( self.selectedItems() ) > 0 
         
     
     def ProcessDeleteAction( self ):
@@ -934,18 +440,6 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
     
-    def SelectAll( self ):
-        
-        currently_selected = set( self._GetSelected() )
-        
-        currently_not_selected = [ index for index in range( self.GetItemCount() ) if index not in currently_selected ]
-        
-        for index in currently_not_selected:
-            
-            self.Select( index )
-            
-        
-    
     def SelectDatas( self, datas ):
         
         for data in datas:
@@ -954,18 +448,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
                 index = self._data_to_indices[ data ]
                 
-                self.Select( index )
+                self.topLevelItem( index ).setSelected( True )
                 
-            
-        
-    
-    def SelectNone( self ):
-        
-        currently_selected = set( self._GetSelected() )
-        
-        for index in currently_selected:
-            
-            self.Select( index, False )
             
         
     
@@ -995,7 +479,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._SortAndRefreshRows()
         
-        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        self.listCtrlChanged.emit()
         
     
     def ShowDeleteSelectedDialog( self ):
@@ -1004,7 +488,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             self.DeleteSelected()
             
@@ -1024,7 +508,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._SortAndRefreshRows()
         
-        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        self.listCtrlChanged.emit()
         
     
     def UpdateDatas( self, datas = None ):
@@ -1070,20 +554,46 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        self.listCtrlChanged.emit()
         
         return sort_data_has_changed
-        
+    
 
-class BetterListCtrlPanel( wx.Panel ):
+    def SetNonDupeName( self, obj ):
+
+        current_names = { o.GetName() for o in self.GetData() if o is not obj }
+
+        HydrusSerialisable.SetNonDupeName( obj, current_names )
+        
+    
+    def ReplaceData( self, old_data, new_data ):
+        
+        new_data = QP.ListsToTuples( new_data )
+        
+        data_index = self._data_to_indices[ old_data ]
+
+        ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( new_data )
+        
+        data_info = ( new_data, display_tuple, sort_tuple )
+        
+        self._indices_to_data_info[ data_index ] = data_info
+        
+        del self._data_to_indices[ old_data ]
+        
+        self._data_to_indices[ new_data ] = data_index
+        
+        self._UpdateRow( data_index, display_tuple )
+
+        
+class BetterListCtrlPanel( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        self._vbox = QP.VBoxLayout()
         
-        self._buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._buttonbox = QP.HBoxLayout()
         
         self._listctrl = None
         
@@ -1107,7 +617,7 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _AddButton( self, button, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
         
-        self._buttonbox.Add( button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttonbox, button, CC.FLAGS_VCENTER )
         
         if enabled_only_on_selection:
             
@@ -1142,7 +652,7 @@ class BetterListCtrlPanel( wx.Panel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 defaults_to_add = panel.GetValue()
                 
@@ -1197,7 +707,7 @@ class BetterListCtrlPanel( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                dlg.ShowModal()
+                dlg.exec()
                 
             
         
@@ -1227,7 +737,7 @@ class BetterListCtrlPanel( wx.Panel ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
     
@@ -1272,7 +782,7 @@ class BetterListCtrlPanel( wx.Panel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -1285,7 +795,7 @@ class BetterListCtrlPanel( wx.Panel ):
             
         except Exception as e:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
         
         self._listctrl.Sort()
@@ -1293,9 +803,9 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _ImportFromPng( self ):
         
-        with wx.FileDialog( self, 'select the png or pngs with the encoded data', style = wx.FD_OPEN | wx.FD_MULTIPLE, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 paths = dlg.GetPaths()
                 
@@ -1339,7 +849,7 @@ class BetterListCtrlPanel( wx.Panel ):
             message += os.linesep * 2
             message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
             
-            wx.MessageBox( message )
+            QW.QMessageBox.critical( self, 'Error', message )
             
         
     
@@ -1353,7 +863,7 @@ class BetterListCtrlPanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.critical( self, 'Error', str(e) )
                 
                 return
                 
@@ -1366,7 +876,7 @@ class BetterListCtrlPanel( wx.Panel ):
                 
             except:
                 
-                wx.MessageBox( 'I could not understand what was encoded in the file!' )
+                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the file!' )
                 
                 return
                 
@@ -1379,11 +889,11 @@ class BetterListCtrlPanel( wx.Panel ):
             
             if enabled_check_func():
                 
-                button.Enable()
+                button.setEnabled( True )
                 
             else:
                 
-                button.Disable()
+                button.setEnabled( False )
                 
             
         
@@ -1441,7 +951,8 @@ class BetterListCtrlPanel( wx.Panel ):
         self.AddMenuButton( 'import', import_menu_items )
         self.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
+        self.setAcceptDrops( True )
+        self.installEventFilter( ClientDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
         
     
     def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):
@@ -1455,15 +966,15 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def AddSeparator( self ):
         
-        self._buttonbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._buttonbox.insertStretch( -1, 1 )
         
     
     def AddWindow( self, window ):
         
-        self._buttonbox.Add( window, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttonbox, window, CC.FLAGS_VCENTER )
         
     
-    def EventContentChanged( self, event ):
+    def EventContentChanged( self, parent, first, last ):
         
         if not self._listctrl:
             
@@ -1472,10 +983,8 @@ class BetterListCtrlPanel( wx.Panel ):
         
         self._UpdateButtons()
         
-        event.Skip()
-        
     
-    def EventSelectionChanged( self, event ):
+    def EventSelectionChanged( self ):
         
         if not self._listctrl:
             
@@ -1483,8 +992,6 @@ class BetterListCtrlPanel( wx.Panel ):
             
         
         self._UpdateButtons()
-        
-        event.Skip()
         
     
     def ImportFromDragDrop( self, paths ):
@@ -1495,7 +1002,7 @@ class BetterListCtrlPanel( wx.Panel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             self._ImportPngs( paths )
             
@@ -1505,26 +1012,24 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def NewButtonRow( self ):
         
-        self._buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._buttonbox = QP.HBoxLayout()
         
-        self._vbox.Add( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_BUTTON_SIZER )
         
     
     def SetListCtrl( self, listctrl ):
         
         self._listctrl = listctrl
         
-        self._vbox.Add( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._vbox.Add( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( self._vbox, self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( self._vbox )
+        self.setLayout( self._vbox )
         
-        self._listctrl.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectionChanged )
-        self._listctrl.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectionChanged )
+        self._listctrl.itemSelectionChanged.connect( self.EventSelectionChanged )
         
-        self._listctrl.Bind( wx.EVT_LIST_INSERT_ITEM, self.EventContentChanged )
-        self._listctrl.Bind( wx.EVT_LIST_DELETE_ITEM, self.EventContentChanged )
-        self._listctrl.Bind( wx.EVT_LIST_DELETE_ALL_ITEMS, self.EventContentChanged )
+        self._listctrl.model().rowsInserted.connect( self.EventContentChanged )
+        self._listctrl.model().rowsRemoved.connect( self.EventContentChanged )
         
     
     def UpdateButtons( self ):

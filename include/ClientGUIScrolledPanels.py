@@ -1,21 +1,55 @@
 from . import ClientConstants as CC
 from . import ClientGUIShortcuts
 from . import ClientGUITopLevelWindows
-import wx
-import wx.lib.scrolledpanel
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
-class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
+class ResizingEventFilter( QC.QObject ):
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.Resize:
+            
+            parent = self.parent()
+            
+            if isinstance( parent, ResizingScrolledPanel ):
+                
+                old_size = event.oldSize()
+                size = event.size()
+                
+                width_larger = size.width() > old_size.width() and size.height() >= old_size.height()
+                height_larger = size.width() >= old_size.width() and size.height() > old_size.height()
+                
+                if width_larger or height_larger:
+                    
+                    QP.CallAfter( self.parent().WidgetJustSized, width_larger, height_larger )
+                    
+                
+            
+        
+        return False
+        
+
+class ResizingScrolledPanel( QW.QScrollArea ):
+    
+    okSignal = QC.Signal()
     
     def __init__( self, parent ):
         
-        wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent )
+        QW.QScrollArea.__init__( self, parent )
         
-        self.Bind( CC.EVT_SIZE_CHANGED, self.EventSizeChanged )
+        self.setWidget( QW.QWidget() )
+        
+        self.setWidgetResizable( True )
+        
+        self.widget().installEventFilter( ResizingEventFilter( self ) )
         
     
     def _OKParent( self ):
         
-        wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+        self.okSignal.emit()
         
     
     def CanCancel( self ):
@@ -33,16 +67,75 @@ class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
-    def EventSizeChanged( self, event ):
+    def sizeHint( self ):
         
-        self.SetVirtualSize( self.GetBestVirtualSize() )
-        
-        event.Skip()
+        if self.widget():
+            
+            # just as a fun note, QScrollArea does a 12 x 8 character height sizeHint on its own here due to as-yet invalid widget size, wew lad
+            
+            frame_width = self.frameWidth()
+            
+            frame_size = QC.QSize( frame_width * 2, frame_width * 2 )
+            
+            size_hint = self.widget().sizeHint() + frame_size
+            
+            #visible_size = self.widget().visibleRegion().boundingRect().size()
+            #size_hint = self.widget().sizeHint() + self.size() - visible_size
+            
+            available_screen_size = QW.QApplication.desktop().availableGeometry( self ).size()
+            
+            screen_fill_factor = 0.85 # don't let size hint be bigger than this percentage of the available screen width/height
+            
+            if size_hint.width() > screen_fill_factor * available_screen_size.width():
+                
+                size_hint.setWidth( screen_fill_factor * available_screen_size.width() )
+                
+            if size_hint.height() > screen_fill_factor * available_screen_size.height():
+                
+                size_hint.setHeight( screen_fill_factor * available_screen_size.height() )
+                
+            
+            return size_hint
+            
+        else:
+            
+            return QW.QScrollArea.sizeHint( self )
+            
         
     
     def TryToClose( self ):
         
         pass
+        
+    
+    def WidgetJustSized( self, width_larger, height_larger ):
+        
+        widget_size_hint = self.widget().minimumSizeHint()
+        
+        my_size = self.size()
+        
+        width_increase = 0
+        height_increase = 0
+        
+        if width_larger:
+            
+            width_increase = max( 0, widget_size_hint.width() - my_size.width() )
+            
+        
+        if height_larger:
+            
+            height_increase = max( 0, widget_size_hint.height() - my_size.height() )
+            
+        
+        if width_increase > 0 or height_increase > 0:
+            
+            window = self.window()
+            
+            if isinstance( window, ( ClientGUITopLevelWindows.DialogThatResizes, ClientGUITopLevelWindows.FrameThatResizes ) ):
+                
+                ClientGUITopLevelWindows.ExpandTLWIfPossible( window, window._frame_key, ( width_increase, height_increase ) )
+                
+            
         
     
 class EditPanel( ResizingScrolledPanel ):
@@ -69,16 +162,24 @@ class EditSingleCtrlPanel( EditPanel ):
         
         #
         
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        self._vbox = QP.VBoxLayout( margin = 0 )
         
-        self.SetSizer( self._vbox )
+        self.widget().setLayout( self._vbox )
         
         self._my_shortcuts_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         
     
     def GetValue( self ):
         
-        return self._control.GetValue()
+        if hasattr( self._control, 'GetValue' ):
+            
+            return self._control.GetValue()
+        
+        elif hasattr( self._control, 'toPlainText' ):
+            
+            return self._control.toPlainText()
+        
+        return self._control.value()
         
     
     def ProcessApplicationCommand( self, command ):
@@ -113,7 +214,7 @@ class EditSingleCtrlPanel( EditPanel ):
         
         self._control = control
         
-        self._vbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._vbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
 class ManagePanel( ResizingScrolledPanel ):
@@ -126,26 +227,3 @@ class ManagePanel( ResizingScrolledPanel ):
 class ReviewPanel( ResizingScrolledPanel ):
     
     pass
-    
-class ReviewSinglePanelPanel( ReviewPanel ):
-    
-    def __init__( self, parent ):
-        
-        ReviewPanel.__init__( self, parent )
-        
-        self._panel = None
-        
-        #
-        
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self.SetSizer( self._vbox )
-        
-    
-    def SetPanel( self, panel ):
-        
-        self._panel = panel
-        
-        self._vbox.Add( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-    

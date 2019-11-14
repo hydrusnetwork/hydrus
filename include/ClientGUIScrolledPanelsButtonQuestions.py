@@ -6,7 +6,10 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
     
@@ -14,21 +17,21 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
         
         ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
         
-        self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.GetParent().EndModal, wx.ID_YES )
-        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
+        self._commit = ClientGUICommon.BetterButton( self, 'commit and continue', self.parentWidget().done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._commit, (0,128,0) )
         
-        self._back = ClientGUICommon.BetterButton( self, 'go back', self.GetParent().EndModal, wx.ID_NO )
+        self._back = ClientGUICommon.BetterButton( self, 'go back', self.parentWidget().done, QW.QDialog.Rejected )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( label, self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( '-or-', self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
-        wx.CallAfter( self._commit.SetFocus )
+        QP.CallAfter( self._commit.setFocus, QC.Qt.OtherFocusReason )
         
     
 class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
@@ -37,29 +40,34 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
         
         ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
         
-        self._commit = ClientGUICommon.BetterButton( self, 'commit', self.GetParent().EndModal, wx.ID_YES )
-        self._commit.SetForegroundColour( ( 0, 128, 0 ) )
+        self._commit = ClientGUICommon.BetterButton( self, 'commit', self.parentWidget().done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._commit, (0,128,0) )
         
-        self._forget = ClientGUICommon.BetterButton( self, 'forget', self.GetParent().EndModal, wx.ID_NO )
-        self._forget.SetForegroundColour( ( 128, 0, 0 ) )
+        self._forget = ClientGUICommon.BetterButton( self, 'forget', self.parentWidget().done, QW.QDialog.Rejected )
+        QP.SetForegroundColour( self._forget, (128,0,0) )
         
-        self._back = ClientGUICommon.BetterButton( self, 'back to filtering', self.GetParent().EndModal, wx.ID_CANCEL )
+        def cancel_callback( parent ):
+            
+            parent.SetCancelled( True )
+            parent.done( QW.QDialog.Rejected )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._back = ClientGUICommon.BetterButton( self, 'back to filtering', cancel_callback, parent )
         
-        hbox.Add( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox = QP.HBoxLayout()
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        QP.AddToLayout( hbox, self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox = QP.VBoxLayout()
         
-        self.SetSizer( vbox )
+        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( label, self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment( '-or-', self, QC.Qt.AlignVCenter | QC.Qt.AlignHCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        wx.CallAfter( self._commit.SetFocus )
+        self.widget().setLayout( vbox )
+        
+        QP.CallAfter( self._commit.setFocus, QC.Qt.OtherFocusReason )
         
     
 class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
@@ -68,32 +76,33 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         
         ClientGUIScrolledPanels.ResizingScrolledPanel.__init__( self, parent )
         
-        self._yes = ClientGUICommon.BetterButton( self, yes_label, self.GetParent().EndModal, wx.ID_YES )
-        self._yes.SetForegroundColour( ( 0, 128, 0 ) )
-        self._yes.SetLabelText( yes_label )
+        self._yes = ClientGUICommon.BetterButton( self, yes_label, self.parentWidget().done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._yes, ( 0, 128, 0 ) )
+        self._yes.setText( yes_label )
         
-        self._no = ClientGUICommon.BetterButton( self, no_label, self.GetParent().EndModal, wx.ID_NO )
-        self._no.SetForegroundColour( ( 128, 0, 0 ) )
-        self._no.SetLabelText( no_label )
+        self._no = ClientGUICommon.BetterButton( self, no_label, self.parentWidget().done, QW.QDialog.Rejected )
+        QP.SetForegroundColour( self._no, ( 128, 0, 0 ) )
+        self._no.setText( no_label )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._yes, CC.FLAGS_VCENTER )
-        hbox.Add( self._no, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._yes )
+        QP.AddToLayout( hbox, self._no )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         text = ClientGUICommon.BetterStaticText( self, message )
         
         text.SetWrapWidth( 480 )
         
-        vbox.Add( text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, text )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
-        wx.CallAfter( self._yes.SetFocus )
+        QP.CallAfter( self._yes.setFocus, QC.Qt.OtherFocusReason )
         
     
+

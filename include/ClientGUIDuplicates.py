@@ -32,10 +32,10 @@ import random
 import threading
 import time
 import traceback
-import wx
 import yaml
 from . import HydrusData
 from . import HydrusGlobals as HG
+from qtpy import QtWidgets as QW
 
 def ClearFalsePositives( win, hashes ):
     
@@ -58,7 +58,7 @@ def ClearFalsePositives( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'clear_false_positive_relations', hashes )
         
@@ -84,7 +84,7 @@ def DissolveAlternateGroup( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'dissolve_alternates_group', hashes )
         
@@ -110,7 +110,7 @@ def DissolveDuplicateGroup( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'dissolve_duplicates_group', hashes )
         
@@ -136,7 +136,7 @@ def RemoveFromAlternateGroup( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'remove_alternates_member', hashes )
         
@@ -162,7 +162,7 @@ def RemoveFromDuplicateGroup( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'remove_duplicates_member', hashes )
         
@@ -184,7 +184,7 @@ def RemovePotentials( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'remove_potential_pairs', hashes )
         
@@ -206,7 +206,7 @@ def ResetPotentialSearch( win, hashes ):
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == wx.ID_YES:
+    if result == QW.QDialog.Accepted:
         
         HG.client_controller.Write( 'reset_potential_search_status', hashes )
         

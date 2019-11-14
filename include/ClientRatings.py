@@ -1,7 +1,8 @@
 from . import HydrusConstants as HC
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtGui as QG
 
 LIKE = 0
 DISLIKE = 1
@@ -29,40 +30,46 @@ default_numerical_colours[ MIXED ] = ( ( 0, 0, 0 ), ( 95, 95, 95 ) )
 
 STAR_COORDS = []
 
-STAR_COORDS.append( wx.Point( 6, 0 ) ) # top
-STAR_COORDS.append( wx.Point( 9, 4 ) )
-STAR_COORDS.append( wx.Point( 12, 4 ) ) # right
-STAR_COORDS.append( wx.Point( 9, 8 ) )
-STAR_COORDS.append( wx.Point( 10, 12 ) ) # bottom right
-STAR_COORDS.append( wx.Point( 6, 10 ) )
-STAR_COORDS.append( wx.Point( 2, 12 ) ) # bottom left
-STAR_COORDS.append( wx.Point( 3, 8 ) )
-STAR_COORDS.append( wx.Point( 0, 4 ) ) # left
-STAR_COORDS.append( wx.Point( 3, 4 ) )
+STAR_COORDS.append( QC.QPoint( 6, 0 ) ) # top
+STAR_COORDS.append( QC.QPoint( 9, 4 ) )
+STAR_COORDS.append( QC.QPoint( 12, 4 ) ) # right
+STAR_COORDS.append( QC.QPoint( 9, 8 ) )
+STAR_COORDS.append( QC.QPoint( 10, 12 ) ) # bottom right
+STAR_COORDS.append( QC.QPoint( 6, 10 ) )
+STAR_COORDS.append( QC.QPoint( 2, 12 ) ) # bottom left
+STAR_COORDS.append( QC.QPoint( 3, 8 ) )
+STAR_COORDS.append( QC.QPoint( 0, 4 ) ) # left
+STAR_COORDS.append( QC.QPoint( 3, 4 ) )
 
-def DrawLike( dc, x, y, service_key, rating_state ):
+def DrawLike( painter, x, y, service_key, rating_state ):
     
     shape = GetShape( service_key )
     
     ( pen_colour, brush_colour ) = GetPenAndBrushColours( service_key, rating_state )
     
-    dc.SetPen( wx.Pen( pen_colour ) )
-    dc.SetBrush( wx.Brush( brush_colour ) )
+    painter.setPen( QG.QPen( pen_colour ) )
+    painter.setBrush( QG.QBrush( brush_colour ) )
 
     if shape == CIRCLE:
         
-        dc.DrawCircle( x + 7, y + 7, 6 )
+        painter.drawEllipse( QC.QPointF( x+7, y+7 ), 6, 6 )
         
     elif shape == SQUARE:
         
-        dc.DrawRectangle( x + 2, y + 2, 12, 12 )
+        painter.drawRect( x+2, y+2, 12, 12 )
         
     elif shape == STAR:
+
+        offset = QC.QPoint( x + 1, y + 1 )
         
-        dc.DrawPolygon( STAR_COORDS, x + 1, y + 1 )
+        painter.translate( offset )
+        
+        painter.drawPolygon( QG.QPolygonF( STAR_COORDS ) )
+        
+        painter.translate( -offset )
         
     
-def DrawNumerical( dc, x, y, service_key, rating_state, rating ):
+def DrawNumerical( painter, x, y, service_key, rating_state, rating ):
     
     ( shape, stars ) = GetStars( service_key, rating_state, rating )
     
@@ -71,22 +78,28 @@ def DrawNumerical( dc, x, y, service_key, rating_state, rating ):
     
     for ( num_stars, pen_colour, brush_colour ) in stars:
         
-        dc.SetPen( wx.Pen( pen_colour ) )
-        dc.SetBrush( wx.Brush( brush_colour ) )
+        painter.setPen( QG.QPen( pen_colour ) )
+        painter.setBrush( QG.QBrush( brush_colour ) )
         
         for i in range( num_stars ):
             
             if shape == CIRCLE:
                 
-                dc.DrawCircle( x + 7 + x_delta, y + 7, 6 )
+                painter.drawEllipse( QC.QPointF( x+7+x_delta, y+7 ), 6, 6 )
                 
             elif shape == SQUARE:
                 
-                dc.DrawRectangle( x + 2 + x_delta, y + 2, 12, 12 )
+                painter.drawRect( x+2+x_delta, y+2, 12, 12 )
                 
             elif shape == STAR:
                 
-                dc.DrawPolygon( STAR_COORDS, x + 1 + x_delta, y + 1 )
+                offset = QC.QPoint( x + 1 + x_delta, y + 1 )
+                
+                painter.translate( offset )
+                
+                painter.drawPolygon( QG.QPolygonF( STAR_COORDS ) )
+                
+                painter.translate( -offset )
                 
             
             x_delta += x_step
@@ -125,7 +138,10 @@ def GetLikeStateFromMedia( media, service_key ):
         elif off_exists: return DISLIKE
         else: return NULL
         
-    else: return MIXED
+    else:
+        
+        return MIXED
+        
     
 def GetLikeStateFromRating( rating ):
     
@@ -217,8 +233,8 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
     ( pen_rgb, brush_rgb ) = colour
     
-    pen_colour = wx.Colour( *pen_rgb )
-    brush_colour = wx.Colour( *brush_rgb )
+    pen_colour = QG.QColor( *pen_rgb )
+    brush_colour = QG.QColor( *brush_rgb )
     
     return ( pen_colour, brush_colour )
     

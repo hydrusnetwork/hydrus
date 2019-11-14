@@ -1,13 +1,8 @@
 from . import HydrusConstants as HC
 import os
-import wx
-import wx.lib.newevent
-
-ID_NULL = wx.NewId()
-
-# timers
-
-ID_TIMER_UPDATES = wx.NewId()
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
 
 #
 
@@ -22,12 +17,12 @@ FILTER_WHITELIST = 0
 FILTER_BLACKLIST = 1
 
 # Hue is generally 200, Sat and Lum changes based on need
-COLOUR_LIGHT_SELECTED = wx.Colour( 235, 248, 255 )
-COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
-COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
-COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
+COLOUR_LIGHT_SELECTED = QG.QColor( 235, 248, 255 )
+COLOUR_SELECTED = QG.QColor( 217, 242, 255 )
+COLOUR_SELECTED_DARK = QG.QColor( 1, 17, 26 )
+COLOUR_UNSELECTED = QG.QColor( 223, 227, 230 )
 
-COLOUR_MESSAGE = wx.Colour( 230, 246, 255 )
+COLOUR_MESSAGE = QG.QColor( 230, 246, 255 )
 
 COLOUR_THUMB_BACKGROUND = 0
 COLOUR_THUMB_BACKGROUND_SELECTED = 1
@@ -56,15 +51,6 @@ Ctrl + C - Copy selected files to clipboard
 Shift-LeftClick-Drag - Drag (in Filter)
 Ctrl + MouseWheel - Zoom
 Z - Zoom Full/Fit'''
-
-if HC.PLATFORM_OSX:
-    
-    DELETE_KEYS = ( wx.WXK_BACK, wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE )
-    
-else:
-    
-    DELETE_KEYS = ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE )
-    
 
 DISCRIMINANT_INBOX = 0
 DISCRIMINANT_LOCAL = 1
@@ -114,33 +100,33 @@ FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU = 2
 FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_STACKED = 3
 FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_SUMMED = 4
 
-FLAGS_NONE = wx.SizerFlags( 0 )
+FLAGS_NONE = 0
 
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-FLAGS_BIG_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 10 )
+FLAGS_SMALL_INDENT = 1
+FLAGS_BIG_INDENT = 2
 
-FLAGS_CENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Center()
+FLAGS_CENTER = 3
 
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_EXPAND_PERPENDICULAR = 4
+FLAGS_EXPAND_BOTH_WAYS = 5
+FLAGS_EXPAND_DEPTH_ONLY = 6
 
-FLAGS_EXPAND_BOTH_WAYS_POLITE = wx.SizerFlags( 3 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS_SHY = wx.SizerFlags( 1 ).Border( wx.ALL, 2 ).Expand()
+FLAGS_EXPAND_BOTH_WAYS_POLITE = 7
+FLAGS_EXPAND_BOTH_WAYS_SHY = 8
 
-FLAGS_SIZER_CENTER = wx.SizerFlags( 5 ).Center()
+FLAGS_SIZER_CENTER = 9
 
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 5 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 5 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_EXPAND_SIZER_PERPENDICULAR = 10
+FLAGS_EXPAND_SIZER_BOTH_WAYS = 11
+FLAGS_EXPAND_SIZER_DEPTH_ONLY = 12
 
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = 13
 
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
+FLAGS_LONE_BUTTON = 14
 
-FLAGS_VCENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-FLAGS_SIZER_VCENTER = wx.SizerFlags( 0 ).Align( wx.ALIGN_CENTRE_VERTICAL )
-FLAGS_VCENTER_EXPAND_DEPTH_ONLY = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_VCENTER = 15
+FLAGS_SIZER_VCENTER = 16
+FLAGS_VCENTER_EXPAND_DEPTH_ONLY = 17
 
 DAY = 0
 WEEK = 1
@@ -202,14 +188,7 @@ media_viewer_capabilities[ HC.IMAGE_TIFF ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_ICON ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_APNG ] = animated_full_support
 media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
-
-if False and HC.PLATFORM_WINDOWS: # currently disabled due to wx 4.0 update, which was crashing with FlashWindow
-    
-    media_viewer_capabilities[ HC.APPLICATION_FLASH ] = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
-    
-else:
-    
-    media_viewer_capabilities[ HC.APPLICATION_FLASH ] = no_support
+media_viewer_capabilities[ HC.APPLICATION_FLASH ] = no_support
     
 
 media_viewer_capabilities[ HC.APPLICATION_PDF ] = no_support
@@ -292,16 +271,118 @@ page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_ALL ] = 'for all 
 page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS ] = 'for import pages'
 page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_NONE ] = 'for no pages'
 
+SHORTCUT_TYPE_KEYBOARD_ASCII = 0
+SHORTCUT_TYPE_MOUSE = 1
+SHORTCUT_TYPE_KEYBOARD_SPECIAL = 2
+
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1
 SHORTCUT_MODIFIER_SHIFT = 2
+SHORTCUT_MODIFIER_KEYPAD = 3
+SHORTCUT_MODIFIER_GROUP_SWITCH = 4
 
-shortcut_wx_to_hydrus_lookup = {}
+SHORTCUT_KEY_SPECIAL_SPACE = 0
+SHORTCUT_KEY_SPECIAL_BACKSPACE = 1
+SHORTCUT_KEY_SPECIAL_TAB = 2
+SHORTCUT_KEY_SPECIAL_RETURN = 3
+SHORTCUT_KEY_SPECIAL_ENTER = 4
+SHORTCUT_KEY_SPECIAL_PAUSE = 5
+SHORTCUT_KEY_SPECIAL_ESCAPE = 6
+SHORTCUT_KEY_SPECIAL_INSERT = 7
+SHORTCUT_KEY_SPECIAL_DELETE = 8
+SHORTCUT_KEY_SPECIAL_UP = 9
+SHORTCUT_KEY_SPECIAL_DOWN = 10
+SHORTCUT_KEY_SPECIAL_LEFT = 11
+SHORTCUT_KEY_SPECIAL_RIGHT = 12
+SHORTCUT_KEY_SPECIAL_HOME = 13
+SHORTCUT_KEY_SPECIAL_END = 14
+SHORTCUT_KEY_SPECIAL_PAGE_UP = 15
+SHORTCUT_KEY_SPECIAL_PAGE_DOWN = 16
+SHORTCUT_KEY_SPECIAL_F1 = 17
+SHORTCUT_KEY_SPECIAL_F2 = 18
+SHORTCUT_KEY_SPECIAL_F3 = 19
+SHORTCUT_KEY_SPECIAL_F4 = 20
+SHORTCUT_KEY_SPECIAL_F5 = 21
+SHORTCUT_KEY_SPECIAL_F6 = 22
+SHORTCUT_KEY_SPECIAL_F7 = 23
+SHORTCUT_KEY_SPECIAL_F8 = 24
+SHORTCUT_KEY_SPECIAL_F9 = 25
+SHORTCUT_KEY_SPECIAL_F10 = 26
+SHORTCUT_KEY_SPECIAL_F11 = 27
+SHORTCUT_KEY_SPECIAL_F12 = 28
 
-shortcut_wx_to_hydrus_lookup[ wx.ACCEL_ALT ] = SHORTCUT_MODIFIER_ALT
-shortcut_wx_to_hydrus_lookup[ wx.ACCEL_CTRL ] = SHORTCUT_MODIFIER_CTRL
-shortcut_wx_to_hydrus_lookup[ wx.ACCEL_CMD ] = SHORTCUT_MODIFIER_CTRL
-shortcut_wx_to_hydrus_lookup[ wx.ACCEL_SHIFT ] = SHORTCUT_MODIFIER_SHIFT
+if HC.PLATFORM_OSX:
+    
+    DELETE_KEYS = ( QC.Qt.Key_Backspace, QC.Qt.Key_Delete )
+    
+else:
+    
+    DELETE_KEYS = ( QC.Qt.Key_Delete, )
+    
+
+special_key_shortcut_enum_lookup = {}
+
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Space ] = SHORTCUT_KEY_SPECIAL_SPACE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Backspace ] = SHORTCUT_KEY_SPECIAL_BACKSPACE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Tab ] = SHORTCUT_KEY_SPECIAL_TAB
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Return ] = SHORTCUT_KEY_SPECIAL_RETURN
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Enter ] = SHORTCUT_KEY_SPECIAL_ENTER
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Pause ] = SHORTCUT_KEY_SPECIAL_PAUSE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Escape ] = SHORTCUT_KEY_SPECIAL_ESCAPE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Insert ] = SHORTCUT_KEY_SPECIAL_INSERT
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Delete ] = SHORTCUT_KEY_SPECIAL_DELETE
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Up ] = SHORTCUT_KEY_SPECIAL_UP
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Down ] = SHORTCUT_KEY_SPECIAL_DOWN
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Left ] = SHORTCUT_KEY_SPECIAL_LEFT
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Right ] = SHORTCUT_KEY_SPECIAL_RIGHT
+special_key_shortcut_enum_lookup[ QC.Qt.Key_Home ] = SHORTCUT_KEY_SPECIAL_HOME
+special_key_shortcut_enum_lookup[ QC.Qt.Key_End ] = SHORTCUT_KEY_SPECIAL_END
+special_key_shortcut_enum_lookup[ QC.Qt.Key_PageUp ] = SHORTCUT_KEY_SPECIAL_PAGE_UP
+special_key_shortcut_enum_lookup[ QC.Qt.Key_PageDown ] = SHORTCUT_KEY_SPECIAL_PAGE_DOWN
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F1 ] = SHORTCUT_KEY_SPECIAL_F1
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F2 ] = SHORTCUT_KEY_SPECIAL_F2
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F3 ] = SHORTCUT_KEY_SPECIAL_F3
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F4 ] = SHORTCUT_KEY_SPECIAL_F4
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F5 ] = SHORTCUT_KEY_SPECIAL_F5
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F6 ] = SHORTCUT_KEY_SPECIAL_F6
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F7 ] = SHORTCUT_KEY_SPECIAL_F7
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F8 ] = SHORTCUT_KEY_SPECIAL_F8
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F9 ] = SHORTCUT_KEY_SPECIAL_F9
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F10 ] = SHORTCUT_KEY_SPECIAL_F10
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F11 ] = SHORTCUT_KEY_SPECIAL_F11
+special_key_shortcut_enum_lookup[ QC.Qt.Key_F12 ] = SHORTCUT_KEY_SPECIAL_F12
+
+special_key_shortcut_str_lookup = {}
+
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_SPACE ] = 'space'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_BACKSPACE ] = 'backspace'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_TAB ] = 'tab'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_RETURN ] = 'return'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_ENTER ] = 'enter'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAUSE ] = 'pause'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_ESCAPE ] = 'escape'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_INSERT ] = 'insert'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_DELETE ] = 'delete'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_UP ] = 'up'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_DOWN ] = 'down'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_LEFT ] = 'left'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_RIGHT ] = 'right'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_HOME ] = 'home'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_END ] = 'end'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAGE_DOWN ] = 'page down'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_PAGE_UP ] = 'page up'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F1 ] = 'f1'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F2 ] = 'f2'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F3 ] = 'f3'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F4 ] = 'f4'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F5 ] = 'f5'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F6 ] = 'f6'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F7 ] = 'f7'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F8 ] = 'f8'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F9 ] = 'f9'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F10 ] = 'f10'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F11 ] = 'f11'
+special_key_shortcut_str_lookup[ SHORTCUT_KEY_SPECIAL_F12 ] = 'f12'
 
 SHORTCUT_MOUSE_LEFT = 0
 SHORTCUT_MOUSE_RIGHT = 1
@@ -320,9 +401,6 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_UP ] = 'scroll up'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
-
-SHORTCUT_TYPE_KEYBOARD = 0
-SHORTCUT_TYPE_MOUSE = 1
 
 SHORTCUTS_RESERVED_NAMES = [ 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
 
@@ -348,8 +426,6 @@ simple_shortcut_name_to_action_lookup[ 'custom' ] = SHORTCUTS_MEDIA_ACTIONS + SH
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1
 SHUTDOWN_TIMESTAMP_DELETE_ORPHANS = 2
-
-( SizeChangedEvent, EVT_SIZE_CHANGED ) = wx.lib.newevent.NewCommandEvent()
 
 SORT_BY_LEXICOGRAPHIC_ASC = 8
 SORT_BY_LEXICOGRAPHIC_DESC = 9
@@ -425,66 +501,6 @@ SUCCESSFUL_IMPORT_STATES = { STATUS_SUCCESSFUL_AND_NEW, STATUS_SUCCESSFUL_BUT_RE
 UNSUCCESSFUL_IMPORT_STATES = { STATUS_DELETED, STATUS_ERROR, STATUS_VETOED }
 FAILED_IMPORT_STATES = { STATUS_ERROR, STATUS_VETOED }
 
-wxk_code_string_lookup = {
-    wx.WXK_SPACE: 'space',
-    wx.WXK_BACK: 'backspace',
-    wx.WXK_TAB: 'tab',
-    wx.WXK_RETURN: 'return',
-    wx.WXK_NUMPAD_ENTER: 'enter',
-    wx.WXK_PAUSE: 'pause',
-    wx.WXK_ESCAPE: 'escape',
-    wx.WXK_INSERT: 'insert',
-    wx.WXK_DELETE: 'delete',
-    wx.WXK_UP: 'up',
-    wx.WXK_DOWN: 'down',
-    wx.WXK_LEFT: 'left',
-    wx.WXK_RIGHT: 'right',
-    wx.WXK_HOME: 'home',
-    wx.WXK_END: 'end',
-    wx.WXK_PAGEDOWN: 'page down',
-    wx.WXK_PAGEUP: 'page up',
-    wx.WXK_F1: 'f1',
-    wx.WXK_F2: 'f2',
-    wx.WXK_F3: 'f3',
-    wx.WXK_F4: 'f4',
-    wx.WXK_F5: 'f5',
-    wx.WXK_F6: 'f6',
-    wx.WXK_F7: 'f7',
-    wx.WXK_F8: 'f8',
-    wx.WXK_F9: 'f9',
-    wx.WXK_F10: 'f10',
-    wx.WXK_F11: 'f11',
-    wx.WXK_F12: 'f12',
-    wx.WXK_ADD: '+',
-    wx.WXK_DIVIDE: '/',
-    wx.WXK_SUBTRACT: '-',
-    wx.WXK_MULTIPLY: '*',
-    wx.WXK_NUMPAD1: 'numpad 1',
-    wx.WXK_NUMPAD2: 'numpad 2',
-    wx.WXK_NUMPAD3: 'numpad 3',
-    wx.WXK_NUMPAD4: 'numpad 4',
-    wx.WXK_NUMPAD5: 'numpad 5',
-    wx.WXK_NUMPAD6: 'numpad 6',
-    wx.WXK_NUMPAD7: 'numpad 7',
-    wx.WXK_NUMPAD8: 'numpad 8',
-    wx.WXK_NUMPAD9: 'numpad 9',
-    wx.WXK_NUMPAD0: 'numpad 0',
-    wx.WXK_NUMPAD_UP: 'numpad up',
-    wx.WXK_NUMPAD_DOWN: 'numpad down',
-    wx.WXK_NUMPAD_LEFT: 'numpad left',
-    wx.WXK_NUMPAD_RIGHT: 'numpad right',
-    wx.WXK_NUMPAD_HOME: 'numpad home',
-    wx.WXK_NUMPAD_END: 'numpad end',
-    wx.WXK_NUMPAD_PAGEDOWN: 'numpad page down',
-    wx.WXK_NUMPAD_PAGEUP: 'numpad page up',
-    wx.WXK_NUMPAD_ADD: 'numpad +',
-    wx.WXK_NUMPAD_DIVIDE: 'numpad /',
-    wx.WXK_NUMPAD_SUBTRACT: 'numpad -',
-    wx.WXK_NUMPAD_MULTIPLY: 'numpad *',
-    wx.WXK_NUMPAD_DELETE: 'numpad delete',
-    wx.WXK_NUMPAD_DECIMAL: 'numpad decimal'
-    }
-
 ZOOM_NEAREST = 0 # pixelly garbage
 ZOOM_LINEAR = 1 # simple and quick
 ZOOM_AREA = 2 # for shrinking without moire
@@ -499,87 +515,88 @@ zoom_string_lookup[ ZOOM_AREA ] = 'pixel area resampling'
 zoom_string_lookup[ ZOOM_CUBIC ] = '4x4 bilinear interpolation'
 zoom_string_lookup[ ZOOM_LANCZOS4 ] = '8x8 Lanczos interpolation'
 
-class GlobalBMPs( object ):
+class GlobalPixmaps( object ):
     
     @staticmethod
     def STATICInitialise():
         
-        # these have to be created after the wxApp is instantiated, for silly GDI reasons
+        # These probably *could* be created even before QApplication is constructed, but it can't hurt to wait until that's done.
         
-        GlobalBMPs.bold = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_bold.png' ) )
-        GlobalBMPs.italic = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_italic.png' ) )
-        GlobalBMPs.underline = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_underline.png' ) )
+        GlobalPixmaps.bold = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_bold.png') )
+        GlobalPixmaps.italic = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_italic.png') )
+        GlobalPixmaps.underline = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_underline.png') )
         
-        GlobalBMPs.align_left = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_align_left.png' ) )
-        GlobalBMPs.align_center = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_align_center.png' ) )
-        GlobalBMPs.align_right = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_align_right.png' ) )
-        GlobalBMPs.align_justify = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_align_justify.png' ) )
+        GlobalPixmaps.align_left = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_align_left.png') )
+        GlobalPixmaps.align_center = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_align_center.png') )
+        GlobalPixmaps.align_right = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_align_right.png') )
+        GlobalPixmaps.align_justify = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_align_justify.png') )
         
-        GlobalBMPs.indent_less = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_indent_remove.png' ) )
-        GlobalBMPs.indent_more = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'text_indent.png' ) )
+        GlobalPixmaps.indent_less = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_indent_remove.png') )
+        GlobalPixmaps.indent_more = QG.QPixmap( os.path.join(HC.STATIC_DIR,'text_indent.png') )
         
-        GlobalBMPs.font = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'font.png' ) )
-        GlobalBMPs.colour = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'color_swatch.png' ) )
+        GlobalPixmaps.font = QG.QPixmap( os.path.join(HC.STATIC_DIR,'font.png') )
+        GlobalPixmaps.colour = QG.QPixmap( os.path.join(HC.STATIC_DIR,'color_swatch.png') )
         
-        GlobalBMPs.link = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'link.png' ) )
-        GlobalBMPs.link_break = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'link_break.png' ) )
+        GlobalPixmaps.link = QG.QPixmap( os.path.join(HC.STATIC_DIR,'link.png') )
+        GlobalPixmaps.link_break = QG.QPixmap( os.path.join(HC.STATIC_DIR,'link_break.png') )
         
-        GlobalBMPs.drag = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'drag.png' ) )
+        GlobalPixmaps.drag = QG.QPixmap( os.path.join(HC.STATIC_DIR,'drag.png') )
         
-        GlobalBMPs.transparent = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'transparent.png' ) )
-        GlobalBMPs.downloading = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'downloading.png' ) )
-        GlobalBMPs.file_repository = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_small.png' ) )
-        GlobalBMPs.file_repository_pending = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_pending_small.png' ) )
-        GlobalBMPs.file_repository_petitioned = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_petitioned_small.png' ) )
-        GlobalBMPs.ipfs = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'ipfs_small.png' ) )
-        GlobalBMPs.ipfs_pending = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'ipfs_pending_small.png' ) )
-        GlobalBMPs.ipfs_petitioned = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'ipfs_petitioned_small.png' ) )
+        GlobalPixmaps.transparent = QG.QPixmap( os.path.join(HC.STATIC_DIR,'transparent.png') )
+        GlobalPixmaps.downloading = QG.QPixmap( os.path.join(HC.STATIC_DIR,'downloading.png') )
+        GlobalPixmaps.file_repository = QG.QPixmap( os.path.join(HC.STATIC_DIR,'file_repository_small.png') )
+        GlobalPixmaps.file_repository_pending = QG.QPixmap( os.path.join(HC.STATIC_DIR,'file_repository_pending_small.png') )
+        GlobalPixmaps.file_repository_petitioned = QG.QPixmap( os.path.join(HC.STATIC_DIR,'file_repository_petitioned_small.png') )
+        GlobalPixmaps.ipfs = QG.QPixmap( os.path.join(HC.STATIC_DIR,'ipfs_small.png') )
+        GlobalPixmaps.ipfs_pending = QG.QPixmap( os.path.join(HC.STATIC_DIR,'ipfs_pending_small.png') )
+        GlobalPixmaps.ipfs_petitioned = QG.QPixmap( os.path.join(HC.STATIC_DIR,'ipfs_petitioned_small.png') )
         
-        GlobalBMPs.collection = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'collection.png' ) )
-        GlobalBMPs.inbox = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'inbox.png' ) )
-        GlobalBMPs.trash = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'trash.png' ) )
+        GlobalPixmaps.collection = QG.QPixmap( os.path.join(HC.STATIC_DIR,'collection.png') )
+        GlobalPixmaps.inbox = QG.QPixmap( os.path.join(HC.STATIC_DIR,'inbox.png') )
+        GlobalPixmaps.trash = QG.QPixmap( os.path.join(HC.STATIC_DIR,'trash.png') )
         
-        GlobalBMPs.refresh = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'refresh.png' ) )
-        GlobalBMPs.archive = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'archive.png' ) )
-        GlobalBMPs.to_inbox = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'to_inbox.png' ) )
-        GlobalBMPs.delete = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'trash.png' ) )
-        GlobalBMPs.trash_delete = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'delete.png' ) )
-        GlobalBMPs.undelete = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'undelete.png' ) )
-        GlobalBMPs.zoom_in = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'zoom_in.png' ) )
-        GlobalBMPs.zoom_out = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'zoom_out.png' ) )
-        GlobalBMPs.zoom_switch = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'zoom_switch.png' ) )
-        GlobalBMPs.fullscreen_switch = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'fullscreen_switch.png' ) )
-        GlobalBMPs.open_externally = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'open_externally.png' ) )
+        GlobalPixmaps.refresh = QG.QPixmap( os.path.join(HC.STATIC_DIR,'refresh.png') )
+        GlobalPixmaps.archive = QG.QPixmap( os.path.join(HC.STATIC_DIR,'archive.png') )
+        GlobalPixmaps.to_inbox = QG.QPixmap( os.path.join(HC.STATIC_DIR,'to_inbox.png') )
+        GlobalPixmaps.delete = QG.QPixmap( os.path.join(HC.STATIC_DIR,'trash.png') )
+        GlobalPixmaps.trash_delete = QG.QPixmap( os.path.join(HC.STATIC_DIR,'delete.png') )
+        GlobalPixmaps.undelete = QG.QPixmap( os.path.join(HC.STATIC_DIR,'undelete.png') )
+        GlobalPixmaps.zoom_in = QG.QPixmap( os.path.join(HC.STATIC_DIR,'zoom_in.png') )
+        GlobalPixmaps.zoom_out = QG.QPixmap( os.path.join(HC.STATIC_DIR,'zoom_out.png') )
+        GlobalPixmaps.zoom_switch = QG.QPixmap( os.path.join(HC.STATIC_DIR,'zoom_switch.png') )
+        GlobalPixmaps.fullscreen_switch = QG.QPixmap( os.path.join(HC.STATIC_DIR,'fullscreen_switch.png') )
+        GlobalPixmaps.open_externally = QG.QPixmap( os.path.join(HC.STATIC_DIR,'open_externally.png') )
         
-        GlobalBMPs.dump_ok = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_ok.png' ) )
-        GlobalBMPs.dump_recoverable = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_recoverable.png' ) )
-        GlobalBMPs.dump_fail = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_fail.png' ) )
+        GlobalPixmaps.dump_ok = QG.QPixmap( os.path.join(HC.STATIC_DIR,'dump_ok.png') )
+        GlobalPixmaps.dump_recoverable = QG.QPixmap( os.path.join(HC.STATIC_DIR,'dump_recoverable.png') )
+        GlobalPixmaps.dump_fail = QG.QPixmap( os.path.join(HC.STATIC_DIR,'dump_fail.png') )
         
-        GlobalBMPs.cog = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'cog.png' ) )
-        GlobalBMPs.family = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'family.png' ) )
-        GlobalBMPs.keyboard = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'keyboard.png' ) )
-        GlobalBMPs.help = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'help.png' ) )
+        GlobalPixmaps.cog = QG.QPixmap( os.path.join(HC.STATIC_DIR,'cog.png') )
+        GlobalPixmaps.family = QG.QPixmap( os.path.join(HC.STATIC_DIR,'family.png') )
+        GlobalPixmaps.keyboard = QG.QPixmap( os.path.join(HC.STATIC_DIR,'keyboard.png') )
+        GlobalPixmaps.help = QG.QPixmap( os.path.join(HC.STATIC_DIR,'help.png') )
         
-        GlobalBMPs.check = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'check.png' ) )
-        GlobalBMPs.pause = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'pause.png' ) )
-        GlobalBMPs.play = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'play.png' ) )
-        GlobalBMPs.stop = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'stop.png' ) )
+        GlobalPixmaps.check = QG.QPixmap( os.path.join(HC.STATIC_DIR,'check.png') )
+        GlobalPixmaps.pause = QG.QPixmap( os.path.join(HC.STATIC_DIR,'pause.png') )
+        GlobalPixmaps.play = QG.QPixmap( os.path.join(HC.STATIC_DIR,'play.png') )
+        GlobalPixmaps.stop = QG.QPixmap( os.path.join(HC.STATIC_DIR,'stop.png') )
+        GlobalPixmaps.sound = QG.QPixmap( os.path.join(HC.STATIC_DIR,'sound.png') )
         
-        GlobalBMPs.listctrl = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'listctrl.png' ) )
+        GlobalPixmaps.listctrl = QG.QPixmap( os.path.join(HC.STATIC_DIR,'listctrl.png') )
         
-        GlobalBMPs.copy = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'copy.png' ) )
-        GlobalBMPs.paste = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'paste.png' ) )
+        GlobalPixmaps.copy = QG.QPixmap( os.path.join(HC.STATIC_DIR,'copy.png') )
+        GlobalPixmaps.paste = QG.QPixmap( os.path.join(HC.STATIC_DIR,'paste.png') )
         
-        GlobalBMPs.eight_chan = wx.Bitmap( os.path.join( HC.STATIC_DIR, '8chan.png' ) )
-        GlobalBMPs.twitter = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'twitter.png' ) )
-        GlobalBMPs.tumblr = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'tumblr.png' ) )
-        GlobalBMPs.discord = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'discord.png' ) )
-        GlobalBMPs.patreon = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'patreon.png' ) )
+        GlobalPixmaps.eight_chan = QG.QPixmap( os.path.join(HC.STATIC_DIR,'8chan.png') )
+        GlobalPixmaps.twitter = QG.QPixmap( os.path.join(HC.STATIC_DIR,'twitter.png') )
+        GlobalPixmaps.tumblr = QG.QPixmap( os.path.join(HC.STATIC_DIR,'tumblr.png') )
+        GlobalPixmaps.discord = QG.QPixmap( os.path.join(HC.STATIC_DIR,'discord.png') )
+        GlobalPixmaps.patreon = QG.QPixmap( os.path.join(HC.STATIC_DIR,'patreon.png') )
         
-        GlobalBMPs.first = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'first.png' ) )
-        GlobalBMPs.previous = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )
-        GlobalBMPs.next_bmp = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'next.png' ) )
-        GlobalBMPs.last = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'last.png' ) )
+        GlobalPixmaps.first = QG.QPixmap( os.path.join(HC.STATIC_DIR,'first.png') )
+        GlobalPixmaps.previous = QG.QPixmap( os.path.join(HC.STATIC_DIR,'previous.png') )
+        GlobalPixmaps.next_bmp = QG.QPixmap( os.path.join(HC.STATIC_DIR,'next.png') )
+        GlobalPixmaps.last = QG.QPixmap( os.path.join(HC.STATIC_DIR,'last.png') )
         
 
 DEFAULT_LOCAL_TAG_SERVICE_KEY = b'local tags'

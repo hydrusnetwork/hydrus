@@ -579,12 +579,6 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.IMAGES )
-        
-        self.assertEqual( p.ToString(), 'system:untagged' )
-        self.assertEqual( p.GetNamespace(), 'system' )
-        self.assertEqual( p.GetTextsAndNamespaces(), [ ( p.ToString(), p.GetNamespace() ) ] )
-        
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
         
         self.assertEqual( p.ToString(), 'system:width = 1,920' )

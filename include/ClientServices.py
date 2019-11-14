@@ -21,7 +21,8 @@ import os
 import threading
 import time
 import traceback
-import wx
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -2302,7 +2303,7 @@ class ServiceIPFS( ServiceRemote ):
     
     def ImportFile( self, multihash, silent = False ):
         
-        def on_wx_select_tree( job_key, url_tree ):
+        def on_qt_select_tree( job_key, url_tree ):
             
             from . import ClientGUIDialogs
             
@@ -2310,7 +2311,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 urls_good = False
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     urls = dlg.GetURLs()
                     
@@ -2329,7 +2330,7 @@ class ServiceIPFS( ServiceRemote ):
                 
             
         
-        def off_wx():
+        def off_qt():
             
             job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
             
@@ -2370,11 +2371,11 @@ class ServiceIPFS( ServiceRemote ):
                 
                 job_key.SetVariable( 'popup_text_1', 'Waiting for user selection' )
                 
-                wx.CallAfter( on_wx_select_tree, job_key, url_tree )
+                QP.CallAfter( on_qt_select_tree, job_key, url_tree )
                 
             
         
-        HG.client_controller.CallToThread( off_wx )
+        HG.client_controller.CallToThread( off_qt )
         
     
     def IsPinned( self, multihash ):

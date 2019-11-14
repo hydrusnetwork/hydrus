@@ -24,7 +24,6 @@ import random
 import threading
 import time
 import traceback
-import wx
 
 CHECKER_STATUS_OK = 0
 CHECKER_STATUS_DEAD = 1

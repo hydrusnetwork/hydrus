@@ -14,7 +14,11 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
+from . import QtPorting as QP
 
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
@@ -28,7 +32,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         if width is not None:
             
-            self.SetMinSize( ( width, -1 ) )
+            self.setMinimumWidth( width )
             
         
     
@@ -54,7 +58,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
             self._Hit( False, False, 0 )
             
         
-        self.SetFocus()
+        self.setFocus( QC.Qt.OtherFocusReason )
         
     
 class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
@@ -67,14 +71,14 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         width = HG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
         
-        self.SetMinSize( ( width, -1 ) )
+        self.setMinimumWidth( width )
         
     
     def _Activate( self ):
         
         if len( self._selected_terms ) > 0:
             
-            tags = { predicate.GetValue() for predicate in self._selected_terms }
+            tags = {predicate.GetValue() for predicate in self._selected_terms}
             
             self._activate_callable( tags )
             
@@ -106,31 +110,31 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
             self._Hit( False, False, 0 )
             
         
-        self.SetFocus()
+        self.setFocus( QC.Qt.OtherFocusReason )
         
     
-class RecentTagsPanel( wx.Panel ):
+class RecentTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, activate_callable, canvas_key = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._canvas_key = canvas_key
         
         self._new_options = HG.client_controller.new_options
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        clear_button = wx.Button( self, label = 'clear' )
-        clear_button.Bind( wx.EVT_BUTTON, self.EventClear )
+        clear_button = QW.QPushButton( 'clear', self )
+        clear_button.clicked.connect( self.EventClear )
         
         self._recent_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = False )
         
-        vbox.Add( clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         self._RefreshRecentTags()
         
@@ -144,9 +148,9 @@ class RecentTagsPanel( wx.Panel ):
         
         def do_it( service_key ):
             
-            def wx_code():
+            def qt_code():
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -156,7 +160,7 @@ class RecentTagsPanel( wx.Panel ):
             
             recent_tags = HG.client_controller.Read( 'recent_tags', service_key )
             
-            wx.CallAfter( wx_code )
+            QP.CallAfter( qt_code )
             
         
         HG.client_controller.CallToThread( do_it, self._service_key )
@@ -170,7 +174,7 @@ class RecentTagsPanel( wx.Panel ):
             
         
     
-    def EventClear( self, event ):
+    def EventClear( self ):
         
         HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
         
@@ -182,11 +186,11 @@ class RecentTagsPanel( wx.Panel ):
         self._recent_tags.TakeFocusForUser()
         
     
-class RelatedTagsPanel( wx.Panel ):
+class RelatedTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
@@ -196,27 +200,27 @@ class RelatedTagsPanel( wx.Panel ):
         
         self._new_options = HG.client_controller.new_options
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        self._button_2 = wx.Button( self, label = 'medium' )
-        self._button_2.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags2 )
-        self._button_2.SetMinSize( ( 30, -1 ) )
+        self._button_2 = QW.QPushButton( 'medium', self )
+        self._button_2.clicked.connect( self.EventSuggestedRelatedTags2 )
+        self._button_2.setMinimumWidth( 30 )
         
-        self._button_3 = wx.Button( self, label = 'thorough' )
-        self._button_3.Bind( wx.EVT_BUTTON, self.EventSuggestedRelatedTags3 )
-        self._button_3.SetMinSize( ( 30, -1 ) )
+        self._button_3 = QW.QPushButton( 'thorough', self )
+        self._button_3.clicked.connect( self.EventSuggestedRelatedTags3 )
+        self._button_3.setMinimumWidth( 30 )
         
         self._related_tags = ListBoxTagsSuggestionsRelated( self, activate_callable )
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        button_hbox.Add( self._button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        vbox.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         if self._canvas_key is not None:
             
@@ -230,9 +234,9 @@ class RelatedTagsPanel( wx.Panel ):
         
         def do_it( service_key ):
             
-            def wx_code():
+            def qt_code():
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -246,7 +250,7 @@ class RelatedTagsPanel( wx.Panel ):
             
             predicates = ClientSearch.SortPredicates( predicates )
             
-            wx.CallAfter( wx_code )
+            QP.CallAfter( qt_code )
             
         
         ( m, ) = self._media
@@ -287,14 +291,14 @@ class RelatedTagsPanel( wx.Panel ):
             
         
     
-    def EventSuggestedRelatedTags2( self, event ):
+    def EventSuggestedRelatedTags2( self ):
         
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) / 1000.0
         
         self._FetchRelatedTags( max_time_to_take )
         
     
-    def EventSuggestedRelatedTags3( self, event ):
+    def EventSuggestedRelatedTags3( self ):
         
         max_time_to_take = self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) / 1000.0
         
@@ -306,11 +310,11 @@ class RelatedTagsPanel( wx.Panel ):
         self._related_tags.TakeFocusForUser()
         
     
-class FileLookupScriptTagsPanel( wx.Panel ):
+class FileLookupScriptTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
@@ -318,13 +322,13 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         self._script_choice = ClientGUICommon.BetterChoice( self )
         
-        self._script_choice.Disable()
+        self._script_choice.setEnabled( False )
         
         self._have_fetched = False
         
         self._fetch_button = ClientGUICommon.BetterButton( self, 'fetch tags', self.FetchTags )
         
-        self._fetch_button.Disable()
+        self._fetch_button.setEnabled( False )
         
         self._script_management = ClientGUIParsing.ScriptManagementControl( self )
         
@@ -332,17 +336,17 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         self._add_all = ClientGUICommon.BetterButton( self, 'add all', self._tags.ActivateAll )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._add_all, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._add_all, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._SetTags( [] )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         if self._canvas_key is not None:
             
@@ -356,9 +360,9 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         def do_it():
             
-            def wx_code():
+            def qt_code():
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -367,7 +371,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
                 
                 for ( name, script ) in list(script_names_to_scripts.items()):
                     
-                    self._script_choice.Append( script.GetName(), script )
+                    self._script_choice.addItem( script.GetName(), script )
                     
                 
                 new_options = HG.client_controller.new_options
@@ -380,16 +384,16 @@ class FileLookupScriptTagsPanel( wx.Panel ):
                     
                 else:
                     
-                    self._script_choice.Select( 0 )
+                    self._script_choice.setCurrentIndex( 0 )
                     
                 
-                self._script_choice.Enable()
-                self._fetch_button.Enable()
+                self._script_choice.setEnabled( True )
+                self._fetch_button.setEnabled( True )
                 
             
             scripts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
             
-            wx.CallAfter( wx_code )
+            QP.CallAfter( qt_code )
             
         
         HG.client_controller.CallToThread( do_it )
@@ -401,11 +405,11 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         if len( tags ) == 0:
             
-            self._add_all.Disable()
+            self._add_all.setEnabled( False )
             
         else:
             
-            self._add_all.Enable()
+            self._add_all.setEnabled( True )
             
         
     
@@ -432,7 +436,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                 
-                if dlg.ShowModal() != wx.ID_OK:
+                if dlg.exec() != QW.QDialog.Accepted:
                     
                     return
                     
@@ -464,15 +468,15 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             
         else:
             
-            self._fetch_button.SetFocus()
+            self._fetch_button.setFocus( QC.Qt.OtherFocusReason )
             
         
     
     def THREADFetchTags( self, script, job_key, file_identifier ):
         
-        def wx_code( tags ):
+        def qt_code( tags ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -486,14 +490,14 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         tags = ClientParsing.GetTagsFromParseResults( parse_results )
         
-        wx.CallAfter( wx_code, tags )
+        QP.CallAfter( qt_code, tags )
         
     
-class SuggestedTagsPanel( wx.Panel ):
+class SuggestedTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, media, activate_callable, canvas_key = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._media = media
@@ -560,32 +564,32 @@ class SuggestedTagsPanel( wx.Panel ):
         
         if layout_mode == 'notebook':
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
             for ( name, panel ) in panels:
                 
-                self._notebook.AddPage( panel, name )
+                self._notebook.addTab( panel, name )
                 
             
-            hbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self.SetSizer( hbox )
+            self.setLayout( hbox )
             
         elif layout_mode == 'columns':
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
             for ( name, panel ) in panels:
                 
-                hbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                QP.AddToLayout( hbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            self.SetSizer( hbox )
+            self.setLayout( hbox )
             
         
         if len( panels ) == 0:
             
-            self.Hide()
+            self.hide()
             
         
     

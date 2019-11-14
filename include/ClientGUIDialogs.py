@@ -43,18 +43,16 @@ import string
 import threading
 import time
 import traceback
-import wx
-import wx.lib.agw.customtreectrl
 import yaml
 from . import HydrusData
 from . import ClientSearch
 from . import HydrusGlobals as HG
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 # Option Enums
-
-ID_NULL = wx.NewId()
-
-ID_TIMER_UPDATE = wx.NewId()
 
 def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
@@ -88,7 +86,7 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
         try:
             
-            service_key = ClientGUIDialogsQuick.SelectFromList( HG.client_controller.GetGUI(), 'select service', choice_tuples )
+            service_key = ClientGUIDialogsQuick.SelectFromList( HG.client_controller.gui, 'select service', choice_tuples )
             
             return service_key
             
@@ -98,82 +96,77 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
             
         
     
-class Dialog( wx.Dialog ):
+class Dialog( QP.Dialog ):
     
-    def __init__( self, parent, title, style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, position = 'topleft' ):
+    def __init__( self, parent, title, style = QC.Qt.Dialog, position = 'topleft' ):
+
+        QP.Dialog.__init__( self, parent )
         
         if parent is not None and position == 'topleft':
             
-            if isinstance( parent, wx.TopLevelWindow ):
-                
-                parent_tlp = parent
-                
-            else:
-                
-                parent_tlp = parent.GetTopLevelParent()
-                
+            parent_tlp = self.parentWidget().window()                
             
-            ( pos_x, pos_y ) = parent_tlp.GetPosition()
+            ( pos_x, pos_y ) = parent_tlp.pos().toTuple()
             
-            pos = ( pos_x + 50, pos_y + 50 )
+            pos = QC.QPoint( pos_x + 50, pos_y + 50 )
             
         else:
             
-            pos = wx.DefaultPosition
+            pos = None
             
         
-        if not HC.PLATFORM_LINUX and parent is not None:
-            
-            style |= wx.FRAME_FLOAT_ON_PARENT
-            
+        self.setWindowTitle( title )
+        self.setWindowFlags( style )
         
-        wx.Dialog.__init__( self, parent, title = title, style = style, pos = pos )
+        if pos: self.move( pos )
+        
+        self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
         
         self._new_options = HG.client_controller.new_options
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self.SetIcon( HG.client_controller.frame_icon )
+        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
         
         if parent is not None and position == 'center':
             
-            wx.CallAfter( self.Center )
+            QP.CallAfter( QP.Center, self )
             
         
         HG.client_controller.ResetIdleTimer()
         
     
-    def EventCharHook( self, event ):
+    def keyPressEvent( self, event ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key == wx.WXK_ESCAPE:
+        if key == QC.Qt.Key_Escape:
             
-            self.EndModal( wx.ID_CANCEL )
+            self.done( QW.QDialog.Rejected )
             
         else:
             
-            event.Skip()
+            QP.Dialog.keyPressEvent( self, event )
             
         
     
     def SetInitialSize( self, size ):
         
-        ( width, height ) = size
+        ( width, height ) = size if isinstance( size, tuple ) else size.toTuple()
         
-        ( display_width, display_height ) = ClientGUITopLevelWindows.GetDisplaySize( self )
+        display_size = ClientGUITopLevelWindows.GetDisplaySize( self )
         
-        width = min( display_width, width )
-        height = min( display_height, height )
+        width = min( display_size.width(), width )
+        height = min( display_size.height(), height )
         
-        wx.Dialog.SetInitialSize( self, ( width, height ) )
+        self.resize( QC.QSize( width, height ) )
         
         min_width = min( 240, width )
         min_height = min( 240, height )
         
-        self.SetMinSize( ( min_width, min_height ) )
+        self.setMinimumSize( QC.QSize( min_width, min_height ) )
         
     
 class DialogChooseNewServiceMethod( Dialog ):
@@ -184,35 +177,36 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         register_message = 'I want to initialise a new account with the server. I have a registration key (a key starting with \'r\').'
         
-        self._register = wx.Button( self, label = register_message )
-        self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
+        self._register = QW.QPushButton( register_message, self )
+        self._register.clicked.connect( self.EventRegister )
         
         setup_message = 'The account is already initialised; I just want to add it to this client. I have a normal access key.'
         
-        self._setup = wx.Button( self, id = wx.ID_OK, label = setup_message )
+        self._setup = QW.QPushButton( setup_message, self )
+        self._setup.clicked.connect( self.accept )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, QP.MakeQLabelWithAlignment('-or-', self, QC.Qt.AlignHCenter | QC.Qt.AlignVCenter ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
         self._should_register = False
         
-        wx.CallAfter( self._register.SetFocus )
+        QP.CallAfter( self._register.setFocus, QC.Qt.OtherFocusReason )
         
     
-    def EventRegister( self, event ):
+    def EventRegister( self ):
         
         self._should_register = True
         
-        self.EndModal( wx.ID_OK )
+        self.done( QW.QDialog.Accepted )
         
     
     def GetRegister( self ):
@@ -228,22 +222,23 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._service_key = service_key
         
-        self._num = wx.SpinCtrl( self, min = 1, max = 10000, size = ( 80, -1 ) )
+        self._num = QP.MakeQSpinBox( self, min=1, max=10000, width = 80 )
         
         self._account_types = ClientGUICommon.BetterChoice( self )
         
         self._lifetime = ClientGUICommon.BetterChoice( self )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = QW.QPushButton( 'OK', self )
+        self._ok.clicked.connect( self.EventOK )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'Cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
-        self._num.SetValue( 1 )
+        self._num.setValue( 1 )
         
         service = HG.client_controller.services_manager.GetService( service_key )
         
@@ -253,49 +248,49 @@ class DialogGenerateNewAccounts( Dialog ):
         
         for account_type in account_types:
             
-            self._account_types.Append( account_type.GetTitle(), account_type )
+            self._account_types.addItem( account_type.GetTitle(), account_type )
             
         
-        self._account_types.Select( 0 )
+        self._account_types.setCurrentIndex( 0 )
         
         for ( s, value ) in HC.lifetimes:
             
-            self._lifetime.Append( s, value )
+            self._lifetime.addItem( s, value )
             
         
-        self._lifetime.SetSelection( 3 ) # one year
+        self._lifetime.setCurrentIndex( 3 ) # one year
         
         #
         
-        ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
+        ctrl_box = QP.HBoxLayout()
         
-        ctrl_box.Add( ClientGUICommon.BetterStaticText( self, 'generate' ), CC.FLAGS_VCENTER )
-        ctrl_box.Add( self._num, CC.FLAGS_VCENTER )
-        ctrl_box.Add( self._account_types, CC.FLAGS_VCENTER )
-        ctrl_box.Add( ClientGUICommon.BetterStaticText( self, 'accounts, to expire in' ), CC.FLAGS_VCENTER )
-        ctrl_box.Add( self._lifetime, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ctrl_box, ClientGUICommon.BetterStaticText(self,'generate'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( ctrl_box, self._num, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ctrl_box, self._account_types, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ctrl_box, ClientGUICommon.BetterStaticText(self,'accounts, to expire in'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( ctrl_box, self._lifetime, CC.FLAGS_VCENTER )
         
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.Add( self._ok, CC.FLAGS_VCENTER )
-        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
+        b_box = QP.HBoxLayout()
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( self._ok.SetFocus )
+        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason )
         
     
-    def EventOK( self, event ):
+    def EventOK( self ):
         
-        num = self._num.GetValue()
+        num = self._num.value()
         
         account_type = self._account_types.GetValue()
         
@@ -331,7 +326,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
         finally:
             
-            self.EndModal( wx.ID_OK )
+            self.done( QW.QDialog.Accepted )
             
         
     
@@ -341,37 +336,39 @@ class DialogInputLocalBooruShare( Dialog ):
         
         Dialog.__init__( self, parent, 'configure local booru share' )
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
-        self._text = ClientGUICommon.SaneMultilineTextCtrl( self )
-        self._text.SetMinSize( ( -1, 100 ) )
+        self._text = QW.QPlainTextEdit( self )
+        self._text.setMinimumHeight( 100 )
         
         message = 'expires in' 
         
         self._timeout_number = ClientGUICommon.NoneableSpinCtrl( self, message, none_phrase = 'no expiration', max = 1000000, multiplier = 1 )
         
         self._timeout_multiplier = ClientGUICommon.BetterChoice( self )
-        self._timeout_multiplier.Append( 'minutes', 60 )
-        self._timeout_multiplier.Append( 'hours', 60 * 60 )
-        self._timeout_multiplier.Append( 'days', 60 * 60 * 24 )
+        self._timeout_multiplier.addItem( 'minutes', 60 )
+        self._timeout_multiplier.addItem( 'hours', 60 * 60 )
+        self._timeout_multiplier.addItem( 'days', 60 * 60 * 24 )
         
-        self._copy_internal_share_link = wx.Button( self, label = 'copy internal share link' )
-        self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
+        self._copy_internal_share_link = QW.QPushButton( 'copy internal share link', self )
+        self._copy_internal_share_link.clicked.connect( self.EventCopyInternalShareURL )
         
-        self._copy_external_share_link = wx.Button( self, label = 'copy external share link' )
-        self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
+        self._copy_external_share_link = QW.QPushButton( 'copy external share link', self )
+        self._copy_external_share_link.clicked.connect( self.EventCopyExternalShareURL )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = QW.QPushButton( 'ok', self )
+        self._ok.clicked.connect( self.accept )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
         self._share_key = share_key
-        self._name.SetValue( name )
-        self._text.SetValue( text )
+        self._name.setText( name )
+        self._text.setPlainText( text )
         
         if timeout is None:
             
@@ -400,8 +397,8 @@ class DialogInputLocalBooruShare( Dialog ):
         
         if internal_port is None:
             
-            self._copy_internal_share_link.Disable()
-            self._copy_external_share_link.Disable()
+            self._copy_internal_share_link.setEnabled( False )
+            self._copy_external_share_link.setEnabled( False )
             
         
         #
@@ -413,49 +410,49 @@ class DialogInputLocalBooruShare( Dialog ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        timeout_box = wx.BoxSizer( wx.HORIZONTAL )
-        timeout_box.Add( self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
-        timeout_box.Add( self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
+        timeout_box = QP.HBoxLayout()
+        QP.AddToLayout( timeout_box, self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( timeout_box, self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        link_box = wx.BoxSizer( wx.HORIZONTAL )
-        link_box.Add( self._copy_internal_share_link, CC.FLAGS_VCENTER )
-        link_box.Add( self._copy_external_share_link, CC.FLAGS_VCENTER )
+        link_box = QP.HBoxLayout()
+        QP.AddToLayout( link_box, self._copy_internal_share_link, CC.FLAGS_VCENTER )
+        QP.AddToLayout( link_box, self._copy_external_share_link, CC.FLAGS_VCENTER )
         
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.Add( self._ok, CC.FLAGS_VCENTER )
-        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
+        b_box = QP.HBoxLayout()
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         intro = 'Sharing ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files.'
         intro += os.linesep + 'Title and text are optional.'
         
         if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( link_box, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, link_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         x = max( x, 350 )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( self._ok.SetFocus )
+        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
         
     
-    def EventCopyExternalShareURL( self, event ):
+    def EventCopyExternalShareURL( self ):
         
         internal_port = self._service.GetPort()
         
         if internal_port is None:
             
-            wx.MessageBox( 'The local booru is not currently running!' )
+            QW.QMessageBox.warning( self, 'Warning', 'The local booru is not currently running!' )
             
         
         try:
@@ -466,7 +463,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
             HydrusData.ShowException( e )
             
-            wx.MessageBox( 'Unfortunately, could not generate an external URL: {}'.format( e ) )
+            QW.QMessageBox.critical( self, 'Error', 'Unfortunately, could not generate an external URL: {}'.format(e) )
             
             return
             
@@ -474,7 +471,7 @@ class DialogInputLocalBooruShare( Dialog ):
         HG.client_controller.pub( 'clipboard', 'text', url )
         
     
-    def EventCopyInternalShareURL( self, event ):
+    def EventCopyInternalShareURL( self ):
         
         self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
@@ -489,9 +486,9 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def GetInfo( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
-        text = self._text.GetValue()
+        text = self._text.toPlainText()
         
         timeout = self._timeout_number.GetValue()
         
@@ -506,66 +503,67 @@ class DialogInputNamespaceRegex( Dialog ):
         
         Dialog.__init__( self, parent, 'configure quick namespace' )
         
-        self._namespace = wx.TextCtrl( self )
+        self._namespace = QW.QLineEdit( self )
         
-        self._regex = wx.TextCtrl( self )
+        self._regex = QW.QLineEdit( self )
         
         self._shortcuts = ClientGUICommon.RegexButton( self )
         
         self._regex_intro_link = ClientGUICommon.BetterHyperLink( self, 'a good regex introduction', 'http://www.aivosto.com/vbtips/regex.html' )
         self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practise', 'http://regexr.com/3cvmf' )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = QW.QPushButton( 'OK', self )
+        self._ok.clicked.connect( self.EventOK )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'Cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
     
-        self._namespace.SetValue( namespace )
-        self._regex.SetValue( regex )
+        self._namespace.setText( namespace )
+        self._regex.setText( regex )
         
         #
         
-        control_box = wx.BoxSizer( wx.HORIZONTAL )
+        control_box = QP.HBoxLayout()
         
-        control_box.Add( self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-        control_box.Add( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
-        control_box.Add( self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( control_box, self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( control_box, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( control_box, self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.Add( self._ok, CC.FLAGS_VCENTER )
-        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
+        b_box = QP.HBoxLayout()
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         intro = r'Put the namespace (e.g. page) on the left.' + os.linesep + r'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + r'All files will be tagged with "namespace:regex".'
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._shortcuts, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._shortcuts, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( self._ok.SetFocus )
+        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
         
     
-    def EventOK( self, event ):
+    def EventOK( self ):
         
         ( namespace, regex ) = self.GetInfo()
         
         if namespace == '':
             
-            wx.MessageBox( 'Please enter something for the namespace.' )
+            QW.QMessageBox.warning( self, 'Warning', 'Please enter something for the namespace.' )
             
             return
             
@@ -580,19 +578,19 @@ class DialogInputNamespaceRegex( Dialog ):
             text += os.linesep * 2
             text += str( e )
             
-            wx.MessageBox( text )
+            QW.QMessageBox.critical( self, 'Error', text )
             
             return
             
         
-        self.EndModal( wx.ID_OK )
+        self.done( QW.QDialog.Accepted )
         
     
     def GetInfo( self ):
         
-        namespace = self._namespace.GetValue()
+        namespace = self._namespace.text()
         
-        regex = self._regex.GetValue()
+        regex = self._regex.text()
         
         return ( namespace, regex )
         
@@ -611,11 +609,12 @@ class DialogInputTags( Dialog ):
         
         self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK, show_paste_button = True )
         
-        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'Cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
@@ -623,31 +622,31 @@ class DialogInputTags( Dialog ):
         
         #
         
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
+        b_box = QP.HBoxLayout()
         
-        b_box.Add( self._ok, CC.FLAGS_VCENTER )
-        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         if message != '':
             
-            vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,message), CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_box )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         x = max( x, 300 )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( self._tag_box.SetFocus )
+        QP.CallAfter( self._tag_box.setFocus, QC.Qt.OtherFocusReason)
         
 
     def EnterTags( self, tags ):
@@ -677,7 +676,7 @@ class DialogInputTags( Dialog ):
     
     def OK( self ):
         
-        self.EndModal( wx.ID_OK )
+        self.done( QW.QDialog.Accepted )
         
     
 class DialogInputUPnPMapping( Dialog ):
@@ -686,32 +685,33 @@ class DialogInputUPnPMapping( Dialog ):
         
         Dialog.__init__( self, parent, 'configure upnp mapping' )
         
-        self._external_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+        self._external_port = QP.MakeQSpinBox( self, min=0, max=65535 )
         
         self._protocol_type = ClientGUICommon.BetterChoice( self )
-        self._protocol_type.Append( 'TCP', 'TCP' )
-        self._protocol_type.Append( 'UDP', 'UDP' )
+        self._protocol_type.addItem( 'TCP', 'TCP' )
+        self._protocol_type.addItem( 'UDP', 'UDP' )
         
-        self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
-        self._description = wx.TextCtrl( self )
-        self._duration = wx.SpinCtrl( self, min = 0, max = 86400 )
+        self._internal_port = QP.MakeQSpinBox( self, min=0, max=65535 )
+        self._description = QW.QLineEdit( self )
+        self._duration = QP.MakeQSpinBox( self, min=0, max=86400 )
         
-        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'Cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
-        self._external_port.SetValue( external_port )
+        self._external_port.setValue( external_port )
         
-        if protocol_type == 'TCP': self._protocol_type.Select( 0 )
-        elif protocol_type == 'UDP': self._protocol_type.Select( 1 )
+        if protocol_type == 'TCP': self._protocol_type.setCurrentIndex( 0 )
+        elif protocol_type == 'UDP': self._protocol_type.setCurrentIndex( 1 )
         
-        self._internal_port.SetValue( internal_port )
-        self._description.SetValue( description )
-        self._duration.SetValue( duration )
+        self._internal_port.setValue( internal_port )
+        self._description.setText( description )
+        self._duration.setValue( duration )
         
         #
         
@@ -725,31 +725,31 @@ class DialogInputUPnPMapping( Dialog ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.Add( self._ok, CC.FLAGS_VCENTER )
-        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
+        b_box = QP.HBoxLayout()
+        QP.AddToLayout( b_box, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( b_box, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, b_box, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( self._ok.SetFocus )
+        QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
         
     
     def GetInfo( self ):
         
-        external_port = self._external_port.GetValue()
+        external_port = self._external_port.value()
         protocol_type = self._protocol_type.GetValue()
-        internal_port = self._internal_port.GetValue()
-        description = self._description.GetValue()
-        duration = self._duration.GetValue()
+        internal_port = self._internal_port.value()
+        description = self._description.text()
+        duration = self._duration.value()
         
         return ( external_port, protocol_type, internal_port, description, duration )
         
@@ -767,46 +767,47 @@ class DialogModifyAccounts( Dialog ):
         
         self._account_info_panel = ClientGUICommon.StaticBox( self, 'account info' )
         
-        self._subject_text = wx.StaticText( self._account_info_panel )
+        self._subject_text = QW.QLabel( self._account_info_panel )
         
         #
         
         self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
         
-        self._account_types = wx.Choice( self._account_types_panel )
+        self._account_types = QW.QComboBox( self._account_types_panel )
         
-        self._account_types_ok = wx.Button( self._account_types_panel, label = 'OK' )
-        self._account_types_ok.Bind( wx.EVT_BUTTON, self.EventChangeAccountType )
+        self._account_types_ok = QW.QPushButton( 'OK', self._account_types_panel )
+        self._account_types_ok.clicked.connect( self.EventChangeAccountType )
         
         #
         
         self._expiration_panel = ClientGUICommon.StaticBox( self, 'change expiration' )
         
-        self._add_to_expires = wx.Choice( self._expiration_panel )
+        self._add_to_expires = QW.QComboBox( self._expiration_panel )
         
-        self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'OK' )
-        self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
+        self._add_to_expires_ok = QW.QPushButton( 'OK', self._expiration_panel )
+        self._add_to_expires.clicked.connect( self.EventAddToExpires )
         
-        self._set_expires = wx.Choice( self._expiration_panel )
+        self._set_expires = QW.QComboBox( self._expiration_panel )
         
-        self._set_expires_ok = wx.Button( self._expiration_panel, label = 'OK' )
-        self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
+        self._set_expires_ok = QW.QPushButton( 'OK', self._expiration_panel )
+        self._set_expires_ok.clicked.connect( self.EventSetExpires )
         
         #
         
         self._ban_panel = ClientGUICommon.StaticBox( self, 'bans' )
         
-        self._ban = wx.Button( self._ban_panel, label = 'ban user' )
-        self._ban.Bind( wx.EVT_BUTTON, self.EventBan )        
-        self._ban.SetBackgroundColour( ( 255, 0, 0 ) )
-        self._ban.SetForegroundColour( ( 255, 255, 0 ) )
+        self._ban = QW.QPushButton( 'ban user', self._ban_panel )
+        self._ban.clicked.connect( self.EventBan )        
+        QP.SetBackgroundColour( self._ban, (255,0,0) )
+        QP.SetForegroundColour( self._ban, (255,255,0) )
         
-        self._superban = wx.Button( self._ban_panel, label = 'ban user and delete every contribution they have ever made' )
-        self._superban.Bind( wx.EVT_BUTTON, self.EventSuperban )        
-        self._superban.SetBackgroundColour( ( 255, 0, 0 ) )
-        self._superban.SetForegroundColour( ( 255, 255, 0 ) )
+        self._superban = QW.QPushButton( 'ban user and delete every contribution they have ever made', self._ban_panel )
+        self._superban.clicked.connect( self.EventSuperban )        
+        QP.SetBackgroundColour( self._superban, (255,0,0) )
+        QP.SetForegroundColour( self._superban, (255,255,0) )
         
-        self._exit = wx.Button( self, id = wx.ID_CANCEL, label = 'Exit' )
+        self._exit = QW.QPushButton( 'Exit', self )
+        self._exit.clicked.connect( self.reject )
         
         #
         
@@ -823,7 +824,7 @@ class DialogModifyAccounts( Dialog ):
             subject_string = 'modifying ' + HydrusData.ToHumanInt( len( self._subject_identifiers ) ) + ' accounts'
             
         
-        self._subject_text.SetLabelText( subject_string )
+        self._subject_text.setText( subject_string )
         
         #
         
@@ -831,9 +832,9 @@ class DialogModifyAccounts( Dialog ):
         
         account_types = response[ 'account_types' ]
         
-        for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
+        for account_type in account_types: self._account_types.addItem( account_type.ConvertToString(), account_type )
         
-        self._account_types.SetSelection( 0 )
+        self._account_types.setCurrentIndex( 0 )
         
         #
         
@@ -841,37 +842,37 @@ class DialogModifyAccounts( Dialog ):
             
             if value is not None:
                 
-                self._add_to_expires.Append( string, value ) # don't want 'add no limit'
+                self._add_to_expires.addItem( string, value ) # don't want 'add no limit'
                 
             
         
-        self._add_to_expires.SetSelection( 1 ) # three months
+        self._add_to_expires.setCurrentIndex( 1 ) # three months
         
-        for ( string, value ) in HC.lifetimes: self._set_expires.Append( string, value )
-        self._set_expires.SetSelection( 1 ) # three months
+        for ( string, value ) in HC.lifetimes: self._set_expires.addItem( string, value )
+        self._set_expires.setCurrentIndex( 1 ) # three months
         
         #
         
         self._account_info_panel.Add( self._subject_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        account_types_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        account_types_hbox = QP.HBoxLayout()
         
-        account_types_hbox.Add( self._account_types, CC.FLAGS_VCENTER )
-        account_types_hbox.Add( self._account_types_ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( account_types_hbox, self._account_types, CC.FLAGS_VCENTER )
+        QP.AddToLayout( account_types_hbox, self._account_types_ok, CC.FLAGS_VCENTER )
         
         self._account_types_panel.Add( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
+        add_to_expires_box = QP.HBoxLayout()
         
-        add_to_expires_box.Add( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), CC.FLAGS_VCENTER )
-        add_to_expires_box.Add( self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-        add_to_expires_box.Add( self._add_to_expires_ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( add_to_expires_box, QW.QLabel( 'add to expires: ', self._expiration_panel ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( add_to_expires_box, self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( add_to_expires_box, self._add_to_expires_ok, CC.FLAGS_VCENTER )
         
-        set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
+        set_expires_box = QP.HBoxLayout()
         
-        set_expires_box.Add( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), CC.FLAGS_VCENTER )
-        set_expires_box.Add( self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-        set_expires_box.Add( self._set_expires_ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( set_expires_box, QW.QLabel( 'set expires to: ', self._expiration_panel ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( set_expires_box, self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( set_expires_box, self._set_expires_ok, CC.FLAGS_VCENTER )
         
         self._expiration_panel.Add( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._expiration_panel.Add( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -879,20 +880,20 @@ class DialogModifyAccounts( Dialog ):
         self._ban_panel.Add( self._ban, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._ban_panel.Add( self._superban, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        vbox.Add( self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._exit, CC.FLAGS_BUTTON_SIZER )
+        vbox = QP.VBoxLayout()
+        QP.AddToLayout( vbox, self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._exit, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( self._exit.SetFocus )
+        QP.CallAfter( self._exit.setFocus, QC.Qt.OtherFocusReason)
         
     
     def _DoModification( self ):
@@ -910,38 +911,41 @@ class DialogModifyAccounts( Dialog ):
             
             account_info = response[ 'account_info' ]
             
-            self._subject_text.SetLabelText( str( account_info ) )
+            self._subject_text.setText( str(account_info) )
             
         
-        if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
+        if len( self._subject_identifiers ) > 1:
+            
+            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            
         
     
-    def EventAddToExpires( self, event ):
+    def EventAddToExpires( self ):
         
         raise NotImplementedError()
         #self._DoModification( HC.ADD_TO_EXPIRES, timespan = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
         
     
-    def EventBan( self, event ):
+    def EventBan( self ):
         
         with DialogTextEntry( self, 'Enter reason for the ban.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 raise NotImplementedError()
                 #self._DoModification( HC.BAN, reason = dlg.GetValue() )
                 
             
         
     
-    def EventChangeAccountType( self, event ):
+    def EventChangeAccountType( self ):
         
         raise NotImplementedError()
         #self._DoModification( HC.CHANGE_ACCOUNT_TYPE, account_type_key = self._account_types.GetValue() )
         
     
-    def EventSetExpires( self, event ):
+    def EventSetExpires( self ):
         
-        expires = self._set_expires.GetClientData( self._set_expires.GetSelection() )
+        expires = QP.GetClientData( self._set_expires, self._set_expires.currentIndex() )
         
         if expires is not None:
             
@@ -952,11 +956,11 @@ class DialogModifyAccounts( Dialog ):
         #self._DoModification( HC.SET_EXPIRES, expires = expires )
         
     
-    def EventSuperban( self, event ):
+    def EventSuperban( self ):
         
         with DialogTextEntry( self, 'Enter reason for the superban.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 raise NotImplementedError()
                 #self._DoModification( HC.SUPERBAN, reason = dlg.GetValue() )
@@ -969,16 +973,15 @@ class DialogSelectFromURLTree( Dialog ):
     def __init__( self, parent, url_tree ):
         
         Dialog.__init__( self, parent, 'select items' )
+               
+        self._tree = QP.TreeWidgetWithInheritedCheckState( self )
         
-        agwStyle = wx.lib.agw.customtreectrl.TR_DEFAULT_STYLE | wx.lib.agw.customtreectrl.TR_AUTO_CHECK_CHILD
+        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._tree = wx.lib.agw.customtreectrl.CustomTreeCtrl( self, agwStyle = agwStyle )
-        
-        self._ok = ClientGUICommon.BetterButton( self, 'OK', self.EndModal, wx.ID_OK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'Cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
@@ -986,34 +989,35 @@ class DialogSelectFromURLTree( Dialog ):
         
         root_name = self._RenderItemName( name, size )
         
-        root_item = self._tree.AddRoot( root_name, ct_type = 1 )
+        root_item = QW.QTreeWidgetItem()
+        root_item.setText( 0, root_name )
+        root_item.setCheckState( 0, QC.Qt.Checked )
+        self._tree.addTopLevelItem( root_item )
         
         self._AddDirectory( root_item, children )
-        
-        self._tree.CheckItem( root_item )
-        
-        self._tree.Expand( root_item )
+               
+        root_item.setExpanded( True )
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._ok, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._ok, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         x = max( x, 640 )
         y = max( y, 640 )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
     
     def _AddDirectory( self, root, children ):
@@ -1024,11 +1028,18 @@ class DialogSelectFromURLTree( Dialog ):
             
             if child_type == 'file':
                 
-                self._tree.AppendItem( root, item_name, ct_type = 1, data = data )
+                item = QW.QTreeWidgetItem()
+                item.setText( 0, item_name )
+                item.setCheckState( root.checkState() )
+                item.setData( 0, QC.Qt.UserRole, data )
+                root.addChild( item )
                 
             else:
                 
-                subroot = self._tree.AppendItem( root, item_name, ct_type = 1 )
+                subroot = QW.QTreeWidgetItem()
+                subroot.setText( 0, item_name )
+                subroot.setCheckState( root.checkState() )
+                root.addChild( subroot )
                 
                 self._AddDirectory( subroot, data )
                 
@@ -1038,14 +1049,12 @@ class DialogSelectFromURLTree( Dialog ):
     def _GetSelectedChildrenData( self, parent_item ):
         
         result = []
-        
-        cookie = 0
-        
-        ( child_item, cookie ) = self._tree.GetNextChild( parent_item, cookie )
-        
-        while child_item is not None:
+
+        child_iterator = QW.QTreeWidgetItemIterator( parent_item )
+               
+        for child_item in child_iterator:
             
-            data = self._tree.GetItemPyData( child_item )
+            data = child_item.data( 0, QC.Qt.UserRole )
             
             if data is None:
                 
@@ -1053,15 +1062,12 @@ class DialogSelectFromURLTree( Dialog ):
                 
             else:
                 
-                if self._tree.IsItemChecked( child_item ):
+                if child_item.checkState() == QC.Qt.Checked:
                     
                     result.append( data )
                     
                 
             
-            ( child_item, cookie ) = self._tree.GetNextChild( parent_item, cookie )
-            
-        
         return result
         
     
@@ -1072,7 +1078,7 @@ class DialogSelectFromURLTree( Dialog ):
     
     def GetURLs( self ):
         
-        root_item = self._tree.GetRootItem()
+        root_item = self._tree.topLevelItem( 0 )
         
         urls = self._GetSelectedChildrenData( root_item )
         
@@ -1085,60 +1091,72 @@ class DialogSelectImageboard( Dialog ):
         
         Dialog.__init__( self, parent, 'select imageboard' )
         
-        self._tree = wx.TreeCtrl( self )
-        self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventActivate )
+        self._tree = QW.QTreeWidget( self )
+        self._tree.itemActivated.connect( self.EventActivate )
         
         #
         
         all_imageboards = HG.client_controller.Read( 'imageboards' )
         
-        root_item = self._tree.AddRoot( 'all sites' )
+        root_item = QW.QTreeWidgetItem()
+        root_item.setText( 0, 'all sites' )
+        self._tree.addTopLevelItem( root_item )
         
         for ( site, imageboards ) in list(all_imageboards.items()):
-            
-            site_item = self._tree.AppendItem( root_item, site )
+
+            site_item = QW.QTreeWidgetItem()
+            site_item.setText( 0, site )
+            root_item.addChild( site_item )
             
             for imageboard in imageboards:
                 
                 name = imageboard.GetName()
-                
-                self._tree.AppendItem( site_item, name, data = wx.TreeItemData( imageboard ) )
+
+                imageboard_item = QW.QTreeWidgetItem()
+                imageboard_item.setText( 0, name )
+                imageboard_item.setData( 0, QC.Qt.UserRole, imageboard )
+                site_item.addChild( imageboard_item )
                 
             
         
-        self._tree.Expand( root_item )
+        root_item.setExpanded( True )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         if x < 320: x = 320
         if y < 640: y = 640
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
     
-    def EventActivate( self, event ):
+    def EventActivate( self, item, column ):
+                
+        data_object = item.data( 0, QC.Qt.UserRole )
         
-        item = self._tree.GetSelection()
-        
-        data_object = self._tree.GetItemData( item )
-        
-        if data_object is None: self._tree.Toggle( item )
-        else: self.EndModal( wx.ID_OK )
+        if data_object is None: item.setExpanded( not item.isExpanded() )
+        else: self.done( QW.QDialog.Accepted )
         
     
-    def GetImageboard( self ): return self._tree.GetItemData( self._tree.GetSelection() ).GetData()
+    def GetImageboard( self ):
+        
+        items = self._tree.selectedItems()
+        
+        if len(items):
+            
+            return items[0].data( 0, QC.Qt.UserRole ).GetData()
     
+
 class DialogTextEntry( Dialog ):
     
-    def __init__( self, parent, message, default = '', allow_blank = False, suggestions = None, max_chars = None ):
+    def __init__( self, parent, message, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None ):
         
         if suggestions is None:
             
@@ -1158,69 +1176,71 @@ class DialogTextEntry( Dialog ):
             button_choices.append( ClientGUICommon.BetterButton( self, text, self.ButtonChoice, text ) )
             
         
-        self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-        self._text.Bind( wx.EVT_TEXT, self.EventText )
-        self._text.Bind( wx.EVT_TEXT_ENTER, self.EventEnter )
+        self._text = QW.QLineEdit( self )
+        self._text.textChanged.connect( self.EventText )
+        self._text.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text, self.EnterText ) )
         
         if self._max_chars is not None:
             
-            self._text.SetMaxLength( self._max_chars )
+            self._text.setMaxLength( self._max_chars )
             
         
-        self._ok = ClientGUICommon.BetterButton( self, 'ok', self.EndModal, wx.ID_OK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = ClientGUICommon.BetterButton( self, 'ok', self.done, QW.QDialog.Accepted )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
-        self._text.SetValue( default )
+        self._text.setText( default )
+        if placeholder is not None: self._text.setPlaceholderText( placeholder )
         
         self._CheckText()
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._ok, CC.FLAGS_SMALL_INDENT )
-        hbox.Add( self._cancel, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._ok, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._cancel, CC.FLAGS_SMALL_INDENT )
         
         st_message = ClientGUICommon.BetterStaticText( self, message )
         st_message.SetWrapWidth( 480 )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( st_message, CC.FLAGS_BIG_INDENT )
+        QP.AddToLayout( vbox, st_message, CC.FLAGS_BIG_INDENT )
         
         for button in button_choices:
             
-            vbox.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         x = max( x, 250 )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
     
     def _CheckText( self ):
         
         if not self._allow_blank:
             
-            if self._text.GetValue() == '':
+            if self._text.text() == '':
                 
-                self._ok.Disable()
+                self._ok.setEnabled( False )
                 
             else:
                 
-                self._ok.Enable()
+                self._ok.setEnabled( True )
                 
             
         
@@ -1229,21 +1249,19 @@ class DialogTextEntry( Dialog ):
         
         self._chosen_suggestion =  text
         
-        self.EndModal( wx.ID_OK )
+        self.done( QW.QDialog.Accepted )
         
     
-    def EventText( self, event ):
+    def EventText( self, text ):
         
-        wx.CallAfter( self._CheckText )
-        
-        event.Skip()
+        QP.CallAfter( self._CheckText )
         
     
-    def EventEnter( self, event ):
+    def EnterText( self ):
         
-        if self._text.GetValue() != '':
+        if self._ok.isEnabled():
             
-            self.EndModal( wx.ID_OK )
+            self.done( QW.QDialog.Accepted )
             
         
     
@@ -1251,7 +1269,7 @@ class DialogTextEntry( Dialog ):
         
         if self._chosen_suggestion is None:
             
-            return self._text.GetValue()
+            return self._text.text()
             
         else:
             
@@ -1277,50 +1295,50 @@ class DialogYesYesNo( Dialog ):
         for ( label, data ) in yes_tuples:
             
             yes_button = ClientGUICommon.BetterButton( self, label, self._DoYes, data )
-            yes_button.SetForegroundColour( ( 0, 128, 0 ) )
+            QP.SetForegroundColour( yes_button, (0,128,0) )
             
             yes_buttons.append( yes_button )
             
         
-        self._no = ClientGUICommon.BetterButton( self, no_label, self.EndModal, wx.ID_NO )
-        self._no.SetForegroundColour( ( 128, 0, 0 ) )
+        self._no = ClientGUICommon.BetterButton( self, no_label, self.done, QW.QDialog.Rejected )
+        QP.SetForegroundColour( self._no, (128,0,0) )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
         for yes_button in yes_buttons:
             
-            hbox.Add( yes_button, CC.FLAGS_SMALL_INDENT )
+            QP.AddToLayout( hbox, yes_button, CC.FLAGS_SMALL_INDENT )
             
         
-        hbox.Add( self._no, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._no, CC.FLAGS_SMALL_INDENT )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         text = ClientGUICommon.BetterStaticText( self, message )
         
         text.SetWrapWidth( 480 )
         
-        vbox.Add( text, CC.FLAGS_BIG_INDENT )
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, text, CC.FLAGS_BIG_INDENT )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         x = max( x, 250 )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        wx.CallAfter( yes_buttons[0].SetFocus )
+        QP.CallAfter( yes_buttons[0].setFocus, QC.Qt.OtherFocusReason )
         
     
     def _DoYes( self, value ):
         
         self._value = value
         
-        self.EndModal( wx.ID_YES )
+        self.done( QW.QDialog.Accepted )
         
     
     def GetValue( self ):

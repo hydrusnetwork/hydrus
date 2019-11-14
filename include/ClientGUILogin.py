@@ -39,7 +39,11 @@ import re
 import threading
 import traceback
 import time
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -61,39 +65,40 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if credential_definition.ShouldHide():
                 
-                style = wx.TE_PASSWORD
+                echo_mode = QW.QLineEdit.Password
                 
             else:
                 
-                style = 0
+                echo_mode = QW.QLineEdit.Normal
                 
             
-            control = wx.TextCtrl( self, style = style )
+            control = QW.QLineEdit( self )
+            control.setEchoMode( echo_mode )
             
             name = credential_definition.GetName()
             
             if name in credentials:
                 
-                control.SetValue( credentials[ name ] )
+                control.setText( credentials[ name] )
                 
             
-            control.Bind( wx.EVT_TEXT, self.EventKey )
+            control.textChanged.connect( self._UpdateSts )
             
             control_st = ClientGUICommon.BetterStaticText( self )
             
             self._control_data.append( ( credential_definition, control, control_st ) )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.Add( control_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, control_st )
             
             rows.append( ( credential_definition.GetName() + ': ', hbox ) )
             
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        gridbox = ClientGUICommon.WrapInGrid( self, rows, add_stretch_at_end = False )
         
-        self.SetSizer( gridbox )
+        self.widget().setLayout( gridbox )
         
         self._UpdateSts()
         
@@ -102,7 +107,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for ( credential_definition, control, control_st ) in self._control_data:
             
-            value = control.GetValue()
+            value = control.text()
             
             colour = ( 127, 0, 0 )
             
@@ -135,8 +140,8 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            control_st.SetLabelText( st_label )
-            control_st.SetForegroundColour( colour )
+            control_st.setText( st_label )
+            QP.SetForegroundColour( control_st, colour )
             
         
     
@@ -148,7 +153,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             name = credential_definition.GetName()
             
-            value = control.GetValue()
+            value = control.text()
             
             if value == '':
                 
@@ -175,20 +180,13 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return False
                 
             
         
         return True
-        
-    
-    def EventKey( self, event ):
-        
-        self._UpdateSts()
-        
-        event.Skip()
         
     
     def GetValue( self ):
@@ -199,7 +197,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             name = credential_definition.GetName()
             
-            value = control.GetValue()
+            value = control.text()
             
             credentials[ name ] = value
             
@@ -215,13 +213,13 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
         self._credential_type = ClientGUICommon.BetterChoice( self )
         
         for credential_type in [ ClientNetworkingLogin.CREDENTIAL_TYPE_TEXT, ClientNetworkingLogin.CREDENTIAL_TYPE_PASS ]:
             
-            self._credential_type.Append( ClientNetworkingLogin.credential_type_str_lookup[ credential_type ], credential_type )
+            self._credential_type.addItem( ClientNetworkingLogin.credential_type_str_lookup[ credential_type], credential_type )
             
         
         string_match = credential_definition.GetStringMatch()
@@ -230,7 +228,7 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name.SetValue( credential_definition.GetName() )
+        self._name.setText( credential_definition.GetName() )
         self._credential_type.SetValue( credential_definition.GetType() )
         
         #
@@ -243,12 +241,12 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.SetSizer( gridbox )
+        self.widget().setLayout( gridbox )
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         credential_type = self._credential_type.GetValue()
         string_match = self._string_match.GetValue()
         
@@ -308,27 +306,28 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
         warning += os.linesep * 2
         warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus!'
         
-        warning_st = ClientGUICommon.BetterStaticText( self, warning, style = wx.ALIGN_CENTER )
+        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        warning_st.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
         
-        warning_st.SetForegroundColour( ( 128, 0, 0 ) )
+        QP.SetForegroundColour( warning_st, (128,0,0) )
         
-        vbox.Add( warning_st, CC.FLAGS_CENTER )
-        vbox.Add( self._domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._domains_and_login_info_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _Add( self ):
         
         if len( self._login_scripts ) == 0:
             
-            wx.MessageBox( 'You have no login scripts, so you cannot add a new login!' )
+            QW.QMessageBox.critical( self, 'Error', 'You have no login scripts, so you cannot add a new login!' )
             
             return
             
@@ -379,15 +378,15 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if login_domain is None:
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'enter the domain', default = 'example.com', allow_blank = False ) as dlg:
+            with ClientGUIDialogs.DialogTextEntry( self, 'enter the domain', placeholder = 'example.com', allow_blank = False ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     login_domain = dlg.GetValue()
                     
                     if login_domain in domains_in_use:
                         
-                        wx.MessageBox( 'That domain is already in use!' )
+                        QW.QMessageBox.warning( self, 'Warning', 'That domain is already in use!' )
                         
                         return
                         
@@ -409,7 +408,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
+                        if dlg.exec() == QW.QDialog.Accepted:
                             
                             login_access_text = dlg.GetValue()
                             
@@ -438,7 +437,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     credentials = panel.GetValue()
                     
@@ -475,7 +474,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 active = True
                 
@@ -605,7 +604,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return
                 
@@ -763,7 +762,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( domains_to_login ) == 0:
             
-            wx.MessageBox( 'Unfortunately, none of the selected domains appear able to log in. Do you need to activate or scrub something somewhere?' )
+            QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, none of the selected domains appear able to log in. Do you need to activate or scrub something somewhere?' )
             
         else:
             
@@ -777,14 +776,14 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return
                 
             
             self._domains_to_login_after_ok = domains_to_login
             
-            self.GetParent().DoOK()
+            self.parentWidget().DoOK()
             
         
     
@@ -802,7 +801,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.DataMissing:
                 
-                wx.MessageBox( 'Could not find a login script for "' + login_domain + '"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
+                QW.QMessageBox.information( self, 'Information', 'Could not find a login script for "'+login_domain+'"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
                 
                 return
                 
@@ -819,7 +818,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         credentials = panel.GetValue()
                         
@@ -862,7 +861,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result == wx.ID_YES:
+                    if result == QW.QDialog.Accepted:
                         
                         active = True
                         
@@ -962,7 +961,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         login_access_text = dlg.GetValue()
                         
@@ -1140,9 +1139,9 @@ def GenerateTestNetworkJobPresentationContextFactory( window, network_job_contro
     
     def network_job_presentation_context_factory( network_job ):
         
-        def wx_set_it( nj ):
+        def qt_set_it( nj ):
             
-            if not window:
+            if not window or not QP.isValid( window ):
                 
                 return
                 
@@ -1152,12 +1151,12 @@ def GenerateTestNetworkJobPresentationContextFactory( window, network_job_contro
         
         def enter_call():
             
-            wx.CallAfter( wx_set_it, network_job )
+            QP.CallAfter( qt_set_it, network_job )
             
         
         def exit_call():
             
-            wx.CallAfter( wx_set_it, None )
+            QP.CallAfter( qt_set_it, None )
             
         
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
@@ -1174,61 +1173,61 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         ( name, url, body, self._downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
         
         self._name = ClientGUICommon.BetterStaticText( self, label = name )
-        self._url = wx.TextCtrl( self )
+        self._url = QW.QLineEdit( self )
         
-        self._body = wx.TextCtrl( self, style = wx.TE_MULTILINE )
-        self._body.SetEditable( False )
+        self._body = QW.QPlainTextEdit( self )
+        self._body.setReadOnly( True )
         
         min_size = ClientGUIFunctions.ConvertTextToPixels( self._body, ( 64, 3 ) )
         
-        self._body.SetMinClientSize( min_size )
+        QP.SetMinClientSize( self._body, min_size )
         
-        self._data_preview = wx.TextCtrl( self, style = wx.TE_MULTILINE )
-        self._data_preview.SetEditable( False )
+        self._data_preview = QW.QPlainTextEdit( self )
+        self._data_preview.setReadOnly( True )
         
         min_size = ClientGUIFunctions.ConvertTextToPixels( self._data_preview, ( 64, 8 ) )
         
-        self._data_preview.SetMinClientSize( min_size )
+        QP.SetMinClientSize( self._data_preview, min_size )
         
-        self._data_copy_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.copy, self._CopyData )
-        self._data_copy_button.SetToolTip( 'Copy the current example data to the clipboard.' )
+        self._data_copy_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.copy, self._CopyData )
+        self._data_copy_button.setToolTip( 'Copy the current example data to the clipboard.' )
         
-        self._temp_variables = wx.TextCtrl( self, style = wx.TE_MULTILINE )
-        self._temp_variables.SetEditable( False )
+        self._temp_variables = QW.QPlainTextEdit( self )
+        self._temp_variables.setReadOnly( True )
         
         min_size = ClientGUIFunctions.ConvertTextToPixels( self._temp_variables, ( 64, 6 ) )
         
-        self._temp_variables.SetMinClientSize( min_size )
+        QP.SetMinClientSize( self._temp_variables, min_size )
         
-        self._cookies = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._cookies = QW.QPlainTextEdit( self )
         self._cookies.SetEditable( False )
         
         min_size = ClientGUIFunctions.ConvertTextToPixels( self._cookies, ( 64, 6 ) )
         
-        self._cookies.SetMinClientSize( min_size )
+        QP.SetMinClientSize( self._cookies, min_size )
         
         self._result = ClientGUICommon.BetterStaticText( self, label = result )
         
         #
         
-        self._url.SetValue( url )
+        self._url.setText( url )
         
         if body is not None:
             
             try:
                 
-                self._body.SetValue( body )
+                self._body.setPlainText( body )
                 
             except:
                 
-                self._body.SetValue( str( body ) )
+                self._body.setPlainText( str( body ) )
                 
             
         
-        self._data_preview.SetValue( str( self._downloaded_data[:1024] ) )
+        self._data_preview.setPlainText( str( self._downloaded_data[:1024] ) )
         
-        self._temp_variables.SetValue( os.linesep.join( new_temp_strings ) )
-        self._cookies.SetValue( os.linesep.join( new_cookie_strings ) )
+        self._temp_variables.setPlainText( os.linesep.join( new_temp_strings ) )
+        self._cookies.setPlainText( os.linesep.join( new_cookie_strings ) )
         
         #
         
@@ -1245,7 +1244,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        self.SetSizer( gridbox )
+        self.widget().setLayout( gridbox )
         
     
     def _CopyData( self ):
@@ -1274,13 +1273,13 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the login scripts help', 'Open the help page for login scripts in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
         #
         
@@ -1350,7 +1349,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name.SetValue( login_script.GetName() )
+        self._name.setText( login_script.GetName() )
         
         self._credential_definitions.SetData( login_script.GetCredentialDefinitions() )
         self._login_steps.AddDatas( login_script.GetLoginSteps() )
@@ -1376,21 +1375,21 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( credential_definitions_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( login_steps_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( required_cookies_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( example_domains_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, credential_definitions_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, login_steps_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, required_cookies_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, example_domains_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        hbox = ClientGUICommon.BetterBoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( hbox )
+        self.widget().setLayout( hbox )
         
     
     def _AddCredentialDefinition( self ):
@@ -1403,7 +1402,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_credential_definition = panel.GetValue()
                 
@@ -1422,7 +1421,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = domain, allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 domain = dlg.GetValue()
                 
@@ -1436,7 +1435,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if domain in existing_domains:
             
-            wx.MessageBox( 'That domain already exists!' )
+            QW.QMessageBox.critical( self, 'Error', 'That domain already exists!' )
             
             return
             
@@ -1463,7 +1462,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = access_text, allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 access_text = dlg.GetValue()
                 
@@ -1557,7 +1556,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_credential_definition = panel.GetValue()
                     
@@ -1579,9 +1578,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _DoTest( self ):
         
-        def wx_add_result( test_result ):
+        def qt_add_result( test_result ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -1591,21 +1590,21 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def receive_result( test_result ):
             
-            wx.CallAfter( wx_add_result, test_result )
+            QP.CallAfter( qt_add_result, test_result )
             
         
         def clean_up( final_result ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            wx.MessageBox( final_result )
+            QW.QMessageBox.information( self, 'Information', final_result )
             
-            self._final_test_result.SetLabelText( final_result )
+            self._final_test_result.setText( final_result )
             
-            self._test_button.Enable()
+            self._test_button.setEnabled( True )
             
             self._currently_testing = False
             
@@ -1630,7 +1629,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( domain )
                 
-                login_result = login_script.Start( network_engine, network_context, credentials, network_job_presentation_context_factory = network_job_presentation_context_factory, test_result_callable = wx_add_result )
+                login_result = login_script.Start( network_engine, network_context, credentials, network_job_presentation_context_factory = network_job_presentation_context_factory, test_result_callable = qt_add_result )
                 
             except Exception as e:
                 
@@ -1642,13 +1641,13 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 network_engine.Shutdown()
                 
-                wx.CallAfter( clean_up, login_result )
+                QP.CallAfter( clean_up, login_result )
                 
             
         
         if self._currently_testing:
             
-            wx.MessageBox( 'Currently testing already! Please cancel current job!' )
+            QW.QMessageBox.warning( self, 'Warning', 'Currently testing already! Please cancel current job!' )
             
             return
             
@@ -1676,7 +1675,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = self._test_domain, allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._test_domain = dlg.GetValue()
                 
@@ -1696,7 +1695,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._test_credentials = panel.GetValue()
                     
@@ -1713,7 +1712,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._test_listctrl.DeleteDatas( self._test_listctrl.GetData() )
         
-        self._test_button.Disable()
+        self._test_button.setEnabled( False )
         
         network_job_presentation_context_factory = GenerateTestNetworkJobPresentationContextFactory( self, self._test_network_job_control )
         
@@ -1732,7 +1731,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = original_domain, allow_blank = False ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     domain = dlg.GetValue()
                     
@@ -1746,7 +1745,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if domain != original_domain and domain in existing_domains:
                 
-                wx.MessageBox( 'That domain already exists!' )
+                QW.QMessageBox.critical( self, 'Error', 'That domain already exists!' )
                 
                 break
                 
@@ -1773,7 +1772,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = access_text, allow_blank = False ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     access_text = dlg.GetValue()
                     
@@ -1801,7 +1800,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 login_step = panel.GetValue()
                 
@@ -1843,7 +1842,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             raise HydrusExceptions.VetoException( 'Currently testing! Please cancel it first!' )
             
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
         login_script_key = self._original_login_script.GetLoginScriptKey()
         
@@ -1872,7 +1871,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'ok as invalid', no_label = 'go back' )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 raise HydrusExceptions.VetoException( 'The ok event has been cancelled!' )
                 
@@ -1909,11 +1908,11 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( login_scripts_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, login_scripts_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _Add( self ):
@@ -1926,7 +1925,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_login_script = panel.GetValue()
                 
@@ -1974,7 +1973,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_login_script = panel.GetValue()
                     
@@ -2020,21 +2019,21 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
         self._method = ClientGUICommon.BetterChoice( self )
         
-        self._method.Append( 'GET', 'GET' )
-        self._method.Append( 'POST', 'POST' )
+        self._method.addItem( 'GET', 'GET' )
+        self._method.addItem( 'POST', 'POST' )
         
         self._scheme = ClientGUICommon.BetterChoice( self )
         
-        self._scheme.Append( 'http', 'http' )
-        self._scheme.Append( 'https', 'https' )
+        self._scheme.addItem( 'http', 'http' )
+        self._scheme.addItem( 'https', 'https' )
         
         self._subdomain = ClientGUICommon.NoneableTextCtrl( self, none_phrase = 'none' )
         
-        self._path = wx.TextCtrl( self )
+        self._path = QW.QLineEdit( self )
         
         required_credentials_panel = ClientGUICommon.StaticBox( self, 'credentials to send' )
         
@@ -2072,11 +2071,11 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         self._scheme.SetValue( scheme )
         self._method.SetValue( method )
         self._subdomain.SetValue( subdomain )
-        self._path.SetValue( path )
+        self._path.setText( path )
         
         self._content_parsers.AddDatas( content_parsers )
         
@@ -2100,25 +2099,25 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( required_credentials_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( temp_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( required_cookies_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( content_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, required_credentials_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, temp_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, required_cookies_info_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, content_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         scheme = self._scheme.GetValue()
         method = self._method.GetValue()
         subdomain = self._subdomain.GetValue()
-        path = self._path.GetValue()
+        path = self._path.text()
         
         required_credentials = self._required_credentials.GetValue()
         static_args = self._static_args.GetValue()

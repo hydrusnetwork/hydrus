@@ -18,7 +18,11 @@ from . import HydrusNetwork
 from . import HydrusPaths
 import os
 import time
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
@@ -37,21 +41,21 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         self._check_nocopy = ClientGUICommon.BetterButton( self, 'check nocopy', self._CheckNoCopy )
         self._enable_nocopy = ClientGUICommon.BetterButton( self, 'enable nocopy', self._EnableNoCopy )
         
-        self._check_running_button.Disable()
-        self._check_nocopy.Disable()
+        self._check_running_button.setEnabled( False )
+        self._check_nocopy.setEnabled( False )
         
         #
         
-        gridbox = wx.FlexGridSizer( 2 )
+        gridbox = QP.GridLayout( cols = 2 )
         
-        gridbox.AddGrowableCol( 1, 1 )
+        gridbox.setColumnStretch( 1, 1 )
         
-        gridbox.Add( self._check_running_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._running_status, CC.FLAGS_VCENTER )
-        gridbox.Add( self._check_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._nocopy_status, CC.FLAGS_VCENTER )
-        gridbox.Add( self._enable_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( ( 20, 20 ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._check_running_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._running_status, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._check_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._nocopy_status, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._enable_nocopy, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, (20,20), CC.FLAGS_VCENTER )
         
         self.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -62,26 +66,26 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
     def _CheckNoCopy( self ):
         
-        def wx_clean_up( result, nocopy_enabled ):
+        def qt_clean_up( result, nocopy_enabled ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            self._nocopy_status.SetLabelText( result )
+            self._nocopy_status.setText( result )
             
-            self._check_nocopy.Enable()
+            self._check_nocopy.setEnabled( True )
             
             self._nocopy_enabled = nocopy_enabled
             
             if self._nocopy_enabled:
                 
-                self._enable_nocopy.Disable()
+                self._enable_nocopy.setEnabled( False )
                 
             else:
                 
-                self._enable_nocopy.Enable()
+                self._enable_nocopy.setEnabled( True )
                 
             
         
@@ -108,13 +112,13 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                wx.CallAfter( wx_clean_up, result, nocopy_enabled )
+                QP.CallAfter( qt_clean_up, result, nocopy_enabled )
                 
             
         
-        self._check_nocopy.Disable()
+        self._check_nocopy.setEnabled( False )
         
-        self._nocopy_status.SetLabelText( 'checking\u2026' )
+        self._nocopy_status.setText( 'checking\u2026' )
         
         service = self._service_callable()
         
@@ -123,22 +127,22 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
     def _CheckRunning( self ):
         
-        def wx_clean_up( result, is_running ):
+        def qt_clean_up( result, is_running ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            self._running_status.SetLabelText( result )
+            self._running_status.setText( result )
             
             self._is_running = is_running
             
-            self._check_running_button.Enable()
+            self._check_running_button.setEnabled( True )
             
             if self._is_running:
                 
-                self._check_nocopy.Enable()
+                self._check_nocopy.setEnabled( True )
                 
                 self._CheckNoCopy()
                 
@@ -162,15 +166,15 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
             finally:
                 
-                wx.CallAfter( wx_clean_up, result, is_running )
+                QP.CallAfter( qt_clean_up, result, is_running )
                 
             
         
-        self._check_running_button.Disable()
-        self._check_nocopy.Disable()
-        self._enable_nocopy.Disable()
+        self._check_running_button.setEnabled( False )
+        self._check_nocopy.setEnabled( False )
+        self._enable_nocopy.setEnabled( False )
         
-        self._running_status.SetLabelText( 'checking\u2026' )
+        self._running_status.setText( 'checking\u2026' )
         
         service = self._service_callable()
         
@@ -179,9 +183,9 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
     
     def _EnableNoCopy( self ):
         
-        def wx_clean_up( success ):
+        def qt_clean_up( success ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -192,9 +196,9 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
             else:
                 
-                wx.MessageBox( 'Unfortunately, was unable to set nocopy configuration.' )
+                QW.QMessageBox.critical( self, 'Error', 'Unfortunately, was unable to set nocopy configuration.' )
                 
-                self._enable_nocopy.Enable()
+                self._enable_nocopy.setEnabled( True )
                 
             
         
@@ -208,30 +212,30 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
                 message = 'Problem: {}'.format( str( e ) )
                 
-                wx.CallAfter( wx.MessageBox, message )
+                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', message )
                 
                 success = False
                 
             finally:
                 
-                wx.CallAfter( wx_clean_up, success )
+                QP.CallAfter( qt_clean_up, success )
                 
             
         
-        self._enable_nocopy.Disable()
+        self._enable_nocopy.setEnabled( False )
         
         service = self._service_callable()
         
         HG.client_controller.CallToThread( do_it, service )
         
     
-class ReviewServicePanel( wx.Panel ):
+class ReviewServicePanel( QW.QWidget ):
     
     def __init__( self, parent, service ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._service = service
         
@@ -298,14 +302,16 @@ class ReviewServicePanel( wx.Panel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         for panel in subpanels:
             
-            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        self.SetSizer( vbox )
+        vbox.addStretch( 1 )
+        
+        self.setLayout( vbox )
         
     
     def EventImmediateSync( self, event ):
@@ -404,7 +410,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -414,7 +420,7 @@ class ReviewServicePanel( wx.Panel ):
             
             label = name + ' - ' + HC.service_string_lookup[ service_type ]
             
-            self._name_and_type.SetLabelText( label )
+            self._name_and_type.setText( label )
             
         
         def ServiceUpdated( self, service ):
@@ -517,7 +523,7 @@ class ReviewServicePanel( wx.Panel ):
             
             if port is None:
                 
-                wx.MessageBox( 'The service is not running, so you cannot add new access via the API!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The service is not running, so you cannot add new access via the API!' )
                 
                 return
                 
@@ -533,7 +539,7 @@ class ReviewServicePanel( wx.Panel ):
                 ClientAPI.last_api_permissions_request = None
                 ClientAPI.api_request_dialog_open = True
                 
-                dlg.ShowModal()
+                dlg.exec()
                 
                 ClientAPI.api_request_dialog_open = False
                 
@@ -561,7 +567,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     api_permissions = panel.GetValue()
                     
@@ -576,7 +582,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 access_keys = [ api_permissions.GetAccessKey() for api_permissions in self._permissions_list.GetData( only_selected = True ) ]
                 
@@ -628,7 +634,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         api_permissions = panel.GetValue()
                         
@@ -650,7 +656,7 @@ class ReviewServicePanel( wx.Panel ):
             
             if port is None:
                 
-                wx.MessageBox( 'The service is not running, so you cannot view it in a web browser!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The service is not running, so you cannot view it in a web browser!' )
                 
             else:
                 
@@ -662,7 +668,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -685,7 +691,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                 
             
-            self._service_status.SetLabelText( status )
+            self._service_status.setText( status )
             
             api_permissions_objects = HG.client_controller.client_api_manager.GetAllPermissions()
             
@@ -726,7 +732,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 hashes = None
                 
@@ -766,7 +772,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -786,14 +792,14 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( text ):
+            def qt_code( text ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._file_info_st.SetLabelText( text )
+                self._file_info_st.setText( text )
                 
             
             service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
@@ -810,7 +816,7 @@ class ReviewServicePanel( wx.Panel ):
                 text += ' - ' + HydrusData.ToHumanInt( num_deleted_files ) + ' deleted files'
                 
             
-            wx.CallAfter( wx_code, text )
+            QP.CallAfter( qt_code, text )
             
         
     
@@ -827,7 +833,7 @@ class ReviewServicePanel( wx.Panel ):
             self._address = ClientGUICommon.BetterStaticText( self )
             self._functional = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
-            self._bandwidth_panel = wx.Panel( self )
+            self._bandwidth_panel = QW.QWidget( self )
             
             #
             
@@ -845,7 +851,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -854,23 +860,23 @@ class ReviewServicePanel( wx.Panel ):
             
             ( host, port ) = credentials.GetAddress()
             
-            self._address.SetLabelText( host + ':' + str( port ) )
+            self._address.setText( host+':'+str(port) )
             
             status = self._service.GetStatusString()
             
-            self._functional.SetLabelText( status )
+            self._functional.setText( status )
             
             bandwidth_summary = self._service.GetBandwidthCurrentMonthSummary()
             
-            self._bandwidth_summary.SetLabelText( bandwidth_summary )
+            self._bandwidth_summary.setText( bandwidth_summary )
             
-            self._bandwidth_panel.DestroyChildren()
+            QP.DestroyChildren( self._bandwidth_panel )
             
             b_gauges = []
             
             bandwidth_rows = self._service.GetBandwidthStringsAndGaugeTuples()
             
-            b_vbox = wx.BoxSizer( wx.VERTICAL )
+            b_vbox = QP.VBoxLayout()
             
             for ( status, ( value, range ) ) in bandwidth_rows:
                 
@@ -878,14 +884,10 @@ class ReviewServicePanel( wx.Panel ):
                 
                 gauge.SetValue( status, value, range )
                 
-                b_vbox.Add( gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                QP.AddToLayout( b_vbox, gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
-            self._bandwidth_panel.SetSizer( b_vbox )
-            
-            self.Layout()
-            
-            ClientGUITopLevelWindows.PostSizeChangedEvent( self )
+            self._bandwidth_panel.setLayout( b_vbox )
             
         
         def ServiceUpdated( self, service ):
@@ -913,7 +915,7 @@ class ReviewServicePanel( wx.Panel ):
             self._status_st = ClientGUICommon.BetterStaticText( self )
             self._next_sync_st = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
-            self._bandwidth_panel = wx.Panel( self )
+            self._bandwidth_panel = QW.QWidget( self )
             
             self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
             self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account key', self._CopyAccountKey )
@@ -925,11 +927,11 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._refresh_account_button, CC.FLAGS_VCENTER )
-            hbox.Add( self._copy_account_key_button, CC.FLAGS_VCENTER )
-            hbox.Add( self._permissions_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._refresh_account_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._copy_account_key_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._permissions_button, CC.FLAGS_VCENTER )
             
             self.Add( self._title_and_expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -954,7 +956,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -967,29 +969,29 @@ class ReviewServicePanel( wx.Panel ):
             
             expires_status = account.GetExpiresString()
             
-            self._title_and_expires_st.SetLabelText( title + ' that ' + expires_status )
+            self._title_and_expires_st.setText( title+' that '+expires_status )
             
             account_status = account.GetStatusString()
             
-            self._status_st.SetLabelText( account_status )
+            self._status_st.setText( account_status )
             
             next_sync_status = self._service.GetNextAccountSyncStatus()
             
-            self._next_sync_st.SetLabelText( next_sync_status )
+            self._next_sync_st.setText( next_sync_status )
             
             #
             
             bandwidth_summary = account.GetBandwidthCurrentMonthSummary()
             
-            self._bandwidth_summary.SetLabelText( bandwidth_summary )
+            self._bandwidth_summary.setText( bandwidth_summary )
             
-            self._bandwidth_panel.DestroyChildren()
+            QP.DestroyChildren( self._bandwidth_panel )
             
             b_gauges = []
             
             bandwidth_rows = account.GetBandwidthStringsAndGaugeTuples()
             
-            b_vbox = wx.BoxSizer( wx.VERTICAL )
+            b_vbox = QP.VBoxLayout()
             
             for ( status, ( value, range ) ) in bandwidth_rows:
                 
@@ -997,33 +999,33 @@ class ReviewServicePanel( wx.Panel ):
                 
                 gauge.SetValue( status, value, range )
                 
-                b_vbox.Add( gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                QP.AddToLayout( b_vbox, gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
-            self._bandwidth_panel.SetSizer( b_vbox )
+            self._bandwidth_panel.setLayout( b_vbox )
             
             #
             
-            self._refresh_account_button.SetLabelText( 'refresh account' )
+            self._refresh_account_button.setText( 'refresh account' )
             
             if self._service.CanSyncAccount( including_external_communication = False ):
                 
-                self._refresh_account_button.Enable()
+                self._refresh_account_button.setEnabled( True )
                 
             else:
                 
-                self._refresh_account_button.Disable()
+                self._refresh_account_button.setEnabled( False )
                 
             
             account_key = account.GetAccountKey()
             
             if account_key is None or account_key == '':
                 
-                self._copy_account_key_button.Disable()
+                self._copy_account_key_button.setEnabled( False )
                 
             else:
                 
-                self._copy_account_key_button.Enable()
+                self._copy_account_key_button.setEnabled( True )
                 
             
             menu_items = []
@@ -1044,10 +1046,6 @@ class ReviewServicePanel( wx.Panel ):
             
             self._permissions_button.SetMenuItems( menu_items )
             
-            self.Layout()
-            
-            ClientGUITopLevelWindows.PostSizeChangedEvent( self )
-            
         
         def _RefreshAccount( self ):
             
@@ -1061,7 +1059,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     HydrusData.ShowException( e )
                     
-                    wx.CallAfter( wx.MessageBox, str( e ) )
+                    QP.CallAfter( QW.QMessageBox.critical, None, 'Error', str(e) )
                     
                 
                 my_updater.Update()
@@ -1069,20 +1067,20 @@ class ReviewServicePanel( wx.Panel ):
             
             if HG.client_controller.options[ 'pause_repo_sync' ]:
                 
-                wx.MessageBox( 'All repositories are currently paused under the services->pause menu! Please unpause them and then try again!' )
+                QW.QMessageBox.warning( self, 'Warning', 'All repositories are currently paused under the services->pause menu! Please unpause them and then try again!' )
                 
                 return
                 
             
             if self._service.GetServiceType() in HC.REPOSITORIES and self._service.IsPaused():
                 
-                wx.MessageBox( 'The service is paused! Please unpause it to refresh its account.' )
+                QW.QMessageBox.warning( self, 'Warning', 'The service is paused! Please unpause it to refresh its account.' )
                 
                 return
                 
             
-            self._refresh_account_button.Disable()
-            self._refresh_account_button.SetLabelText( 'fetching\u2026' )
+            self._refresh_account_button.setEnabled( False )
+            self._refresh_account_button.setText( 'fetching\u2026' )
             
             HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
             
@@ -1108,7 +1106,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._content_panel = wx.Panel( self )
+            self._content_panel = QW.QWidget( self )
             
             self._metadata_st = ClientGUICommon.BetterStaticText( self )
             
@@ -1140,17 +1138,17 @@ class ReviewServicePanel( wx.Panel ):
             
             if not new_options.GetBoolean( 'advanced_mode' ):
                 
-                self._export_updates_button.Hide()
-                self._reset_button.Hide()
+                self._export_updates_button.hide()
+                self._reset_button.hide()
                 
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._sync_remote_now_button, CC.FLAGS_VCENTER )
-            hbox.Add( self._sync_processing_now_button, CC.FLAGS_VCENTER )
-            hbox.Add( self._pause_play_button, CC.FLAGS_VCENTER )
-            hbox.Add( self._export_updates_button, CC.FLAGS_VCENTER )
-            hbox.Add( self._reset_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._sync_remote_now_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._sync_processing_now_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._pause_play_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._export_updates_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._reset_button, CC.FLAGS_VCENTER )
             
             self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1163,15 +1161,15 @@ class ReviewServicePanel( wx.Panel ):
         
         def _ExportUpdates( self ):
             
-            def wx_done():
+            def qt_done():
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._export_updates_button.SetLabelText( 'export updates' )
-                self._export_updates_button.Enable()
+                self._export_updates_button.setText( 'export updates' )
+                self._export_updates_button.setEnabled( True )
                 
             
             def do_it( dest_dir, service ):
@@ -1184,7 +1182,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     if num_to_do == 0:
                         
-                        wx.CallAfter( wx.MessageBox, 'No updates to export!' )
+                        QP.CallAfter( QW.QMessageBox.information, None, 'Information', 'No updates to export!' )
                         
                     else:
                         
@@ -1239,18 +1237,18 @@ class ReviewServicePanel( wx.Panel ):
                     
                 finally:
                     
-                    wx.CallAfter( wx_done )
+                    QP.CallAfter( qt_done )
                     
                 
             
-            with wx.DirDialog( self, 'Select export location.' ) as dlg:
+            with QP.DirDialog( self, 'Select export location.' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     path = dlg.GetPath()
                     
-                    self._export_updates_button.SetLabelText( 'exporting\u2026' )
-                    self._export_updates_button.Disable()
+                    self._export_updates_button.setText( 'exporting\u2026' )
+                    self._export_updates_button.setEnabled( False )
                     
                     HG.client_controller.CallToThread( do_it, path, self._service )
                     
@@ -1264,28 +1262,28 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
             
             service_paused = self._service.IsPaused()
             
-            self._sync_remote_now_button.Disable()
-            self._sync_processing_now_button.Disable()
+            self._sync_remote_now_button.setEnabled( False )
+            self._sync_processing_now_button.setEnabled( False )
             
             if service_paused:
                 
-                self._pause_play_button.SetLabelText( 'paused' )
-                self._pause_play_button.SetForegroundColour( ( 128, 0, 0 ) )
+                self._pause_play_button.setText( 'paused' )
+                QP.SetForegroundColour( self._pause_play_button, (128,0,0) )
                 
             else:
                 
-                self._pause_play_button.SetLabelText( 'working' )
-                self._pause_play_button.SetForegroundColour( ( 0, 128, 0 ) )
+                self._pause_play_button.setText( 'working' )
+                QP.SetForegroundColour( self._pause_play_button, (0,128,0) )
                 
             
-            self._metadata_st.SetLabelText( self._service.GetNextUpdateDueString() )
+            self._metadata_st.setText( self._service.GetNextUpdateDueString() )
             
             HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
@@ -1309,7 +1307,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
                 
@@ -1334,7 +1332,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
                 
@@ -1348,13 +1346,13 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 message = 'Seriously, are you absolutely sure?'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result == wx.ID_YES:
+                if result == QW.QDialog.Accepted:
                     
                     self._service.Reset()
                     
@@ -1370,7 +1368,7 @@ class ReviewServicePanel( wx.Panel ):
                 my_updater.Update()
                 
             
-            self._sync_remote_now_button.Disable()
+            self._sync_remote_now_button.setEnabled( False )
             
             HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
             
@@ -1383,7 +1381,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 def do_it( service, my_updater ):
                     
@@ -1392,7 +1390,7 @@ class ReviewServicePanel( wx.Panel ):
                     my_updater.Update()
                     
                 
-                self._sync_processing_now_button.Disable()
+                self._sync_processing_now_button.setEnabled( False )
                 
                 HG.client_controller.CallToThread( do_it, self._service, self._my_updater )
                 
@@ -1410,9 +1408,9 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up ):
+            def qt_code( download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -1429,24 +1427,24 @@ class ReviewServicePanel( wx.Panel ):
                     caught_up_text = 'Still some processing to do until the client is caught up.'
                     
                 
-                self._is_mostly_caught_up_st.SetLabel( caught_up_text )
+                self._is_mostly_caught_up_st.setText( caught_up_text )
                 
                 if download_value == 0:
                     
-                    self._export_updates_button.Disable()
+                    self._export_updates_button.setEnabled( False )
                     
                 else:
                     
-                    self._export_updates_button.Enable()
+                    self._export_updates_button.setEnabled( True )
                     
                 
                 if processing_value == 0:
                     
-                    self._reset_button.Disable()
+                    self._reset_button.setEnabled( False )
                     
                 else:
                     
-                    self._reset_button.Enable()
+                    self._reset_button.setEnabled( True )
                     
                 
                 metadata_due = self._service.GetMetadata().UpdateDue( from_client = True )
@@ -1458,11 +1456,11 @@ class ReviewServicePanel( wx.Panel ):
                 
                 if download_work_to_do and can_sync_download:
                     
-                    self._sync_remote_now_button.Enable()
+                    self._sync_remote_now_button.setEnabled( True )
                     
                 else:
                     
-                    self._sync_remote_now_button.Disable()
+                    self._sync_remote_now_button.setEnabled( False )
                     
                 
                 processing_work_to_do = processing_value < download_value
@@ -1471,11 +1469,11 @@ class ReviewServicePanel( wx.Panel ):
                 
                 if processing_work_to_do and can_sync_process:
                     
-                    self._sync_processing_now_button.Enable()
+                    self._sync_processing_now_button.setEnabled( True )
                     
                 else:
                     
-                    self._sync_processing_now_button.Disable()
+                    self._sync_processing_now_button.setEnabled( False )
                     
                 
             
@@ -1487,7 +1485,7 @@ class ReviewServicePanel( wx.Panel ):
             
             processing_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( processing_value, range )
             
-            wx.CallAfter( wx_code, download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up )
+            QP.CallAfter( qt_code, download_text, download_value, processing_text, processing_value, range, is_mostly_caught_up )
             
         
     
@@ -1564,7 +1562,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -1580,7 +1578,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for these shares.' ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         note = dlg.GetValue()
                         
@@ -1605,14 +1603,14 @@ class ReviewServicePanel( wx.Panel ):
         
         def _ShowSelectedInNewPages( self ):
             
-            def wx_done():
+            def qt_done():
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._ipfs_shares_panel.Enable()
+                self._ipfs_shares_panel.setEnabled( True )
                 
             
             def do_it( service_key, pages_of_hashes_to_show ):
@@ -1630,27 +1628,27 @@ class ReviewServicePanel( wx.Panel ):
                     
                 finally:
                     
-                    wx.CallAfter( wx_done )
+                    QP.CallAfter( qt_done )
                     
                 
             
             shares = self._ipfs_shares.GetData( only_selected = True )
             
-            self._ipfs_shares_panel.Disable()
+            self._ipfs_shares_panel.setEnabled( False )
             
             HG.client_controller.CallToThread( do_it, self._service.GetServiceKey(), shares )
             
         
         def _Unpin( self ):
             
-            def wx_done():
+            def qt_done():
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._ipfs_shares_panel.Enable()
+                self._ipfs_shares_panel.setEnabled( True )
                 
                 self._my_updater.Update()
                 
@@ -1666,17 +1664,17 @@ class ReviewServicePanel( wx.Panel ):
                     
                 finally:
                     
-                    wx.CallAfter( wx_done )
+                    QP.CallAfter( qt_done )
                     
                 
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Unpin (remove) all selected?' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetData( only_selected = True ) ]
                 
-                self._ipfs_shares_panel.Disable()
+                self._ipfs_shares_panel.setEnabled( False )
                 
                 HG.client_controller.CallToThread( do_it, self._service, multihashes )
                 
@@ -1699,9 +1697,9 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( ipfs_shares ):
+            def qt_code( ipfs_shares ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -1713,7 +1711,7 @@ class ReviewServicePanel( wx.Panel ):
             
             ipfs_shares = HG.client_controller.Read( 'service_directories', service.GetServiceKey() )
             
-            wx.CallAfter( wx_code, ipfs_shares )
+            QP.CallAfter( qt_code, ipfs_shares )
             
         
     
@@ -1798,7 +1796,7 @@ class ReviewServicePanel( wx.Panel ):
             
             if internal_port is None:
                 
-                wx.MessageBox( 'The local booru is not currently running!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The local booru is not currently running!' )
                 
             
             urls = []
@@ -1813,7 +1811,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     HydrusData.ShowException( e )
                     
-                    wx.MessageBox( 'Unfortunately, could not generate an external URL: {}'.format( e ) )
+                    QW.QMessageBox.critical( self, 'Error', 'Unfortunately, could not generate an external URL: {}'.format(e) )
                     
                     return
                     
@@ -1834,7 +1832,7 @@ class ReviewServicePanel( wx.Panel ):
             
             if internal_port is None:
                 
-                wx.MessageBox( 'The local booru is not currently running!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The local booru is not currently running!' )
                 
             
             urls = []
@@ -1855,7 +1853,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 for share_key in self._booru_shares.GetData( only_selected = True ):
                     
@@ -1879,7 +1877,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 with ClientGUIDialogs.DialogInputLocalBooruShare( self, share_key, name, text, timeout, hashes, new_share = False) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         ( share_key, name, text, timeout, hashes ) = dlg.GetInfo()
                         
@@ -1917,7 +1915,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -1940,7 +1938,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                 
             
-            self._service_status.SetLabelText( status )
+            self._service_status.setText( status )
             
             HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
@@ -1957,9 +1955,9 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( booru_shares ):
+            def qt_code( booru_shares ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -1973,7 +1971,7 @@ class ReviewServicePanel( wx.Panel ):
             
             booru_shares = HG.client_controller.Read( 'local_booru_shares' )
             
-            wx.CallAfter( wx_code, booru_shares )
+            QP.CallAfter( qt_code, booru_shares )
             
         
     
@@ -2018,7 +2016,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
                 
@@ -2047,14 +2045,14 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( text ):
+            def qt_code( text ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._rating_info_st.SetLabelText( text )
+                self._rating_info_st.setText( text )
                 
             
             service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
@@ -2063,7 +2061,7 @@ class ReviewServicePanel( wx.Panel ):
             
             text = HydrusData.ToHumanInt( num_files ) + ' files are rated'
             
-            wx.CallAfter( wx_code, text )
+            QP.CallAfter( qt_code, text )
             
         
     
@@ -2119,14 +2117,14 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self, service ):
             
-            def wx_code( text ):
+            def qt_code( text ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
                 
-                self._tag_info_st.SetLabelText( text )
+                self._tag_info_st.setText( text )
                 
             
             service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
@@ -2144,7 +2142,7 @@ class ReviewServicePanel( wx.Panel ):
                 text += ' - ' + HydrusData.ToHumanInt( num_deleted_mappings ) + ' deleted mappings'
                 
             
-            wx.CallAfter( wx_code, text )
+            QP.CallAfter( qt_code, text )
             
         
     
@@ -2171,7 +2169,7 @@ class ReviewServicePanel( wx.Panel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 def do_it():
                     

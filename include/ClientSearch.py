@@ -11,7 +11,6 @@ from . import HydrusSerialisable
 from . import HydrusTags
 import re
 import time
-import wx
 
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}"\''
 IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : None for char in IGNORED_TAG_SEARCH_CHARACTERS }
@@ -1188,10 +1187,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
-            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
+            elif self._predicate_type in ( HC.PREDICATE_TYPE_SYSTEM_WIDTH, HC.PREDICATE_TYPE_SYSTEM_HEIGHT, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS ):
                 
-                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: base = 'number of tags'
-                elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = 'width'
+                if self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH: base = 'width'
                 elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HEIGHT: base = 'height'
                 elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: base = 'number of words'
                 
@@ -1210,7 +1208,40 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value ) = self._value
                     
-                    base += ' ' + operator + ' ' + HydrusData.ConvertMillisecondsToPrettyTime( value )
+                    if operator == '>' and value == 0:
+                        
+                        base = 'has duration'
+                        
+                    elif operator == '=' and value == 0:
+                        
+                        base = 'no duration'
+                        
+                    else:
+                        
+                        base += ' ' + operator + ' ' + HydrusData.ConvertMillisecondsToPrettyTime( value )
+                        
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+                
+                base = 'number of tags'
+                
+                if self._value is not None:
+                    
+                    ( operator, value ) = self._value
+                    
+                    if operator == '>' and value == 0:
+                        
+                        base = 'has tags'
+                        
+                    elif operator == '=' and value == 0:
+                        
+                        base = 'untagged'
+                        
+                    else:
+                        
+                        base += ' ' + operator + ' ' + HydrusData.ToHumanInt( value )
+                        
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATIO:
@@ -1354,7 +1385,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     if not has_audio:
                         
-                        base = 'does not have audio'
+                        base = 'no audio'
                         
                     
                 

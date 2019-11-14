@@ -16,8 +16,10 @@ from . import HydrusGlobals as HG
 from . import HydrusText
 import re
 import string
-import wx
-import wx.adv
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
     
@@ -27,63 +29,75 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         
         self._predicates = []
         
-        pred_classes = []
+        editable_pred_panel_classes = []
+        static_pred_buttons = []
         
         if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
             
-            pred_classes.append( PanelPredicateSystemAgeDelta )
-            pred_classes.append( PanelPredicateSystemAgeDate )
+            editable_pred_panel_classes.append( PanelPredicateSystemAgeDelta )
+            editable_pred_panel_classes.append( PanelPredicateSystemAgeDate )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
             
-            pred_classes.append( PanelPredicateSystemModifiedDelta )
-            pred_classes.append( PanelPredicateSystemModifiedDate )
+            editable_pred_panel_classes.append( PanelPredicateSystemModifiedDelta )
+            editable_pred_panel_classes.append( PanelPredicateSystemModifiedDate )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
-            pred_classes.append( PanelPredicateSystemHeight )
-            pred_classes.append( PanelPredicateSystemWidth )
-            pred_classes.append( PanelPredicateSystemRatio )
-            pred_classes.append( PanelPredicateSystemNumPixels )
+            editable_pred_panel_classes.append( PanelPredicateSystemHeight )
+            editable_pred_panel_classes.append( PanelPredicateSystemWidth )
+            editable_pred_panel_classes.append( PanelPredicateSystemRatio )
+            editable_pred_panel_classes.append( PanelPredicateSystemNumPixels )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
             
-            pred_classes.append( PanelPredicateSystemDuration )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0 ) ), ) ) )
+            
+            editable_pred_panel_classes.append( PanelPredicateSystemDuration )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
             
-            pred_classes.append( PanelPredicateSystemFileService )
+            editable_pred_panel_classes.append( PanelPredicateSystemFileService )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
             
-            pred_classes.append( PanelPredicateSystemKnownURLsExactURL )
-            pred_classes.append( PanelPredicateSystemKnownURLsDomain )
-            pred_classes.append( PanelPredicateSystemKnownURLsRegex )
-            pred_classes.append( PanelPredicateSystemKnownURLsURLClass )
+            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsExactURL )
+            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsDomain )
+            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsRegex )
+            editable_pred_panel_classes.append( PanelPredicateSystemKnownURLsURLClass )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
             
-            pred_classes.append( PanelPredicateSystemHasAudio )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, True ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, False ), ) ) )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
-            pred_classes.append( PanelPredicateSystemHash )
+            editable_pred_panel_classes.append( PanelPredicateSystemHash )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
             
-            pred_classes.append( PanelPredicateSystemLimit )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 1024 ), ) ) )
+            
+            editable_pred_panel_classes.append( PanelPredicateSystemLimit )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
             
-            pred_classes.append( PanelPredicateSystemMime )
+            editable_pred_panel_classes.append( PanelPredicateSystemMime )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
             
-            pred_classes.append( PanelPredicateSystemNumTags )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '>', 0 ) ), ) ) )
+            static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ), ) ) )
+            
+            editable_pred_panel_classes.append( PanelPredicateSystemNumTags )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
             
-            pred_classes.append( PanelPredicateSystemNumWords )
+            editable_pred_panel_classes.append( PanelPredicateSystemNumWords )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
@@ -93,42 +107,52 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
             if len( ratings_services ) > 0:
                 
-                pred_classes.append( PanelPredicateSystemRating )
+                editable_pred_panel_classes.append( PanelPredicateSystemRating )
                 
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
             
-            pred_classes.append( PanelPredicateSystemSimilarTo )
+            editable_pred_panel_classes.append( PanelPredicateSystemSimilarTo )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
             
-            pred_classes.append( PanelPredicateSystemSize )
+            editable_pred_panel_classes.append( PanelPredicateSystemSize )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
             
-            pred_classes.append( PanelPredicateSystemTagAsNumber )
+            editable_pred_panel_classes.append( PanelPredicateSystemTagAsNumber )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS:
             
-            pred_classes.append( PanelPredicateSystemDuplicateRelationships )
-            pred_classes.append( PanelPredicateSystemDuplicateKing )
+            editable_pred_panel_classes.append( PanelPredicateSystemDuplicateRelationships )
+            editable_pred_panel_classes.append( PanelPredicateSystemDuplicateKing )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS:
             
-            pred_classes.append( PanelPredicateSystemFileViewingStatsViews )
-            pred_classes.append( PanelPredicateSystemFileViewingStatsViewtime )
+            editable_pred_panel_classes.append( PanelPredicateSystemFileViewingStatsViews )
+            editable_pred_panel_classes.append( PanelPredicateSystemFileViewingStatsViewtime )
             
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        for pred_class in pred_classes:
+        for button in static_pred_buttons:
             
-            panel = self._Panel( self, pred_class )
-            
-            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        self.SetSizer( vbox )
+        for pred_class in editable_pred_panel_classes:
+            
+            panel = self._EditablePredPanel( self, pred_class )
+            
+            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        if len( static_pred_buttons ) > 0 and len( editable_pred_panel_classes ) == 0:
+            
+            QP.CallAfter( static_pred_buttons[0].setFocus, QC.Qt.OtherFocusReason )
+            
+        
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -140,59 +164,76 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         
         self._predicates = predicates
         
-        self.GetParent().DoOK()
+        self.parentWidget().DoOK()
         
     
-    class _Panel( wx.Panel ):
+    class _EditablePredPanel( QW.QWidget ):
         
         def __init__( self, parent, predicate_class ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._predicate_panel = predicate_class( self )
+            self._parent = parent
             
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            self._ok = QW.QPushButton( 'OK', self )
+            self._ok.clicked.connect( self._DoOK )
+            QP.SetForegroundColour( self._ok, (0,128,0) )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            hbox.Add( self._ok, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._ok, CC.FLAGS_VCENTER )
             
-            self.SetSizer( hbox )
+            self.setLayout( hbox )
             
-            self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+            QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason )
             
         
         def _DoOK( self ):
             
             predicates = self._predicate_panel.GetPredicates()
             
-            self.GetParent().SubPanelOK( predicates )
+            self._parent.SubPanelOK( predicates )
             
         
-        def EventCharHook( self, event ):
+        def keyPressEvent( self, event ):
             
             ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
-            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            if key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
                 
                 self._DoOK()
                 
             else:
                 
-                event.Skip()
+                event.ignore()
                 
             
         
-        def EventOK( self, event ):
-            
-            self._DoOK()
-            
+    
+class StaticSystemPredicateButton( QW.QPushButton ):
+    
+    def __init__( self, parent, predicates ):
+        
+        QW.QPushButton.__init__( self, parent )
+        
+        self._parent = parent
+        self._predicates = predicates
+        
+        label = ', '.join( ( predicate.ToString() for predicate in self._predicates ) )
+        
+        self.setText( label )
+        
+        self.clicked.connect( self.DoOK )
         
     
-class PanelPredicateSystem( wx.Panel ):
+    def DoOK( self ):
+        
+        self._parent.SubPanelOK( self._predicates )
+        
+    
+class PanelPredicateSystem( QW.QWidget ):
     
     PREDICATE_TYPE = None
     
@@ -209,7 +250,7 @@ class PanelPredicateSystem( wx.Panel ):
         
         return predicates
         
-    
+
 class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_AGE
@@ -218,34 +259,36 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._date = wx.adv.CalendarCtrl( self )
+        self._date = QW.QCalendarWidget( self )
         
-        wx_dt = wx.DateTime.Today()
+        qt_dt = QC.QDate.currentDate()
         
-        wx_dt.Subtract( wx.TimeSpan( 24 * 7 ) )
+        qt_dt.addDays( -7 )
         
-        self._date.SetDate( wx_dt )
+        self._date.setSelectedDate( qt_dt )
         
         self._sign.SetStringSelection( '>' )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:time imported' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._date, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        wx_dt = self._date.GetDate()
+        qt_dt = self._date.selectedDate()
         
-        year = wx_dt.year
-        month = wx_dt.month + 1 # month zero indexed, wew
-        day = wx_dt.day
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
         
         info = ( self._sign.GetStringSelection(), 'date', ( year, month, day ) )
         
@@ -260,12 +303,12 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','>'] )
         
-        self._years = wx.SpinCtrl( self, max = 30, size = ( 60, -1 ) )
-        self._months = wx.SpinCtrl( self, max = 60, size = ( 60, -1 ) )
-        self._days = wx.SpinCtrl( self, max = 90, size = ( 60, -1 ) )
-        self._hours = wx.SpinCtrl( self, max = 24, size = ( 60, -1 ) )
+        self._years = QP.MakeQSpinBox( self, max=30, width = 60 )
+        self._months = QP.MakeQSpinBox( self, max=60, width = 60 )
+        self._days = QP.MakeQSpinBox( self, max=90, width = 60 )
+        self._hours = QP.MakeQSpinBox( self, max=24, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -286,32 +329,32 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._years.SetValue( years )
-        self._months.SetValue( months )
-        self._days.SetValue( days )
-        self._hours.SetValue( hours )
+        self._years.setValue( years )
+        self._months.setValue( months )
+        self._days.setValue( days )
+        self._hours.setValue( hours )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:time imported' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._years, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._months, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'months' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._days, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._hours, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:time imported'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._days.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), 'delta', ( self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() ) )
+        info = ( self._sign.GetStringSelection(), 'delta', (self._years.value(), self._months.value(), self._days.value(), self._hours.value()))
         
         return info
         
@@ -324,34 +367,36 @@ class PanelPredicateSystemModifiedDate( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._date = wx.adv.CalendarCtrl( self )
+        self._date = QW.QCalendarWidget( self )
         
-        wx_dt = wx.DateTime.Today()
+        qt_dt = QC.QDate.currentDate()
         
-        wx_dt.Subtract( wx.TimeSpan( 24 * 7 ) )
+        qt_dt.addDays( -7 )
         
-        self._date.SetDate( wx_dt )
+        self._date.setSelectedDate( qt_dt )
         
         self._sign.SetStringSelection( '>' )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:modified date' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._date, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._date, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        wx_dt = self._date.GetDate()
+        qt_dt = self._date.selectedDate()
         
-        year = wx_dt.year
-        month = wx_dt.month + 1 # month zero indexed, wew
-        day = wx_dt.day
+        year = qt_dt.year()
+        month = qt_dt.month()
+        day = qt_dt.day()
         
         info = ( self._sign.GetStringSelection(), 'date', ( year, month, day ) )
         
@@ -366,12 +411,12 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','>'] )
         
-        self._years = wx.SpinCtrl( self, max = 30, size = ( 60, -1 ) )
-        self._months = wx.SpinCtrl( self, max = 60, size = ( 60, -1 ) )
-        self._days = wx.SpinCtrl( self, max = 90, size = ( 60, -1 ) )
-        self._hours = wx.SpinCtrl( self, max = 24, size = ( 60, -1 ) )
+        self._years = QP.MakeQSpinBox( self, max=30 )
+        self._months = QP.MakeQSpinBox( self, max=60 )
+        self._days = QP.MakeQSpinBox( self, max=90 )
+        self._hours = QP.MakeQSpinBox( self, max=24 )
         
         # wew lad. replace this all with proper system pred saving on new_options in future
         sign = '<'
@@ -383,32 +428,32 @@ class PanelPredicateSystemModifiedDelta( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._years.SetValue( years )
-        self._months.SetValue( months )
-        self._days.SetValue( days )
-        self._hours.SetValue( hours )
+        self._years.setValue( years )
+        self._months.setValue( months )
+        self._days.setValue( days )
+        self._hours.setValue( hours )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:modified date' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._years, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._months, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'months' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._days, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._hours, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:modified date'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._years, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'years'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._months, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'months'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._days, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'days'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._hours, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'hours'), CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._days.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), 'delta', ( self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() ) )
+        info = ( self._sign.GetStringSelection(), 'delta', ( self._years.value(), self._months.value(), self._days.value(), self._hours.value() ) )
         
         return info
         
@@ -423,18 +468,18 @@ class PanelPredicateSystemDuplicateKing( PanelPredicateSystem ):
         
         choices = [ 'is the best quality file of its group', 'is not the best quality file of its group' ]
         
-        self._king = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
+        self._king = QP.RadioBox( self, choices = choices, vertical = True )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._king, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._king, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._king.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -458,36 +503,36 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         choices = [ '<', '\u2248', '=', '>' ]
         
-        self._sign = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
+        self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num = wx.SpinCtrl( self, min = 0, max = 65535 )
+        self._num = QP.MakeQSpinBox( self, min=0, max=65535 )
         
         choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
         
-        self._dupe_type = ClientGUICommon.BetterRadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
+        self._dupe_type = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
         #
         
         self._sign.SetStringSelection( '>' )
-        self._num.SetValue( 0 )
+        self._num.setValue( 0 )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num file relationships' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._num, CC.FLAGS_VCENTER )
-        hbox.Add( self._dupe_type, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num file relationships'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._dupe_type, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._num.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._num.GetValue(), self._dupe_type.GetValue() )
+        info = (self._sign.GetStringSelection(), self._num.value(), self._dupe_type.GetValue())
         
         return info
         
@@ -502,10 +547,10 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         choices = [ '<', '\u2248', '=', '>' ]
         
-        self._sign = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
+        self._sign = QP.RadioBox( self, choices = choices )
         
-        self._duration_s = wx.SpinCtrl( self, max = 3599, size = ( 60, -1 ) )
-        self._duration_ms = wx.SpinCtrl( self, max = 999, size = ( 60, -1 ) )
+        self._duration_s = QP.MakeQSpinBox( self, max=3599, width = 60 )
+        self._duration_ms = QP.MakeQSpinBox( self, max=999, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -517,26 +562,26 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._duration_s.SetValue( s )
-        self._duration_ms.SetValue( ms )
+        self._duration_s.setValue( s )
+        self._duration_ms.setValue( ms )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:duration' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._duration_s, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 's' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._duration_ms, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'ms' ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:duration'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._duration_s, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'s'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._duration_ms, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'ms'), CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._duration_s.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._duration_s.GetValue() * 1000 + self._duration_ms.GetValue() )
+        info = (self._sign.GetStringSelection(), self._duration_s.value() * 1000 + self._duration_ms.value())
         
         return info
         
@@ -549,26 +594,26 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], style = wx.RA_SPECIFY_ROWS )
+        self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
-        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CONTENT_STATUS_CURRENT ), ( 'pending to', HC.CONTENT_STATUS_PENDING ) ], style = wx.RA_SPECIFY_ROWS )
+        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CONTENT_STATUS_CURRENT ), ( 'pending to', HC.CONTENT_STATUS_PENDING ) ], vertical = True )
         
         services = HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES )
         
         choices = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
-        self._file_service_key = ClientGUICommon.BetterRadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
+        self._file_service_key = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:file service:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._current_pending, CC.FLAGS_VCENTER )
-        hbox.Add( self._file_service_key, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:file service:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._current_pending, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._file_service_key, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._sign.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -586,14 +631,14 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._viewing_locations = ClientGUICommon.BetterCheckListBox( self )
+        self._viewing_locations = QP.CheckListBox( self )
         
         self._viewing_locations.Append( 'media views', 'media' )
         self._viewing_locations.Append( 'preview views', 'preview' )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._value = wx.SpinCtrl( self, min = 0, max = 1000000 )
+        self._value = QP.MakeQSpinBox( self, min=0, max=1000000 )
         
         #
         
@@ -601,16 +646,18 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
         
         self._sign.Select( 3 )
         
-        self._value.SetValue( 10 )
+        self._value.setValue( 10 )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._viewing_locations, CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._value, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._value, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -624,7 +671,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystem ):
         
         sign = self._sign.GetStringSelection()
         
-        value = self._value.GetValue()
+        value = self._value.value()
         
         info = ( 'views', tuple( viewing_locations ), sign, value )
         
@@ -639,12 +686,12 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._viewing_locations = ClientGUICommon.BetterCheckListBox( self )
+        self._viewing_locations = QP.CheckListBox( self )
         
         self._viewing_locations.Append( 'media viewtime', 'media' )
         self._viewing_locations.Append( 'preview viewtime', 'preview' )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
         self._time_delta = ClientGUITime.TimeDeltaCtrl( self, min = 0, days = True, hours = True, minutes = True, seconds = True )
         
@@ -656,14 +703,16 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         
         self._time_delta.SetValue( 600 )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._viewing_locations, CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._time_delta, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._viewing_locations, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -684,41 +733,6 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystem ):
         return info
         
     
-class PanelPredicateSystemHasAudio( PanelPredicateSystem ):
-    
-    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HAS_AUDIO
-    
-    def __init__( self, parent ):
-        
-        PanelPredicateSystem.__init__( self, parent )
-        
-        choices = [ 'has audio', 'does not have audio' ]
-        
-        self._has_audio = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._has_audio, CC.FLAGS_VCENTER )
-        
-        self.SetSizer( hbox )
-        
-        wx.CallAfter( self._has_audio.SetFocus )
-        
-    
-    def GetInfo( self ):
-        
-        has_audio_string = self._has_audio.GetStringSelection()
-        
-        has_audio = has_audio_string == 'has audio'
-        
-        info = has_audio
-        
-        return info
-        
-    
 class PanelPredicateSystemHash( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_HASH
@@ -727,32 +741,32 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._hashes = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._hashes = QW.QPlainTextEdit( self )
         
         init_size = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
         
-        self._hashes.SetMinSize( init_size )
+        self._hashes.setMinimumSize( QP.TupleToQSize( init_size ) )
         
         choices = [ 'sha256', 'md5', 'sha1', 'sha512' ]
         
-        self._hash_type = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
+        self._hash_type = QP.RadioBox( self, choices = choices, vertical = True )
         
-        self._hashes.SetValue( 'enter hash (paste newline-separated for multiple hashes)' )
+        self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:hash=' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._hashes, CC.FLAGS_VCENTER )
-        hbox.Add( self._hash_type, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash='), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._hash_type, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._hashes.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        hex_hashes_raw = self._hashes.GetValue()
+        hex_hashes_raw = self._hashes.toPlainText()
         
         hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
         
@@ -775,9 +789,9 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._height = wx.SpinCtrl( self, max = 200000, size = ( 60, -1 ) )
+        self._height = QP.MakeQSpinBox( self, max=200000, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -785,22 +799,22 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._height.SetValue( height )
+        self._height.setValue( height )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:height' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._height, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:height'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._height, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._height.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._height.GetValue() )
+        info = ( self._sign.GetStringSelection(), self._height.value())
         
         return info
         
@@ -815,19 +829,22 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
-        self._operator.Append( 'has', True )
-        self._operator.Append( 'does not have', False )
+        self._operator.addItem( 'has', True )
+        self._operator.addItem( 'does not have', False )
         
-        self._exact_url = wx.TextCtrl( self, size = ( 250, -1 ) )
+        self._exact_url = QW.QLineEdit( self )
+        self._exact_url.setFixedWidth( 250 )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._operator, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'exact url:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._exact_url, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'exact url:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._exact_url, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -845,7 +862,7 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
         
         rule_type = 'regex'
         
-        exact_url = self._exact_url.GetValue()
+        exact_url = self._exact_url.text()
         
         rule = re.escape( exact_url )
         
@@ -864,21 +881,24 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
-        self._operator.Append( 'has', True )
-        self._operator.Append( 'does not have', False )
+        self._operator.addItem( 'has', True )
+        self._operator.addItem( 'does not have', False )
         
-        self._domain = wx.TextCtrl( self, size = ( 250, -1 ) )
+        self._domain = QW.QLineEdit( self )
+        self._domain.setFixedWidth( 250 )
         
-        self._domain.SetValue( 'example.com' )
+        self._domain.setPlaceholderText( 'example.com' )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._operator, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'a url with domain:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._domain, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url with domain:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._domain, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -896,7 +916,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
         
         rule_type = 'regex'
         
-        domain = self._domain.GetValue()
+        domain = self._domain.text()
         
         rule = r'^https?\:\/\/(www[^\.]*\.)?' + re.escape( domain ) + r'\/.*'
         
@@ -915,19 +935,22 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
-        self._operator.Append( 'has', True )
-        self._operator.Append( 'does not have', False )
+        self._operator.addItem( 'has', True )
+        self._operator.addItem( 'does not have', False )
         
-        self._regex = wx.TextCtrl( self, size = ( 250, -1 ) )
+        self._regex = QW.QLineEdit( self )
+        self._regex.setFixedWidth( 250 )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._operator, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'a url that matches this regex:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._regex, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url that matches this regex:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._regex, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -945,7 +968,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
         
         rule_type = 'regex'
         
-        regex = self._regex.GetValue()
+        regex = self._regex.text()
         
         rule = regex
         
@@ -964,8 +987,8 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
         
         self._operator = ClientGUICommon.BetterChoice( self )
         
-        self._operator.Append( 'has', True )
-        self._operator.Append( 'does not have', False )
+        self._operator.addItem( 'has', True )
+        self._operator.addItem( 'does not have', False )
         
         self._url_classes = ClientGUICommon.BetterChoice( self )
         
@@ -973,18 +996,20 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystem ):
             
             if url_class.ShouldAssociateWithFiles():
                 
-                self._url_classes.Append( url_class.GetName(), url_class )
+                self._url_classes.addItem( url_class.GetName(), url_class )
                 
             
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._operator, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'url matching this class:' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._url_classes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'url matching this class:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._url_classes, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -1019,27 +1044,27 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._limit = wx.SpinCtrl( self, max = 1000000, size = ( 60, -1 ) )
+        self._limit = QP.MakeQSpinBox( self, max=1000000, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
         limit = system_predicates[ 'limit' ]
         
-        self._limit.SetValue( limit )
+        self._limit.setValue( limit )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:limit=' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._limit, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:limit='), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._limit, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._limit.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = self._limit.GetValue()
+        info = self._limit.value()
         
         return info
         
@@ -1065,12 +1090,14 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         self._mimes.SetValue( mimes )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:filetype' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._mimes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:filetype'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._mimes, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -1088,11 +1115,11 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._num_pixels = wx.SpinCtrl( self, max = 1048576, size = ( 60, -1 ) )
+        self._num_pixels = QP.MakeQSpinBox( self, max=1048576, width = 60 )
         
-        self._unit = wx.RadioBox( self, choices = [ 'pixels', 'kilopixels', 'megapixels' ] )
+        self._unit = QP.RadioBox( self, choices=['pixels','kilopixels','megapixels'] )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -1100,25 +1127,25 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._num_pixels.SetValue( num_pixels )
+        self._num_pixels.setValue( num_pixels )
         
         self._unit.SetStringSelection( HydrusData.ConvertIntToPixels( unit ) )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num_pixels' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._num_pixels, CC.FLAGS_VCENTER )
-        hbox.Add( self._unit, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_pixels'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num_pixels, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._unit, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._num_pixels.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._num_pixels.GetValue(), HydrusData.ConvertPixelsToInt( self._unit.GetStringSelection() ) )
+        info = (self._sign.GetStringSelection(), self._num_pixels.value(), HydrusData.ConvertPixelsToInt( self._unit.GetStringSelection() ))
         
         return info
         
@@ -1131,9 +1158,9 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._num_tags = wx.SpinCtrl( self, max = 2000, size = ( 60, -1 ) )
+        self._num_tags = QP.MakeQSpinBox( self, max=2000, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -1141,22 +1168,22 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._num_tags.SetValue( num_tags )
+        self._num_tags.setValue( num_tags )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num_tags' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._num_tags, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_tags'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num_tags, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._num_tags.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._num_tags.GetValue() )
+        info = ( self._sign.GetStringSelection(), self._num_tags.value())
         
         return info
         
@@ -1169,9 +1196,9 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._num_words = wx.SpinCtrl( self, max = 1000000, size = ( 60, -1 ) )
+        self._num_words = QP.MakeQSpinBox( self, max=1000000, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -1179,22 +1206,22 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._num_words.SetValue( num_words )
+        self._num_words.setValue( num_words )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num_words' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._num_words, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:num_words'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num_words, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._num_words.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._num_words.GetValue() )
+        info = ( self._sign.GetStringSelection(), self._num_words.value())
         
         return info
         
@@ -1215,28 +1242,28 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         self._like_rating_ctrls = []
         
-        gridbox = wx.FlexGridSizer( 5 )
+        gridbox = QP.GridLayout( cols = 5 )
         
-        gridbox.AddGrowableCol( 0, 1 )
+        gridbox.setColumnStretch( 0, 1 )
         
         for service in local_like_services:
             
             name = service.GetName()
             service_key = service.GetServiceKey()
             
-            rated_checkbox = wx.CheckBox( self, label = 'rated' )
-            not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
+            rated_checkbox = QW.QCheckBox( 'rated', self )
+            not_rated_checkbox = QW.QCheckBox( 'not rated', self )
             rating_ctrl = ClientGUICommon.RatingLikeDialog( self, service_key )
             
             self._like_checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
             self._like_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._like_rating_ctrls.append( rating_ctrl )
             
-            gridbox.Add( ClientGUICommon.BetterStaticText( self, name ), CC.FLAGS_VCENTER )
-            gridbox.Add( rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.Add( not_rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            gridbox.Add( rating_ctrl, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText(self,name), CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, rated_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, not_rated_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( gridbox, rating_ctrl, CC.FLAGS_VCENTER )
             
         
         #
@@ -1252,31 +1279,31 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             name = service.GetName()
             service_key = service.GetServiceKey()
             
-            rated_checkbox = wx.CheckBox( self, label = 'rated' )
-            not_rated_checkbox = wx.CheckBox( self, label = 'not rated' )
-            choice = wx.RadioBox( self, choices = [ '>', '<', '=', '\u2248' ] )
+            rated_checkbox = QW.QCheckBox( 'rated', self )
+            not_rated_checkbox = QW.QCheckBox( 'not rated', self )
+            choice = QP.RadioBox( self, choices=['>','<','=','\u2248'] )
             rating_ctrl = ClientGUICommon.RatingNumericalDialog( self, service_key )
             
-            choice.SetSelection( 2 )
+            choice.Select( 2 )
             
             self._numerical_checkboxes_to_info[ rated_checkbox ] = ( service_key, ClientRatings.SET )
             self._numerical_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._numerical_rating_ctrls_to_info[ rating_ctrl ] = choice
             
-            gridbox.Add( ClientGUICommon.BetterStaticText( self, name ), CC.FLAGS_VCENTER )
-            gridbox.Add( rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.Add( not_rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.Add( choice, CC.FLAGS_VCENTER )
-            gridbox.Add( rating_ctrl, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText(self,name), CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, rated_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, not_rated_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, choice, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, rating_ctrl, CC.FLAGS_VCENTER )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def GetInfo( self ):
@@ -1287,7 +1314,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         for ( checkbox, ( service_key, rating_state ) ) in list(self._like_checkboxes_to_info.items()):
             
-            if checkbox.GetValue() == True:
+            if checkbox.isChecked():
                 
                 if rating_state == ClientRatings.SET:
                     
@@ -1327,7 +1354,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         for ( checkbox, ( service_key, rating_state ) ) in list(self._numerical_checkboxes_to_info.items()):
             
-            if checkbox.GetValue() == True:
+            if checkbox.isChecked():
                 
                 if rating_state == ClientRatings.SET:
                     
@@ -1380,11 +1407,11 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '=', 'wider than', 'taller than', '\u2248' ] )
+        self._sign = QP.RadioBox( self, choices=['=','wider than','taller than','\u2248'] )
         
-        self._width = wx.SpinCtrl( self, max = 50000, size = ( 60, -1 ) )
+        self._width = QP.MakeQSpinBox( self, max=50000, width = 60 )
         
-        self._height = wx.SpinCtrl( self, max = 50000, size = ( 60, -1 ) )
+        self._height = QP.MakeQSpinBox( self, max=50000, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -1392,26 +1419,26 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._width.SetValue( width )
+        self._width.setValue( width )
         
-        self._height.SetValue( height )
+        self._height.setValue( height )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:ratio' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._width, CC.FLAGS_VCENTER )
-        hbox.Add( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._height, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:ratio'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._width, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,':'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._height, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._sign.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._width.GetValue(), self._height.GetValue() )
+        info = (self._sign.GetStringSelection(), self._width.value(), self._height.value())
         
         return info
         
@@ -1424,37 +1451,37 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._hashes = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+        self._hashes = QW.QPlainTextEdit( self )
         
         init_size = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 66, 10 ) )
         
-        self._hashes.SetMinSize( init_size )
+        self._hashes.setMinimumSize( QP.TupleToQSize( init_size ) )
         
-        self._max_hamming = wx.SpinCtrl( self, max = 256, size = ( 60, -1 ) )
+        self._max_hamming = QP.MakeQSpinBox( self, max=256, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        self._hashes.SetValue( 'enter hash (paste newline-separated for multiple hashes)' )
+        self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
         
         hamming_distance = system_predicates[ 'hamming_distance' ]
         
-        self._max_hamming.SetValue( hamming_distance )
+        self._max_hamming.setValue( hamming_distance )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:similar_to' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._hashes, CC.FLAGS_VCENTER )
-        hbox.Add( wx.StaticText( self, label='\u2248' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._max_hamming, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:similar_to'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, QW.QLabel( '\u2248', self ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._max_hamming, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._hashes.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        hex_hashes_raw = self._hashes.GetValue()
+        hex_hashes_raw = self._hashes.toPlainText()
         
         hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
         
@@ -1464,7 +1491,7 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
         
-        info = ( hashes, self._max_hamming.GetValue() )
+        info = ( hashes, self._max_hamming.value())
         
         return info
         
@@ -1477,7 +1504,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
         self._bytes = ClientGUIControls.BytesControl( self )
         
@@ -1489,15 +1516,15 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         self._bytes.SetSeparatedValue( size, unit )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:filesize' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._bytes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:filesize'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._bytes, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._bytes.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
@@ -1517,37 +1544,37 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._namespace = wx.TextCtrl( self )
+        self._namespace = QW.QLineEdit( self )
         
         choices = [ '<', '\u2248', '>' ]
         
-        self._sign = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
+        self._sign = QP.RadioBox( self, choices = choices )
         
-        self._num = wx.SpinCtrl( self, min = -99999999, max = 99999999 )
+        self._num = QP.MakeQSpinBox( self, min=-99999999, max=99999999 )
         
         #
         
-        self._namespace.SetValue( 'page' )
+        self._namespace.setText( 'page' )
         self._sign.SetStringSelection( '>' )
-        self._num.SetValue( 0 )
+        self._num.setValue( 0 )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:tag as number' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._namespace, CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._num, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:tag as number'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._namespace, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._num, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._num.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._namespace.GetValue(), self._sign.GetStringSelection(), self._num.GetValue() )
+        info = ( self._namespace.text(), self._sign.GetStringSelection(), self._num.value())
         
         return info
         
@@ -1560,9 +1587,9 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self._sign = wx.RadioBox( self, choices = [ '<', '\u2248', '=', '>' ] )
+        self._sign = QP.RadioBox( self, choices=['<','\u2248','=','>'] )
         
-        self._width = wx.SpinCtrl( self, max = 200000, size = ( 60, -1 ) )
+        self._width = QP.MakeQSpinBox( self, max=200000, width = 60 )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -1570,22 +1597,22 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._width.SetValue( width )
+        self._width.setValue( width )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:width' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._width, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:width'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._width, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
         
-        wx.CallAfter( self._width.SetFocus )
+        self.setLayout( hbox )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._width.GetValue() )
+        info = ( self._sign.GetStringSelection(), self._width.value())
         
         return info
         

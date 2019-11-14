@@ -8,47 +8,65 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
-import wx
-
-FLASHWIN_OK = False
-
-if HC.PLATFORM_WINDOWS:
-    
-    try:
-        
-        import wx.lib.flashwin
-        
-        FLASHWIN_OK = True
-        
-    except Exception as e:
-        
-        pass
-        
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
     
 def ConvertKeyEventToShortcut( event ):
     
-    key = event.KeyCode
+    key = event.key()
     
-    if ClientData.OrdIsSensibleASCII( key ) or key in list(CC.wxk_code_string_lookup.keys()):
+    if key in CC.special_key_shortcut_enum_lookup or ClientData.OrdIsSensibleASCII( key ):
+        
+        if key in CC.special_key_shortcut_enum_lookup:
+            
+            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
+            key = CC.special_key_shortcut_enum_lookup[ key ]
+            
+        else:
+            
+            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_ASCII
+            key = int( key )
+            
         
         modifiers = []
         
-        if event.AltDown():
+        if event.modifiers() & QC.Qt.AltModifier:
             
             modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
             
         
-        if event.CmdDown():
+        if HC.PLATFORM_OSX:
+            
+            ctrl = QC.Qt.MetaModifier
+            
+        else:
+            
+            ctrl = QC.Qt.ControlModifier
+            
+        
+        if event.modifiers() & ctrl:
             
             modifiers.append( CC.SHORTCUT_MODIFIER_CTRL )
             
         
-        if event.ShiftDown():
+        if event.modifiers() & QC.Qt.ShiftModifier:
             
             modifiers.append( CC.SHORTCUT_MODIFIER_SHIFT )
             
         
-        shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
+        if event.modifiers() & QC.Qt.GroupSwitchModifier:
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_GROUP_SWITCH )
+            
+        
+        if event.modifiers() & QC.Qt.KeypadModifier:
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+            
+        
+        shortcut = Shortcut( shortcut_type, key, modifiers )
         
         if HG.gui_report_mode:
             
@@ -62,13 +80,15 @@ def ConvertKeyEventToShortcut( event ):
     
 def ConvertKeyEventToSimpleTuple( event ):
     
-    modifier = wx.ACCEL_NORMAL
+    modifier = QC.Qt.NoModifier
     
-    if event.AltDown(): modifier = wx.ACCEL_ALT
-    elif event.CmdDown(): modifier = wx.ACCEL_CTRL
-    elif event.ShiftDown(): modifier = wx.ACCEL_SHIFT
+    if event.modifiers() & QC.Qt.AltModifier: modifier = QC.Qt.AltModifier
+    elif event.modifiers() & QC.Qt.ControlModifier: modifier = QC.Qt.ControlModifier
+    elif event.modifiers() & QC.Qt.ShiftModifier: modifier = QC.Qt.ShiftModifier
+    elif event.modifiers() & QC.Qt.KeypadModifier: modifier = QC.Qt.KeypadModifier
+    elif event.modifiers() & QC.Qt.GroupSwitchModifier: modifier = QC.Qt.GroupSwitchModifier
     
-    key = event.KeyCode
+    key = event.key()
     
     return ( modifier, key )
     
@@ -76,23 +96,23 @@ def ConvertMouseEventToShortcut( event ):
     
     key = None
     
-    if event.LeftDown() or event.LeftDClick():
+    if (event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.LeftButton) or (event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.LeftButton):
         
         key = CC.SHORTCUT_MOUSE_LEFT
         
-    elif event.MiddleDown() or event.MiddleDClick():
+    elif (event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.MiddleButton) or (event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.MiddleButton):
         
         key = CC.SHORTCUT_MOUSE_MIDDLE
         
-    elif event.RightDown() or event.RightDClick():
+    elif (event.type() == QC.QEvent.MouseButtonPress and event.buttons() & QC.Qt.RightButton) or (event.type() == QC.QEvent.MouseButtonDblClick and event.button() == QC.Qt.RightButton):
         
         key = CC.SHORTCUT_MOUSE_RIGHT
         
-    elif event.GetWheelRotation() > 0:
+    elif event.type() == QC.QEvent.Wheel and event.angleDelta().y() > 0:
         
         key = CC.SHORTCUT_MOUSE_SCROLL_UP
         
-    elif event.GetWheelRotation() < 0:
+    elif event.type() == QC.QEvent.Wheel and event.angleDelta().y() < 0:
         
         key = CC.SHORTCUT_MOUSE_SCROLL_DOWN
         
@@ -101,19 +121,29 @@ def ConvertMouseEventToShortcut( event ):
         
         modifiers = []
         
-        if event.AltDown():
+        if event.modifiers() & QC.Qt.AltModifier:
             
             modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
             
         
-        if event.CmdDown():
+        if event.modifiers() & QC.Qt.ControlModifier:
             
             modifiers.append( CC.SHORTCUT_MODIFIER_CTRL )
             
         
-        if event.ShiftDown():
+        if event.modifiers() & QC.Qt.ShiftModifier:
             
             modifiers.append( CC.SHORTCUT_MODIFIER_SHIFT )
+            
+        
+        if event.modifiers() & QC.Qt.GroupSwitchModifier:
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_GROUP_SWITCH )
+            
+        
+        if event.modifiers() & QC.Qt.KeypadModifier:
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
             
         
         shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, modifiers )
@@ -130,23 +160,11 @@ def ConvertMouseEventToShortcut( event ):
     
 def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlp_classes_who_can_pass_up = None ):
     
-    if HC.PLATFORM_WINDOWS and FLASHWIN_OK:
-        
-        window = wx.FindWindowAtPointer()
-        
-        if window is not None and isinstance( window, wx.lib.flashwin.FlashWindow ):
-            
-            return False
-            
-        
-    
     do_focus_test = True
     
-    if event is not None and isinstance( event, wx.MouseEvent ):
-        
-        if event.GetEventType() == wx.wxEVT_MOUSEWHEEL:
+    if event is not None and isinstance( event, QG.QWheelEvent ):
             
-            do_focus_test = False
+        do_focus_test = False
             
         
     
@@ -156,7 +174,7 @@ def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlp_classes_who_
             
             if child_tlp_classes_who_can_pass_up is not None:
                 
-                child_tlp_has_focus = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( evt_handler ) and isinstance( ClientGUIFunctions.GetFocusTLP(), child_tlp_classes_who_can_pass_up )
+                child_tlp_has_focus = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( evt_handler ) and isinstance( QW.QApplication.activeWindow(), child_tlp_classes_who_can_pass_up )
                 
                 if not child_tlp_has_focus:
                     
@@ -176,23 +194,28 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT
     SERIALISABLE_NAME = 'Shortcut'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, shortcut_type = None, shortcut_key = None, modifiers = None ):
         
         if shortcut_type is None:
             
-            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD
+            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
             
         
         if shortcut_key is None:
             
-            shortcut_key = wx.WXK_F7
+            shortcut_key = CC.SHORTCUT_KEY_SPECIAL_F7
             
         
         if modifiers is None:
             
             modifiers = []
+            
+        
+        if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII and ClientData.OrdIsAlphaUpper( shortcut_key ):
+            
+            shortcut_key += 32 # convert A to a
             
         
         modifiers.sort()
@@ -229,6 +252,120 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         ( self._shortcut_type, self._shortcut_key, self._modifiers ) = serialisable_info
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            # these are dicts that convert fixed wx enums to new stuff
+            wx_to_qt_flat_conversion = {
+                32 : CC.SHORTCUT_KEY_SPECIAL_SPACE,
+                8 : CC.SHORTCUT_KEY_SPECIAL_BACKSPACE,
+                9 : CC.SHORTCUT_KEY_SPECIAL_TAB,
+                13 : CC.SHORTCUT_KEY_SPECIAL_RETURN,
+                310 : CC.SHORTCUT_KEY_SPECIAL_PAUSE,
+                27 : CC.SHORTCUT_KEY_SPECIAL_ESCAPE,
+                322 : CC.SHORTCUT_KEY_SPECIAL_INSERT,
+                127 : CC.SHORTCUT_KEY_SPECIAL_DELETE,
+                315 : CC.SHORTCUT_KEY_SPECIAL_UP,
+                317 : CC.SHORTCUT_KEY_SPECIAL_DOWN,
+                314 : CC.SHORTCUT_KEY_SPECIAL_LEFT,
+                316 : CC.SHORTCUT_KEY_SPECIAL_RIGHT,
+                313 : CC.SHORTCUT_KEY_SPECIAL_HOME,
+                312 : CC.SHORTCUT_KEY_SPECIAL_END,
+                367 : CC.SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
+                366 : CC.SHORTCUT_KEY_SPECIAL_PAGE_UP,
+                340 : CC.SHORTCUT_KEY_SPECIAL_F1,
+                341 : CC.SHORTCUT_KEY_SPECIAL_F2,
+                342 : CC.SHORTCUT_KEY_SPECIAL_F3,
+                343 : CC.SHORTCUT_KEY_SPECIAL_F4,
+                344 : CC.SHORTCUT_KEY_SPECIAL_F5,
+                345 : CC.SHORTCUT_KEY_SPECIAL_F6,
+                346 : CC.SHORTCUT_KEY_SPECIAL_F7,
+                347 : CC.SHORTCUT_KEY_SPECIAL_F8,
+                348 : CC.SHORTCUT_KEY_SPECIAL_F9,
+                349 : CC.SHORTCUT_KEY_SPECIAL_F10,
+                350 : CC.SHORTCUT_KEY_SPECIAL_F11,
+                351 : CC.SHORTCUT_KEY_SPECIAL_F12
+            }
+            
+            # regular keys, but numpad, that are tracked in wx by combined unique enum
+            wx_to_qt_numpad_ascii_conversion = {
+                324 : ord( '0' ),
+                325 : ord( '1' ),
+                326 : ord( '2' ),
+                327 : ord( '3' ),
+                328 : ord( '4' ),
+                329 : ord( '5' ),
+                330 : ord( '6' ),
+                331 : ord( '7' ),
+                332 : ord( '8' ),
+                332 : ord( '9' ),
+                388 : ord( '+' ),
+                392 : ord( '/' ),
+                390 : ord( '-' ),
+                387 : ord( '*' ),
+                391 : ord( '.' )
+                }
+            
+            wx_to_qt_numpad_conversion = {
+                377 : CC.SHORTCUT_KEY_SPECIAL_UP,
+                379 : CC.SHORTCUT_KEY_SPECIAL_DOWN,
+                376 : CC.SHORTCUT_KEY_SPECIAL_LEFT,
+                378 : CC.SHORTCUT_KEY_SPECIAL_RIGHT,
+                375 : CC.SHORTCUT_KEY_SPECIAL_HOME,
+                382 : CC.SHORTCUT_KEY_SPECIAL_END,
+                381 : CC.SHORTCUT_KEY_SPECIAL_PAGE_DOWN,
+                380 : CC.SHORTCUT_KEY_SPECIAL_PAGE_UP,
+                385 : CC.SHORTCUT_KEY_SPECIAL_DELETE,
+                370 : CC.SHORTCUT_KEY_SPECIAL_ENTER
+                }
+            
+            ( shortcut_type, shortcut_key, modifiers ) = old_serialisable_info
+            
+            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII:
+                
+                if shortcut_key in wx_to_qt_flat_conversion:
+                    
+                    shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
+                    shortcut_key = wx_to_qt_flat_conversion[ shortcut_key ]
+                    
+                elif shortcut_key in wx_to_qt_numpad_ascii_conversion:
+                    
+                    shortcut_key = wx_to_qt_numpad_ascii_conversion[ shortcut_key ]
+                    
+                    modifiers = list( modifiers )
+                    
+                    modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+                    
+                    modifiers.sort()
+                    
+                elif shortcut_key in wx_to_qt_numpad_conversion:
+                    
+                    shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL
+                    shortcut_key = wx_to_qt_numpad_conversion[ shortcut_key ]
+                    
+                    modifiers = list( modifiers )
+                    
+                    modifiers.append( CC.SHORTCUT_MODIFIER_KEYPAD )
+                    
+                    modifiers.sort()
+                    
+                
+            
+            if shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII:
+                
+                if ClientData.OrdIsAlphaUpper( shortcut_key ):
+                    
+                    shortcut_key += 32 # convert 'A' to 'a'
+                    
+                
+            
+            new_serialisable_info = ( shortcut_type, shortcut_key, modifiers )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
     def GetShortcutType( self ):
         
         return self._shortcut_type
@@ -253,70 +390,82 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
             components.append( 'shift' )
             
         
-        if self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD:
+        if CC.SHORTCUT_MODIFIER_GROUP_SWITCH in self._modifiers:
             
-            if self._shortcut_key in CC.wxk_code_string_lookup:
-                
-                components.append( CC.wxk_code_string_lookup[ self._shortcut_key ] )
-                
-            elif ClientData.OrdIsAlphaUpper( self._shortcut_key ):
-                
-                components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
-                
-            elif ClientData.OrdIsSensibleASCII( self._shortcut_key ):
-                
-                components.append( chr( self._shortcut_key ) )
-                
-            else:
-                
-                components.append( 'unknown key' )
-                
+            components.append( 'Mode_switch' )
             
-        elif self._shortcut_type == CC.SHORTCUT_TYPE_MOUSE:
+        
+        if self._shortcut_type == CC.SHORTCUT_TYPE_MOUSE and self._shortcut_key in CC.shortcut_mouse_string_lookup:
             
             components.append( CC.shortcut_mouse_string_lookup[ self._shortcut_key ] )
             
+        elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_SPECIAL and self._shortcut_key in CC.special_key_shortcut_str_lookup:
+            
+            components.append( CC.special_key_shortcut_str_lookup[ self._shortcut_key ] )
+            
+        elif self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD_ASCII and ClientData.OrdIsSensibleASCII( self._shortcut_key ):
+            
+            if ClientData.OrdIsAlphaUpper( self._shortcut_key ):
+                
+                components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
+                
+            else:
+                
+                components.append( chr( self._shortcut_key ) )
+                
+            
+        else:
+            
+            components.append( 'unknown key' )
+            
         
-        return '+'.join( components )
+        s = '+'.join( components )
+        
+        if CC.SHORTCUT_MODIFIER_KEYPAD in self._modifiers:
+            
+            s += ' (on numpad)'
+            
+        
+        return s
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT ] = Shortcut
 
-class ShortcutPanel( wx.Panel ):
+class ShortcutPanel( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._mouse_radio = wx.RadioButton( self, style = wx.RB_GROUP, label = 'mouse' )
+        self._mouse_radio = QW.QRadioButton( 'mouse', self )
         self._mouse_shortcut = ShortcutMouse( self, self._mouse_radio )
         
-        self._keyboard_radio = wx.RadioButton( self, label = 'keyboard' )
+        self._keyboard_radio = QW.QRadioButton( 'keyboard', self )
         self._keyboard_shortcut = ShortcutKeyboard( self, self._keyboard_radio )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, 'Mouse events only work for the duplicate and archive/delete filters atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,'Mouse events only work for the duplicate and archive/delete filters atm!'), CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        gridbox = wx.FlexGridSizer( 2 )
+        gridbox = QP.GridLayout( cols = 2 )
         
-        gridbox.AddGrowableCol( 1, 1 )
+        gridbox.setColumnStretch( 1, 1 )
         
-        gridbox.Add( self._mouse_radio, CC.FLAGS_VCENTER )
-        gridbox.Add( self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._keyboard_radio, CC.FLAGS_VCENTER )
-        gridbox.Add( self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._mouse_radio, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._keyboard_radio, CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def GetValue( self ):
         
-        if self._mouse_radio.GetValue() == True:
+        if self._mouse_radio.isChecked():
             
             return self._mouse_shortcut.GetValue()
             
@@ -330,27 +479,25 @@ class ShortcutPanel( wx.Panel ):
         
         if shortcut.GetShortcutType() == CC.SHORTCUT_TYPE_MOUSE:
             
-            self._mouse_radio.SetValue( True )
+            self._mouse_radio.setChecked( True )
             self._mouse_shortcut.SetValue( shortcut )
             
         else:
             
-            self._keyboard_radio.SetValue( True )
+            self._keyboard_radio.setChecked( True )
             self._keyboard_shortcut.SetValue( shortcut )
             
         
     
-class ShortcutKeyboard( wx.TextCtrl ):
+class ShortcutKeyboard( QW.QLineEdit ):
     
     def __init__( self, parent, related_radio = None ):
         
-        self._shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F7, [] )
+        self._shortcut = Shortcut()
         
         self._related_radio = related_radio
         
-        wx.TextCtrl.__init__( self, parent, style = wx.TE_PROCESS_ENTER )
-        
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        QW.QLineEdit.__init__( self, parent )
         
         self._SetShortcutString()
         
@@ -359,10 +506,10 @@ class ShortcutKeyboard( wx.TextCtrl ):
         
         display_string = self._shortcut.ToString()
         
-        wx.TextCtrl.SetValue( self, display_string )
+        self.setText( display_string )
         
     
-    def EventKeyDown( self, event ):
+    def keyPressEvent( self, event ):
         
         shortcut = ConvertKeyEventToShortcut( event )
         
@@ -372,7 +519,7 @@ class ShortcutKeyboard( wx.TextCtrl ):
             
             if self._related_radio is not None:
                 
-                self._related_radio.SetValue( True )
+                self._related_radio.setChecked( True )
                 
             
             self._SetShortcutString()
@@ -391,7 +538,7 @@ class ShortcutKeyboard( wx.TextCtrl ):
         self._SetShortcutString()
         
     
-class ShortcutMouse( wx.Button ):
+class ShortcutMouse( QW.QPushButton ):
     
     def __init__( self, parent, related_radio = None ):
         
@@ -399,9 +546,7 @@ class ShortcutMouse( wx.Button ):
         
         self._related_radio = related_radio
         
-        wx.Button.__init__( self, parent )
-        
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
+        QW.QPushButton.__init__( self, parent )
         
         self._SetShortcutString()
         
@@ -410,12 +555,20 @@ class ShortcutMouse( wx.Button ):
         
         display_string = self._shortcut.ToString()
         
-        self.SetLabel( display_string )
+        self.setText( display_string )
         
+    
+    def mousePressEvent( self, event ):
+        
+        self.EventMouse( event )
+        
+    def mouseDoubleClickEvent( self, event ):
+        
+        self.EventMouse( event )
     
     def EventMouse( self, event ):
         
-        self.SetFocus()
+        self.setFocus( QC.Qt.OtherFocusReason )
         
         shortcut = ConvertMouseEventToShortcut( event )
         
@@ -425,7 +578,7 @@ class ShortcutMouse( wx.Button ):
             
             if self._related_radio is not None:
                 
-                self._related_radio.SetValue( True )
+                self._related_radio.setChecked( True )
                 
             
             self._SetShortcutString()
@@ -501,16 +654,11 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( modifier, key, ( serialisable_service_key, data ) ) in serialisable_keyboard_actions:
                 
-                if modifier not in CC.shortcut_wx_to_hydrus_lookup:
-                    
-                    modifiers = []
-                    
-                else:
-                    
-                    modifiers = [ CC.shortcut_wx_to_hydrus_lookup[ modifier ] ]
-                    
+                # no longer updating modifier, as that was wx legacy
                 
-                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
+                modifiers = []
+                
+                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD_ASCII, key, modifiers )
                 
                 if serialisable_service_key is None:
                     
@@ -592,9 +740,11 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET ] = ShortcutSet
 
-class ShortcutsHandler( object ):
+class ShortcutsHandler( QC.QObject ):
     
     def __init__( self, parent, initial_shortcuts_names = None ):
+        
+        QC.QObject.__init__( self, parent )
         
         if initial_shortcuts_names is None:
             
@@ -602,10 +752,8 @@ class ShortcutsHandler( object ):
             
         
         self._parent = parent
+        self._parent.installEventFilter( self )
         self._shortcuts_names = list( initial_shortcuts_names )
-        
-        self._parent.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        #self._parent.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse ) # let's not mess with this until we are doing something clever with it
         
     
     def _ProcessShortcut( self, shortcut ):
@@ -643,57 +791,42 @@ class ShortcutsHandler( object ):
         return shortcut_processed
         
     
-    def EventCharHook( self, event ):
+    def eventFilter( self, watched, event ):
         
-        shortcut = ConvertKeyEventToShortcut( event )
-        
-        if shortcut is not None:
+        if event.type() == QC.QEvent.KeyPress:
             
-            if HG.shortcut_report_mode:
+            shortcut = ConvertKeyEventToShortcut( event )
+            
+            if shortcut is not None:
                 
-                message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                if HG.shortcut_report_mode:
+                    
+                    message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                    
+                    if IShouldCatchShortcutEvent( self._parent, event = event ):
+                        
+                        message += ' I am in a state to catch it.'
+                        
+                    else:
+                        
+                        message += ' I am not in a state to catch it.'
+                        
+                    
+                    HydrusData.ShowText( message )
+                    
                 
                 if IShouldCatchShortcutEvent( self._parent, event = event ):
                     
-                    message += ' I am in a state to catch it.'
+                    shortcut_processed = self._ProcessShortcut( shortcut )
                     
-                else:
-                    
-                    message += ' I am not in a state to catch it.'
-                    
-                
-                HydrusData.ShowText( message )
-                
-            
-            if IShouldCatchShortcutEvent( self._parent, event = event ):
-                
-                shortcut_processed = self._ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
+                    if shortcut_processed:
+                        
+                        return True
+                        
                     
                 
             
-        
-        event.Skip()
-        
-    
-    def EventMouse( self, event ):
-        
-        shortcut = ConvertMouseEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            shortcut_processed = self._ProcessShortcut( shortcut )
-            
-            if shortcut_processed:
-                
-                return
-                
-            
-        
-        event.Skip()
+        return False
         
     
     def AddShortcuts( self, shortcut_set_name ):

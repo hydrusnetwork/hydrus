@@ -4,7 +4,10 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
@@ -145,7 +148,7 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
                 
                 with ClientGUIDialogs.DialogTextEntry( parent, message ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         content_update_action = HC.CONTENT_UPDATE_PETITION
                         
@@ -278,22 +281,17 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
 def ClientToScreen( win, pos ):
     
-    if isinstance( win, wx.TopLevelWindow ):
-        
-        tlp = win
-        
-    else:
-        
-        tlp = win.GetTopLevelParent()
-        
+    if isinstance( pos, tuple ): pos = QP.TupleToQPoint( pos )
     
-    if win.IsShown() and tlp.IsShown():
+    tlp = win.window()
+    
+    if win.isVisible() and tlp.isVisible():
         
-        return win.ClientToScreen( pos )
+        return win.mapToGlobal( pos )
         
     else:
         
-        return ( 50, 50 )
+        return QC.QPoint( 50, 50 )
         
     
 
@@ -303,85 +301,30 @@ def ConvertTextToPixels( window, char_dimensions ):
     
     ( char_cols, char_rows ) = char_dimensions
     
-    dc = wx.ClientDC( window )
-    
-    dc.SetFont( window.GetFont() )
-    
-    return ( int( char_cols * dc.GetCharWidth() * MAGIC_TEXT_PADDING ), int( char_rows * dc.GetCharHeight() * MAGIC_TEXT_PADDING ) )
+    return ( int( window.fontMetrics().boundingRect( char_cols * 'x' ).width() * MAGIC_TEXT_PADDING ), int( char_rows * window.fontMetrics().height() * MAGIC_TEXT_PADDING ) )
     
 def ConvertTextToPixelWidth( window, char_cols ):
     
-    dc = wx.ClientDC( window )
-    
-    dc.SetFont( window.GetFont() )
-    
-    return int( char_cols * dc.GetCharWidth() * MAGIC_TEXT_PADDING )
-    
-def GetFocusTLP():
-    
-    focus = wx.Window.FindFocus()
-    
-    return GetTLP( focus )
-    
-def GetTLP( window ):
-    
-    if window is None:
-        
-        return None
-        
-    elif isinstance( window, wx.TopLevelWindow ):
-        
-        return window
-        
-    else:
-        
-        return window.GetTopLevelParent()
-        
+    return int( window.fontMetrics().boundingRect( char_cols * 'x' ).width() * MAGIC_TEXT_PADDING )
     
 def GetTLPParents( window ):
     
-    if not isinstance( window, wx.TopLevelWindow ):
-        
-        window = GetTLP( window )
-        
+    window = window.window()        
     
     parents = []
     
-    parent = window.GetParent()
+    parent = window.parentWidget()
     
     while parent is not None:
         
         parents.append( parent )
         
-        parent = parent.GetParent()
+        parent = parent.parentWidget()
         
     
     return parents
     
-def GetXYTopTLP( screen_position ):
-    
-    tlps = wx.GetTopLevelWindows()
-    
-    hittest_tlps = [ tlp for tlp in tlps if tlp.HitTest( tlp.ScreenToClient( screen_position ) ) == wx.HT_WINDOW_INSIDE and tlp.IsShown() ]
-    
-    if len( hittest_tlps ) == 0:
-        
-        return None
-        
-    
-    most_childish = hittest_tlps[0]
-    
-    for tlp in hittest_tlps[1:]:
-        
-        if most_childish in GetTLPParents( tlp ):
-            
-            most_childish = tlp
-            
-        
-    
-    return most_childish
-    
-def IsWXAncestor( child, ancestor, through_tlws = False ):
+def IsQtAncestor( child, ancestor, through_tlws = False ):
     
     if child == ancestor:
         
@@ -399,55 +342,29 @@ def IsWXAncestor( child, ancestor, through_tlws = False ):
                 return True
                 
             
-            parent = parent.GetParent()
+            parent = parent.parentWidget()
             
         
     else:
         
-        # get parent first, then test, then loop test. otherwise we exclude ancestor if it is a tlp
-        
-        while not isinstance( parent, wx.TopLevelWindow ):
-            
-            parent = parent.GetParent()
-            
-            if parent == ancestor:
-                
-                return True
-                
-            
+        # only works within window
+        return ancestor.isAncestorOf( child )
         
     
     return False
     
 def NotebookScreenToHitTest( notebook, screen_position ):
     
-    if HC.PLATFORM_OSX:
-        
-        # OS X has some unusual coordinates for its notebooks
-        # the notebook tabs are not considered to be in the client area (they are actually negative on getscreenposition())
-        # its hittest works on window coords, not client coords
-        # hence to get hittest position, we get our parent's client position and adjust by our given position in that
-        
-        # this also seems to cause menus popped on notebooks to spawn high and left, wew
-        
-        ( my_x, my_y ) = notebook.GetPosition()
-        
-        ( p_x, p_y ) = notebook.GetParent().ScreenToClient( wx.GetMousePosition() )
-        
-        position = ( p_x - my_x, p_y - my_y )
-        
-    else:
-        
-        position = notebook.ScreenToClient( screen_position )
-        
+    position = notebook.mapFromGlobal( screen_position )    
     
-    return notebook.HitTest( position )
+    return notebook.tabBar().tabAt( position )
     
 def SetBitmapButtonBitmap( button, bitmap ):
     
+    # old wx stuff, but still basically relevant
     # the button's bitmap, retrieved via GetBitmap, is not the same as the one we gave it!
     # hence testing bitmap vs that won't work to save time on an update loop, so we'll just save it here custom
-    # this isn't a big memory deal for our purposes since they are small and mostly if not all from the GlobalBMPs library so shared anyway
+    # this isn't a big memory deal for our purposes since they are small and mostly if not all from the GlobalPixmaps library so shared anyway
     
     if hasattr( button, 'last_bitmap' ):
         
@@ -457,32 +374,20 @@ def SetBitmapButtonBitmap( button, bitmap ):
             
         
     
-    button.SetBitmap( bitmap )
+    button.setIcon( QG.QIcon( bitmap ) )
+    button.setIconSize( bitmap.size() )
     
     button.last_bitmap = bitmap
     
 def TLPHasFocus( window ):
     
-    focus_tlp = GetFocusTLP()
-    
-    window_tlp = GetTLP( window )
-    
-    return window_tlp == focus_tlp
-    
-def WindowHasFocus( window ):
-    
-    focus = wx.Window.FindFocus()
-    
-    if focus is None:
-        
-        return False
-        
-    
-    return window == focus
+    return window.window().hasFocus()
     
 def WindowOrAnyTLPChildHasFocus( window ):
     
-    focus = wx.Window.FindFocus()
+    if window == QW.QApplication.activeWindow(): return True
+    
+    focus = QW.QApplication.focusWidget()
     
     while focus is not None:
         
@@ -491,14 +396,16 @@ def WindowOrAnyTLPChildHasFocus( window ):
             return True
             
         
-        focus = focus.GetParent()
+        focus = focus.parentWidget()
         
     
     return False
     
 def WindowOrSameTLPChildHasFocus( window ):
     
-    focus = wx.Window.FindFocus()
+    if window == QW.QApplication.activeWindow(): return True
+    
+    focus = QW.QApplication.focusWidget()
     
     while focus is not None:
         
@@ -507,12 +414,12 @@ def WindowOrSameTLPChildHasFocus( window ):
             return True
             
         
-        if isinstance( focus, wx.TopLevelWindow ):
+        if focus == focus.window():
             
             return False
             
         
-        focus = focus.GetParent()
+        focus = focus.parentWidget()
         
     
     return False

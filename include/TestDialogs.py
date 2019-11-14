@@ -9,28 +9,30 @@ import collections
 from . import HydrusConstants as HC
 import os
 import unittest
-import wx
 from . import HydrusGlobals as HG
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 def HitButton( button ):
     
-    wx.QueueEvent( button, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = button.GetId() ) )
+    button.click()
     
 def HitCancelButton( window ):
     
-    wx.QueueEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_CANCEL ) )
+    window.reject()
     
 def HitOKButton( window ):
     
-    wx.QueueEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_OK ) )
+    window.accept()
     
 def CancelChildDialog( window ):
     
-    children = window.GetChildren()
+    children = window.children()
     
     for child in children:
         
-        if isinstance( child, wx.Dialog ):
+        if isinstance( child, QP.Dialog ):
             
             HitCancelButton( child )
             
@@ -38,11 +40,11 @@ def CancelChildDialog( window ):
 
 def OKChildDialog( window ):
     
-    children = window.GetChildren()
+    children = window.children()
     
     for child in children:
         
-        if isinstance( child, wx.Dialog ):
+        if isinstance( child, QP.Dialog ):
             
             HitOKButton( child )
             
@@ -50,9 +52,9 @@ def OKChildDialog( window ):
     
 def PressKey( window, key ):
     
-    window.SetFocus()
+    window.setFocus( QC.Qt.OtherFocusReason )
     
-    uias = wx.UIActionSimulator()
+    uias = QP.UIActionSimulator()
     
     uias.Char( key )
     
@@ -60,7 +62,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_manage_subs( self ):
         
-        def wx_code():
+        def qt_code():
             
             title = 'subs test'
             
@@ -70,34 +72,34 @@ class TestDBDialogs( unittest.TestCase ):
                 
                 dlg.SetPanel( panel )
                 
-                HG.test_controller.CallLaterWXSafe( dlg, 2, panel.Add )
+                HG.test_controller.CallLaterQtSafe(dlg, 2, panel.Add)
                 
-                HG.test_controller.CallLaterWXSafe( dlg, 4, OKChildDialog, panel )
+                HG.test_controller.CallLaterQtSafe(dlg, 4, OKChildDialog, panel)
                 
-                HG.test_controller.CallLaterWXSafe( dlg, 6, HitCancelButton, dlg )
+                HG.test_controller.CallLaterQtSafe(dlg, 6, HitCancelButton, dlg)
                 
-                result = dlg.ShowModal()
+                result = dlg.exec()
                 
-                self.assertEqual( result, wx.ID_CANCEL )
+                self.assertEqual( result, QW.QDialog.Rejected )
                 
             
         
-        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
+        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
         
     
 class TestNonDBDialogs( unittest.TestCase ):
     
     def test_dialog_choose_new_service_method( self ):
         
-        def wx_code():
+        def qt_code():
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HitButton( dlg._register )
+                HG.test_controller.CallLaterQtSafe( dlg, 1, HitButton, dlg._register )
                 
-                result = dlg.ShowModal()
+                result = dlg.exec()
                 
-                self.assertEqual( result, wx.ID_OK )
+                self.assertEqual( result, QW.QDialog.Accepted )
                 
                 register = dlg.GetRegister()
                 
@@ -106,11 +108,11 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HitButton( dlg._setup )
+                HG.test_controller.CallLaterQtSafe( dlg, 1, HitButton, dlg._setup )
                 
-                result = dlg.ShowModal()
+                result = dlg.exec()
                 
-                self.assertEqual( result, wx.ID_OK )
+                self.assertEqual( result, QW.QDialog.Accepted )
                 
                 register = dlg.GetRegister()
                 
@@ -119,14 +121,14 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
                 
-                HitCancelButton( dlg )
+                HG.test_controller.CallLaterQtSafe( dlg, 1, HitCancelButton, dlg )
                 
-                result = dlg.ShowModal()
+                result = dlg.exec()
                 
-                self.assertEqual( result, wx.ID_CANCEL )
+                self.assertEqual( result, QW.QDialog.Rejected )
                 
             
         
-        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
+        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
         
     

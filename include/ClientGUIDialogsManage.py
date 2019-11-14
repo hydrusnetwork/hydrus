@@ -46,14 +46,14 @@ import re
 import string
 import time
 import traceback
-import wx
 import yaml
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 # Option Enums
-
-ID_NULL = wx.NewId()
-
-ID_TIMER_UPDATE = wx.NewId()
 
 class DialogManageRatings( ClientGUIDialogs.Dialog ):
     
@@ -85,41 +85,42 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             self._panels.append( self._NumericalPanel( self, numerical_services, media ) )
             
         
-        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
+        self._apply = QW.QPushButton( 'apply', self )
+        self._apply.clicked.connect( self.EventOK )
+        QP.SetForegroundColour( self._apply, (0,128,0) )
         
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+        self._cancel = QW.QPushButton( 'cancel', self )
+        self._cancel.clicked.connect( self.reject )
+        QP.SetForegroundColour( self._cancel, (128,0,0) )
         
         #
         
-        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        buttonbox = QP.HBoxLayout()
         
-        buttonbox.Add( self._apply, CC.FLAGS_VCENTER )
-        buttonbox.Add( self._cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         for panel in self._panels:
             
-            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.Add( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, buttonbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
         #
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         
     
-    def EventOK( self, event ):
+    def EventOK( self ):
         
         try:
             
@@ -139,7 +140,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
         finally:
             
-            self.EndModal( wx.ID_OK )
+            self.done( QW.QDialog.Accepted )
             
         
     
@@ -156,7 +157,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             if action == 'manage_file_ratings':
                 
-                self.EventOK( None )
+                self.EventOK()
                 
             else:
                 
@@ -171,13 +172,13 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         return command_processed
         
     
-    class _LikePanel( wx.Panel ):
+    class _LikePanel( QW.QWidget ):
         
         def __init__( self, parent, services, media ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+            QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
             
             self._services = services
             
@@ -208,7 +209,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
             
-            self.SetSizer( gridbox )
+            self.setLayout( gridbox )
             
         
         def GetContentUpdates( self ):
@@ -239,11 +240,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
         
     
-    class _NumericalPanel( wx.Panel ):
+    class _NumericalPanel( QW.QWidget ):
         
         def __init__( self, parent, services, media ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._services = services
             
@@ -281,7 +282,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_text = True )
             
-            self.SetSizer( gridbox )
+            self.setLayout( gridbox )
             
         
         def GetContentUpdates( self ):
@@ -339,25 +340,25 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         listctrl_panel.AddButton( 'edit mapping', self._Edit, enabled_only_on_selection = True )
         listctrl_panel.AddButton( 'remove mapping', self._Remove, enabled_only_on_selection = True )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+        self._ok = QW.QPushButton( 'ok', self )
+        self._ok.clicked.connect( self.EventOK )
+        QP.SetForegroundColour( self._ok, (0,128,0) )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._ok, CC.FLAGS_LONE_BUTTON )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         x = max( x, 760 )
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
         #
         
@@ -382,7 +383,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                 
@@ -390,7 +391,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                     
                     if external_port == existing_external_port and protocol == existing_protocol:
                         
-                        wx.MessageBox( 'That external port already exists!' )
+                        QW.QMessageBox.critical( self, 'Error', 'That external port already exists!' )
                         
                         return
                         
@@ -441,7 +442,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                     
@@ -468,14 +469,14 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def _RefreshExternalIP( self ):
         
-        def wx_code( external_ip_text ):
+        def qt_code( external_ip_text ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            self._status_st.SetLabelText( external_ip_text )
+            self._status_st.setText( external_ip_text )
             
         
         def THREADdo_it():
@@ -491,19 +492,19 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 external_ip_text = 'Error finding external IP: ' + str( e )
                 
             
-            wx.CallAfter( wx_code, external_ip_text )
+            QP.CallAfter( qt_code, external_ip_text )
             
         
-        self._status_st.SetLabelText( 'Loading external IP\u2026' )
+        self._status_st.setText( 'Loading external IP\u2026' )
         
         HG.client_controller.CallToThread( THREADdo_it )
         
     
     def _RefreshMappings( self ):
         
-        def wx_code( mappings ):
+        def qt_code( mappings ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -512,7 +513,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             self._mappings_list_ctrl.SetData( self._mappings )
             
-            self._status_st.SetLabelText( '' )
+            self._status_st.setText( '' )
             
             if not self._started_external_ip_fetch:
                 
@@ -532,15 +533,15 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 HydrusData.ShowException( e )
                 
-                wx.CallAfter( wx.MessageBox, 'Could not load mappings:' + os.linesep * 2 + str( e ) )
+                QP.CallAfter( QW.QMessageBox.critical, self, 'Error', 'Could not load mappings:'+os.linesep*2+str(e) )
                 
                 return
                 
             
-            wx.CallAfter( wx_code, mappings )
+            QP.CallAfter( qt_code, mappings )
             
         
-        self._status_st.SetLabelText( 'Refreshing mappings--please wait\u2026' )
+        self._status_st.setText( 'Refreshing mappings--please wait\u2026' )
         
         self._mappings_list_ctrl.SetData( [] )
         
@@ -568,8 +569,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventOK( self, event ):
+    def EventOK( self ):
         
-        self.EndModal( wx.ID_OK )
+        self.done( QW.QDialog.Accepted )
         
     

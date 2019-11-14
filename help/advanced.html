@@ -42,16 +42,14 @@
 			<p>Here is a particularly zoomed out view, after importing volume 2:</p>
 			<p><img src="gunnerkrigg_volume.png"/></p>
 			<p>Importing with tags is great for long-running series with well-formatted filenames, and will save you literally hours' finicky tagging.</p>
-			<h3>tag archives</h3>
-			<p>A user told me he had scraped all of danbooru's tags, and we got to discussing if his data could be integrated with hydrus.</p>
-			<p>There are some technical limitations that prohibit rawly importing that data into a hydrus tag repository (our different systems use different file hash standards), but I figured it would be possible to import his data into a hydrus <i>client</i>, at least for any locally stored files.</p>
-			<p>I developed <i>hydrus tag archives</i>, which are just efficiently indexed databases of hashes and tags. They are normal files, external to hydrus, that you can ftp or move around like any other. Putting a tag archive in the right directory in your client's database allows you to <i>synchronise</i> with that archive, importing whatever tags it thinks your files should have to whatever tag service you want.</p>
-			<p>To sync with an archive, go <i>services->manage services</i> and browse to your local tag service or a remote tag repository:</p>
-			<p><img src="tag_archives.png" /></p>
-			<p>Tag archive sync works a bit like the import tag options when you download from a booru or other gallery; you select which namespaces the archive offers that you are interested in, and when you click OK, the client will check if the archive has any tags for your local files. If so, it will filter them according to your namespace selection and then add or pend the tags to that tag service, just as if you had entered them in the manage tags dialog.</p>
-			<p>New files that you import will also be checked against your archive syncs, keeping you up to date.</p>
-			<p>You can get some archives users have created <a href="https://www.mediafire.com/folder/yoy1dx6or0tnr/tag_archives">here</a>.</p>
-			<p>Be careful with this tool! If you have tens of thousands of files and sync with an archive that has tens of millions of mappings, you may end up adding a whole lot of tags. It may take several minutes to initialise the sync as well. Make sure your namespaces are set exactly how you want before you click OK on the dialog.</p>
+			<h3>tag migration</h3>
+			<p class="warning">At <i>some</i> point I will write some better help for this system, which is powerful. Be careful with it!</p>
+			<p>Sometimes, you may wish to move thousands or millions of tags from one place to another. These actions are now collected in one place: <i>services->tag migration</i>.</p>
+			<p><img src="tag_migration.png" /></p>
+			<p>It proceeds from left to right, reading data from the source and applying it to the destination with the certain action. There are multiple filters available to select which sorts of tag mappings or siblings or parents will be selected from the source. The source and destination can be the same, for instance if you wanted to delete all 'clothing:' tags from a service, you would pull all those tags and then apply the 'delete' action on the same service.</p>
+			<p>You can import from and export to Hydrus Tag Archives (HTAs), which are external, portable .db files. In this way, you can move millions of tags between two hydrus clients, or share with a friend, or import from an HTA put together from a website scrape.</p>
+			<p>Tag Migration is a powerful system. Be very careful with it. Do small experiments before starting large jobs, and if you intend to migrate millions of tags, make a backup of your db beforehand, just in case it goes wrong.</p>
+			<p>This system was once much more simple, but it still had HTA support. If you wish to play around with some HTAs, there are some old user-created ones <a href="https://www.mediafire.com/folder/yoy1dx6or0tnr/tag_archives">here</a>.</p>
 			<h3>custom shortcuts</h3>
 			<p>Once you are comfortable with manually setting tags and ratings, you may be interested in setting some shortcuts to do it quicker. Try hitting <i>file->shortcuts</i> or clicking the keyboard icon on any media viewer window's top hover window.</p>
 			<p>There are two kinds of shortcuts in the program--<i>reserved</i>, which have fixed names, are undeletable, and are always active in certain contexts (related to their name), and <i>custom</i>, which you create and name and edit and are only active in a media viewer when you want them to. You can redefine some simple shortcut commands, but most importantly, you can create shortcuts for adding/removing a tag or setting/unsetting a rating.</p>

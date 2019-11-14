@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 373</h3></li>
+				<ul>
+					<li>qt:</li>
+					<li>hydrus now uses Qt for its client's user interface, migrating from wx. this is thanks to a huge effort by a user, who delivered converted code for hydrus dev to finish off</li>
+					<li>a number of hacks and patches remain to compensate for old systems, which hydrus dev will slowly clean up in normal work. ui bug and layout issue reports would be greatly appreciated</li>
+					<li>shortcut storage had to be converted from fixed wx enums to an independant system. there is a small chance that one of your shortcuts, particularly if it is on the numpad, may have been converted wrong (unusual Enter/Return buttons may be hit here). if one is not working, please check what hydrus thinks it is and try re-entering it</li>
+					<li>added tentative support for 'Mode_switch' keyboard modifier, for X11 users (and perhaps some users' AltGr?)</li>
+					<li>autocomplete results can now float in a popup window in dialogs like manage tags! they'll still embed by default, but there are now separate float/embed options for 'main gui' and 'other frame' a/cs</li>
+					<li>autocomplete results can now float in linux and macOS ok!</li>
+					<li>page drag and drop now navigates as you drag, so dropping into a page of pages works by you hovering over it and then dropping in the tabbar below, inserting exactly where you want the page to be</li>
+					<li>a couple of text inputs in the program--the watcher and gallery search pages' text inputs, particularly--now use nicer 'placeholder' text, which isn't real and only shows as grey text when the input is empty</li>
+					<li>for now, moved to icons for thumbnail 'has audio/duration' indicators, rather than the custom labels</li>
+					<li>to run the hydrus client from source, qtpy is now needed. either pyside2 (default) or qtpy5 is needed. QtCharts is optional. wx and matplotlib are no longer needed</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>'archive/delete filter' now appears even when no file is focused. it also appears when no files are selected--and will apply to everything</li>
+					<li>the system predicate edit panels now support static buttons for easy one-click select for common predicates. duration, has audio, limit, and num tags now have these</li>
+					<li>system:duration and system:num tags now render a special label if they are >0 or =0</li>
+					<li>system:untagged is now removed from the normal list</li>
+					<li>fixed a critical cpu inefficiency in the file maintenance manager's new always-on maintenance, which was lagging several users' browsing sessions while it was working</li>
+					<li>fixed ctrl+mousewheel tag autocomplete results navigation to skip over multirow parent results</li>
+					<li>fixed an issue where resetting to default bandwidth rules for a network context would not update the ui properly</li>
+					<li>fixed a bug when adding a parent/sibling from autocomplete results list</li>
+					<li>the serialised png export folder now catches when a manually inputted export path's directory does not exist</li>
+					<li>reduced metadata update lag of pages with very large media collection groups</li>
+					<li>the inaccurate 'add tags based on filename' button is now called 'import with tags'</li>
+					<li>fixed a database UNIQUE issue when two duplicate gui session save calls happen within one second</li>
+					<li>the server's lock_off command now works with the Hydrus-Key header auth (rather than hanging indefinitely wew)</li>
+					<li>the server now caches hashed access keys in the session manager, in memory, to avoid a db hit on access-key based reauthentication, and in instances where this authentication requires a db hit, now cleanly provides an appropriate 'serverbusy' error</li>
+					<li>improved some media object memory management and speedy cleanup</li>
+					<li>improved boot fail graceful exit</li>
+					<li>removed a bunch of defunct flash (swf) hacks from media viewer code</li>
+					<li>bunch of misc non-qt cleanup as I went through the code</li>
+					<li>fixed a bug with rendering network credentials for human display</li>
+					<li>cleared out the ancient tag archive sync advanced help and added a stub for the new tag migration window</li>
+					<li>various help updates around wx->Qt</li>
+				</ul>
 				<li><h3>version 372</h3></li>
 				<ul>
 					<li>petitions processing page:</li>

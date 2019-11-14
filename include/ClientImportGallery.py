@@ -16,7 +16,6 @@ import itertools
 import threading
 import time
 import traceback
-import wx
 
 class GalleryImport( HydrusSerialisable.SerialisableBase ):
     

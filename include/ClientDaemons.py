@@ -15,7 +15,6 @@ from . import ClientConstants as CC
 import random
 import threading
 import time
-import wx
 
 def DAEMONCheckExportFolders():
     

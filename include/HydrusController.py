@@ -28,7 +28,9 @@ class HydrusController( object ):
         
         self.db = None
         
-        self._pubsub = HydrusPubSub.HydrusPubSub( self )
+        pubsub_valid_callable = self._GetPubsubValidCallable()
+        
+        self._pubsub = HydrusPubSub.HydrusPubSub( self, pubsub_valid_callable )
         self._daemons = []
         self._daemon_jobs = {}
         self._caches = {}
@@ -119,6 +121,11 @@ class HydrusController( object ):
             
             return call_to_thread
             
+        
+    
+    def _GetPubsubValidCallable( self ):
+        
+        return lambda o: True
         
     
     def _GetAppropriateJobScheduler( self, time_delta ):
@@ -552,11 +559,6 @@ class HydrusController( object ):
         
     
     def MaintainMemorySlow( self ):
-        
-        gc.collect()
-        
-        #
-        del gc.garbage[:]
         
         gc.collect()
         

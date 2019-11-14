@@ -17,7 +17,10 @@ from . import HydrusGlobals as HG
 import os
 import time
 import traceback
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -31,13 +34,13 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
         
         self._st = ClientGUICommon.BetterStaticText( self, label = 'waiting for request\u2026' )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
-        self._repeating_job = HG.client_controller.CallRepeatingWXSafe( self, 0.0, 0.5, self.REPEATINGUpdate )
+        self._repeating_job = HG.client_controller.CallRepeatingQtSafe(self, 0.0, 0.5, self.REPEATINGUpdate)
         
     
     def GetAPIAccessPermissions( self ):
@@ -53,14 +56,14 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
             
             self._api_permissions = api_permissions_request
             
-            wx.MessageBox( 'Got request!' )
+            QW.QMessageBox.information( self, 'Information', 'Got request!' )
             
             ClientAPI.last_api_permissions_request = None
             self._repeating_job.Cancel()
             
-            parent = self.GetParent()
+            parent = self.parentWidget()
             
-            if parent.IsModal(): # event sometimes fires after modal done
+            if parent.isModal(): # event sometimes fires after modal done
                 
                 parent.DoOK()
                 
@@ -75,15 +78,17 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._original_api_permissions = api_permissions
         
-        self._access_key = wx.TextCtrl( self, style = wx.TE_READONLY )
+        self._access_key = QW.QLineEdit()
+        
+        self._access_key.setReadOnly( True )
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self._access_key, 66 )
         
-        self._access_key.SetMinClientSize( ( width, -1 ) )
+        self.setMinimumWidth( width )
         
-        self._name = wx.TextCtrl( self )
+        self._name = QW.QLineEdit( self )
         
-        self._basic_permissions = ClientGUICommon.BetterCheckListBox( self )
+        self._basic_permissions = QP.CheckListBox( self )
         
         for permission in ClientAPI.ALLOWED_PERMISSIONS:
             
@@ -102,11 +107,11 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         access_key = api_permissions.GetAccessKey()
         
-        self._access_key.SetValue( access_key.hex() )
+        self._access_key.setText( access_key.hex() )
         
         name = api_permissions.GetName()
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         basic_permissions = api_permissions.GetBasicPermissions()
         
@@ -123,30 +128,30 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
         self._UpdateEnabled()
         
-        self._basic_permissions.Bind( wx.EVT_CHECKLISTBOX, self.EventCheckList )
+        self._basic_permissions.checkListBoxChanged.connect( self._UpdateEnabled )
         
     
     def _UpdateEnabled( self ):
         
         can_search = ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES in self._basic_permissions.GetChecked()
         
-        self._search_tag_filter.Enable( can_search )
+        self._search_tag_filter.setEnabled( can_search )
         
     
     def _GetValue( self ):
         
-        name = self._name.GetValue()
-        access_key = bytes.fromhex( self._access_key.GetValue() )
+        name = self._name.text()
+        access_key = bytes.fromhex( self._access_key.text() )
         
         basic_permissions = self._basic_permissions.GetChecked()
         search_tag_filter = self._search_tag_filter.GetValue()
@@ -154,11 +159,6 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         api_permissions = ClientAPI.APIPermissions( name = name, access_key = access_key, basic_permissions = basic_permissions, search_tag_filter = search_tag_filter )
         
         return api_permissions
-        
-    
-    def EventCheckList( self, event ):
-        
-        self._UpdateEnabled()
         
     
     def GetValue( self ):

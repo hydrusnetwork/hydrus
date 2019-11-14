@@ -16,9 +16,9 @@ import os
 import sqlite3
 import sys
 import time
-import wx
-import wx.lib.colourutils
 import yaml
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 def AddPaddingToDimensions( dimensions, padding ):
     
@@ -88,7 +88,7 @@ def CatchExceptionClient( etype, value, tb ):
     
 def ColourIsBright( colour ):
     
-    ( r, g, b, a ) = colour.Get()
+    ( r, g, b, a ) = colour.toTuple()
     
     brightness_estimate = ( r + g + b ) // 3
     
@@ -98,7 +98,7 @@ def ColourIsBright( colour ):
     
 def ColourIsGreyish( colour ):
     
-    ( r, g, b, a ) = colour.Get()
+    ( r, g, b, a ) = colour.toTuple()
     
     greyish = r // 16 == g // 16 and g // 16 == b // 16
     
@@ -203,28 +203,28 @@ def ConvertZoomToPercentage( zoom ):
     
 def GetAlphaOfColour( colour, alpha ):
     
-    ( r, g, b, a ) = colour.Get()
+    ( r, g, b, a ) = colour.toTuple()
     
-    return wx.Colour( r, g, b, alpha )
+    return QG.QColor( r, g, b, alpha )
     
 def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
-    ( r, g, b, a ) = colour.Get()
+    ( r, g, b, a ) = colour.toTuple()
     
     if ColourIsGreyish( colour ):
         
         if ColourIsBright( colour ):
             
-            colour = wx.Colour( int( g * ( 1 - 0.05 * intensity ) ), b, r )
+            colour = QG.QColor( int(g*(1-0.05*intensity)), b, r )
             
         else:
             
-            colour = wx.Colour( int( g * ( 1 + 0.05 * intensity ) / 2 ), b, r )
+            colour = QG.QColor( int(g*(1+0.05*intensity)/2), b, r )
             
         
     else:
         
-        colour = wx.Colour( g, b, r )
+        colour = QG.QColor( g, b, r )
         
     
     return GetLighterDarkerColour( colour, intensity )
@@ -238,17 +238,17 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
     
     if ColourIsBright( colour ):
         
-        return wx.lib.colourutils.AdjustColour( colour, -5 * intensity )
+        return QP.AdjustColour( colour, -5*intensity )
         
     else:
         
-        ( r, g, b, a ) = colour.Get()
+        ( r, g, b, a ) = colour.toTuple()
         
         ( r, g, b ) = [ max( value, 32 ) for value in ( r, g, b ) ]
         
-        colour = wx.Colour( r, g, b )
+        colour = QG.QColor( r, g, b )
         
-        return wx.lib.colourutils.AdjustColour( colour, 5 * intensity )
+        return QP.AdjustColour( colour, 5*intensity )
         
     
 def GetSortTypeChoices():
@@ -378,17 +378,6 @@ def OrdIsAlpha( o ):
 def OrdIsNumber( o ):
     
     return 48 <= o and o <= 57
-    
-def ReportShutdownException():
-    
-    text = 'A serious error occurred while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
-    
-    HydrusData.DebugPrint( text )
-    
-    HydrusData.DebugPrint( traceback.format_exc() )
-    
-    wx.SafeShowMessage( 'shutdown error', text )
-    wx.SafeShowMessage( 'shutdown error', traceback.format_exc() )
     
 def ShowExceptionClient( e, do_wait = True ):
     

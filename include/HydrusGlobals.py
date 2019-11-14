@@ -7,6 +7,8 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+qt_app_running = False
+
 no_daemons = False
 no_wal = False
 no_db_temp_files = False
@@ -49,8 +51,6 @@ restart = False
 emergency_exit = False
 
 twisted_is_broke = False
-
-do_not_catch_char_hook = False
 
 dirty_object_lock = threading.Lock()
 server_busy = threading.Lock()

@@ -17,7 +17,11 @@ from . import HydrusExceptions
 from . import HydrusGlobals as HG
 from . import HydrusText
 import os
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -46,18 +50,18 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._list_ctrl.AddMenuCallable( self._GetListCtrlMenu )
         
         self._controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
-        wx.CallAfter( self._UpdateText )
+        QP.CallAfter( self._UpdateText )
         
     
     def _ConvertGallerySeedToListCtrlTuples( self, gallery_seed ):
@@ -137,28 +141,25 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             raise HydrusExceptions.DataMissing()
             
         
-        menu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+        menu = QW.QMenu()
+
+        ClientGUIMenus.AppendMenuItem( menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
+        ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
         
         ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
+
+        ClientGUIMenus.AppendMenuItem( menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
         
         ClientGUIMenus.AppendSeparator( menu )
         
         if not self._read_only:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'try again (just this one page)', 'Schedule this url to occur again.', HydrusData.Call( self._TrySelectedAgain, False ) )
+            ClientGUIMenus.AppendMenuItem( menu, 'try again (just this one page)', 'Schedule this url to occur again.', HydrusData.Call( self._TrySelectedAgain, False ) )
             
             if self._can_generate_more_pages:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'try again (and allow search to continue)', 'Schedule this url to occur again and continue.', HydrusData.Call( self._TrySelectedAgain, True ) )
-                
-            
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
+                ClientGUIMenus.AppendMenuItem( menu, 'try again (and allow search to continue)', 'Schedule this url to occur again and continue.', HydrusData.Call( self._TrySelectedAgain, True ) )
+
+        ClientGUIMenus.AppendMenuItem( menu, 'skip', 'Skip all the selected urls.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
         
         return menu
         
@@ -175,7 +176,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != wx.ID_YES:
+                if result != QW.QDialog.Accepted:
                     
                     return
                     
@@ -263,9 +264,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( status, ( total_processed, total ) ) = self._gallery_seed_log.GetStatus()
         
-        self._text.SetLabelText( status )
-        
-        self.Layout()
+        self._text.setText( status )
         
     
     def GetValue( self ):
@@ -286,7 +285,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
     def __init__( self, parent, controller, read_only, can_generate_more_pages, gallery_seed_log_get_callable, gallery_seed_log_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalBMPs.listctrl, self._ShowGallerySeedLogFrame )
+        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalPixmaps.listctrl, self._ShowGallerySeedLogFrame )
         
         self._controller = controller
         self._read_only = read_only
@@ -294,9 +293,10 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         self._gallery_seed_log_get_callable = gallery_seed_log_get_callable
         self._gallery_seed_log_set_callable = gallery_seed_log_set_callable
         
-        self.SetToolTip( 'open detailed gallery log--right-click for quick actions, if applicable' )
+        self.setToolTip( 'open detailed gallery log--right-click for quick actions, if applicable' )
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         
     
     def _ClearGallerySeeds( self, statuses_to_remove ):
@@ -305,7 +305,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             gallery_seed_log = self._gallery_seed_log_get_callable()
             
@@ -339,7 +339,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -352,7 +352,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
         except:
             
-            wx.MessageBox( 'Could not import!' )
+            QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
             
             raise
             
@@ -360,9 +360,9 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
     def _ImportFromPng( self ):
         
-        with wx.FileDialog( self, 'select the png with the urls', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png with the urls', wildcard = 'PNG (*.png)' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -376,7 +376,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                     
                 except:
                     
-                    wx.MessageBox( 'Could not import!' )
+                    QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
                     
                     raise
                     
@@ -401,11 +401,11 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'only add new urls', no_label = 'add all urls, even duplicates' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 urls_to_add = filtered_urls
                 
-            elif result == wx.ID_CANCEL:
+            elif result == QW.QDialog.Rejected:
                 
                 return
                 
@@ -419,12 +419,12 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' )
             
-            if result == wx.ID_CANCEL:
+            if result == QW.QDialog.Rejected:
                 
                 return
                 
             
-            can_generate_more_pages = result == wx.ID_NO
+            can_generate_more_pages = result == QW.QDialog.Rejected
             
         
         gallery_seeds = [ ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages ) for url in urls_to_add ]
@@ -442,7 +442,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
     
@@ -459,7 +459,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             gallery_seed_log = self._gallery_seed_log_get_callable()
             
@@ -471,9 +471,9 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
-        tlp = ClientGUIFunctions.GetTLP( self )
+        tlp = self.window()
         
-        if isinstance( tlp, wx.Dialog ):
+        if isinstance( tlp, QP.Dialog ):
             
             if self._gallery_seed_log_set_callable is None: # throw up a dialog that edits the gallery_seed log in place
                 
@@ -483,7 +483,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                     
                     dlg.SetPanel( panel )
                     
-                    dlg.ShowModal()
+                    dlg.exec()
                     
                 
             else: # throw up a dialog that edits the gallery_seed log but can be cancelled
@@ -496,7 +496,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         self._gallery_seed_log_set_callable( dupe_gallery_seed_log )
                         
@@ -518,7 +518,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
     
     def EventShowMenu( self, event ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         gallery_seed_log = self._gallery_seed_log_get_callable()
         
@@ -526,25 +526,25 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
             
             if not self._read_only and gallery_seed_log.CanRestartFailedSearch():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
+                ClientGUIMenus.AppendMenuItem( menu, 'restart and resume failed search', 'Requeue the last failed attempt and resume search from there.', gallery_seed_log.RestartFailedSearch )
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
             
-            submenu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPng )
+            submenu = QW.QMenu( menu )
+
+            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the urls in this list to the clipboard.', self._ExportToClipboard )
+            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the urls in this list to a png file.', self._ExportToPng )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'export all urls' )
             
         
         if not self._read_only:
             
-            submenu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPng )
+            submenu = QW.QMenu( menu )
+
+            ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls to this list from the clipboard.', self._ImportFromClipboard )
+            ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls to this list from a png file.', self._ImportFromPng )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'import new urls' )
             
@@ -552,11 +552,12 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         HG.client_controller.PopupMenu( self, menu )
         
     
-class GallerySeedLogStatusControl( wx.Panel ):
+class GallerySeedLogStatusControl( QW.QFrame ):
     
     def __init__( self, parent, controller, read_only, can_generate_more_pages, page_key = None ):
         
-        wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
+        QW.QFrame.__init__( self, parent )
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         self._controller = controller
         self._read_only = read_only
@@ -565,7 +566,7 @@ class GallerySeedLogStatusControl( wx.Panel ):
         
         self._gallery_seed_log = None
         
-        self._log_summary_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
+        self._log_summary_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         
         self._gallery_seed_log_button = GallerySeedLogButton( self, self._controller, self._read_only, self._can_generate_more_pages, self._GetGallerySeedLog )
         
@@ -575,12 +576,12 @@ class GallerySeedLogStatusControl( wx.Panel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._log_summary_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._gallery_seed_log_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._log_summary_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._gallery_seed_log_button, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
         #
         
@@ -596,29 +597,29 @@ class GallerySeedLogStatusControl( wx.Panel ):
         
         if self._gallery_seed_log is None:
             
-            self._log_summary_st.SetLabelText( '' )
+            self._log_summary_st.setText( '' )
             
-            if self._gallery_seed_log_button.IsEnabled():
+            if self._gallery_seed_log_button.isEnabled():
                 
-                self._gallery_seed_log_button.Disable()
+                self._gallery_seed_log_button.setEnabled( False )
                 
             
         else:
             
             ( import_summary, ( num_done, num_to_do ) ) = self._gallery_seed_log.GetStatus()
             
-            self._log_summary_st.SetLabelText( import_summary )
+            self._log_summary_st.setText( import_summary )
             
-            if not self._gallery_seed_log_button.IsEnabled():
+            if not self._gallery_seed_log_button.isEnabled():
                 
-                self._gallery_seed_log_button.Enable()
+                self._gallery_seed_log_button.setEnabled( True )
                 
             
         
     
     def SetGallerySeedLog( self, gallery_seed_log ):
         
-        if not self:
+        if not self or not QP.isValid( self ):
             
             return
             

@@ -34,46 +34,25 @@ from . import HydrusPaths
 from . import HydrusSerialisable
 from . import HydrusTags
 import os
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
-FLASHWIN_OK = False
-# this is currently a bit dodgy in wxPython 4.0, so disabled for now
-'''
-if HC.PLATFORM_WINDOWS:
     
-    try:
-        
-        import wx.lib.flashwin
-        
-        FLASHWIN_OK = True
-        
-    except Exception as e:
-        
-        HydrusData.Print( 'Flashwin did not load OK:' )
-        
-        HydrusData.PrintException( e )
-        
-'''
-    
-ID_TIMER_HOVER_SHOW = wx.NewId()
 
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
 
 def CalculateCanvasMediaSize( media, canvas_size ):
     
-    ( canvas_width, canvas_height ) = canvas_size
+    ( canvas_width, canvas_height ) = canvas_size.toTuple()
     
     if ShouldHaveAnimationBar( media ):
         
         animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
         
         canvas_height -= animated_scanbar_height
-        
-    
-    if media.GetMime() == HC.APPLICATION_FLASH:
-        
-        canvas_height -= 10
-        canvas_width -= 10
         
     
     canvas_width = max( canvas_width, 80 )
@@ -102,7 +81,7 @@ def CalculateCanvasZooms( canvas, media, show_action ):
     
     new_options = HG.client_controller.new_options
     
-    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.GetClientSize() )
+    ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.size() )
     
     width_zoom = canvas_width / media_width
     
@@ -245,21 +224,19 @@ def ShouldHaveAnimationBar( media ):
     
     is_animated_gif = media.GetMime() == HC.IMAGE_GIF and media.HasDuration()
     
-    is_animated_flash = media.GetMime() == HC.APPLICATION_FLASH and media.HasDuration()
-    
     is_native_video = media.GetMime() in HC.NATIVE_VIDEO
     
     num_frames = media.GetNumFrames()
     
     has_more_than_one_frame = num_frames is not None and num_frames > 1
     
-    return is_animated_gif or is_animated_flash or is_native_video
+    return is_animated_gif or is_native_video
     
-class Animation( wx.Window ):
+class Animation( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Window.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._media = None
         
@@ -281,77 +258,54 @@ class Animation( wx.Window ):
         
         self._video_container = None
         
-        self._canvas_bmp = None
-        self._frame_bmp = None
-        
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
-        self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        self._canvas_qt_pixmap = None
         
     
-    def _DrawFrame( self, dc ):
+    def _ClearCanvasBitmap( self ):
+        
+        if self._canvas_qt_pixmap is not None:
+            
+            self._canvas_qt_pixmap = None
+            
+        
+    
+    def _TryToDrawCanvasBitmap( self ):
+        
+        if self._video_container is None:
+            
+            self._video_container = ClientRendering.RasterContainerVideo( self._media, self.size().toTuple(), init_position = self._current_frame_index )
+            
+        
+        if not self._video_container.HasFrame( self._current_frame_index ):
+            
+            return
+            
+        
+        my_size = self.size()
+        
+        my_width = my_size.width()
+        my_height = my_size.height()
+        
+        if self._canvas_qt_pixmap is None:
+            
+            self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( my_width, my_height )
+            
+        
+        painter = QG.QPainter( self._canvas_qt_pixmap )
         
         current_frame = self._video_container.GetFrame( self._current_frame_index )
         
-        ( my_width, my_height ) = self._canvas_bmp.GetSize()
-        
         ( frame_width, frame_height ) = current_frame.GetSize()
         
-        if self._frame_bmp is not None and self._frame_bmp.GetSize() != current_frame.GetSize():
-            
-            HG.client_controller.bitmap_manager.ReleaseBitmap( self._frame_bmp )
-            
-            self._frame_bmp = None
-            
+        scale = my_width / frame_width
         
-        if self._frame_bmp is None:
-            
-            self._frame_bmp = HG.client_controller.bitmap_manager.GetBitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
-            
-            #self._frame_bmp = wx.Bitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
-            
+        painter.setTransform( QG.QTransform().scale( scale, scale ) )
         
-        current_frame.CopyToWxBitmap( self._frame_bmp )
+        current_frame_image = current_frame.GetQtImage()
         
-        # since stretchblit is unreliable, and since stretched drawing is so slow anyway, let's do it at the numpy_level
-        # so this calls for 'copy this clipped region to this bmp'
-        # the frame container clips the numpy_image, resizes up in cv, fills the bmp
-        # then we blit in 0.001ms no prob
+        painter.drawImage( 0, 0, current_frame_image )
         
-        if HC.PLATFORM_OSX or HC.PLATFORM_LINUX:
-            
-            # for some reason, stretchblit just draws white for os x
-            # and for ubuntu 16.04, it only handles the first frame!
-            # maybe a wx.copy problem?
-            # or a mask?
-            # os x double buffering something?
-            # apparently some os x blit bindings might just be missing
-            
-            scale = my_width / frame_width
-            
-            dc.SetUserScale( scale, scale )
-            
-            dc.DrawBitmap( self._frame_bmp, 0, 0 )
-            
-            dc.SetUserScale( 1.0, 1.0 )
-            
-        else:
-            
-            # next step here is to deal with superzoom cleverly, by having a clipped bmp
-            # only blit from the clipped section of the src to our clipped bmp
-            # on resize, get the parent canvas, get its clienttoscreen size/pos, compare that with our own, clip a bmp, something like that.
-            # think we'll have to initialise the dc with that in mind, moving our smaller bmp to the correct virtual location on the window
-            # I think this is dc.SetDeviceOrigin
-            # and do something similar for staticimage
-            # will need to setdirty on drag that reveals offscreen region
-            # hence prob a good idea to give the bmp 100px or so spare offscreen buffer, to reduce redraw spam, if that can be neatly done
-            
-            mdc = wx.MemoryDC( self._frame_bmp )
-            
-            dc.StretchBlit( 0, 0, my_width, my_height, mdc, 0, 0, frame_width, frame_height )
-            
+        painter.setTransform( QG.QTransform().scale( 1.0, 1.0 ) )
         
         self._current_frame_drawn = True
         
@@ -371,13 +325,13 @@ class Animation( wx.Window ):
         self._something_valid_has_been_drawn = True
         
     
-    def _DrawABlankFrame( self, dc ):
+    def _DrawABlankFrame( self, painter ):
         
         new_options = HG.client_controller.new_options
         
-        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        painter.setBackground( QG.QBrush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         self._something_valid_has_been_drawn = True
         
@@ -385,149 +339,6 @@ class Animation( wx.Window ):
     def CurrentFrame( self ):
         
         return self._current_frame_index
-        
-    
-    def EventEraseBackground( self, event ):
-        
-        pass
-        
-    
-    def EventPaint( self, event ):
-        
-        if self._canvas_bmp is None:
-            
-            return
-            
-        
-        if self._video_container is None and self._media is not None:
-            
-            self._video_container = ClientRendering.RasterContainerVideo( self._media, self.GetClientSize(), init_position = self._current_frame_index )
-            
-        
-        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
-        
-        if not self._something_valid_has_been_drawn:
-            
-            self._DrawABlankFrame( dc )
-            
-        
-    
-    def EventPropagateKey( self, event ):
-        
-        event.ResumePropagation( 1 )
-        event.Skip()
-        
-    
-    def EventPropagateMouse( self, event ):
-        
-        if not ( event.ShiftDown() or event.CmdDown() or event.AltDown() ):
-            
-            if event.LeftDClick():
-                
-                hash = self._media.GetHash()
-                mime = self._media.GetMime()
-                
-                client_files_manager = HG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                new_options = HG.client_controller.new_options
-                
-                launch_path = new_options.GetMimeLaunch( mime )
-                
-                HydrusPaths.LaunchFile( path, launch_path )
-                
-                self.Pause()
-                
-                return
-                
-            elif event.LeftDown():
-                
-                self.PausePlay()
-                
-                self.GetParent().BeginDrag()
-                
-                return
-                
-            
-        
-        screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
-        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-        
-        event.SetX( x )
-        event.SetY( y )
-        
-        event.ResumePropagation( 1 )
-        event.Skip()
-        
-    
-    def EventResize( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if my_width > 0 and my_height > 0:
-            
-            if self._canvas_bmp is None:
-                
-                make_new_one = True
-                
-            else:
-                
-                ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
-                
-                make_new_one = my_width != current_bmp_width or my_height != current_bmp_height
-                
-            
-            if make_new_one:
-                
-                if self._canvas_bmp is not None:
-                    
-                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
-                    
-                
-                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
-                
-                self._current_frame_drawn = False
-                self._something_valid_has_been_drawn = False
-                
-                self.Refresh()
-                
-                if self._media is not None:
-                    
-                    ( media_width, media_height ) = self._media.GetResolution()
-                    
-                    if self._video_container is not None:
-                        
-                        ( renderer_width, renderer_height ) = self._video_container.GetSize()
-                        
-                        we_just_zoomed_in = my_width > renderer_width or my_height > renderer_height
-                        we_just_zoomed_out = my_width < renderer_width or my_height < renderer_height
-                        
-                        if we_just_zoomed_in:
-                            
-                            if self._video_container.IsScaled():
-                                
-                                target_width = min( media_width, my_width )
-                                target_height = min( media_height, my_height )
-                                
-                                self._video_container.Stop()
-                                
-                                self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index )
-                                
-                            
-                        elif we_just_zoomed_out:
-                            
-                            if my_width < media_width or my_height < media_height: # i.e. new zoom is scaled
-                                
-                                self._video_container.Stop()
-                                
-                                self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ), init_position = self._current_frame_index )
-                                
-                            
-                        
-                    
-                
-            
         
     
     def GetAnimationBarStatus( self ):
@@ -579,9 +390,68 @@ class Animation( wx.Window ):
         return not self._paused
         
     
-    def Play( self ):
+    def mouseDoubleClickEvent( self, event ):
         
-        self._paused = False
+        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
+            
+            if event.button() == QC.Qt.LeftButton:
+                
+                self.Pause()
+                
+                hash = self._media.GetHash()
+                mime = self._media.GetMime()
+                
+                client_files_manager = HG.client_controller.client_files_manager
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                new_options = HG.client_controller.new_options
+                
+                launch_path = new_options.GetMimeLaunch( mime )
+                
+                HydrusPaths.LaunchFile( path, launch_path )
+                
+                return
+                
+            
+        
+        event.ignore()
+        
+    
+    def mousePressEvent( self, event ):
+        
+        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ):
+            
+            if event.button() == QC.Qt.LeftButton:
+                
+                self.PausePlay()
+                
+                self.parentWidget().BeginDrag()
+                
+                return
+                
+            
+        
+        event.ignore()
+        
+    
+    def paintEvent( self, event ):
+        
+        if not self._current_frame_drawn:
+            
+            self._TryToDrawCanvasBitmap()
+            
+        
+        painter = QG.QPainter( self )
+        
+        if self._canvas_qt_pixmap is None:
+            
+            self._DrawABlankFrame( painter )
+            
+        else:
+            
+            painter.drawPixmap( 0, 0, self._canvas_qt_pixmap )
+            
         
     
     def Pause( self ):
@@ -594,12 +464,72 @@ class Animation( wx.Window ):
         self._paused = not self._paused
         
     
+    def Play( self ):
+        
+        self._paused = False
+        
+    
+    def resizeEvent( self, event ):
+        
+        ( my_width, my_height ) = self.size().toTuple()
+        
+        if my_width > 0 and my_height > 0:
+            
+            if self.size() != event.oldSize():
+                
+                self._ClearCanvasBitmap()
+                
+                self._current_frame_drawn = False
+                self._something_valid_has_been_drawn = False
+                
+                self.update()
+                
+                if self._media is not None:
+                    
+                    ( media_width, media_height ) = self._media.GetResolution()
+                    
+                    if self._video_container is not None:
+                        
+                        ( renderer_width, renderer_height ) = self._video_container.GetSize()
+                        
+                        we_just_zoomed_in = my_width > renderer_width or my_height > renderer_height
+                        we_just_zoomed_out = my_width < renderer_width or my_height < renderer_height
+                        
+                        if we_just_zoomed_in:
+                            
+                            if self._video_container.IsScaled():
+                                
+                                target_width = min( media_width, my_width )
+                                target_height = min( media_height, my_height )
+                                
+                                self._video_container.Stop()
+                                
+                                self._video_container = ClientRendering.RasterContainerVideo( self._media, ( target_width, target_height ), init_position = self._current_frame_index )
+                                
+                            
+                        elif we_just_zoomed_out:
+                            
+                            if my_width < media_width or my_height < media_height: # i.e. new zoom is scaled
+                                
+                                self._video_container.Stop()
+                                
+                                self._video_container = ClientRendering.RasterContainerVideo( self._media, ( my_width, my_height ), init_position = self._current_frame_index )
+                                
+                            
+                        
+                    
+                
+            
+        
+    
     def SetMedia( self, media, start_paused = False ):
         
         self._media = media
         
         self._drag_happened = False
         self._left_down_event = None
+        
+        self._ClearCanvasBitmap()
         
         self._something_valid_has_been_drawn = False
         self._has_played_once_through = False
@@ -628,8 +558,6 @@ class Animation( wx.Window ):
         
         self._video_container = None
         
-        self._frame_bmp = None
-        
         if self._media is None:
             
             HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
@@ -638,7 +566,7 @@ class Animation( wx.Window ):
             
             HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
-            self.Refresh()
+            self.update()
             
         
     
@@ -656,7 +584,7 @@ class Animation( wx.Window ):
         
         try:
             
-            if self.IsShownOnScreen():
+            if self.isVisible():
                 
                 if self._current_frame_drawn:
                     
@@ -691,9 +619,7 @@ class Animation( wx.Window ):
                         
                         if self._video_container.HasFrame( self._current_frame_index ):
                             
-                            dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
-                            
-                            self._DrawFrame( dc )
+                            self.update()
                             
                         
                     
@@ -707,17 +633,13 @@ class Animation( wx.Window ):
             
         
     
-class AnimationBar( wx.Window ):
+class AnimationBar( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Window.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._dirty = False
-        
-        self._canvas_bmp = None
-        
-        self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
+        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
         self._media_window = None
         self._duration_ms = 1000
@@ -728,38 +650,21 @@ class AnimationBar( wx.Window ):
         self._currently_in_a_drag = False
         self._it_was_playing = False
         
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
-        
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )        
     
-    def _DrawBlank( self, dc ):
+    def _DrawBlank( self, painter ):
         
         new_options = HG.client_controller.new_options
         
-        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        painter.setBackground( QG.QBrush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
-        dc.Clear()
-        
-        self._dirty = False
+        painter.eraseRect( painter.viewport() )
         
     
     def _GetAnimationBarStatus( self ):
         
-        if FLASHWIN_OK and isinstance( self._media_window, wx.lib.flashwin.FlashWindow ):
-            
-            current_frame = self._media_window.CurrentFrame()
-            current_timestamp_ms = None
-            paused = False
-            buffer_indices = None
-            
-            return ( current_frame, current_timestamp_ms, paused, buffer_indices )
-            
-        else:
-            
-            return self._media_window.GetAnimationBarStatus()
-            
+        return self._media_window.GetAnimationBarStatus() 
         
     
     def _GetXFromFrameIndex( self, index, width_offset = 0 ):
@@ -769,31 +674,31 @@ class AnimationBar( wx.Window ):
             return 0
             
         
-        ( my_width, my_height ) = self._canvas_bmp.GetSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         return int( ( my_width - width_offset ) * index / ( self._num_frames - 1 ) )
         
     
-    def _Redraw( self, dc ):
+    def _Redraw( self, painter ):
         
         self._last_drawn_info = self._GetAnimationBarStatus()
         
         ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._last_drawn_info
         
-        ( my_width, my_height ) = self._canvas_bmp.GetSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
-        dc.SetPen( wx.TRANSPARENT_PEN )
+        painter.setPen( QC.Qt.NoPen )
         
-        background_colour = wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE )
+        background_colour = QP.GetSystemColour( QG.QPalette.Button )
         
         if paused:
             
             background_colour = ClientData.GetLighterDarkerColour( background_colour )
             
         
-        dc.SetBackground( wx.Brush( background_colour ) )
+        painter.setBackground( QG.QBrush( background_colour ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         #
         
@@ -816,17 +721,17 @@ class AnimationBar( wx.Window ):
                 
                 rendered_colour = ClientData.GetDifferentLighterDarkerColour( background_colour )
                 
-                dc.SetBrush( wx.Brush( rendered_colour ) )
+                painter.setBrush( QG.QBrush( rendered_colour ) )
                 
                 if rendered_to_x > start_x:
                     
-                    dc.DrawRectangle( start_x, 0, rendered_to_x - start_x, animated_scanbar_height )
+                    painter.drawRect( start_x, 0, rendered_to_x - start_x, animated_scanbar_height )
                     
                 else:
                     
-                    dc.DrawRectangle( start_x, 0, my_width - start_x, animated_scanbar_height )
+                    painter.drawRect( start_x, 0, my_width - start_x, animated_scanbar_height )
                     
-                    dc.DrawRectangle( 0, 0, rendered_to_x, animated_scanbar_height )
+                    painter.drawRect( 0, 0, rendered_to_x, animated_scanbar_height )
                     
                 
             
@@ -834,32 +739,32 @@ class AnimationBar( wx.Window ):
                 
                 to_be_rendered_colour = ClientData.GetDifferentLighterDarkerColour( background_colour, 1 )
                 
-                dc.SetBrush( wx.Brush( to_be_rendered_colour ) )
+                painter.setBrush( QG.QBrush( to_be_rendered_colour ) )
                 
                 if end_x > rendered_to_x:
                     
-                    dc.DrawRectangle( rendered_to_x, 0, end_x - rendered_to_x, animated_scanbar_height )
+                    painter.drawRect( rendered_to_x, 0, end_x - rendered_to_x, animated_scanbar_height )
                     
                 else:
                     
-                    dc.DrawRectangle( rendered_to_x, 0, my_width - rendered_to_x, animated_scanbar_height )
+                    painter.drawRect( rendered_to_x, 0, my_width - rendered_to_x, animated_scanbar_height )
                     
-                    dc.DrawRectangle( 0, 0, end_x, animated_scanbar_height )
+                    painter.drawRect( 0, 0, end_x, animated_scanbar_height )
                     
                 
             
         
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
+        painter.setBrush( QG.QBrush( QP.GetSystemColour( QG.QPalette.Shadow ) ) )
         
         animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
         
         nub_x = self._GetXFromFrameIndex( current_frame_index, width_offset = animated_scanbar_nub_width )
         
-        dc.DrawRectangle( nub_x, 0, animated_scanbar_nub_width, animated_scanbar_height )
+        painter.drawRect( nub_x, 0, animated_scanbar_nub_width, animated_scanbar_height )
         
         #
         
-        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        painter.setPen( QG.QPen() )
         
         s = HydrusData.ConvertValueRangeToPrettyString( current_frame_index + 1, self._num_frames )
         
@@ -868,23 +773,16 @@ class AnimationBar( wx.Window ):
             s += ' - {}'.format( HydrusData.ConvertValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
             
         
-        ( x, y ) = dc.GetTextExtent( s )
+        ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, s ).toTuple()
         
-        dc.DrawText( s, my_width - x - 3, 3 )
-        
-        self._dirty = False
-        
-    
-    def EventEraseBackground( self, event ):
-        
-        pass
+        QP.DrawText( painter, my_width-x-3, 3, s )
         
     
     def EventMouse( self, event ):
         
         if self._media_window is not None:
             
-            if not self._media_window:
+            if not self._media_window or not QP.isValid( self._media_window ):
                 
                 self.SetNoneMedia()
                 
@@ -893,7 +791,7 @@ class AnimationBar( wx.Window ):
             
             CC.CAN_HIDE_MOUSE = False
             
-            if event.ButtonDown( wx.MOUSE_BTN_ANY ):
+            if event.type() == QC.QEvent.MouseButtonPress:
                 
                 self._has_experienced_mouse_down = True
                 
@@ -905,14 +803,14 @@ class AnimationBar( wx.Window ):
                 return
                 
             
-            ( my_width, my_height ) = self.GetClientSize()
+            ( my_width, my_height ) = self.size().toTuple()
             
-            if event.Dragging():
+            if event.buttons() != QC.Qt.NoButton and event.type() == QC.QEvent.MouseMove:
                 
                 self._currently_in_a_drag = True
                 
             
-            a_button_is_down = event.LeftIsDown() or event.MiddleIsDown() or event.RightIsDown()
+            a_button_is_down = event.buttons() != QC.Qt.NoButton
             
             if a_button_is_down:
                 
@@ -921,11 +819,11 @@ class AnimationBar( wx.Window ):
                     self._it_was_playing = self._media_window.IsPlaying()
                     
                 
-                ( x, y ) = event.GetPosition()
+                event_pos = event.pos()
                 
                 animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
                 
-                compensated_x_position = x - ( animated_scanbar_nub_width / 2 )
+                compensated_x_position = event_pos.x() - ( animated_scanbar_nub_width / 2 )
                 
                 proportion = ( compensated_x_position ) / ( my_width - animated_scanbar_nub_width )
                 
@@ -934,13 +832,11 @@ class AnimationBar( wx.Window ):
                 
                 current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
                 
-                self._dirty = True
-                
-                self.Refresh()
+                self.update()
                 
                 self._media_window.GotoFrame( current_frame_index )
                 
-            elif event.ButtonUp( wx.MOUSE_BTN_ANY ):
+            elif event.type() == QC.QEvent.MouseButtonRelease:
                 
                 if self._it_was_playing:
                     
@@ -952,56 +848,17 @@ class AnimationBar( wx.Window ):
             
         
     
-    def EventPaint( self, event ):
+    def paintEvent( self, event ):
         
-        if self._canvas_bmp is not None:
-            
-            dc = wx.BufferedPaintDC( self, self._canvas_bmp )
-            
-            if self._dirty:
-                
-                if self._media_window is None:
-                    
-                    self._DrawBlank( dc )
-                    
-                else:
-                    
-                    self._Redraw( dc )
-                    
-                
-            
+        painter = QG.QPainter( self )
         
-    
-    def EventResize( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if my_width > 0 and my_height > 0:
+        if self._media_window is None:
             
-            if self._canvas_bmp is None:
-                
-                make_new_one = True
-                
-            else:
-                
-                ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
-                
-                make_new_one = my_width != current_bmp_width or my_height != current_bmp_height
-                
+            self._DrawBlank( painter )
             
-            if make_new_one:
-                
-                if self._canvas_bmp is not None:
-                    
-                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
-                    
-                
-                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
-                
-                self._dirty = True
-                
-                self.Refresh()
-                
+        else:
+            
+            self._Redraw( painter )
             
         
     
@@ -1018,9 +875,7 @@ class AnimationBar( wx.Window ):
         
         HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
-        self._dirty = True
-        
-        self.Refresh()
+        self.update()
         
     
     def SetNoneMedia( self ):
@@ -1029,87 +884,71 @@ class AnimationBar( wx.Window ):
         
         HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
         
-        self._dirty = True
-        
-        self.Refresh()
+        self.update()
         
     
     def TIMERAnimationUpdate( self ):
         
-        if self.IsShownOnScreen():
+        if self.isVisible():
             
-            if not self._media_window:
+            if not self._media_window or not QP.isValid( self._media_window ):
                 
                 self.SetNoneMedia()
                 
                 return
                 
             
-            try:
-                
-                frame_index = self._media_window.CurrentFrame()
-                
-            except AttributeError:
-                
-                text = 'The flash window produced an unusual error that probably means it never initialised properly. This is usually because Flash has not been installed for Internet Explorer. '
-                text += os.linesep * 2
-                text += 'Please close the client, open Internet Explorer, and install flash from Adobe\'s site and then try again. If that does not work, please tell the hydrus developer.'
-                
-                HydrusData.ShowText( text )
-                
-                raise
-                
+            frame_index = self._media_window.CurrentFrame()
             
             if self._last_drawn_info != self._GetAnimationBarStatus():
                 
-                self._dirty = True
-                
-                self.Refresh()
+                self.update()
                 
             
         
     
 class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent ):            
         
-        if HC.PLATFORM_OSX:
-            
-            float_on_parent = True
-            
-        else:
-            
-            float_on_parent = False
-            
-        
-        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = float_on_parent )
+        # Parent is set to None here so that this window shows up as a separate entry on the taskbar
+        ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, 'hydrus client media viewer', 'media_viewer' )
         
         self._canvas_window = None
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media_viewer' ] )
         
+        HG.client_controller.gui.RegisterCanvasFrameReference( self )
+        
+        def l():
+            
+            HydrusData.ShowText( QP.isValid( self ) )
+            
+        
+        self.destroyed.connect( HG.client_controller.gui.MaintainCanvasFrameReferences )
+        
     
     def Close( self ):
         
-        if HC.PLATFORM_OSX and self.IsFullScreen():
-            
-            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-            
-        
         self._canvas_window.CleanBeforeDestroy()
         
-        self.DestroyLater()
+        self.close()
         
     
     def FullscreenSwitch( self ):
         
-        if self.IsFullScreen():
+        if self.isFullScreen():
             
-            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
+            self.showNormal()
             
         else:
             
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
+            if HC.PLATFORM_OSX:
+                
+                return
+                
+            
+            self.showFullScreen()
             
         
         self._canvas_window.ResetMediaWindowCenterPosition()
@@ -1151,34 +990,36 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._canvas_window = canvas_window
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        self.setFocusProxy( self._canvas_window )
         
-        vbox.Add( self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox = QP.VBoxLayout( margin = 0 )
         
-        self.SetSizer( vbox )
+        QP.AddToLayout( vbox, self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.setLayout( vbox )
         
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
-        self.Show( True )
+        self.show()
         
-        wx.GetApp().SetTopWindow( self )
+        # just to reinforce, as Qt sometimes sets none focus for this window until it goes off and back on
+        self._canvas_window.setFocus( QC.Qt.OtherFocusReason )
         
-        self.Bind( wx.EVT_CLOSE, self._canvas_window.EventClose )
+        self._widget_event_filter.EVT_CLOSE( self._canvas_window.EventClose )
         
     
     def TakeFocusForUser( self ):
         
-        self._canvas_window.SetFocus()
+        self._canvas_window.setFocus( QC.Qt.OtherFocusReason )
         
     
-class Canvas( wx.Window ):
+class Canvas( QW.QWidget ):
     
-    BORDER = wx.SIMPLE_BORDER
     PREVIEW_WINDOW = False
     
     def __init__( self, parent ):
         
-        wx.Window.__init__( self, parent, style = self.BORDER )
+        QW.QWidget.__init__( self, parent )
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
         
@@ -1197,31 +1038,24 @@ class Canvas( wx.Window ):
         
         self._maintain_pan_and_zoom = False
         
-        self._dirty = True
         self._closing = False
         
         self._service_keys_to_services = {}
         
         self._current_media = None
         self._media_container = MediaContainer( self )
+        
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
         
-        self._last_drag_coordinates = None
+        self._last_drag_pos = None
         self._current_drag_is_touch = False
-        self._last_motion_coordinates = ( 0, 0 )
-        self._media_window_position = ( 0, 0 )
+        self._last_motion_pos = QC.QPoint( 0, 0 )
+        self._media_window_pos = QC.QPoint( 0, 0 )
         
         self._UpdateBackgroundColour()
         
-        self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
-        
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
-        
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
         
         HG.client_controller.sub( self, 'ZoomIn', 'canvas_zoom_in' )
         HG.client_controller.sub( self, 'ZoomOut', 'canvas_zoom_out' )
@@ -1230,7 +1064,7 @@ class Canvas( wx.Window ):
         HG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         HG.client_controller.sub( self, 'ProcessApplicationCommand', 'canvas_application_command' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
-        HG.client_controller.sub( self, '_SetDirty', 'notify_new_colourset' )
+        HG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         
     
     def _Archive( self ):
@@ -1275,7 +1109,7 @@ class Canvas( wx.Window ):
                 
             else:
                 
-                wx.MessageBox( 'Sorry, cannot take bmps of anything but static images right now!' )
+                QW.QMessageBox.critical( self, 'Error', 'Sorry, cannot take bmps of anything but static images right now!' )
                 
             
         
@@ -1298,7 +1132,7 @@ class Canvas( wx.Window ):
                 
             else:
                 
-                wx.MessageBox( 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
+                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, you do not have that file in your database, so its non-sha256 hashes are unknown.' )
                 
                 return
                 
@@ -1357,8 +1191,6 @@ class Canvas( wx.Window ):
             return False
             
         
-        self.SetFocus() # annoying bug because of the modal dialog
-        
         def do_it( jobs ):
             
             for service_keys_to_content_updates in jobs:
@@ -1379,36 +1211,34 @@ class Canvas( wx.Window ):
             return
             
         
-        ( my_x, my_y ) = self.GetClientSize()
-        ( media_x, media_y ) = self._media_container.GetClientSize()
+        my_size = self.size()
+        media_size = self._media_container.size()
         
-        x_pan_distance = min( my_x // 12, media_x // 12 )
-        y_pan_distance = min( my_y // 12, media_y // 12 )
+        x_pan_distance = min( my_size.width(), media_size.width() ) // 12
+        y_pan_distance = min( my_size.height(), media_size.height() ) // 12
         
         delta_x = delta_x_step * x_pan_distance
         delta_y = delta_y_step * y_pan_distance
         
-        ( x, y ) = self._media_window_position
+        delta = QC.QPoint( delta_x, delta_y )
         
-        self._media_window_position = ( x + delta_x, y + delta_y )
+        self._media_window_pos += delta
         
         self._DrawCurrentMedia()
         
     
-    def _DrawBackgroundBitmap( self, dc ):
+    def _DrawBackgroundBitmap( self, painter ):
         
         background_colour = self._GetBackgroundColour()
         
-        dc.SetBackground( wx.Brush( background_colour ) )
+        painter.setBackground( QG.QBrush( background_colour ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
-        self._DrawBackgroundDetails( dc )
-        
-        self._dirty = False
+        self._DrawBackgroundDetails( painter )
         
     
-    def _DrawBackgroundDetails( self, dc ):
+    def _DrawBackgroundDetails( self, painter ):
         
         pass
         
@@ -1420,7 +1250,7 @@ class Canvas( wx.Window ):
             return
             
         
-        ( my_width, my_height ) = self.GetClientSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         if my_width > 0 and my_height > 0:
             
@@ -1475,7 +1305,7 @@ class Canvas( wx.Window ):
     
     def _GetMediaContainerSize( self ):
         
-        ( my_width, my_height ) = self.GetClientSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         action = self._GetShowAction( self._current_media )
         
@@ -1546,9 +1376,9 @@ class Canvas( wx.Window ):
     
     def _ManageNotes( self ):
         
-        def wx_do_it( media, notes ):
+        def qt_do_it( media, notes ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -1559,24 +1389,25 @@ class Canvas( wx.Window ):
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
                 
-                control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
+                control = QW.QPlainTextEdit( panel )
                 
-                size = ClientGUIFunctions.ConvertTextToPixels( control, ( 80, 14 ) )
+                ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( control, ( 80, 14 ) )
                 
-                control.SetInitialSize( size )
+                control.setMinimumWidth( min_width )
+                control.setMinimumHeight( min_height )
                 
-                control.SetValue( notes )
+                control.setPlainText( notes )
                 
                 panel.SetControl( control )
                 
                 dlg.SetPanel( panel )
                 
-                wx.CallAfter( control.SetFocus )
-                wx.CallAfter( control.SetInsertionPointEnd )
+                QP.CallAfter( control.setFocus, QC.Qt.OtherFocusReason )
+                QP.CallAfter( control.SetInsertionPointEnd )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
-                    notes = control.GetValue()
+                    notes = control.plainText()
                     
                     hash = media.GetHash()
                     
@@ -1595,7 +1426,7 @@ class Canvas( wx.Window ):
             
             notes = HG.client_controller.Read( 'file_notes', media.GetHash() )
             
-            wx.CallAfter( wx_do_it, media, notes )
+            QP.CallAfter( qt_do_it, media, notes )
             
         
         if self._current_media is None:
@@ -1617,7 +1448,7 @@ class Canvas( wx.Window ):
             
             with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg:
                 
-                dlg.ShowModal()
+                dlg.exec()
                 
             
         
@@ -1629,7 +1460,7 @@ class Canvas( wx.Window ):
             return
             
         
-        for child in self.GetChildren():
+        for child in self.children():
             
             if isinstance( child, ClientGUITopLevelWindows.FrameThatTakesScrollablePanel ):
                 
@@ -1637,7 +1468,7 @@ class Canvas( wx.Window ):
                 
                 if isinstance( panel, ClientGUITags.ManageTagsPanel ):
                     
-                    panel.SetFocus()
+                    panel.setFocus( QC.Qt.OtherFocusReason )
                     
                     return
                     
@@ -1645,7 +1476,7 @@ class Canvas( wx.Window ):
             
         
         # take any focus away from hover window, which will mess up window order when it hides due to the new frame
-        self.SetFocus()
+        self.setFocus( QC.Qt.OtherFocusReason )
         
         title = 'manage tags'
         frame_key = 'manage_tags_frame'
@@ -1672,7 +1503,7 @@ class Canvas( wx.Window ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
     
@@ -1685,27 +1516,10 @@ class Canvas( wx.Window ):
         
         mime = self._current_media.GetMime()
         
-        if mime == HC.APPLICATION_FLASH:
-            
-            self._media_container.SetEmbedButton()
-            
-        elif self._current_media.HasDuration():
+        if self._current_media.HasDuration():
             
             self._media_container.Pause()
             
-        
-    
-    def _MouseIsOverFlash( self ):
-        
-        if self._current_media is not None and self._current_media.GetMime() == HC.APPLICATION_FLASH:
-            
-            if self.MouseIsOverMedia():
-                
-                return True
-                
-            
-        
-        return False
         
     
     def _OpenExternally( self ):
@@ -1825,18 +1639,18 @@ class Canvas( wx.Window ):
             return
             
         
-        ( my_width, my_height ) = self.GetClientSize()
+        my_size = self.size()
         
         action = self._GetShowAction( self._current_media )
         
         ( media_width, media_height ) = CalculateMediaContainerSize( self._current_media, self._current_zoom, action )
         
-        x = ( my_width - media_width ) // 2
-        y = ( my_height - media_height ) // 2
+        x = ( my_size.width() - media_width ) // 2
+        y = ( my_size.height() - media_height ) // 2
         
-        self._media_window_position = ( x, y )
+        self._media_window_pos = QC.QPoint( x, y )
         
-        self._last_drag_coordinates = None
+        self._last_drag_pos = None
         
     
     def _SaveCurrentMediaViewTime( self ):
@@ -1873,13 +1687,6 @@ class Canvas( wx.Window ):
         HG.client_controller.file_viewing_stats_manager.FinishViewing( viewtype, hash, viewtime_delta )
         
     
-    def _SetDirty( self ):
-        
-        self._dirty = True
-        
-        self.Refresh()
-        
-    
     def _ShowMediaInNewPage( self ):
         
         if self._current_media is None:
@@ -1903,21 +1710,21 @@ class Canvas( wx.Window ):
         
         new_size = self._GetMediaContainerSize()
         
-        if new_size != self._media_container.GetSize():
+        if new_size != self._media_container.size().toTuple():
             
-            self._media_container.SetSize( new_size )
+            self._media_container.setFixedSize( QP.TupleToQSize( new_size ) )
             
         
-        if self._media_window_position == self._media_container.GetPosition():
+        if self._media_window_pos == self._media_container.pos():
             
             if HC.PLATFORM_OSX:
                 
-                self._media_container.Refresh()
+                self._media_container.update()
                 
             
         else:
             
-            self._media_container.SetPosition( self._media_window_position )
+            self._media_container.move( self._media_window_pos )
             
         
     
@@ -1928,38 +1735,22 @@ class Canvas( wx.Window ):
             return
             
         
-        if self._current_media.GetMime() == HC.APPLICATION_FLASH:
-            
-            # we want to preserve whitespace around flash
-            
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            action = self._GetShowAction( self._current_media )
-            
-            ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_media, new_zoom, action )
-            
-            if new_media_width >= my_width or new_media_height >= my_height:
-                
-                return
-                
-            
-        
-        ( media_window_width, media_window_height ) = self._media_container.GetSize()
+        ( media_window_width, media_window_height ) = self._media_container.size().toTuple()
         
         ( new_media_window_width, new_media_window_height ) = CalculateMediaSize( self._current_media, new_zoom )
         
         width_delta = media_window_width - new_media_window_width
         height_delta = media_window_height - new_media_window_height
         
-        ( x, y ) = self._media_window_position
+        half_delta = QC.QPoint( width_delta // 2, height_delta // 2 )
         
-        self._media_window_position = ( x + ( width_delta / 2 ), y + ( height_delta / 2 ) )
+        self._media_window_pos += half_delta
         
         self._current_zoom = new_zoom
         
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
         
-        self._SetDirty()
+        self.update()
         
     
     def _Undelete( self ):
@@ -1978,7 +1769,7 @@ class Canvas( wx.Window ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, 'Undelete this file?' )
                 
-                if result == wx.ID_YES:
+                if result == QW.QDialog.Accepted:
                     
                     do_it = True
                     
@@ -1989,17 +1780,15 @@ class Canvas( wx.Window ):
                 HG.client_controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( self._current_media.GetHash(), ) ) ] } )
                 
             
-            self.SetFocus() # annoying bug because of the modal dialog
-            
         
     
     def _UpdateBackgroundColour( self ):
         
         colour = self._GetBackgroundColour()
         
-        self.SetBackgroundColour( colour )
+        QP.SetBackgroundColour( self, colour )
         
-        self.Refresh()
+        self.update()
         
     
     def _ZoomIn( self ):
@@ -2101,7 +1890,7 @@ class Canvas( wx.Window ):
                 return
                 
             
-            ( my_width, my_height ) = self.GetClientSize()
+            ( my_width, my_height ) = self.size().toTuple()
             
             ( media_width, media_height ) = self._current_media.GetResolution()
             
@@ -2128,74 +1917,26 @@ class Canvas( wx.Window ):
         self.SetMedia( None )
         
     
-    def EventCharHook( self, event ):
+    def BeginDrag( self, point = None ):
         
-        if self._IShouldCatchShortcutEvent( event = event ):
+        if point is None:
             
-            shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
-                    
-                
+            point = self.mapFromGlobal( QG.QCursor.pos() )
             
         
-        event.Skip()
-        
-    
-    def BeginDrag( self, pos = None ):
-        
-        if pos is None:
-            
-            ( x, y ) = self.ScreenToClient( wx.GetMousePosition() )
-            
-        else:
-            
-            ( x, y ) = pos
-            
-        
-        self._last_drag_coordinates = ( x, y )
+        self._last_drag_pos = point
         self._current_drag_is_touch = False
         
     
-    def EventEraseBackground( self, event ):
-        
-        pass
-        
-    
-    def EventPaint( self, event ):
-        
-        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
-        
-        if self._dirty:
-            
-            self._DrawBackgroundBitmap( dc )
-            
-            if self._current_media is not None:
-                
-                self._DrawCurrentMedia()
-                
-            
-        
-    
-    def EventResize( self, event ):
+    def resizeEvent( self, event ):
         
         if not self._closing:
             
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
-            
-            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
+            ( my_width, my_height ) = self.size().toTuple()
             
             if self._current_media is not None:
                 
-                ( media_width, media_height ) = self._media_container.GetClientSize()
+                ( media_width, media_height ) = self._media_container.size().toTuple()
                 
                 if my_width != media_width or my_height != media_height:
                     
@@ -2205,10 +1946,8 @@ class Canvas( wx.Window ):
                     
                 
             
-            self._SetDirty()
+            self.update()
             
-        
-        event.Skip()
         
     
     def FlipActiveCustomShortcutName( self, name ):
@@ -2233,6 +1972,26 @@ class Canvas( wx.Window ):
     def KeepCursorAlive( self ):
         
         pass
+        
+    
+    def keyPressEvent( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
+            
+            shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
+            
+            if shortcut is not None:
+                
+                shortcut_processed = self._ProcessShortcut( shortcut )
+                
+                if shortcut_processed:
+                    
+                    return
+                    
+                
+            
+        
+        QW.QWidget.keyPressEvent( self, event )
         
     
     def ManageTags( self, canvas_key ):
@@ -2263,17 +2022,11 @@ class Canvas( wx.Window ):
             
         else:
             
-            ( x, y ) = self._media_container.GetScreenPosition()
-            ( width, height ) = self._media_container.GetSize()
+            media_mouse_pos = self._media_container.mapFromGlobal( QG.QCursor.pos() )
             
-            ( mouse_x, mouse_y ) = wx.GetMousePosition()
+            media_rect = self._media_container.rect()
             
-            if mouse_x >= x and mouse_x <= x + width and mouse_y >= y and mouse_y <= y + height:
-                
-                return True
-                
-            
-            return False
+            return media_rect.contains( media_mouse_pos )
             
         
     
@@ -2282,6 +2035,18 @@ class Canvas( wx.Window ):
         if self._canvas_key == canvas_key:
             
             self._OpenExternally()
+            
+        
+    
+    def paintEvent( self, event ):
+        
+        painter = QG.QPainter( self )
+        
+        self._DrawBackgroundBitmap( painter )
+        
+        if self._current_media is not None:
+            
+            self._DrawCurrentMedia()
             
         
     
@@ -2470,7 +2235,9 @@ class Canvas( wx.Window ):
                     
                     show_action = self._GetShowAction( self._current_media )
                     
-                    self._media_container.SetMedia( self._current_media, initial_size, self._media_window_position, show_action )
+                    pos = ( self._media_window_pos.x(), self._media_window_pos.y() )
+                    
+                    self._media_container.SetMedia( self._current_media, initial_size, pos, show_action )
                     
                     self._PrefetchNeighbours()
                     
@@ -2484,7 +2251,7 @@ class Canvas( wx.Window ):
             
             HG.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._SetDirty()
+            self.update()
             
         
     
@@ -2526,10 +2293,15 @@ class CanvasPanel( Canvas ):
         HG.client_controller.sub( self, 'PreviewChanged', 'preview_changed' )
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
-        
     
-    def EventShowMenu( self, event ):
+    def mousePressEvent( self, event ):
+        
+        if event.button() != QC.Qt.RightButton:
+            
+            event.ignore()
+            
+            return
+            
         
         if self._current_media is not None:
             
@@ -2545,7 +2317,7 @@ class CanvasPanel( Canvas ):
             
             i_can_post_ratings = len( local_ratings_services ) > 0
             
-            menu = wx.Menu()
+            menu = QW.QMenu()
             
             #
             
@@ -2553,7 +2325,7 @@ class CanvasPanel( Canvas ):
             
             top_line = info_lines.pop(0)
             
-            info_menu = wx.Menu()
+            info_menu = QW.QMenu( menu )
             
             for line in info_lines:
                 
@@ -2570,89 +2342,87 @@ class CanvasPanel( Canvas ):
             
             if self._current_media.HasInbox():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file.', self._Archive )
+                ClientGUIMenus.AppendMenuItem( menu, 'archive', 'Archive this file.', self._Archive )
                 
             
             if self._current_media.HasArchive():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'inbox', 'Send this files back to the inbox.', self._Inbox )
+                ClientGUIMenus.AppendMenuItem( menu, 'inbox', 'Send this files back to the inbox.', self._Inbox )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete this file.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+
+                ClientGUIMenus.AppendMenuItem( menu, 'delete', 'Delete this file.', self._Delete, file_service_key=CC.LOCAL_FILE_SERVICE_KEY )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key=CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            manage_menu = wx.Menu()
+            manage_menu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
             
             if i_can_post_ratings:
                 
-                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
+                ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known URLs.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'known urls', 'Manage this file\'s known URLs.', self._ManageURLs )
             
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
             ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            open_menu = wx.Menu()
+            open_menu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+            ClientGUIMenus.AppendMenuItem( open_menu, 'in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
+            ClientGUIMenus.AppendMenuItem( open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
             
             show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
             
             if show_open_in_explorer:
                 
-                ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                ClientGUIMenus.AppendMenuItem( open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
                 
             
             ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
             
-            share_menu = wx.Menu()
+            share_menu = QW.QMenu( menu )
             
-            copy_menu = wx.Menu()
+            copy_menu = QW.QMenu( share_menu )
+
+            ClientGUIMenus.AppendMenuItem( copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
-            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
-            
-            copy_hash_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Open this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Open this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Open this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Open this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
+            copy_hash_menu = QW.QMenu( copy_hash_menu )
+
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Open this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Open this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Open this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Open this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
             if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
                 
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
                 
-            
-            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
+
+            ClientGUIMenus.AppendMenuItem( copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
             
             ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
             
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
             HG.client_controller.PopupMenu( self, menu )
-            
-            event.Skip()
             
         
     
@@ -2697,14 +2467,12 @@ class CanvasPanel( Canvas ):
             
             if do_redraw:
                 
-                self._SetDirty()
+                self.update()
                 
             
         
     
 class CanvasWithDetails( Canvas ):
-    
-    BORDER = wx.NO_BORDER
     
     def __init__( self, parent ):
         
@@ -2713,33 +2481,33 @@ class CanvasWithDetails( Canvas ):
         HG.client_controller.sub( self, 'RedrawDetails', 'refresh_all_tag_presentation_gui' )
         
     
-    def _DrawAdditionalTopMiddleInfo( self, dc, current_y ):
+    def _DrawAdditionalTopMiddleInfo( self, painter, current_y ):
         
         pass
         
     
-    def _DrawBackgroundDetails( self, dc ):
+    def _DrawBackgroundDetails( self, painter ):
         
         if self._current_media is None:
             
             text = self._GetNoMediaText()
             
-            ( width, height ) = dc.GetTextExtent( text )
+            ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
             
-            ( my_width, my_height ) = self.GetClientSize()
+            ( my_width, my_height ) = self.size().toTuple()
             
             x = ( my_width - width ) // 2
             y = ( my_height - height ) // 2
             
-            dc.DrawText( text, x, y )
+            QP.DrawText( painter, x, y, text )
             
         else:
             
-            ( client_width, client_height ) = self.GetClientSize()
+            ( client_width, client_height ) = self.size().toTuple()
             
             # tags on the top left
             
-            dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+            painter.setFont( QW.QApplication.font() )
             
             tags_manager = self._current_media.GetTagsManager()
             
@@ -2786,16 +2554,13 @@ class CanvasWithDetails( Canvas ):
                     ( r, g, b ) = namespace_colours[ None ]
                     
                 
-                dc.SetTextForeground( wx.Colour( r, g, b ) )
+                painter.setPen( QG.QPen( QG.QColor( r, g, b ) ) )
                 
-                ( x, y ) = dc.GetTextExtent( display_string )
+                ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string ).toTuple()
                 
-                dc.DrawText( display_string, 5, current_y )
+                QP.DrawText( painter, 5, current_y, display_string )
                 
                 current_y += y
-                
-            
-            dc.SetTextForeground( self._new_options.GetColour( CC.COLOUR_MEDIA_TEXT ) )
             
             # top right
             
@@ -2809,7 +2574,7 @@ class CanvasWithDetails( Canvas ):
             
             like_services.reverse()
             
-            like_rating_current_x = client_width - 16
+            like_rating_current_x = client_width - 16 - 2 # -2 to line up exactly with the floating panel
             
             for like_service in like_services:
                 
@@ -2817,7 +2582,7 @@ class CanvasWithDetails( Canvas ):
                 
                 rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), service_key )
                 
-                ClientRatings.DrawLike( dc, like_rating_current_x, current_y, service_key, rating_state )
+                ClientRatings.DrawLike( painter, like_rating_current_x, current_y, service_key, rating_state )
                 
                 like_rating_current_x -= 16
                 
@@ -2837,7 +2602,7 @@ class CanvasWithDetails( Canvas ):
                 
                 numerical_width = ClientRatings.GetNumericalWidth( service_key )
                 
-                ClientRatings.DrawNumerical( dc, client_width - numerical_width, current_y, service_key, rating_state, rating )
+                ClientRatings.DrawNumerical( painter, client_width - numerical_width - 2, current_y, service_key, rating_state, rating ) # -2 to line up exactly with the floating panel
                 
                 current_y += 20
                 
@@ -2848,12 +2613,12 @@ class CanvasWithDetails( Canvas ):
             
             if CC.TRASH_SERVICE_KEY in self._current_media.GetLocationsManager().GetCurrent():
                 
-                icons_to_show.append( CC.GlobalBMPs.trash )
+                icons_to_show.append( CC.GlobalPixmaps.trash )
                 
             
             if self._current_media.HasInbox():
                 
-                icons_to_show.append( CC.GlobalBMPs.inbox )
+                icons_to_show.append( CC.GlobalPixmaps.inbox )
                 
             
             if len( icons_to_show ) > 0:
@@ -2862,13 +2627,14 @@ class CanvasWithDetails( Canvas ):
                 
                 for icon in icons_to_show:
                     
-                    dc.DrawBitmap( icon, client_width + icon_x - 18, current_y )
+                    painter.drawPixmap( client_width+icon_x-18, current_y, icon )
                     
                     icon_x -= 18
                     
                 
                 current_y += 18
                 
+            painter.setPen( QG.QPen( self._new_options.GetColour( CC.COLOUR_MEDIA_TEXT ) ) )
             
             # repo strings
             
@@ -2876,9 +2642,9 @@ class CanvasWithDetails( Canvas ):
             
             for remote_string in remote_strings:
                 
-                ( text_width, text_height ) = dc.GetTextExtent( remote_string )
+                ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, remote_string ).toTuple()
                 
-                dc.DrawText( remote_string, client_width - text_width - 3, current_y )
+                QP.DrawText( painter, client_width-text_width-3, current_y, remote_string )
                 
                 current_y += text_height + 4
                 
@@ -2891,9 +2657,9 @@ class CanvasWithDetails( Canvas ):
             
             for ( display_string, url ) in url_tuples:
                 
-                ( text_width, text_height ) = dc.GetTextExtent( display_string )
+                ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, display_string ).toTuple()
                 
-                dc.DrawText( display_string, client_width - text_width - 3, current_y )
+                QP.DrawText( painter, client_width-text_width-3, current_y, display_string )
                 
                 current_y += text_height + 4
                 
@@ -2906,22 +2672,22 @@ class CanvasWithDetails( Canvas ):
             
             if len( title_string ) > 0:
                 
-                ( x, y ) = dc.GetTextExtent( title_string )
+                ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, title_string ).toTuple()
                 
-                dc.DrawText( title_string, ( client_width - x ) // 2, current_y )
+                QP.DrawText( painter, (client_width-x)//2, current_y, title_string )
                 
                 current_y += y + 3
                 
             
             info_string = self._GetInfoString()
             
-            ( x, y ) = dc.GetTextExtent( info_string )
+            ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, info_string ).toTuple()
             
-            dc.DrawText( info_string, ( client_width - x ) // 2, current_y )
+            QP.DrawText( painter, (client_width-x)//2, current_y, info_string )
             
             current_y += y + 3
             
-            self._DrawAdditionalTopMiddleInfo( dc, current_y )
+            self._DrawAdditionalTopMiddleInfo( painter, current_y )
             
             # bottom-right index
             
@@ -2929,9 +2695,9 @@ class CanvasWithDetails( Canvas ):
             
             if len( index_string ) > 0:
                 
-                ( x, y ) = dc.GetTextExtent( index_string )
+                ( x, y ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, index_string ).toTuple()
                 
-                dc.DrawText( index_string, client_width - x - 3, client_height - y - 3 )
+                QP.DrawText( painter, client_width-x-3, client_height-y-3, index_string )
                 
             
         
@@ -2954,7 +2720,7 @@ class CanvasWithDetails( Canvas ):
     
     def RedrawDetails( self ):
         
-        self._SetDirty()
+        self.update()
         
     
 class CanvasWithHovers( CanvasWithDetails ):
@@ -2963,18 +2729,18 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         CanvasWithDetails.__init__( self, parent )
         
-        self._hover_commands = self._GenerateHoverTopFrame()
-        self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self, self._canvas_key )
+        self._GenerateHoverTopFrame()
+        ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self, self._canvas_key )
         
         ratings_services = HG.client_controller.services_manager.GetServices( ( HC.RATINGS_SERVICES ) )
         
-        self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self, self._canvas_key )
+        ClientGUIHoverFrames.FullscreenHoverFrameTopRight( self, self, self._canvas_key )
         
         #
         
         self._timer_cursor_hide_job = None
         
-        self.Bind( wx.EVT_MOTION, self.EventDrag )
+        self._widget_event_filter.EVT_MOTION( self.EventDrag )
         
         HG.client_controller.sub( self, 'Close', 'canvas_close' )
         HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
@@ -2984,7 +2750,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self._closing = True
         
-        self.GetParent().Close()
+        self.parentWidget().close()
         
     
     def _GenerateHoverTopFrame( self ):
@@ -3002,44 +2768,42 @@ class CanvasWithHovers( CanvasWithDetails ):
     
     def EventDragBegin( self, event ):
         
-        ( x, y ) = event.GetPosition()
+        point = event.pos()
         
-        self.BeginDrag( ( x, y ) )
+        self.BeginDrag( point = point )
         
-        event.Skip()
+        return True # was: event.ignore()
         
     
     def EventDragEnd( self, event ):
         
-        self._last_drag_coordinates = None
+        self._last_drag_pos = None
         
-        event.Skip()
+        return True # was: event.ignore()
         
     
     def EventDrag( self, event ):
         
         CC.CAN_HIDE_MOUSE = True
         
-        ( x, y ) = event.GetPosition()
+        event_pos = event.pos()
         
-        show_mouse = self.GetCursor() == wx.Cursor( wx.CURSOR_ARROW )
+        show_mouse = self.cursor() == QG.QCursor( QC.Qt.ArrowCursor )
         
-        is_dragging = event.Dragging() and self._last_drag_coordinates is not None
-        has_moved = ( x, y ) != self._last_motion_coordinates
+        is_dragging = ( event.type() == QC.QEvent.MouseMove and event.buttons() != QC.Qt.NoButton ) and self._last_drag_pos is not None
+        has_moved = event_pos != self._last_motion_pos
         
         if is_dragging:
             
-            ( old_x, old_y ) = self._last_drag_coordinates
+            delta = event_pos - self._last_drag_pos
             
-            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
+            approx_distance = delta.manhattanLength()
             
-            delta_distance = ( ( delta_x ** 2 ) + ( delta_y ** 2 ) ) ** 0.5
-            
-            if delta_distance > 0:
+            if approx_distance > 0:
                 
                 touchscreen_canvas_drags_unanchor = HG.client_controller.new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' )
                 
-                if not self._current_drag_is_touch and delta_distance > 50:
+                if not self._current_drag_is_touch and approx_distance > 50:
                     
                     # if user is able to generate such a large distance, they are almost certainly touching
                     
@@ -3055,38 +2819,38 @@ class CanvasWithHovers( CanvasWithDetails ):
                     
                     show_mouse = False
                     
-                    self.WarpPointer( old_x, old_y )
+                    global_mouse_pos = self.mapToGlobal( self._last_drag_pos )
+                    
+                    QG.QCursor.setPos( global_mouse_pos )
                     
                 else:
                     
                     show_mouse = True
                     
-                    self._last_drag_coordinates = ( x, y )
+                    self._last_drag_pos = QC.QPoint( event_pos )
                     
                 
-                ( x, y ) = self._media_window_position
-                
-                self._media_window_position = ( x + delta_x, y + delta_y )
+                self._media_window_pos += delta
                 
                 self._DrawCurrentMedia()
                 
             
         elif has_moved:
             
-            self._last_motion_coordinates = ( x, y )
+            self._last_motion_pos = QC.QPoint( event_pos )
             
             show_mouse = True
             
         
         if show_mouse:
             
-            self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
+            self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
             
             self._PutOffCursorHide()
             
         else:
             
-            self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
+            self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
             
         
     
@@ -3094,7 +2858,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         if canvas_key == self._canvas_key:
             
-            self.GetParent().FullscreenSwitch()
+            self.parentWidget().FullscreenSwitch()
             
         
     
@@ -3105,7 +2869,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             self._timer_cursor_hide_job.Cancel()
             
         
-        self._timer_cursor_hide_job = HG.client_controller.CallLaterWXSafe( self, 0.8, self._HideCursor )
+        self._timer_cursor_hide_job = HG.client_controller.CallLaterQtSafe( self, 0.8, self._HideCursor )
         
     
     def _HideCursor( self ):
@@ -3121,7 +2885,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
         else:
             
-            self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
+            self.setCursor( QG.QCursor( QC.Qt.BlankCursor ) )
             
         
     
@@ -3131,7 +2895,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         CanvasWithHovers.__init__( self, parent )
         
-        self._hover_duplicates = ClientGUIHoverFrames.FullscreenHoverFrameRightDuplicates( self, self, self._canvas_key )
+        ClientGUIHoverFrames.FullscreenHoverFrameRightDuplicates( self, self, self._canvas_key )
         
         self._file_search_context = file_search_context
         self._both_files_match = both_files_match
@@ -3152,7 +2916,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._reserved_shortcut_names.append( 'media_viewer_browser' )
         self._reserved_shortcut_names.append( 'duplicate_filter' )
         
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
+        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )
         
         # add support for 'f' to borderless
         # add support for F4 and other general shortcuts so people can do edits before processing
@@ -3163,7 +2927,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         
-        wx.CallAfter( self._ShowNewPair )
+        QP.CallAfter( self._ShowNewPair )
         
     
     def _Close( self ):
@@ -3174,9 +2938,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions?'
             
-            result = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+            result, cancelled = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
             
-            if result == wx.ID_CANCEL:
+            if cancelled:
                 
                 close_was_triggered_by_everything_being_processed = len( self._unprocessed_pairs ) == 0
                 
@@ -3187,7 +2951,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 return
                 
-            elif result == wx.ID_YES:
+            elif result == QW.QDialog.Accepted:
                 
                 self._CommitProcessed( blocking = False )
                 
@@ -3255,7 +3019,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 value = dlg.GetValue()
                 
@@ -3324,7 +3088,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 dlg_2.SetPanel( panel )
                 
-                if dlg_2.ShowModal() == wx.ID_OK:
+                if dlg_2.exec() == QW.QDialog.Accepted:
                     
                     duplicate_action_options = panel.GetValue()
                     
@@ -3354,9 +3118,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
             
-            result = dlg.ShowModal()
+            result = dlg.exec()
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 value = dlg.GetValue()
                 
@@ -3382,30 +3146,30 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( duplicate_type, delete_first = delete_first, delete_second = delete_second, delete_both = delete_both, duplicate_action_options = duplicate_action_options )
         
     
-    def _DrawBackgroundDetails( self, dc ):
+    def _DrawBackgroundDetails( self, painter ):
         
         if self._currently_fetching_pairs:
             
             text = 'Loading pairs\u2026'
             
-            ( width, height ) = dc.GetTextExtent( text )
+            ( width, height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
             
-            ( my_width, my_height ) = self.GetClientSize()
+            ( my_width, my_height ) = self.size().toTuple()
             
             x = ( my_width - width ) // 2
             y = ( my_height - height ) // 2
             
-            dc.DrawText( text, x, y )
+            QP.DrawText( painter, x, y, text )
             
         else:
             
-            CanvasWithHovers._DrawBackgroundDetails( self, dc )
+            CanvasWithHovers._DrawBackgroundDetails( self, painter )
             
         
     
     def _GenerateHoverTopFrame( self ):
         
-        return ClientGUIHoverFrames.FullscreenHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
+        ClientGUIHoverFrames.FullscreenHoverFrameTopDuplicatesFilter( self, self, self._canvas_key )
         
     
     def _GetBackgroundColour( self ):
@@ -3481,7 +3245,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if len( self._processed_pairs ) == 0:
                     
-                    wx.MessageBox( 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
+                    QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
                     
                     self._Close()
                     
@@ -3600,7 +3364,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             result = ClientGUIDialogsQuick.GetInterstitialFilteringAnswer( self, label )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 self._CommitProcessed( blocking = True )
                 
@@ -3614,7 +3378,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     if len( self._processed_pairs ) == 0:
                         
-                        wx.MessageBox( 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
+                        QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
                         
                         self._Close()
                         
@@ -3645,7 +3409,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_search_context, self._both_files_match )
             
-            self._SetDirty()
+            self.update()
             
         else:
             
@@ -3683,7 +3447,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     if len( self._processed_pairs ) == 0:
                         
-                        wx.MessageBox( 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
+                        QW.QMessageBox.critical( self, 'Error', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
                         
                         self._Close()
                         
@@ -3706,7 +3470,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if not ( first_media_result.GetLocationsManager().IsLocal() and second_media_result.GetLocationsManager().IsLocal() ):
                 
-                wx.MessageBox( 'At least one of the potential files in this pair was not in this client. Likely it was very recently deleted through a different process. Your decisions until now will be saved, and then the duplicate filter will close.' )
+                QW.QMessageBox.warning( self, 'Warning', 'At least one of the potential files in this pair was not in this client. Likely it was very recently deleted through a different process. Your decisions until now will be saved, and then the duplicate filter will close.' )
                 
                 self._CommitProcessed( blocking = True )
                 
@@ -3732,10 +3496,16 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._media_list = ClientMedia.ListeningMediaList( file_service_key, media_results_with_better_first )
             
             self.SetMedia( self._media_list.GetFirst() )
+
+            self._media_container.hide()
             
             self._ReinitZoom()
             
             self._ResetMediaWindowCenterPosition()
+            
+            self._SizeAndPositionMediaContainer()
+            
+            self._media_container.show()
             
         
     
@@ -3786,62 +3556,28 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def EventCharHook( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ):
-                
-                self._Close()
-                
-            else:
-                
-                ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-                
-                if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS:
-                    
-                    self._Delete()
-                    
-                elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS:
-                    
-                    self._Undelete()
-                    
-                else:
-                    
-                    CanvasWithHovers.EventCharHook( self, event )
-                    
-                
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
     def EventClose( self, event ):
         
-        self._Close()
+        if not self._closing: self._Close()
         
     
     def EventMouse( self, event ):
         
         if self._IShouldCatchShortcutEvent( event = event ):
             
-            if event.ShiftDown():
+            if event.modifiers() & QC.Qt.ShiftModifier:
                 
                 caught = True
                 
-                if event.LeftDown():
+                if event.button() == QC.Qt.LeftButton and event.type() == QC.QEvent.MouseButtonPress:
                     
                     self.EventDragBegin( event )
                     
-                elif event.LeftUp():
+                elif event.button() == QC.Qt.LeftButton and event.type() == QC.QEvent.MouseButtonRelease:
                     
                     self.EventDragEnd( event )
                     
-                elif event.Dragging():
+                elif event.buttons() != QC.Qt.NoButton and event.type() == QC.QEvent.MouseMove:
                     
                     self.EventDrag( event )
                     
@@ -3867,19 +3603,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return
                     
                 
-            
-            if event.GetWheelRotation() != 0:
+            if event.type() == QC.QEvent.Wheel and event.angleDelta().y() != 0:
                 
                 self._SwitchMedia()
                 
             else:
                 
-                event.Skip()
-                
+                return True # was: event.ignore()    
             
         else:
             
-            event.Skip()
+            return True # was: event.ignore()
             
         
     
@@ -3888,6 +3622,40 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         if self._canvas_key == canvas_key:
             
             self._Inbox()
+            
+        
+    
+    def keyPressEvent( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
+                
+                self._Close()
+                
+            else:
+                
+                ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+                
+                if modifier == QC.Qt.NoModifier and key in CC.DELETE_KEYS:
+                    
+                    self._Delete()
+                    
+                elif modifier == QC.Qt.ShiftModifier and key in CC.DELETE_KEYS:
+                    
+                    self._Undelete()
+                    
+                else:
+                    
+                    CanvasWithHovers.keyPressEvent( self, event )
+                    
+                
+            
+        else:
+            
+            event.ignore()
             
         
     
@@ -3973,11 +3741,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                self._SetDirty()
+                self.update()
                 
             
         
-        HG.client_controller.CallLaterWXSafe( self, 0.1, catch_up )
+        HG.client_controller.CallLaterQtSafe(self, 0.1, catch_up)
         
     
     def SetMedia( self, media ):
@@ -4014,21 +3782,21 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def THREADFetchPairs( self, file_search_context, both_files_match ):
         
-        def wx_close():
+        def qt_close():
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            wx.MessageBox( 'All pairs have been filtered!' )
+            QW.QMessageBox.information( self, 'Information', 'All pairs have been filtered!' )
             
             self._Close()
             
         
-        def wx_continue( unprocessed_pairs ):
+        def qt_continue( unprocessed_pairs ):
             
-            if not self:
+            if not self or not QP.isValid( self):
                 
                 return
                 
@@ -4044,11 +3812,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if len( result ) == 0:
             
-            wx.CallAfter( wx_close )
+            QP.CallAfter( qt_close )
             
         else:
             
-            wx.CallAfter( wx_continue, result )
+            QP.CallAfter( qt_continue, result )
             
         
     
@@ -4063,8 +3831,8 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         self._just_started = True
         
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
-        self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
+        self._widget_event_filter.EVT_LEFT_DOWN( self.EventDragBegin )
+        self._widget_event_filter.EVT_LEFT_UP( self.EventDragEnd )
         
         HG.client_controller.pub( 'set_focus', self._page_key, None )
         
@@ -4153,7 +3921,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    HG.client_controller.CallLaterWXSafe( self, delay, image_cache.GetImageRenderer, media )
+                    HG.client_controller.CallLaterQtSafe(self, delay, image_cache.GetImageRenderer, media)
                     
                 
             
@@ -4184,7 +3952,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
             HG.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._SetDirty()
+            self.update()
             
         else:
             
@@ -4225,18 +3993,18 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
             HG.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._SetDirty()
+            self.update()
             
         
     
     def EventClose( self, event ):
         
-        self._Close()
+        if not self._closing: self._Close()
         
     
     def EventFullscreenSwitch( self, event ):
         
-        self.GetParent().FullscreenSwitch()
+        self.parentWidget().FullscreenSwitch()
         
     
     def KeepCursorAlive( self ):
@@ -4270,7 +4038,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
             HG.client_controller.pub( 'canvas_new_index_string', self._canvas_key, self._GetIndexString() )
             
-            self._SetDirty()
+            self.update()
             
         elif self.HasMedia( next_media ):
             
@@ -4293,12 +4061,12 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         self._kept = set()
         self._deleted = set()
         
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
+        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )
         
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
         HG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
         
-        wx.CallAfter( self.SetMedia, self._GetFirst() ) # don't set this until we have a size > (20, 20)!
+        QP.CallAfter( self.SetMedia, self._GetFirst() ) # don't set this until we have a size > (20, 20)!
         
     
     def _Back( self ):
@@ -4327,9 +4095,9 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
                 
-                result = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+                result, cancelled = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
                 
-                if result == wx.ID_CANCEL:
+                if cancelled:
                     
                     if self._current_media in self._kept:
                         
@@ -4343,7 +4111,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                     return
                     
-                elif result == wx.ID_YES:
+                elif result == QW.QDialog.Accepted:
                     
                     def process_in_thread( service_keys_and_content_updates ):
                         
@@ -4407,7 +4175,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        return ClientGUIHoverFrames.FullscreenHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
+        ClientGUIHoverFrames.FullscreenHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
         
     
     def _Keep( self ):
@@ -4454,29 +4222,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def EventBack( self, event ):
-        
-        self._Back()
-        
-    
-    def EventCharHook( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-            
-            if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-            else:
-                
-                CanvasMediaList.EventCharHook( self, event )
-                
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
     def EventDelete( self, event ):
         
         if self._IShouldCatchShortcutEvent( event = event ):
@@ -4485,7 +4230,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         else:
             
-            event.Skip()
+            return True # was: event.ignore()
             
         
     
@@ -4493,24 +4238,24 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         if self._IShouldCatchShortcutEvent( event = event ):
             
-            if event.ShiftDown():
+            if event.modifiers() & QC.Qt.ShiftModifier:
                 
                 caught = True
-                
-                if event.LeftDown():
-                    
+
+                if event.button() == QC.Qt.LeftButton and event.type() == QC.QEvent.MouseButtonPress:
+
                     self.EventDragBegin( event )
-                    
-                elif event.LeftUp():
-                    
+
+                elif event.button() == QC.Qt.LeftButton and event.type() == QC.QEvent.MouseButtonRelease:
+
                     self.EventDragEnd( event )
-                    
-                elif event.Dragging():
-                    
+
+                elif event.buttons() != QC.Qt.NoButton and event.type() == QC.QEvent.MouseMove:
+
                     self.EventDrag( event )
-                    
+
                 else:
-                    
+
                     caught = False
                     
                 
@@ -4533,12 +4278,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
             
         
-        event.Skip()
-        
-    
-    def EventSkip( self, event ):
-        
-        self._Skip()
+        return True # was: event.ignore()
         
     
     def EventUndelete( self, event ):
@@ -4549,7 +4289,28 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         else:
             
-            event.Skip()
+            return True # was: event.ignore()
+            
+        
+    
+    def keyPressEvent( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
+                
+                self._Close()
+                
+            else:
+                
+                CanvasMediaList.keyPressEvent( self, event )
+                
+            
+        else:
+            
+            event.ignore()
             
         
     
@@ -4639,7 +4400,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
     
     def _GenerateHoverTopFrame( self ):
         
-        return ClientGUIHoverFrames.FullscreenHoverFrameTopNavigableList( self, self, self._canvas_key )
+        ClientGUIHoverFrames.FullscreenHoverFrameTopNavigableList( self, self, self._canvas_key )
         
     
     def Archive( self, canvas_key ):
@@ -4656,26 +4417,6 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
             self._Delete()
             
-        
-    
-    def EventArchive( self, event ):
-        
-        self._Archive()
-        
-    
-    def EventDelete( self, event ):
-        
-        self._Delete()
-        
-    
-    def EventNext( self, event ):
-        
-        self._ShowNext()
-        
-    
-    def EventPrevious( self, event ):
-        
-        self._ShowPrevious()
         
     
     def Inbox( self, canvas_key ):
@@ -4793,10 +4534,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self._timer_slideshow_job = None
         self._timer_slideshow_interval = 0
         
-        self.Bind( wx.EVT_LEFT_DCLICK, self.EventClose )
-        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventClose )
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventClose )
+        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventClose )
         
         if first_hash is None:
             
@@ -4814,7 +4553,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             
         
-        wx.CallAfter( self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
+        QP.CallAfter( self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         
@@ -4839,7 +4578,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     try:
                         
@@ -4857,7 +4596,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._timer_slideshow_interval = interval
             
-            self._timer_slideshow_job = HG.client_controller.CallLaterWXSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
+            self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe(self, self._timer_slideshow_interval, self.DoSlideshow)
             
         
     
@@ -4881,11 +4620,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     self._ShowNext()
                     
-                    self._timer_slideshow_job = HG.client_controller.CallLaterWXSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
+                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe(self, self._timer_slideshow_interval, self.DoSlideshow)
                     
                 else:
                     
-                    self._timer_slideshow_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.DoSlideshow )
+                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe(self, 0.5, self.DoSlideshow)
                     
                 
             
@@ -4897,61 +4636,14 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def EventCharHook( self, event ):
+    def mousePressEvent( self, event ):
         
-        if self._IShouldCatchShortcutEvent( event = event ):
+        if event.button() != QC.Qt.RightButton:
             
-            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            event.ignore()
             
-            if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
-            elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): self._PausePlaySlideshow()
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-            else:
-                
-                CanvasMediaListNavigable.EventCharHook( self, event )
-                
+            return
             
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventMouseWheel( self, event ):
-        
-        if self._IShouldCatchShortcutEvent( event = event ):
-            
-            if event.CmdDown():
-                
-                if event.GetWheelRotation() > 0:
-                    
-                    self._ZoomIn()
-                    
-                else:
-                    
-                    self._ZoomOut()
-                    
-                
-            else:
-                
-                if event.GetWheelRotation() > 0:
-                    
-                    self._ShowPrevious()
-                    
-                else:
-                    
-                    self._ShowNext()
-                    
-                
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventShowMenu( self, event ):
         
         if self._current_media is not None:
             
@@ -4965,11 +4657,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             i_can_post_ratings = len( local_ratings_services ) > 0
             
-            self._last_drag_coordinates = None # to stop successive right-click drag warp bug
+            self._last_drag_pos = None # to stop successive right-click drag warp bug
             
             locations_manager = self._current_media.GetLocationsManager()
             
-            menu = wx.Menu()
+            menu = QW.QMenu()
             
             #
             
@@ -4977,7 +4669,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             top_line = info_lines.pop(0)
             
-            info_menu = wx.Menu()
+            info_menu = QW.QMenu( menu )
             
             for line in info_lines:
                 
@@ -4994,133 +4686,128 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._IsZoomable():
                 
-                zoom_menu = wx.Menu()
+                zoom_menu = QW.QMenu( menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom in', 'Zoom the media in.', self._ZoomIn )
-                ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom out', 'Zoom the media out.', self._ZoomOut )
+                ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom in', 'Zoom the media in.', self._ZoomIn )
+                ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom out', 'Zoom the media out.', self._ZoomOut )
                 
-                if self._current_media.GetMime() != HC.APPLICATION_FLASH:
+                if self._current_zoom != 1.0:
                     
-                    if self._current_zoom != 1.0:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom to 100%', 'Set the zoom to 100%.', self._ZoomSwitch )
-                        
-                    elif self._current_zoom != self._canvas_zoom:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, zoom_menu, 'zoom fit', 'Set the zoom so the media fits the canvas.', self._ZoomSwitch )
-                        
+                    ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom to 100%', 'Set the zoom to 100%.', self._ZoomSwitch )
+                    
+                elif self._current_zoom != self._canvas_zoom:
+                    
+                    ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom fit', 'Set the zoom so the media fits the canvas.', self._ZoomSwitch )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, zoom_menu, 'current zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._current_zoom ) ) )
                 
             
-            if self.GetParent().IsFullScreen():
+            if self.parentWidget().isFullScreen():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.GetParent().FullscreenSwitch )
+                ClientGUIMenus.AppendMenuItem( menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.parentWidget().FullscreenSwitch )
                 
             else:
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.GetParent().FullscreenSwitch )
+                ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.parentWidget().FullscreenSwitch )
                 
             
-            slideshow = wx.Menu()
+            slideshow = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60.0 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
+            ClientGUIMenus.AppendMenuItem( slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1.0 )
+            ClientGUIMenus.AppendMenuItem( slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5.0 )
+            ClientGUIMenus.AppendMenuItem( slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10.0 )
+            ClientGUIMenus.AppendMenuItem( slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30.0 )
+            ClientGUIMenus.AppendMenuItem( slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60.0 )
+            ClientGUIMenus.AppendMenuItem( slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
+            ClientGUIMenus.AppendMenuItem( slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
             
             ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
             
             if self._timer_slideshow_job is not None:
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
+                ClientGUIMenus.AppendMenuItem( menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'remove from view', 'Remove this file from the list you are viewing.', self._Remove )
+            ClientGUIMenus.AppendMenuItem( menu, 'remove from view', 'Remove this file from the list you are viewing.', self._Remove )
             
             ClientGUIMenus.AppendSeparator( menu )
             
             if self._current_media.HasInbox():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file, taking it out of the inbox.', self._Archive )
+
+                ClientGUIMenus.AppendMenuItem( menu, 'archive', 'Archive this file, taking it out of the inbox.', self._Archive )
                 
             elif self._current_media.HasArchive():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
+                ClientGUIMenus.AppendMenuItem( menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Send this file to the trash.', self._Delete, file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+
+                ClientGUIMenus.AppendMenuItem( menu, 'delete', 'Send this file to the trash.', self._Delete, file_service_key=CC.LOCAL_FILE_SERVICE_KEY )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.TRASH_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key=CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            manage_menu = wx.Menu()
+            manage_menu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
             
             if i_can_post_ratings:
                 
-                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
+                ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known urls.', self._ManageURLs )
-            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'known urls', 'Manage this file\'s known urls.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
             ClientGUIMedia.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            open_menu = wx.Menu()
+            open_menu = QW.QMenu( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in external program', 'Open this file in the default external program.', self._OpenExternally )
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
-            ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+            ClientGUIMenus.AppendMenuItem( open_menu, 'in external program', 'Open this file in the default external program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
+            ClientGUIMenus.AppendMenuItem( open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
             
             show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
             
             if show_open_in_explorer:
                 
-                ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                ClientGUIMenus.AppendMenuItem( open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
                 
             
             ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
             
-            share_menu = wx.Menu()
+            share_menu = QW.QMenu( menu )
             
-            copy_menu = wx.Menu()
+            copy_menu = QW.QMenu( share_menu )
+
+            ClientGUIMenus.AppendMenuItem( copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
-            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
-            
-            copy_hash_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy this file\'s SHA256 hash to your clipboard.', self._CopyHashToClipboard, 'sha256' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard.', self._CopyHashToClipboard, 'md5' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard.', self._CopyHashToClipboard, 'sha1' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard.', self._CopyHashToClipboard, 'sha512' )
+            copy_hash_menu = QW.QMenu( copy_menu )
+
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Copy this file\'s SHA256 hash to your clipboard.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard.', self._CopyHashToClipboard, 'md5' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard.', self._CopyHashToClipboard, 'sha1' )
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard.', self._CopyHashToClipboard, 'sha512' )
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
             if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
-                
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
+
+            ClientGUIMenus.AppendMenuItem( copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
             
             ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
             
@@ -5129,14 +4816,66 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             HG.client_controller.PopupMenu( self, menu )
             
         
-        event.Skip()
+    
+    def keyPressEvent( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
+            
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+            
+            if modifier == QC.Qt.NoModifier and key in CC.DELETE_KEYS: self._Delete()
+            elif modifier == QC.Qt.ShiftModifier and key in CC.DELETE_KEYS: self._Undelete()
+            elif modifier == QC.Qt.NoModifier and key in ( QC.Qt.Key_Space, ): self._PausePlaySlideshow()
+            elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ): self._Close()
+            else:
+                
+                CanvasMediaListNavigable.keyPressEvent( self, event )
+                
+            
+        else:
+            
+            event.ignore()
+            
         
     
-class MediaContainer( wx.Window ):
+    def wheelEvent( self, event ):
+        
+        if self._IShouldCatchShortcutEvent( event = event ):
+            
+            if event.modifiers() & QC.Qt.ControlModifier:
+                
+                if event.angleDelta().y() > 0:
+                    
+                    self._ZoomIn()
+                    
+                else:
+                    
+                    self._ZoomOut()
+                    
+                
+            else:
+                
+                if event.angleDelta().y() > 0:
+                    
+                    self._ShowPrevious()
+                    
+                else:
+                    
+                    self._ShowNext()
+                    
+                
+            
+        else:
+            
+            return True # was: event.ignore()
+            
+        
+    
+class MediaContainer( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Window.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._media = None
         self._show_action = None
@@ -5144,21 +4883,19 @@ class MediaContainer( wx.Window ):
         self._media_window = None
         
         self._embed_button = EmbedButton( self )
-        self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
+        self._embed_button_widget_event_filter = QP.WidgetEventFilter( self._embed_button )
+        self._embed_button_widget_event_filter.EVT_LEFT_DOWN( self.EventEmbedButton )
         
         self._animation_window = Animation( self )
         self._animation_bar = AnimationBar( self )
         self._static_image_window = StaticImage( self )
         
-        self._animation_window.Hide()
-        self._animation_bar.Hide()
-        self._static_image_window.Hide()
+        self._animation_window.hide()
+        self._animation_bar.hide()
+        self._static_image_window.hide()
+        self._embed_button.hide()
         
-        self.Hide()
-        
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        self.hide()
         
     
     def _DestroyOrHideThisMediaWindow( self, media_window ):
@@ -5168,11 +4905,11 @@ class MediaContainer( wx.Window ):
             if isinstance( media_window, ( Animation, StaticImage ) ):
                 
                 media_window.SetNoneMedia()
-                media_window.Hide()
+                media_window.hide()
                 
             else:
                 
-                media_window.DestroyLater()
+                media_window.deleteLater()
                 
             
         
@@ -5181,20 +4918,13 @@ class MediaContainer( wx.Window ):
         
         self._animation_bar.SetNoneMedia()
         
-        self._animation_bar.Hide()
+        self._animation_bar.hide()
         
     
     def _MakeMediaWindow( self ):
         
         old_media_window = self._media_window
         destroy_old_media_window = True
-        
-        ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
-        
-        if self._media.GetMime() == HC.APPLICATION_FLASH and not FLASHWIN_OK:
-            
-            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
-            
         
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
@@ -5210,56 +4940,25 @@ class MediaContainer( wx.Window ):
             
             start_paused = self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED )
             
-            if ShouldHaveAnimationBar( self._media ) or self._media.GetMime() == HC.APPLICATION_FLASH:
+            if ShouldHaveAnimationBar( self._media ):
                 
-                if ShouldHaveAnimationBar( self._media ):
-                    
-                    ( x, y ) = media_initial_size
-                    
-                    animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
-                    
-                    media_initial_size = ( x, y - animated_scanbar_height )
-                    
-                
-                if self._media.GetMime() == HC.APPLICATION_FLASH:
-                    
-                    if isinstance( self._media_window, wx.lib.flashwin.FlashWindow ):
+                if isinstance( self._media_window, Animation ):
                         
-                        destroy_old_media_window = False
+                    destroy_old_media_window = False
                         
-                    else:
-                        
-                        self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
-                        
-                        if self._media_window is None:
-                            
-                            raise Exception( 'Failed to initialise the flash window' )
-                            
-                        
-                    
-                    client_files_manager = HG.client_controller.client_files_manager
-                    
-                    self._media_window.LoadMovie( 0, client_files_manager.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH ) )
-                    
                 else:
-                    
-                    if isinstance( self._media_window, Animation ):
                         
-                        destroy_old_media_window = False
+                    self._animation_window.show()
                         
-                    else:
-                        
-                        self._animation_window.Show()
-                        
-                        self._media_window = self._animation_window
+                    self._media_window = self._animation_window
                         
                     
-                    self._media_window.SetMedia( self._media, start_paused = start_paused )
+                self._media_window.SetMedia( self._media, start_paused = start_paused )
                     
                 
                 if ShouldHaveAnimationBar( self._media ):
                     
-                    self._animation_bar.Show()
+                    self._animation_bar.show()
                     
                     self._animation_bar.SetMediaAndWindow( self._media, self._media_window )
                     
@@ -5276,7 +4975,7 @@ class MediaContainer( wx.Window ):
                     
                 else:
                     
-                    self._static_image_window.Show()
+                    self._static_image_window.show()
                     
                     self._media_window = self._static_image_window
                     
@@ -5297,12 +4996,12 @@ class MediaContainer( wx.Window ):
         
         if self._media is not None:
             
-            ( my_width, my_height ) = self.GetClientSize()
+            ( my_width, my_height ) = self.size().toTuple()
             
             if self._media_window is None:
                 
-                self._embed_button.SetSize( ( my_width, my_height ) )
-                self._embed_button.SetPosition( ( 0, 0 ) )
+                self._embed_button.setFixedSize( QP.TupleToQSize( (my_width,my_height) ) )
+                self._embed_button.move( QP.TupleToQPoint( (0,0) ) )
                 
             else:
                 
@@ -5316,56 +5015,29 @@ class MediaContainer( wx.Window ):
                     
                     media_height -= animated_scanbar_height
                     
-                    self._animation_bar.SetSize( ( my_width, animated_scanbar_height ) )
-                    self._animation_bar.SetPosition( ( 0, my_height - animated_scanbar_height ) )
-                    
+                    self._animation_bar.setFixedSize( QP.TupleToQSize( ( my_width, animated_scanbar_height ) ) )
+                    self._animation_bar.move( QP.TupleToQPoint( ( 0, my_height - animated_scanbar_height ) ) )
                 
-                self._media_window.SetSize( ( media_width, media_height ) )
-                self._media_window.SetPosition( ( 0, 0 ) )
-                
+                self._media_window.setFixedSize( QP.TupleToQSize( ( media_width, media_height ) ) )
+                self._media_window.move( QP.TupleToQPoint( ( 0, 0 ) ) )
             
         
     
     def BeginDrag( self ):
         
-        self.GetParent().BeginDrag()
+        self.parentWidget().BeginDrag()
         
     
     def EventEmbedButton( self, event ):
         
-        self._embed_button.Hide()
+        self._embed_button.hide()
         
         self._MakeMediaWindow()
         
         self._SizeAndPositionChildren()
         
     
-    def EventEraseBackground( self, event ):
-        
-        pass
-        
-    
-    def EventPropagateMouse( self, event ):
-        
-        if self._media is not None:
-            
-            mime = self._media.GetMime()
-            
-            if mime in HC.IMAGES or mime in HC.VIDEO:
-                
-                screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
-                ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-                
-                event.SetX( x )
-                event.SetY( y )
-                
-                event.ResumePropagation( 1 )
-                event.Skip()
-                
-            
-        
-    
-    def EventResize( self, event ):
+    def resizeEvent( self, event ):
         
         if self._media is not None:
             
@@ -5421,17 +5093,15 @@ class MediaContainer( wx.Window ):
             
             if ShouldHaveAnimationBar( self._media ):
                 
-                ( x, y ) = self._animation_bar.GetScreenPosition()
-                ( width, height ) = self._animation_bar.GetSize()
+                animation_bar_mouse_pos = self._animation_bar.mapFromGlobal( QG.QCursor.pos() )
                 
-                ( mouse_x, mouse_y ) = wx.GetMousePosition()
+                animation_bar_rect = self._animation_bar.rect()
                 
-                buffer_distance = 100
+                buffer = 100
                 
-                if mouse_x >= x - buffer_distance and mouse_x <= x + width + buffer_distance and mouse_y >= y - buffer_distance and mouse_y <= y + height + buffer_distance:
-                    
-                    return True
-                    
+                test_rect = animation_bar_rect.adjusted( -buffer, -buffer, buffer, buffer )
+                
+                return test_rect.contains( animation_bar_mouse_pos )
                 
             
             return False
@@ -5487,14 +5157,14 @@ class MediaContainer( wx.Window ):
         
         self._embed_button.SetMedia( self._media )
         
-        self._embed_button.Show()
+        self._embed_button.show()
         
     
     def SetMedia( self, media, initial_size, initial_position, show_action ):
         
         self._media = media
         
-        self.Show()
+        self.hide()
         
         self._show_action = show_action
         
@@ -5504,16 +5174,17 @@ class MediaContainer( wx.Window ):
             
         else:
             
-            self._embed_button.Hide()
+            self._embed_button.hide()
             
             self._MakeMediaWindow()
             
         
-        self.SetSize( initial_size )
-        self.SetPosition( initial_position )
+        self.setFixedSize( QP.TupleToQSize( initial_size ) )
+        self.move( QP.TupleToQPoint( initial_position ) )
         
         self._SizeAndPositionChildren()
         
+        self.show()
     
     def SetNoneMedia( self ):
         
@@ -5525,33 +5196,27 @@ class MediaContainer( wx.Window ):
         
         self._media_window = None
         
-        self.Hide()
+        self.hide()
         
     
-class EmbedButton( wx.Window ):
+class EmbedButton( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Window.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._media = None
         
-        self._dirty = False
+        self._thumbnail_qt_pixmap = None
         
-        self._canvas_bmp = None
-        self._thumbnail_bmp = None
+        self.setCursor( QG.QCursor( QC.Qt.PointingHandCursor ) )
         
-        self.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
-        
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
-        HG.client_controller.sub( self, '_SetDirty', 'notify_new_colourset' )
+        HG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         
     
-    def _Redraw( self, dc ):
+    def _Redraw( self, painter ):
         
-        ( x, y ) = self.GetClientSize()
+        ( x, y ) = self.size().toTuple()
         
         center_x = x // 2
         center_y = y // 2
@@ -5559,38 +5224,38 @@ class EmbedButton( wx.Window ):
         
         new_options = HG.client_controller.new_options
         
-        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        painter.setBackground( QG.QBrush( new_options.GetColour(CC.COLOUR_MEDIA_BACKGROUND) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
-        if self._thumbnail_bmp is not None:
+        if self._thumbnail_qt_pixmap is not None:
             
             if ShouldHaveAnimationBar( self._media ):
                 
                 # animations will have the animation bar space underneath in this case, so colour it in
-                dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+                painter.setBackground( QG.QBrush( QP.GetSystemColour( QG.QPalette.Button ) ) )
                 
                 animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
                 
-                dc.DrawRectangle( 0, y - animated_scanbar_height, x, animated_scanbar_height )
+                painter.drawRect( 0, y - animated_scanbar_height, x, animated_scanbar_height )
                 
             
-            ( thumb_width, thumb_height ) = self._thumbnail_bmp.GetSize()
+            ( thumb_width, thumb_height ) = self._thumbnail_qt_pixmap.size().toTuple()
             
             scale = x / thumb_width
             
-            dc.SetUserScale( scale, scale )
+            painter.setTransform( QG.QTransform().scale( scale, scale ) )
             
-            dc.DrawBitmap( self._thumbnail_bmp, 0, 0 )
+            painter.drawPixmap( 0, 0, self._thumbnail_qt_pixmap )
             
-            dc.SetUserScale( 1.0, 1.0 )
+            painter.setTransform( QG.QTransform().scale( 1.0, 1.0 ) )
             
         
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) ) )
+        painter.setBrush( QG.QBrush( QP.GetSystemColour( QG.QPalette.Button ) ) )
         
-        dc.DrawCircle( center_x, center_y, radius )
+        painter.drawEllipse( QC.QPointF( center_x, center_y ), radius, radius )
         
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) ) )
+        painter.setBrush( QG.QBrush( QP.GetSystemColour( QG.QPalette.Window ) ) )
         
         # play symbol is a an equilateral triangle
         
@@ -5606,75 +5271,26 @@ class EmbedButton( wx.Window ):
         
         points = []
         
-        points.append( ( center_x - third_triangle_width, center_y - half_triangle_side ) )
-        points.append( ( center_x + third_triangle_width * 2, center_y ) )
-        points.append( ( center_x - third_triangle_width, center_y + half_triangle_side ) )
+        points.append( QC.QPoint( center_x - third_triangle_width, center_y - half_triangle_side ) )
+        points.append( QC.QPoint( center_x + third_triangle_width * 2, center_y ) )
+        points.append( QC.QPoint( center_x - third_triangle_width, center_y + half_triangle_side ) )
         
-        dc.DrawPolygon( points )
+        painter.drawPolygon( QG.QPolygon( points ) )
         
         #
         
-        dc.SetPen( wx.Pen( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
+        painter.setPen( QG.QPen( QP.GetSystemColour( QG.QPalette.Shadow ) ) )
+
+        painter.setBrush( QG.QBrush( QG.QColor( QC.Qt.transparent ) ) )
         
-        dc.SetBrush( wx.TRANSPARENT_BRUSH )
-        
-        dc.DrawRectangle( 0, 0, x, y )
-        
-    
-    def _SetDirty( self ):
-        
-        self._dirty = True
-        
-        self.Refresh()
+        painter.drawRect( 0, 0, x, y )
         
     
-    def EventEraseBackground( self, event ):
+    def paintEvent( self, event ):
         
-        pass
+        painter = QG.QPainter( self )
         
-    
-    def EventPaint( self, event ):
-        
-        if self._canvas_bmp is not None:
-            
-            dc = wx.BufferedPaintDC( self, self._canvas_bmp )
-            
-            if self._dirty:
-                
-                self._Redraw( dc )
-                
-            
-        
-    
-    def EventResize( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if my_width > 0 and my_height > 0:
-            
-            if self._canvas_bmp is None:
-                
-                make_new_one = True
-                
-            else:
-                
-                ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
-                
-                make_new_one = my_width != current_bmp_width or my_height != current_bmp_height
-                
-            
-            if make_new_one:
-                
-                if self._canvas_bmp is not None:
-                    
-                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
-                    
-                
-                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
-                
-                self._SetDirty()
-                
-            
+        self._Redraw( painter )
         
     
     def SetMedia( self, media ):
@@ -5696,29 +5312,29 @@ class EmbedButton( wx.Window ):
             
             thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
-            self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
+            self._thumbnail_qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetQtPixmap()
             
-            self._SetDirty()
+            self.update()
             
         else:
             
-            self._thumbnail_bmp = None
+            self._thumbnail_qt_pixmap = None
             
         
     
-class OpenExternallyPanel( wx.Panel ):
+class OpenExternallyPanel( QW.QWidget ):
     
     def __init__( self, parent, media ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._new_options = HG.client_controller.new_options
         
-        self.SetBackgroundColour( self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
+        QP.SetBackgroundColour( self, self._new_options.GetColour(CC.COLOUR_MEDIA_BACKGROUND) )
         
         self._media = media
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
@@ -5726,30 +5342,41 @@ class OpenExternallyPanel( wx.Panel ):
             
             thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
-            bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
+            qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetQtPixmap()
             
-            thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, bmp )
+            thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, qt_pixmap )
             
-            thumbnail_window.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
-            
-            vbox.Add( thumbnail_window, CC.FLAGS_CENTER )
+            QP.AddToLayout( vbox, thumbnail_window, CC.FLAGS_CENTER )
             
         
         m_text = HC.mime_string_lookup[ media.GetMime() ]
         
-        button = wx.Button( self, label = 'open ' + m_text + ' externally', size = OPEN_EXTERNALLY_BUTTON_SIZE )
+        button = QW.QPushButton( 'open ' + m_text + ' externally', self )
+        button.setFixedSize( QP.TupleToQSize( OPEN_EXTERNALLY_BUTTON_SIZE ) )
+        button.setFocusPolicy( QC.Qt.NoFocus )
         
-        vbox.Add( button, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, button, CC.FLAGS_CENTER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        self.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
+        self.setCursor( QG.QCursor( QC.Qt.PointingHandCursor ) )
         
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
-        button.Bind( wx.EVT_BUTTON, self.EventButton )
+        button.clicked.connect( self.LaunchFile )
         
     
-    def EventButton( self, event ):
+    def mousePressEvent( self, event ):
+        
+        if not ( event.modifiers() & ( QC.Qt.ShiftModifier | QC.Qt.ControlModifier | QC.Qt.AltModifier) ) and event.button() == QC.Qt.LeftButton:
+            
+            self.LaunchFile()
+            
+        else:
+            
+            event.ignore()
+            
+        
+    
+    def LaunchFile( self ):
         
         hash = self._media.GetHash()
         mime = self._media.GetMime()
@@ -5763,13 +5390,11 @@ class OpenExternallyPanel( wx.Panel ):
         HydrusPaths.LaunchFile( path, launch_path )
         
     
-class StaticImage( wx.Window ):
+class StaticImage( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Window.__init__( self, parent )
-        
-        self._dirty = True
+        QW.QWidget.__init__( self, parent )
         
         self._media = None
         
@@ -5779,120 +5404,72 @@ class StaticImage( wx.Window ):
         
         self._is_rendered = False
         
-        self._canvas_bmp = None
-        
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        self._canvas_qt_pixmap = None
         
     
-    def _DrawBackground( self, dc ):
+    def _ClearCanvasBitmap( self ):
+        
+        self._canvas_qt_pixmap = None
+        
+        self._is_rendered = False
+        
+    
+    def _DrawBackground( self, painter ):
         
         new_options = HG.client_controller.new_options
         
-        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
+        painter.setBackground( QG.QBrush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         self._first_background_drawn = True
         
     
-    def _Redraw( self, dc ):
+    def _TryToDrawCanvasBitmap( self ):
         
         if self._image_renderer is not None and self._image_renderer.IsReady():
             
-            self._DrawBackground( dc )
+            my_size = self.size()
             
-            wx_bitmap = self._image_renderer.GetWXBitmap( self._canvas_bmp.GetSize() )
+            width = my_size.width()
+            height = my_size.height()
             
-            dc.DrawBitmap( wx_bitmap, 0, 0 )
+            self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( width, height )
             
-            HG.client_controller.bitmap_manager.ReleaseBitmap( wx_bitmap )
+            painter = QG.QPainter( self._canvas_qt_pixmap )
+            
+            self._DrawBackground( painter )
+            
+            qt_bitmap = self._image_renderer.GetQtImage( self.size() )
+            
+            painter.drawImage( 0, 0, qt_bitmap )
             
             self._is_rendered = True
             
+        
+    
+    def paintEvent( self, event ):           
+        
+        if self._canvas_qt_pixmap is None:
+            
+            self._TryToDrawCanvasBitmap()
+            
+        
+        painter = QG.QPainter( self )
+        
+        if self._canvas_qt_pixmap is None:
+            
+            self._DrawBackground( painter )
+            
         else:
             
-            if not self._first_background_drawn:
-                
-                self._DrawBackground( dc )
-                
-            
-        
-        self._dirty = False
-        
-    
-    def _SetDirty( self ):
-        
-        self._dirty = True
-        
-        self.Refresh()
-        
-    
-    def EventEraseBackground( self, event ):
-        
-        pass
-        
-    
-    def EventPaint( self, event ):
-        
-        if self._canvas_bmp is None:
-            
-            return
-            
-        
-        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
-        
-        if self._dirty:
-            
-            self._Redraw( dc )
+            painter.drawPixmap( 0, 0, self._canvas_qt_pixmap )
             
         
     
-    def EventPropagateMouse( self, event ):
+    def resizeEvent( self, event ):
         
-        screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
-        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-        
-        event.SetX( x )
-        event.SetY( y )
-        
-        event.ResumePropagation( 1 )
-        event.Skip()
-        
-    
-    def EventResize( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if my_width > 0 and my_height > 0:
-            
-            if self._canvas_bmp is None:
-                
-                make_new_one = True
-                
-            else:
-                
-                ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
-                
-                make_new_one = my_width != current_bmp_width or my_height != current_bmp_height
-                
-            
-            if make_new_one:
-                
-                if self._canvas_bmp is not None:
-                    
-                    HG.client_controller.bitmap_manager.ReleaseBitmap( self._canvas_bmp )
-                    
-                
-                self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
-                
-                self._first_background_drawn = False
-                
-                self._SetDirty()
-                
-            
+        self._ClearCanvasBitmap()
         
     
     def IsRendered( self ):
@@ -5908,21 +5485,23 @@ class StaticImage( wx.Window ):
         
         self._image_renderer = image_cache.GetImageRenderer( self._media )
         
-        self._is_rendered = False
+        self._ClearCanvasBitmap()
         
         if not self._image_renderer.IsReady():
             
             HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
         
-        self._SetDirty()
+        self.update()
         
     
     def SetNoneMedia( self ):
         
         self._media = None
         self._image_renderer = None
-        self._is_rendered = False
+        
+        self._ClearCanvasBitmap()
+        
         self._first_background_drawn = False
         
     
@@ -5932,7 +5511,7 @@ class StaticImage( wx.Window ):
             
             if self._image_renderer is None or self._image_renderer.IsReady():
                 
-                self._SetDirty()
+                self.update()
                 
                 HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
                 

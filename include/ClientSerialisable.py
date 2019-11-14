@@ -14,7 +14,10 @@ import numpy
 import os
 import shutil
 import struct
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtGui as QG
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 if cv2.__version__.startswith( '2' ):
     
@@ -27,21 +30,21 @@ else:
 
 def CreateTopImage( width, title, payload_description, text ):
     
-    text_extent_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
+    text_extent_qt_image = HG.client_controller.bitmap_manager.GetQtImage( 20, 20, 24 )
     
-    dc = wx.MemoryDC( text_extent_bmp )
+    painter = QG.QPainter( text_extent_qt_image )
     
-    text_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
+    text_font = QW.QApplication.font()
     
-    basic_font_size = text_font.GetPointSize()
+    basic_font_size = text_font.pointSize()
     
-    payload_description_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
+    payload_description_font = QW.QApplication.font()
     
-    payload_description_font.SetPointSize( int( basic_font_size * 1.4 ) )
+    payload_description_font.setPointSize( int( basic_font_size * 1.4 ) )
     
-    title_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
+    title_font = QW.QApplication.font()
     
-    title_font.SetPointSize( int( basic_font_size * 2.0 ) )
+    title_font.setPointSize( int( basic_font_size * 2.0 ) )
     
     texts_to_draw = []
     
@@ -49,10 +52,10 @@ def CreateTopImage( width, title, payload_description, text ):
     
     for ( t, f ) in ( ( title, title_font ), ( payload_description, payload_description_font ), ( text, text_font ) ):
         
-        dc.SetFont( f )
+        painter.setFont( f )
         
-        wrapped_texts = WrapText( dc, t, width - 20 )
-        ( gumpf, line_height ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+        wrapped_texts = WrapText( painter, t, width - 20 )
+        line_height = painter.fontMetrics().height()
         
         wrapped_texts_with_ys = []
         
@@ -75,46 +78,44 @@ def CreateTopImage( width, title, payload_description, text ):
     
     top_height = current_y
     
-    del dc
-    del text_extent_bmp
+    del painter
+    del text_extent_qt_image
     
     #
     
-    top_bmp = HG.client_controller.bitmap_manager.GetBitmap( width, top_height, 24 )
+    top_qt_image = HG.client_controller.bitmap_manager.GetQtImage( width, top_height, 24 )
     
-    dc = wx.MemoryDC( top_bmp )
+    painter = QG.QPainter( top_qt_image )
     
-    dc.SetBackground( wx.Brush( wx.WHITE ) )
+    painter.setBackground( QG.QBrush( QC.Qt.white ) )
     
-    dc.Clear()
+    painter.eraseRect( painter.viewport() )
     
     #
     
-    dc.DrawBitmap( CC.GlobalBMPs.file_repository, width - 16 - 5, 5 )
+    painter.drawPixmap( width-16-5, 5, CC.GlobalPixmaps.file_repository )
     
     #
     
     for ( wrapped_texts_with_ys, f ) in texts_to_draw:
         
-        dc.SetFont( f )
+        painter.setFont( f )
         
         for ( wrapped_text, y ) in wrapped_texts_with_ys:
             
-            ( t_width, t_height ) = dc.GetTextExtent( wrapped_text )
+            ( t_width, t_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, wrapped_text ).toTuple()
             
-            dc.DrawText( wrapped_text, ( width - t_width ) // 2, y )
+            QP.DrawText( painter, (width-t_width)//2, y, wrapped_text )
             
         
     
-    del dc
+    del painter
     
-    data_bytearray = top_bmp.ConvertToImage().GetData()
+    data_bytearray = top_qt_image.bits()
     
     data_bytes = bytes( data_bytearray )
     
     top_image_rgb = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( top_height, width, 3 ) )
-    
-    HG.client_controller.bitmap_manager.ReleaseBitmap( top_bmp )
     
     top_image = cv2.cvtColor( top_image_rgb, cv2.COLOR_RGB2GRAY )
     
@@ -300,13 +301,13 @@ def LoadFromPng( path ):
     
     return payload_bytes
     
-def TextExceedsWidth( dc, text, width ):
+def TextExceedsWidth( painter, text, width ):
     
-    ( t_width, t_height ) = dc.GetTextExtent( text )
+    ( t_width, t_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
     
     return t_width > width
     
-def WrapText( dc, text, width ):
+def WrapText( painter, text, width ):
     
     words = text.split( ' ' )
     
@@ -325,7 +326,7 @@ def WrapText( dc, text, width ):
         
         potential_next_line.append( word )
         
-        if TextExceedsWidth( dc, ' '.join( potential_next_line ), width ):
+        if TextExceedsWidth( painter, ' '.join( potential_next_line ), width ):
             
             if len( potential_next_line ) == 1: # one very long word
                 

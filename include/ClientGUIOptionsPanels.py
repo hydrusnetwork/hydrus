@@ -8,11 +8,13 @@ import collections
 from . import HydrusConstants as HC
 from . import HydrusData
 import os
-import wx
-import wx.lib.masked.timectrl
 from . import HydrusGlobals as HG
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
-class OptionsPanel( wx.Panel ):
+class OptionsPanel( QW.QWidget ):
     
     def GetOptions( self ): raise NotImplementedError()
     
@@ -49,66 +51,67 @@ class OptionsPanelMimes( OptionsPanel ):
                 
             
         
-        gridbox = wx.FlexGridSizer( 2 )
+        gridbox = QP.GridLayout( cols = 2 )
         
-        gridbox.AddGrowableCol( 1, 1 )
+        gridbox.setColumnStretch( 1, 1 )
         
         for mime_group in mime_groups:
             
             mimes = mime_groups_to_mimes[ mime_group ]
             
-            mg_checkbox = wx.CheckBox( self, label = HC.mime_string_lookup[ mime_group ] )
-            mg_checkbox.Bind( wx.EVT_CHECKBOX, self.EventMimeGroupCheckbox )
+            mg_checkbox = QW.QCheckBox( HC.mime_string_lookup[mime_group], self )
+            mg_checkbox.clicked.connect( self.EventMimeGroupCheckbox )
             
             self._mime_groups_to_checkboxes[ mime_group ] = mg_checkbox
-            self._mime_groups_to_values[ mime_group ] = mg_checkbox.GetValue()
+            self._mime_groups_to_values[ mime_group ] = mg_checkbox.isChecked()
             
-            gridbox.Add( mg_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( gridbox, mg_checkbox, CC.FLAGS_VCENTER )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
             for mime in mimes:
                 
-                m_checkbox = wx.CheckBox( self, label = HC.mime_string_lookup[ mime ] )
-                m_checkbox.Bind( wx.EVT_CHECKBOX, self.EventMimeCheckbox )
+                m_checkbox = QW.QCheckBox( HC.mime_string_lookup[mime], self )
+                m_checkbox.clicked.connect( self.EventMimeCheckbox )
                 
                 self._mimes_to_checkboxes[ mime ] = m_checkbox
                 
-                vbox.Add( m_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                QP.AddToLayout( vbox, m_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            gridbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( gridbox, vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        self.SetSizer( gridbox )
+        self.setLayout( gridbox )
         
     
     def _UpdateMimeGroupCheckboxes( self ):
         
         for ( mime_group, mg_checkbox ) in list(self._mime_groups_to_checkboxes.items()):
             
-            respective_checkbox_values = [ m_checkbox.GetValue() for ( mime, m_checkbox ) in list(self._mimes_to_checkboxes.items()) if mime in mime_group ]
+            respective_checkbox_values = [m_checkbox.isChecked() for (mime, m_checkbox) in list( self._mimes_to_checkboxes.items() ) if mime in mime_group]
             
             all_true = False not in respective_checkbox_values
             
-            mg_checkbox.SetValue( all_true )
+            mg_checkbox.setChecked( all_true )
             self._mime_groups_to_values[ mime_group ] = all_true
             
         
     
-    def EventMimeCheckbox( self, event ):
+    def EventMimeCheckbox( self ):
         
         self._UpdateMimeGroupCheckboxes()
         
     
-    def EventMimeGroupCheckbox( self, event ):
+    def EventMimeGroupCheckbox( self ):
         
+        # Obsolote comment from before the Qt port:
         # this is a commandevent, which won't give up the checkbox object, so we have to do some jiggery pokery
         
         for ( mime_group, mg_checkbox ) in list(self._mime_groups_to_checkboxes.items()):
             
             expected_value = self._mime_groups_to_values[ mime_group ]
-            actual_value = mg_checkbox.GetValue()
+            actual_value = mg_checkbox.isChecked()
             
             if actual_value != expected_value:
                 
@@ -116,7 +119,7 @@ class OptionsPanelMimes( OptionsPanel ):
                     
                     if mime in mime_group:
                         
-                        m_checkbox.SetValue( actual_value )
+                        m_checkbox.setChecked( actual_value )
                         
                     
                 
@@ -127,7 +130,7 @@ class OptionsPanelMimes( OptionsPanel ):
     
     def GetValue( self ):
         
-        mimes = tuple( [ mime for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()) if checkbox.GetValue() == True ] )
+        mimes = tuple( [mime for ( mime, checkbox ) in list(self._mimes_to_checkboxes.items()) if checkbox.isChecked() == True] )
         
         return mimes
         
@@ -138,11 +141,11 @@ class OptionsPanelMimes( OptionsPanel ):
             
             if mime in mimes:
                 
-                checkbox.SetValue( True )
+                checkbox.setChecked( True )
                 
             else:
                 
-                checkbox.SetValue( False )
+                checkbox.setChecked( False )
                 
             
         

@@ -8,7 +8,7 @@ from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusThreading
 import os
-import wx
+from . import QtPorting as QP
 
 class JobKey( object ):
     
@@ -480,7 +480,7 @@ class FileRWLock( object ):
         self.there_is_an_active_writer = False
         
     
-class WXAwareJob( HydrusThreading.SchedulableJob ):
+class QtAwareJob(HydrusThreading.SchedulableJob):
     
     def __init__( self, controller, scheduler, window, initial_delay, work_callable ):
         
@@ -491,9 +491,9 @@ class WXAwareJob( HydrusThreading.SchedulableJob ):
     
     def _BootWorker( self ):
         
-        def wx_code():
+        def qt_code():
             
-            if not self._window:
+            if not self._window or not QP.isValid( self._window ):
                 
                 return
                 
@@ -501,7 +501,7 @@ class WXAwareJob( HydrusThreading.SchedulableJob ):
             self.Work()
             
         
-        wx.CallAfter( wx_code )
+        QP.CallAfter( qt_code )
         
     
     def _MyWindowDead( self ):
@@ -526,7 +526,7 @@ class WXAwareJob( HydrusThreading.SchedulableJob ):
         return self._MyWindowDead()
         
     
-class WXAwareRepeatingJob( HydrusThreading.RepeatingJob ):
+class QtAwareRepeatingJob(HydrusThreading.RepeatingJob):
     
     def __init__( self, controller, scheduler, window, initial_delay, period, work_callable ):
         
@@ -537,9 +537,9 @@ class WXAwareRepeatingJob( HydrusThreading.RepeatingJob ):
     
     def _BootWorker( self ):
         
-        def wx_code():
+        def qt_code():
             
-            if not self._window:
+            if not self._window or not QP.isValid( self._window ):
                 
                 return
                 
@@ -547,7 +547,7 @@ class WXAwareRepeatingJob( HydrusThreading.RepeatingJob ):
             self.Work()
             
         
-        wx.CallAfter( wx_code )
+        QP.CallAfter( qt_code )
         
     
     def _MyWindowDead( self ):

@@ -15,17 +15,24 @@ from . import HydrusGlobals as HG
 import os
 import sys
 import traceback
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
+from . import QtPorting as QP
 
-class PopupWindow( wx.Window ):
+class PopupWindow( QW.QFrame ):
     
     def __init__( self, parent, manager ):
         
-        wx.Window.__init__( self, parent, style = wx.BORDER_SIMPLE )
+        QW.QFrame.__init__( self, parent )
+        
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
         
         self._manager = manager
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventDismiss )
         
     
     def TryToDismiss( self ):
@@ -48,9 +55,11 @@ class PopupMessage( PopupWindow ):
         
         self._job_key = job_key
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        self._title = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_CENTER )
+        self._title = ClientGUICommon.BetterStaticText( self )
+        self._title.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
         
         popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
         
@@ -58,100 +67,113 @@ class PopupMessage( PopupWindow ):
         
         if HG.client_controller.new_options.GetBoolean( 'popup_message_force_min_width' ):
             
-            self.SetMinClientSize( ( wrap_width, -1 ) )
+            QP.SetMinClientSize( self, ( wrap_width, -1 ) )
             
         
         self._title.SetWrapWidth( wrap_width )
-        self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._title.Hide()
+        self._title_ev = QP.WidgetEventFilter( self._title )
+        self._title_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._title.hide()
         
-        self._text_1 = ClientGUICommon.BetterStaticText( self )
+        self._text_1 = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         self._text_1.SetWrapWidth( wrap_width )
-        self._text_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._text_1.Hide()
+        self._text_1_ev = QP.WidgetEventFilter( self._text_1 )
+        self._text_1_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._text_1.hide()
         
-        self._gauge_1 = ClientGUICommon.Gauge( self, size = ( wrap_width, -1 ) )
-        self._gauge_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._gauge_1.Hide()
+        self._gauge_1 = ClientGUICommon.Gauge( self )
+        self._gauge_1_ev = QP.WidgetEventFilter( self._gauge_1 )
+        self._gauge_1_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._gauge_1.hide()
         
-        self._text_2 = ClientGUICommon.BetterStaticText( self )
+        self._text_2 = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         self._text_2.SetWrapWidth( wrap_width )
-        self._text_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._text_2.Hide()
+        self._text_2_ev = QP.WidgetEventFilter( self._text_2 )
+        self._text_2_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._text_2.hide()
         
-        self._gauge_2 = ClientGUICommon.Gauge( self, size = ( wrap_width, -1 ) )
-        self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._gauge_2.Hide()
+        self._gauge_2 = ClientGUICommon.Gauge( self )
+        self._gauge_2_ev = QP.WidgetEventFilter( self._gauge_2 )
+        self._gauge_2_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._gauge_2.hide()
         
         self._text_yes_no = ClientGUICommon.BetterStaticText( self )
         self._text_yes_no.SetWrapWidth( wrap_width )
-        self._text_yes_no.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._text_yes_no.Hide()
+        self._text_yes_no_ev = QP.WidgetEventFilter( self._text_yes_no )
+        self._text_yes_no_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._text_yes_no.hide()
         
         self._yes = ClientGUICommon.BetterButton( self, 'yes', self._YesButton )
-        self._yes.Hide()
+        self._yes.hide()
         
         self._no = ClientGUICommon.BetterButton( self, 'no', self._NoButton )
-        self._no.Hide()
+        self._no.hide()
         
         self._network_job_ctrl = ClientGUIControls.NetworkJobControl( self )
-        self._network_job_ctrl.Hide()
+        self._network_job_ctrl.hide()
         
         self._copy_to_clipboard_button = ClientGUICommon.BetterButton( self, 'copy to clipboard', self.CopyToClipboard )
-        self._copy_to_clipboard_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._copy_to_clipboard_button.Hide()
+        self._copy_to_clipboard_button_ev = QP.WidgetEventFilter( self._copy_to_clipboard_button )
+        self._copy_to_clipboard_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._copy_to_clipboard_button.hide()
         
         self._show_files_button = ClientGUICommon.BetterButton( self, 'show files', self.ShowFiles )
-        self._show_files_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._show_files_button.Hide()
+        self._show_files_button_ev = QP.WidgetEventFilter( self._show_files_button )
+        self._show_files_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._show_files_button.hide()
         
         self._show_tb_button = ClientGUICommon.BetterButton( self, 'show traceback', self.ShowTB )
-        self._show_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._show_tb_button.Hide()
+        self._show_tb_button_ev = QP.WidgetEventFilter( self._show_tb_button )
+        self._show_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._show_tb_button.hide()
         
         self._tb_text = ClientGUICommon.BetterStaticText( self )
         self._tb_text.SetWrapWidth( wrap_width )
-        self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._tb_text.Hide()
+        self._tb_text_ev = QP.WidgetEventFilter( self._tb_text )
+        self._tb_text_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._tb_text.hide()
         
         self._copy_tb_button = ClientGUICommon.BetterButton( self, 'copy traceback information', self.CopyTB )
-        self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._copy_tb_button.Hide()
+        self._copy_tb_button_ev = QP.WidgetEventFilter( self._copy_tb_button )
+        self._copy_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._copy_tb_button.hide()
         
-        self._pause_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.pause, self.PausePlay )
-        self._pause_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._pause_button.Hide()
+        self._pause_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.pause, self.PausePlay )
+        self._pause_button_ev = QP.WidgetEventFilter( self._pause_button )
+        self._pause_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._pause_button.hide()
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.Cancel )
-        self._cancel_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._cancel_button.Hide()
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, self.Cancel )
+        self._cancel_button_ev = QP.WidgetEventFilter( self._cancel_button )
+        self._cancel_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._cancel_button.hide()
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._pause_button, CC.FLAGS_VCENTER )
-        hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_VCENTER )
         
-        yes_no_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        yes_no_hbox = QP.HBoxLayout()
         
-        yes_no_hbox.Add( self._yes, CC.FLAGS_VCENTER )
-        yes_no_hbox.Add( self._no, CC.FLAGS_VCENTER )
+        QP.AddToLayout( yes_no_hbox, self._yes, CC.FLAGS_VCENTER )
+        QP.AddToLayout( yes_no_hbox, self._no, CC.FLAGS_VCENTER )
         
-        vbox.Add( self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._text_yes_no, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( yes_no_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._network_job_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._copy_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._title, alignment = QC.Qt.AlignHCenter )
+        QP.AddToLayout( vbox, self._text_1 )
+        QP.AddToLayout( vbox, self._gauge_1 )
+        QP.AddToLayout( vbox, self._text_2 )
+        QP.AddToLayout( vbox, self._gauge_2 )
+        QP.AddToLayout( vbox, self._text_yes_no )
+        QP.AddToLayout( vbox, yes_no_hbox )
+        QP.AddToLayout( vbox, self._network_job_ctrl )
+        QP.AddToLayout( vbox, self._copy_to_clipboard_button )
+        QP.AddToLayout( vbox, self._show_files_button )
+        QP.AddToLayout( vbox, self._show_tb_button )
+        QP.AddToLayout( vbox, self._tb_text )
+        QP.AddToLayout( vbox, self._copy_tb_button )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def _NoButton( self ):
@@ -160,8 +182,8 @@ class PopupMessage( PopupWindow ):
         
         self._job_key.Delete()
         
-        self._yes.Hide()
-        self._no.Hide()
+        self._yes.hide()
+        self._no.hide()
         
     
     def _ProcessText( self, text ):
@@ -188,16 +210,16 @@ class PopupMessage( PopupWindow ):
         
         self._job_key.Delete()
         
-        self._yes.Hide()
-        self._no.Hide()
+        self._yes.hide()
+        self._no.hide()
         
     
     def Cancel( self ):
         
         self._job_key.Cancel()
         
-        self._pause_button.Disable()
-        self._cancel_button.Disable()
+        self._pause_button.setEnabled( False )
+        self._cancel_button.setEnabled( False )
         
     
     def CopyTB( self ):
@@ -223,11 +245,11 @@ class PopupMessage( PopupWindow ):
         
         if self._job_key.IsPaused():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.play )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.GlobalPixmaps.pause )
             
         
     
@@ -245,21 +267,21 @@ class PopupMessage( PopupWindow ):
     
     def ShowTB( self ):
         
-        if self._tb_text.IsShown():
+        if self._tb_text.isVisible():
             
-            self._show_tb_button.SetLabelText( 'show traceback' )
+            self._show_tb_button.setText( 'show traceback' )
             
-            self._tb_text.Hide()
+            self._tb_text.hide()
             
         else:
             
-            self._show_tb_button.SetLabelText( 'hide traceback' )
+            self._show_tb_button.setText( 'hide traceback' )
             
             popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
             
             wrap_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._title, popup_message_character_width )
             
-            self._tb_text.Show()
+            self._tb_text.show()
             
         
         self._manager.MakeSureEverythingFits()
@@ -299,13 +321,13 @@ class PopupMessage( PopupWindow ):
         
         if title is not None:
             
-            self._title.Show()
+            self._title.show()
             
-            self._title.SetLabelText( title )
+            self._title.setText( title )
             
         else:
             
-            self._title.Hide()
+            self._title.hide()
             
         
         popup_text_1 = self._job_key.GetIfHasVariable( 'popup_text_1' )
@@ -321,13 +343,13 @@ class PopupMessage( PopupWindow ):
                 text = popup_text_1
                 
             
-            self._text_1.Show()
+            self._text_1.show()
             
-            self._text_1.SetLabelText( text )
+            self._text_1.setText( text )
             
         else:
             
-            self._text_1.Hide()
+            self._text_1.hide()
             
         
         popup_gauge_1 = self._job_key.GetIfHasVariable( 'popup_gauge_1' )
@@ -339,11 +361,11 @@ class PopupMessage( PopupWindow ):
             self._gauge_1.SetRange( gauge_range )
             self._gauge_1.SetValue( gauge_value )
             
-            self._gauge_1.Show()
+            self._gauge_1.show()
             
         else:
             
-            self._gauge_1.Hide()
+            self._gauge_1.hide()
             
         
         popup_text_2 = self._job_key.GetIfHasVariable( 'popup_text_2' )
@@ -352,13 +374,13 @@ class PopupMessage( PopupWindow ):
             
             text = popup_text_2
             
-            self._text_2.SetLabelText( self._ProcessText( text ) )
+            self._text_2.setText( self._ProcessText( text ) )
             
-            self._text_2.Show()
+            self._text_2.show()
             
         else:
             
-            self._text_2.Hide()
+            self._text_2.hide()
             
         
         popup_gauge_2 = self._job_key.GetIfHasVariable( 'popup_gauge_2' )
@@ -370,11 +392,11 @@ class PopupMessage( PopupWindow ):
             self._gauge_2.SetRange( gauge_range )
             self._gauge_2.SetValue( gauge_value )
             
-            self._gauge_2.Show()
+            self._gauge_2.show()
             
         else:
             
-            self._gauge_2.Hide()
+            self._gauge_2.hide()
             
         
         popup_yes_no_question = self._job_key.GetIfHasVariable( 'popup_yes_no_question' )
@@ -383,18 +405,18 @@ class PopupMessage( PopupWindow ):
             
             text = popup_yes_no_question
             
-            self._text_yes_no.SetLabelText( self._ProcessText( text ) )
+            self._text_yes_no.setText( self._ProcessText(text) )
             
-            self._text_yes_no.Show()
+            self._text_yes_no.show()
             
-            self._yes.Show()
-            self._no.Show()
+            self._yes.show()
+            self._no.show()
             
         else:
             
-            self._text_yes_no.Hide()
-            self._yes.Hide()
-            self._no.Hide()
+            self._text_yes_no.hide()
+            self._yes.hide()
+            self._no.hide()
             
         
         if self._job_key.HasVariable( 'popup_network_job' ):
@@ -405,13 +427,13 @@ class PopupMessage( PopupWindow ):
             
             self._network_job_ctrl.SetNetworkJob( popup_network_job )
             
-            self._network_job_ctrl.Show()
+            self._network_job_ctrl.show()
             
         else:
             
             self._network_job_ctrl.ClearNetworkJob()
             
-            self._network_job_ctrl.Hide()
+            self._network_job_ctrl.hide()
             
         
         popup_clipboard = self._job_key.GetIfHasVariable( 'popup_clipboard' )
@@ -420,16 +442,16 @@ class PopupMessage( PopupWindow ):
             
             ( title, text ) = popup_clipboard
             
-            if self._copy_to_clipboard_button.GetLabelText() != title:
+            if self._copy_to_clipboard_button.text() != title:
                 
-                self._copy_to_clipboard_button.SetLabelText( title )
+                self._copy_to_clipboard_button.setText( title )
                 
             
-            self._copy_to_clipboard_button.Show()
+            self._copy_to_clipboard_button.show()
             
         else:
             
-            self._copy_to_clipboard_button.Hide()
+            self._copy_to_clipboard_button.hide()
             
         
         result = self._job_key.GetIfHasVariable( 'popup_files' )
@@ -442,93 +464,107 @@ class PopupMessage( PopupWindow ):
             
             text = popup_files_name + ' - show ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
             
-            if self._show_files_button.GetLabelText() != text:
+            if self._show_files_button.text() != text:
                 
-                self._show_files_button.SetLabelText( text )
+                self._show_files_button.setText( text )
                 
             
-            self._show_files_button.Show()
+            self._show_files_button.show()
             
         else:
             
-            self._show_files_button.Hide()
+            self._show_files_button.hide()
             
         
         popup_traceback = self._job_key.GetIfHasVariable( 'popup_traceback' )
         
         if popup_traceback is not None:
             
-            self._copy_tb_button.Show()
+            self._copy_tb_button.show()
             
         else:
             
-            self._copy_tb_button.Hide()
+            self._copy_tb_button.hide()
             
         
         if popup_traceback is not None:
             
             text = popup_traceback
             
-            self._tb_text.SetLabelText( self._ProcessText( text ) )
+            self._tb_text.setText( self._ProcessText(text) )
             
-            self._show_tb_button.Show()
+            self._show_tb_button.show()
             
         else:
             
-            self._show_tb_button.Hide()
-            self._tb_text.Hide()
+            self._show_tb_button.hide()
+            self._tb_text.hide()
             
         
         if self._job_key.IsPausable():
             
-            self._pause_button.Show()
+            self._pause_button.show()
             
         else:
             
-            self._pause_button.Hide()
+            self._pause_button.hide()
             
         
         if self._job_key.IsCancellable():
             
-            self._cancel_button.Show()
+            self._cancel_button.show()
             
         else:
             
-            self._cancel_button.Hide()
+            self._cancel_button.hide()
+        
+        # Dirty hack to reduce unnecessary resizing
+        
+        if self.minimumWidth() < self.sizeHint().width():
+            
+            self.setMinimumWidth( self.sizeHint().width() )
             
         
     
-class PopupMessageManager( wx.Frame ):
+class PopupMessageManager( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE )
+        QW.QWidget.__init__( self, parent )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        self.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
+        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
+        self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+        
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._last_best_size_i_fit_on = ( 0, 0 )
         
         self._max_messages_to_display = 10
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        self._message_panel = wx.Panel( self )
+        self._message_panel = QW.QWidget( self )
         
-        self._message_vbox = wx.BoxSizer( wx.VERTICAL )
+        self._message_vbox = QP.VBoxLayout( margin = 0 )
+        vbox.setSizeConstraint( QW.QLayout.SetFixedSize )
         
-        self._message_panel.SetSizer( self._message_vbox )
+        self._message_panel.setLayout( self._message_vbox )
+        self._message_panel.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
         
         self._summary_bar = PopupMessageSummaryBar( self, self )
+        self._summary_bar.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
         
-        vbox.Add( self._message_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._summary_bar, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._message_panel )
+        QP.AddToLayout( vbox, self._summary_bar )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         self._pending_job_keys = []
         
-        parent.Bind( wx.EVT_SIZE, self.EventMove )
-        parent.Bind( wx.EVT_MOVE, self.EventMove )
+        self._gui_event_filter = QP.WidgetEventFilter( parent )
+        self._gui_event_filter.EVT_SIZE( self.EventParentMovedOrResized )
+        self._gui_event_filter.EVT_MOVE( self.EventParentMovedOrResized )
         
         HG.client_controller.sub( self, 'AddMessage', 'message' )
         
@@ -543,20 +579,18 @@ class PopupMessageManager( wx.Frame ):
         
         job_key.SetVariable( 'popup_text_1', 'initialising popup message manager\u2026' )
         
-        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingQtSafe(self, 0.25, 0.5, self.REPEATINGUpdate)
         
-        HG.client_controller.CallLaterWXSafe( self, 0.5, self.AddMessage, job_key )
+        HG.client_controller.CallLaterQtSafe(self, 0.5, self.AddMessage, job_key)
         
-        HG.client_controller.CallLaterWXSafe( self, 1.0, job_key.Delete )
+        HG.client_controller.CallLaterQtSafe(self, 1.0, job_key.Delete)
         
     
     def _CheckPending( self ):
         
-        force_relayout = False
-        
         self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
         
-        while len( self._pending_job_keys ) > 0 and self._message_vbox.GetItemCount() < self._max_messages_to_display:
+        while len( self._pending_job_keys ) > 0 and self._message_vbox.count() < self._max_messages_to_display:
             
             job_key = self._pending_job_keys.pop( 0 )
             
@@ -564,19 +598,12 @@ class PopupMessageManager( wx.Frame ):
             
             window.UpdateMessage()
             
-            self._message_vbox.Add( window, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            force_relayout = True
+            QP.AddToLayout( self._message_vbox, window )
             
         
-        total_messages = len( self._pending_job_keys ) + self._message_vbox.GetItemCount()
+        total_messages = len( self._pending_job_keys ) + self._message_vbox.count()
         
-        self._summary_bar.SetNumMessages( total_messages )
-        
-        if force_relayout:
-            
-            self.Layout()
-            
+        self._summary_bar.SetNumMessages( total_messages )            
         
         if self._NeedsSizeOrShow():
             
@@ -586,11 +613,13 @@ class PopupMessageManager( wx.Frame ):
     
     def _DisplayingError( self ):
         
-        sizer_items = self._message_vbox.GetChildren()
-        
-        for sizer_item in sizer_items:
+        for i in range( self._message_vbox.count() ):
             
-            message_window = sizer_item.GetWindow()
+            sizer_item = self._message_vbox.itemAt( i )
+            
+            message_window = sizer_item.widget()
+            
+            if not message_window: continue
             
             job_key = message_window.GetJobKey()
             
@@ -605,40 +634,37 @@ class PopupMessageManager( wx.Frame ):
     
     def _DoDebugHide( self ):
         
-        parent = self.GetParent()
+        if not QP.isValid( self ): return
         
-        parent_iconized = parent.IsIconized()
-        
-        # changing show status while parent iconised in Windows leads to grey window syndrome
-        windows_and_iconised = HC.PLATFORM_WINDOWS and parent_iconized
+        parent = self.parentWidget()
         
         possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
         
-        going_to_bug_out_at_hide_or_show = windows_and_iconised or possibly_on_hidden_virtual_desktop
+        going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
         
         new_options = HG.client_controller.new_options
         
-        if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ):
+        if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) and not self._DisplayingError():
             
-            if parent.IsIconized():
+            if parent.isMinimized():
                 
-                self.Hide()
+                self.hide()
                 
                 return
                 
             
         
-        current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
+        current_focus_tlp = QW.QApplication.activeWindow()
         
         main_gui_is_active = current_focus_tlp in ( self, parent )
         
-        if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ):
+        if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) and not self._DisplayingError():
             
             if not main_gui_is_active:
                 
                 if not going_to_bug_out_at_hide_or_show:
                     
-                    self.Hide()
+                    self.hide()
                     
                 
             
@@ -646,11 +672,11 @@ class PopupMessageManager( wx.Frame ):
     
     def _NeedsSizeOrShow( self ):
         
-        num_messages_displayed = self._message_vbox.GetItemCount()
+        num_messages_displayed = self._message_vbox.count()
         
         there_is_stuff_to_display = num_messages_displayed > 0
         
-        is_shown = self.IsShown()
+        is_shown = self.isVisible()
         
         if there_is_stuff_to_display:
             
@@ -659,9 +685,9 @@ class PopupMessageManager( wx.Frame ):
                 return True
                 
             
-            best_size = self.GetBestSize()
+            best_size = self.sizeHint()
             
-            if best_size != self.GetSize():
+            if best_size != self.size():
                 
                 return True
                 
@@ -681,16 +707,13 @@ class PopupMessageManager( wx.Frame ):
         
         try:
             
-            parent = self.GetParent()
-            
-            # changing show status while parent iconised in Windows leads to grey window syndrome
-            windows_and_iconised = HC.PLATFORM_WINDOWS and parent.IsIconized()
+            parent = self.parentWidget()
             
             possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
             
-            going_to_bug_out_at_hide_or_show = windows_and_iconised or possibly_on_hidden_virtual_desktop
+            going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
             
-            current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
+            current_focus_tlp = QW.QApplication.activeWindow()
             
             main_gui_is_active = current_focus_tlp in ( self, parent )
             
@@ -698,84 +721,53 @@ class PopupMessageManager( wx.Frame ):
             
             if not main_gui_is_active:
                 
-                c_f_tlp_is_child_frame_of_main_gui = isinstance( current_focus_tlp, wx.Frame ) and current_focus_tlp.GetParent() == parent
+                c_f_tlp_is_child_frame_of_main_gui = current_focus_tlp is not None and current_focus_tlp.parentWidget() == parent
                 
-                if c_f_tlp_is_child_frame_of_main_gui and current_focus_tlp.GetWindowStyle() & wx.FRAME_FLOAT_ON_PARENT == wx.FRAME_FLOAT_ON_PARENT:
+                if c_f_tlp_is_child_frame_of_main_gui:
                     
                     on_top_frame_is_active = True
                     
                 
             
-            num_messages_displayed = self._message_vbox.GetItemCount()
+            num_messages_displayed = self._message_vbox.count()
             
             there_is_stuff_to_display = num_messages_displayed > 0
             
             if there_is_stuff_to_display:
                 
-                # little catch here to try to stop the linux users who got infinitely expanding popups wew
+                ( parent_width, parent_height ) = parent.size().toTuple()
                 
-                popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
+                ( my_width, my_height ) = self.size().toTuple()
                 
-                wrap_width = ClientGUIFunctions.ConvertTextToPixelWidth( self, popup_message_character_width )
+                my_x = ( parent_width - my_width ) - 20
+                my_y = ( parent_height - my_height ) - 25
                 
-                max_width = wrap_width * 1.2
-                
-                ( best_width, best_height ) = self.GetBestSize()
-                
-                best_width = min( best_width, max_width )
-                
-                best_size = ( best_width, best_height )
-                
-                if best_size != self._last_best_size_i_fit_on:
-                    
-                    self._last_best_size_i_fit_on = best_size
-                    
-                    self.SetClientSize( best_size )
-                    
-                    self.Layout()
-                    
-                
-                ( parent_width, parent_height ) = parent.GetClientSize()
-                
-                ( my_width, my_height ) = self.GetClientSize()
-                
-                my_x = ( parent_width - my_width ) - 25
-                my_y = ( parent_height - my_height ) - 5
-                
-                if parent.IsShown():
+                if parent.isVisible():
                     
                     my_position = ClientGUIFunctions.ClientToScreen( parent, ( my_x, my_y ) )
                     
-                    if my_position != self.GetPosition():
+                    if my_position != self.pos():
                         
-                        self.SetPosition( my_position )
+                        self.move( my_position )
                         
                     
                 
                 # Unhiding tends to raise the main gui tlp, which is annoying if a media viewer window has focus
-                show_is_not_annoying = main_gui_is_active or on_top_frame_is_active or self._DisplayingError()
+                # Qt port note: the on_top_frame_is_active part was uncommented originally, but it IS annoying since it leads to flickering (e.g. open the options window with this uncommented to see it in action)
+                show_is_not_annoying = main_gui_is_active or self._DisplayingError() # or on_top_frame_is_active
                 
                 ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
                 
                 if ok_to_show:
                     
-                    was_hidden = not self.IsShown()
-                    
-                    self.Show()
-                    
-                    if was_hidden:
-                        
-                        self.Layout()
-                        
-                        self.Refresh()
-                        
+                    self.show()
                     
                 
             else:
                 
                 if not going_to_bug_out_at_hide_or_show:
                     
-                    self.Hide()
+                    self.hide()
                     
                 
             
@@ -787,25 +779,27 @@ class PopupMessageManager( wx.Frame ):
             
             HydrusData.Print( traceback.format_exc() )
             
-            wx.MessageBox( text )
+            QW.QMessageBox.critical( HG.client_controller.gui, 'Error', text )
             
             self._update_job.Cancel()
             
             self.CleanBeforeDestroy()
             
-            self.DestroyLater()
+            self.deleteLater()
             
         
     
     def _GetAllMessageJobKeys( self ):
         
         job_keys = []
-        
-        sizer_items = self._message_vbox.GetChildren()
-        
-        for sizer_item in sizer_items:
+
+        for i in range( self._message_vbox.count() ):
             
-            message_window = sizer_item.GetWindow()
+            sizer_item = self._message_vbox.itemAt( i )
+            
+            message_window = sizer_item.widget()
+            
+            if not message_window: continue
             
             job_key = message_window.GetJobKey()
             
@@ -818,14 +812,16 @@ class PopupMessageManager( wx.Frame ):
         
     
     def _OKToAlterUI( self ):
+
+        if not QP.isValid( self ): return
         
-        main_gui = self.GetParent()
+        main_gui = self.parentWidget()
         
         # test both because when user uses a shortcut to send gui to a diff monitor, we can't chase it
         # this may need a better test for virtual display dismissal
         not_on_hidden_or_virtual_display = ClientGUITopLevelWindows.MouseIsOnMyDisplay( main_gui ) or ClientGUITopLevelWindows.MouseIsOnMyDisplay( self )
         
-        main_gui_up = not main_gui.IsIconized()
+        main_gui_up = not main_gui.isMinimized()
         
         return not_on_hidden_or_virtual_display and main_gui_up
         
@@ -884,28 +880,29 @@ class PopupMessageManager( wx.Frame ):
             
             self.CleanBeforeDestroy()
             
-            self.DestroyLater()
+            self.deleteLater()
             
             return
             
         
-        sizer_items = self._message_vbox.GetChildren()
-        
-        for sizer_item in sizer_items:
+        for i in range( self._message_vbox.count() ):
             
-            message_window = sizer_item.GetWindow()
+            sizer_item = self._message_vbox.itemAt( i )
             
-            if message_window.IsDeleted():
+            message_window = sizer_item.widget()
+            
+            if message_window:
                 
-                message_window.TryToDismiss()
-                
-                self.Layout()
-                
-                break
-                
-            else:
-                
-                message_window.UpdateMessage()
+                if message_window.IsDeleted():
+                    
+                    message_window.TryToDismiss()
+                    
+                    break
+                    
+                else:
+                    
+                    message_window.UpdateMessage()
+                    
                 
             
         
@@ -944,11 +941,11 @@ class PopupMessageManager( wx.Frame ):
                 
             
         
-        sizer_items = self._message_vbox.GetChildren()
-        
-        for sizer_item in sizer_items:
+        for i in range( self._message_vbox.count() ):
             
-            message_window = sizer_item.GetWindow()
+            message_window = self._message_vbox.itemAt( i ).widget()
+            
+            if not message_window: continue
             
             job_key = message_window.GetJobKey()
             
@@ -965,13 +962,11 @@ class PopupMessageManager( wx.Frame ):
     
     def Dismiss( self, window ):
         
-        self._message_vbox.Detach( window )
+        self._message_vbox.removeWidget( window )
         
-        window.DestroyLater()
+        window.deleteLater()
         
         if self._OKToAlterUI():
-            
-            self.Layout()
             
             self._CheckPending()
             
@@ -981,39 +976,41 @@ class PopupMessageManager( wx.Frame ):
         
         self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if job_key.IsPausable() or job_key.IsCancellable() ]
         
-        sizer_items = self._message_vbox.GetChildren()
+        items = []
         
-        for sizer_item in sizer_items:
+        for i in range( self._message_vbox.count() ):
             
-            message_window = sizer_item.GetWindow()
+            items.append( self._message_vbox.itemAt( i ) )
+            
+        
+        for item in items:
+
+            message_window = item.widget()
+            
+            if not message_window: continue
             
             message_window.TryToDismiss()
             
-        
-        self.Layout()
         
         self._CheckPending()
         
     
     def ExpandCollapse( self ):
         
-        if self._message_panel.IsShown():
+        if self._message_panel.isVisible():
             
-            self._message_panel.Hide()
+            self._message_panel.setVisible( False )
             
         else:
             
-            self._message_panel.Show()
+            self._message_panel.show()
             
-            self.Fit()
-            
-        
         self.MakeSureEverythingFits()
         
     
-    def EventMove( self, event ):
+    def resizeEvent( self, event ):
         
-        if not self: # funny runtime error caused this
+        if not self or not QP.isValid( self ): # funny runtime error caused this
             
             return
             
@@ -1023,14 +1020,27 @@ class PopupMessageManager( wx.Frame ):
             self._SizeAndPositionAndShow()
             
         
-        event.Skip()
+        event.ignore()
+        
+    
+    def EventParentMovedOrResized( self, event ):
+        
+        if not self or not QP.isValid( self ): # funny runtime error caused this
+            
+            return
+            
+        
+        if self._OKToAlterUI():
+            
+            self._SizeAndPositionAndShow()
+            
+        
+        return True # was: event.ignore()
         
     
     def MakeSureEverythingFits( self ):
         
         if self._OKToAlterUI():
-            
-            self.Layout()
             
             self._SizeAndPositionAndShow()
             
@@ -1056,12 +1066,12 @@ class PopupMessageManager( wx.Frame ):
             raise
             
         
-    
-class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
+# This was originally a reviewpanel subclass which is a scroll area subclass, but having it in a scroll area didn't work out with dynamically updating size as the widget contents change.
+class PopupMessageDialogPanel( QW.QWidget ):
     
     def __init__( self, parent, job_key ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._yesno_open = False
         
@@ -1069,11 +1079,11 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._message_window = PopupMessage( self, self, self._job_key )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._message_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._message_window )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         self._windows_hidden = []
         
@@ -1081,12 +1091,26 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._message_pubbed = False
         
-        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingQtSafe(self, 0.25, 0.5, self.REPEATINGUpdate)
+
+    def CanCancel( self ):
+
+        return True
         
-    
+
+    def CanOK( self ):
+        
+        return True
+        
+
+    def CleanBeforeDestroy( self ):
+
+        pass
+        
+
     def _HideOtherWindows( self ):
         
-        for tlw in wx.GetTopLevelWindows():
+        for tlw in QW.QApplication.topLevelWidgets():
             
             if tlw == self:
                 
@@ -1098,7 +1122,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
-            if ClientGUIFunctions.IsWXAncestor( self, tlw, through_tlws = True ):
+            if ClientGUIFunctions.IsQtAncestor( self, tlw, through_tlws = True ):
                 
                 continue
                 
@@ -1110,12 +1134,12 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
-            if not tlw.IsShown() or tlw.IsIconized():
+            if not tlw.isVisible() or tlw.isMinimized():
                 
                 continue
                 
             
-            tlw.Hide()
+            tlw.hide()
             
             self._windows_hidden.append( tlw )
             
@@ -1137,7 +1161,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for tlw in self._windows_hidden:
             
-            tlw.Show()
+            tlw.show()
             
         
         self._windows_hidden = []
@@ -1147,12 +1171,15 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._message_window.UpdateMessage()
         
-        best_size = self.GetBestSize()
-        
-        if best_size != self.GetSize():
-            
-            ClientGUITopLevelWindows.PostSizeChangedEvent( self )
-            
+        # Resize the window after updates
+        # The problem is that when the window is created, the initial size is too small because all widgets are empty before the first update,
+        # but after it updates it doesn't want to resize the window, rather it just adds scrollbars.
+        # This is a manual fix. Need to find a better solution...
+
+        self.layout().update()
+        self._message_window.adjustSize()
+        self.adjustSize()
+        self.window().adjustSize()
         
     
     def Dismiss( self, window ):
@@ -1183,7 +1210,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     self._yesno_open = False
                     
                 
-                if result == wx.ID_YES:
+                if result == QW.QDialog.Accepted:
                     
                     self._job_key.Cancel()
                     
@@ -1209,9 +1236,9 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if not self._yesno_open: # don't close while a child dialog open m8
                     
-                    parent = self.GetParent()
+                    parent = self.parentWidget()
                     
-                    if parent.IsModal(): # event sometimes fires after modal done
+                    if parent.isModal(): # event sometimes fires after modal done
                         
                         parent.DoOK()
                         
@@ -1236,7 +1263,7 @@ class PopupMessageSummaryBar( PopupWindow ):
         
         PopupWindow.__init__( self, parent, manager )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
         self._text = ClientGUICommon.BetterStaticText( self )
         
@@ -1244,19 +1271,19 @@ class PopupMessageSummaryBar( PopupWindow ):
         
         dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self._manager.DismissAll )
         
-        hbox.Add( self._text, CC.FLAGS_VCENTER )
-        hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( dismiss_all, CC.FLAGS_VCENTER )
-        hbox.Add( self._expand_collapse, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, dismiss_all, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._expand_collapse, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
     
     def ExpandCollapse( self ):
         
         self._manager.ExpandCollapse()
         
-        current_text = self._expand_collapse.GetLabelText()
+        current_text = self._expand_collapse.text()
         
         if current_text == '\u25bc':
             
@@ -1267,7 +1294,7 @@ class PopupMessageSummaryBar( PopupWindow ):
             new_text = '\u25bc'
             
         
-        self._expand_collapse.SetLabelText( new_text )
+        self._expand_collapse.setText( new_text )
         
     
     def TryToDismiss( self ):
@@ -1279,10 +1306,10 @@ class PopupMessageSummaryBar( PopupWindow ):
         
         if num_messages_pending == 1:
             
-            self._text.SetLabelText( '1 message' )
+            self._text.setText( '1 message' )
             
         else:
             
-            self._text.SetLabelText( HydrusData.ToHumanInt( num_messages_pending ) + ' messages' )
+            self._text.setText( HydrusData.ToHumanInt(num_messages_pending)+' messages' )
             
         

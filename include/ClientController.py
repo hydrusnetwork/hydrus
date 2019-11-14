@@ -1,16 +1,10 @@
 import os
-import wx
-
-wx_first_num = int( wx.__version__[0] )
-
-if wx_first_num < 4:
-    
-    wx_error = 'Unfortunately, hydrus now requires the new Phoenix (4.x) version of wx.'
-    wx_error += os.linesep * 2
-    wx_error += 'Please check the \'running from source\' page in the html help for more details.'
-    
-    raise Exception( wx_error )
-    
+import sys
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
+   
 from . import ClientAPI
 from . import ClientCaches
 from . import ClientData
@@ -53,42 +47,45 @@ import signal
 import threading
 import time
 import traceback
+from . import QtPorting as QP
 
 if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
-class App( wx.App ):
+class App( QW.QApplication ):
     
     def __init__( self, *args, **kwargs ):
         
-        wx.App.__init__( self, *args, **kwargs )
+        QW.QApplication.__init__( self, *args, **kwargs )
         
-        self.Bind( wx.EVT_QUERY_END_SESSION, self.EventQueryEndSession )
-        self.Bind( wx.EVT_END_SESSION, self.EventEndSession )
+        self.setApplicationName( 'Hydrus Client' )
+        self.setApplicationVersion( str( HC.SOFTWARE_VERSION ) )
+        
+        # Uncomment this to debug Qt warnings. Set a breakpoint on the print statement in QP.WarningHandler to be able to see where the warnings originate from.
+        QC.qInstallMessageHandler( QP.WarningHandler )
+        
+        self.setQuitOnLastWindowClosed( True )
+        
+        self.call_after_catcher = QC.QObject( self )
+        
+        self.call_after_catcher.installEventFilter( QP.CallAfterEventFilter( self.call_after_catcher ) )
+        
+        self.aboutToQuit.connect( self.EventEndSession )
         
     
-    def EventEndSession( self, event ):
+    def EventEndSession( self ):
         
-        HG.emergency_exit = True
+        # Since aboutToQuit gets called not only on external shutdown events (like user logging off), but even if we explicitely call QApplication.exit(),
+        # this check will make sure that we only do an emergency exit if it's really necessary (i.e. QApplication.exit() wasn't called by us).
+        if not QW.QApplication.instance().property( 'normal_exit' ):
         
-        HG.client_controller.gui.Exit()
-        
-        if event.CanVeto(): # if any more time is offered, take it
+            HG.emergency_exit = True
             
-            event.Veto()
-            
-        
-    
-    def EventQueryEndSession( self, event ):
-        
-        HG.emergency_exit = True
-        
-        HG.client_controller.gui.Exit()
-        
-        if event.CanVeto(): # if any more time is offered, take it
-            
-            event.Veto()
+            if hasattr( HG.client_controller, 'gui' ):
+                
+                HG.client_controller.gui.Exit()
+                
             
         
     
@@ -145,13 +142,13 @@ class Controller( HydrusController.HydrusController ):
     
     def _DestroySplash( self ):
         
-        def wx_code( splash ):
+        def qt_code( splash ):
             
-            if splash:
+            if splash and QP.isValid( splash ):
                 
-                splash.Hide()
+                splash.hide()
                 
-                splash.DestroyLater()
+                splash.close()
                 
             
         
@@ -161,8 +158,13 @@ class Controller( HydrusController.HydrusController ):
             
             self._splash = None
             
-            wx.CallAfter( wx_code, splash )
+            QP.CallAfter( qt_code, splash )
             
+        
+    
+    def _GetPubsubValidCallable( self ):
+        
+        return QP.isValid
         
     
     def _GetUPnPServices( self ):
@@ -181,6 +183,18 @@ class Controller( HydrusController.HydrusController ):
         self.pub( 'splash_set_status_subtext', ', '.join( names ) )
         
     
+    def _ReportShutdownException( self ):
+        
+        text = 'A serious error occurred while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
+        
+        HydrusData.DebugPrint( text )
+        
+        HydrusData.DebugPrint( traceback.format_exc() )
+        
+        self.SafeShowCriticalMessage( 'shutdown error', text )
+        self.SafeShowCriticalMessage( 'shutdown error', traceback.format_exc() )
+        
+    
     def AcquirePageKey( self ):
         
         with self._page_key_lock:
@@ -193,22 +207,22 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CallBlockingToWX( self, win, func, *args, **kwargs ):
+    def CallBlockingToQt(self, win, func, *args, **kwargs):
         
-        def wx_code( win, job_key ):
+        def qt_code( win, job_key ):
             
             try:
                 
-                if win is not None and not win:
+                if win is not None and not QP.isValid( win ):
                     
-                    raise HydrusExceptions.WXDeadWindowException( 'Parent Window was destroyed before wx command was called!' )
+                    raise HydrusExceptions.QtDeadWindowException('Parent Window was destroyed before Qt command was called!')
                     
                 
                 result = func( *args, **kwargs )
                 
                 job_key.SetVariable( 'result', result )
                 
-            except ( HydrusExceptions.WXDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
                 job_key.SetVariable( 'error', e )
                 
@@ -216,7 +230,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_key.SetVariable( 'error', e )
                 
-                HydrusData.Print( 'CallBlockingToWX just caught this error:' )
+                HydrusData.Print( 'CallBlockingToQt just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
@@ -229,11 +243,11 @@ class Controller( HydrusController.HydrusController ):
         
         job_key.Begin()
         
-        wx.CallAfter( wx_code, win, job_key )
+        QP.CallAfter( qt_code, win, job_key )
         
         while not job_key.IsDone():
             
-            if HG.model_shutdown:
+            if not HG.qt_app_running:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
@@ -243,7 +257,7 @@ class Controller( HydrusController.HydrusController ):
         
         if job_key.HasVariable( 'result' ):
             
-            # result can be None, for wx_code that has no return variable
+            # result can be None, for qt_code that has no return variable
             
             result = job_key.GetIfHasVariable( 'result' )
             
@@ -260,13 +274,13 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
-    def CallLaterWXSafe( self, window, initial_delay, func, *args, **kwargs ):
+    def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ):
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareJob( self, job_scheduler, window, initial_delay, call )
+        job = ClientThreading.QtAwareJob( self, job_scheduler, window, initial_delay, call )
         
         if job_scheduler is not None:
             
@@ -276,13 +290,13 @@ class Controller( HydrusController.HydrusController ):
         return job
         
     
-    def CallRepeatingWXSafe( self, window, initial_delay, period, func, *args, **kwargs ):
+    def CallRepeatingQtSafe(self, window, initial_delay, period, func, *args, **kwargs):
         
         job_scheduler = self._GetAppropriateJobScheduler( period )
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareRepeatingJob( self, job_scheduler, window, initial_delay, period, call )
+        job = ClientThreading.QtAwareRepeatingJob(self, job_scheduler, window, initial_delay, period, call)
         
         if job_scheduler is not None:
             
@@ -296,9 +310,9 @@ class Controller( HydrusController.HydrusController ):
         
         if sig == signal.SIGINT:
             
-            event = wx.CloseEvent( wx.wxEVT_CLOSE_WINDOW, -1 )
+            event = QG.QCloseEvent()
             
-            wx.QueueEvent( self.gui, event )
+            QW.QApplication.postEvent( self.gui, event )
             
         
     
@@ -308,7 +322,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'splash_set_status_text', 'client already running' )
             
-            def wx_code():
+            def qt_code():
                 
                 message = 'It looks like another instance of this client is already running, so this instance cannot start.'
                 message += os.linesep * 2
@@ -316,7 +330,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self._splash, message, title = 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' )
                 
-                if result != wx.ID_YES:
+                if result != QW.QDialog.Accepted:
                     
                     HG.shutting_down_due_to_already_running = True
                     
@@ -324,7 +338,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToWX( self._splash, wx_code )
+            self.CallBlockingToQt(self._splash, qt_code)
             
             for i in range( 10, 0, -1 ):
                 
@@ -342,7 +356,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CheckMouseIdle( self ):
         
-        mouse_position = wx.GetMousePosition()
+        mouse_position = QG.QCursor.pos()
         
         if self._last_mouse_position is None:
             
@@ -499,6 +513,11 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
+        if not self._is_booted:
+            
+            HG.emergency_exit = True
+            
+        
         HG.program_is_shutting_down = True
         
         if HG.emergency_exit:
@@ -550,7 +569,7 @@ class Controller( HydrusController.HydrusController ):
                             
                             result = ClientGUIDialogsQuick.GetYesNo( self._splash, text, title = 'Maintenance is due', auto_no_time = 15 )
                             
-                            if result == wx.ID_YES:
+                            if result == QW.QDialog.Accepted:
                                 
                                 HG.do_idle_shutdown_work = True
                                 
@@ -583,58 +602,23 @@ class Controller( HydrusController.HydrusController ):
                 HG.emergency_exit = True
                 
                 self.Exit()
-                
             
-        
-    
-    def GetApp( self ):
-        
-        return self._app
         
     
     def GetClipboardText( self ):
         
-        if wx.TheClipboard.Open():
+        clipboard_text = QW.QApplication.clipboard().text()
+        
+        if not clipboard_text:
             
-            try:
-                
-                if not wx.TheClipboard.IsSupported( wx.DataFormat( wx.DF_TEXT ) ):
-                    
-                    raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
-                    
-                
-                data = wx.TextDataObject()
-                
-                success = wx.TheClipboard.GetData( data )
-                
-            finally:
-                
-                wx.TheClipboard.Close()
-                
-            
-            if not success:
-                
-                raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
-                
-            
-            text = data.GetText()
-            
-            return text
-            
-        else:
-            
-            raise HydrusExceptions.DataMissing( 'I could not get permission to access the clipboard.' )
-            
+            raise HydrusExceptions.DataMissing( 'No text on the clipboard!' )
+        
+        return clipboard_text
         
     
     def GetCommandFromShortcut( self, shortcut_names, shortcut ):
         
         return self.shortcuts_manager.GetCommand( shortcut_names, shortcut )
-        
-    
-    def GetGUI( self ):
-        
-        return self.gui
         
     
     def GetIdleShutdownWorkDue( self, time_to_stop ):
@@ -663,7 +647,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitClientFilesManager( self ):
         
-        def wx_code( missing_locations ):
+        def qt_code( missing_locations ):
             
             with ClientGUITopLevelWindows.DialogManage( None, 'repair file system' ) as dlg:
                 
@@ -671,7 +655,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self.client_files_manager = ClientFiles.ClientFilesManager( self )
                     
@@ -694,7 +678,7 @@ class Controller( HydrusController.HydrusController ):
         
         while len( missing_locations ) > 0:
             
-            missing_locations = self.CallBlockingToWX( self._splash, wx_code, missing_locations )
+            missing_locations = self.CallBlockingToQt(self._splash, qt_code, missing_locations)
             
         
     
@@ -743,7 +727,7 @@ class Controller( HydrusController.HydrusController ):
             
             client_api_manager._dirty = True
             
-            wx.SafeShowMessage( 'Problem loading object', 'Your client api manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your client api manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         self.client_api_manager = client_api_manager
@@ -758,7 +742,7 @@ class Controller( HydrusController.HydrusController ):
             
             bandwidth_manager._dirty = True
             
-            wx.SafeShowMessage( 'Problem loading object', 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         session_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
@@ -769,7 +753,7 @@ class Controller( HydrusController.HydrusController ):
             
             session_manager._dirty = True
             
-            wx.SafeShowMessage( 'Problem loading object', 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         domain_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
@@ -782,7 +766,7 @@ class Controller( HydrusController.HydrusController ):
             
             domain_manager._dirty = True
             
-            wx.SafeShowMessage( 'Problem loading object', 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         domain_manager.Initialise()
@@ -797,7 +781,7 @@ class Controller( HydrusController.HydrusController ):
             
             login_manager._dirty = True
             
-            wx.SafeShowMessage( 'Problem loading object', 'Your login manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your login manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         login_manager.Initialise()
@@ -830,7 +814,7 @@ class Controller( HydrusController.HydrusController ):
             
             tag_display_manager._dirty = True
             
-            wx.SafeShowMessage( 'Problem loading object', 'Your tag display manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            self.SafeShowCriticalMessage( 'Problem loading object', 'Your tag display manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
         self.tag_display_manager = tag_display_manager
@@ -844,18 +828,18 @@ class Controller( HydrusController.HydrusController ):
         self.tag_parents_manager = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         
-        def wx_code():
+        def qt_code():
             
             self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
             self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
             self.bitmap_manager = ClientCaches.BitmapManager( self )
             
-            CC.GlobalBMPs.STATICInitialise()
+            CC.GlobalPixmaps.STATICInitialise()
             
         
         self.pub( 'splash_set_status_subtext', 'image caches' )
         
-        self.CallBlockingToWX( self._splash, wx_code )
+        self.CallBlockingToQt(self._splash, qt_code)
         
         self.sub( self, 'ToClipboard', 'clipboard' )
         
@@ -866,13 +850,13 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'splash_set_status_text', 'waiting for password' )
             
-            def wx_code_password():
+            def qt_code_password():
                 
                 while True:
                     
-                    with wx.PasswordEntryDialog( self._splash, 'Enter your password', 'Enter password' ) as dlg:
+                    with QP.PasswordEntryDialog( self._splash, 'Enter your password:', 'Enter password' ) as dlg:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
+                        if dlg.exec() == QW.QDialog.Accepted:
                             
                             password_bytes = bytes( dlg.GetValue(), 'utf-8' )
                             
@@ -889,19 +873,19 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToWX( self._splash, wx_code_password )
+            self.CallBlockingToQt(self._splash, qt_code_password)
             
         
         self.pub( 'splash_set_title_text', 'booting gui\u2026' )
         
-        def wx_code_gui():
+        def qt_code_gui():
             
             self.gui = ClientGUI.FrameGUI( self )
             
             self.ResetIdleTimer()
             
         
-        self.CallBlockingToWX( self._splash, wx_code_gui )
+        self.CallBlockingToQt(self._splash, qt_code_gui)
         
         # ShowText will now popup as a message, as popup message manager has overwritten the hooks
         
@@ -941,7 +925,7 @@ class Controller( HydrusController.HydrusController ):
         job.WakeOnPubSub( 'notify_unknown_accounts' )
         self._daemon_jobs[ 'synchronise_accounts' ] = job
         
-        job = self.CallRepeatingWXSafe( self, 10.0, 10.0, self.CheckMouseIdle )
+        job = self.CallRepeatingQtSafe(self, 10.0, 10.0, self.CheckMouseIdle)
         self._daemon_jobs[ 'check_mouse_idle' ] = job
         
         if self.db.IsFirstStart():
@@ -1125,11 +1109,11 @@ class Controller( HydrusController.HydrusController ):
     
     def PopupMenu( self, window, menu ):
         
-        if menu.GetMenuItemCount() > 0:
+        if not menu.isEmpty():
             
             self._menu_open = True
             
-            window.PopupMenu( menu )
+            menu.exec_( QG.QCursor.pos() ) # This could also be window.mapToGlobal( QC.QPoint( 0, 0 ) ), but in practice, popping up at the current cursor position feels better.
             
             self._menu_open = False
             
@@ -1144,7 +1128,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ProcessPubSub( self ):
         
-        self.CallBlockingToWX( None, self._pubsub.Process )
+        self.CallBlockingToQt( self.app, self._pubsub.Process )
         
     
     def RefreshServices( self ):
@@ -1179,9 +1163,9 @@ class Controller( HydrusController.HydrusController ):
         
         from . import ClientGUIDialogsQuick
         
-        with wx.DirDialog( self.gui, 'Select backup location.' ) as dlg:
+        with QP.DirDialog( self.gui, 'Select backup location.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -1193,7 +1177,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self.gui, text )
                 
-                if result == wx.ID_YES:
+                if result == QW.QDialog.Accepted:
                     
                     def THREADRestart():
                         
@@ -1214,7 +1198,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     self.CallToThreadLongRunning( THREADRestart )
                     
-                    wx.CallAfter( self.gui.Exit )
+                    QP.CallAfter( self.gui.Exit )
                     
                 
             
@@ -1222,16 +1206,12 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        self._app = App()
-        
-        self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
-        
-        # do not import locale here and try anything clever--assume that bad locale formatting is due to OS-level mess-up, not mine
-        # wx locale is supposed to set it all up nice, so if someone's doesn't, explore that and find the external solution
+        QP.MonkeyPatchMissingMethods()
+        self.app = App( sys.argv )
         
         HydrusData.Print( 'booting controller\u2026' )
         
-        self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
+        self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
         
         self.CreateSplash()
         
@@ -1239,9 +1219,33 @@ class Controller( HydrusController.HydrusController ):
         
         self.CallToThreadLongRunning( self.THREADBootEverything )
         
-        self._app.MainLoop()
+        HG.qt_app_running = True
+        
+        try:
+            
+            self.app.exec_()
+            
+        finally:
+            
+            HG.qt_app_running = False
+            
         
         HydrusData.DebugPrint( 'shutting down controller\u2026' )
+        
+    
+    def SafeShowCriticalMessage( self, title, message ):
+        
+        HydrusData.DebugPrint( title )
+        HydrusData.DebugPrint( message )
+        
+        if QC.QThread.currentThread() == QW.QApplication.instance().thread():
+            
+            QW.QMessageBox.critical( None, title, message )
+            
+        else:
+            
+            self.CallBlockingToQt( self.app, QW.QMessageBox.critical, None, title, message )
+            
         
     
     def SaveDirtyObjects( self ):
@@ -1411,9 +1415,12 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownModel( self ):
         
-        self.file_viewing_stats_manager.Flush()
-        
-        self.SaveDirtyObjects()
+        if self._is_booted:
+            
+            self.file_viewing_stats_manager.Flush()
+            
+            self.SaveDirtyObjects()
+            
         
         HydrusController.HydrusController.ShutdownModel( self )
         
@@ -1434,7 +1441,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 except:
                     
-                    ClientData.ReportShutdownException()
+                    self._ReportShutdownException()
                     
                 
             
@@ -1532,9 +1539,7 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.Print( e )
             
-            HG.emergency_exit = True
-            
-            self.Exit()
+            QP.CallAfter( QW.QApplication.exit, 0 )
             
         except Exception as e:
             
@@ -1545,12 +1550,11 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.DebugPrint( traceback.format_exc() )
             
-            wx.SafeShowMessage( 'boot error', text )
-            wx.SafeShowMessage( 'boot error', traceback.format_exc() )
+            self.SafeShowCriticalMessage( 'boot error', text )
             
-            HG.emergency_exit = True
+            self.SafeShowCriticalMessage( 'boot error', traceback.format_exc() )
             
-            self.Exit()
+            QP.CallAfter( QW.QApplication.exit, 0 )
             
         finally:
             
@@ -1582,11 +1586,15 @@ class Controller( HydrusController.HydrusController ):
             
         except:
             
-            ClientData.ReportShutdownException()
+            self._ReportShutdownException()
             
         finally:
             
             self._DestroySplash()
+
+            QW.QApplication.instance().setProperty( 'normal_exit', True )
+
+            QW.QApplication.exit()
             
         
     
@@ -1596,56 +1604,24 @@ class Controller( HydrusController.HydrusController ):
         
         if data_type == 'paths':
             
-            paths = data
+            paths = []
             
-            if wx.TheClipboard.Open():
+            for path in data:
                 
-                try:
-                    
-                    data = wx.DataObjectComposite()
-                    
-                    file_data = wx.FileDataObject()
-                    
-                    for path in paths: file_data.AddFile( path )
-                    
-                    text_data = wx.TextDataObject( os.linesep.join( paths ) )
-                    
-                    data.Add( file_data, True )
-                    data.Add( text_data, False )
-                    
-                    wx.TheClipboard.SetData( data )
-                    
-                finally:
-                    
-                    wx.TheClipboard.Close()
-                    
+                paths.append( QC.QUrl.fromLocalFile( path ) )
                 
-            else:
-                
-                wx.MessageBox( 'Could not get permission to access the clipboard!' )
-                
+            
+            mime_data = QC.QMimeData()
+            
+            mime_data.setUrls( paths )
+            
+            QW.QApplication.clipboard().setMimeData( mime_data )
             
         elif data_type == 'text':
             
             text = data
             
-            if wx.TheClipboard.Open():
-                
-                try:
-                    
-                    data = wx.TextDataObject( text )
-                    
-                    wx.TheClipboard.SetData( data )
-                    
-                finally:
-                    
-                    wx.TheClipboard.Close()
-                    
-                
-            else:
-                
-                wx.MessageBox( 'I could not get permission to access the clipboard.' )
-                
+            QW.QApplication.clipboard().setText( text )
             
         elif data_type == 'bmp':
             
@@ -1655,30 +1631,12 @@ class Controller( HydrusController.HydrusController ):
             
             def CopyToClipboard():
                 
-                if wx.TheClipboard.Open():
-                    
-                    try:
-                        
-                        wx_bmp = image_renderer.GetWXBitmap()
-                        
-                        data = wx.BitmapDataObject( wx_bmp )
-                        
-                        wx.TheClipboard.SetData( data )
-                        
-                    finally:
-                        
-                        wx.TheClipboard.Close()
-                        
-                    
-                else:
-                    
-                    wx.MessageBox( 'I could not get permission to access the clipboard.' )
-                    
+                qt_image = image_renderer.GetQtImage().copy()
+                
+                QW.QApplication.clipboard().setImage( qt_image )
                 
             
             def THREADWait():
-                
-                # have to do this in thread, because the image needs the wx event queue to render
                 
                 start_time = time.time()
                 
@@ -1686,13 +1644,15 @@ class Controller( HydrusController.HydrusController ):
                     
                     if HydrusData.TimeHasPassed( start_time + 15 ):
                         
-                        raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                        HydrusData.ShowText( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                        
+                        return
                         
                     
                     time.sleep( 0.1 )
                     
                 
-                wx.CallAfter( CopyToClipboard )
+                QP.CallAfter( CopyToClipboard )
                 
             
             self.CallToThread( THREADWait )

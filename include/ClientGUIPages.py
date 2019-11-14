@@ -23,8 +23,12 @@ import os
 import sys
 import time
 import traceback
-import wx
+from . import QtPorting as QP
 from . import HydrusGlobals as HG
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 RESERVED_SESSION_NAMES = { '', 'just a blank page', 'last session', 'exit session' }
 
@@ -38,33 +42,71 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         self._result = None
         
-        # spawn in this order, so focus precipitates from the graphical top
+        # spawn and add to layout in this order, so focus precipitates from the graphical top
         
-        self._button_7 = wx.Button( self, label = '', id = 7 )
-        self._button_8 = wx.Button( self, label = '', id = 8 )
-        self._button_9 = wx.Button( self, label = '', id = 9 )
-        self._button_4 = wx.Button( self, label = '', id = 4 )
-        self._button_5 = wx.Button( self, label = '', id = 5 )
-        self._button_6 = wx.Button( self, label = '', id = 6 )
-        self._button_1 = wx.Button( self, label = '', id = 1 )
-        self._button_2 = wx.Button( self, label = '', id = 2 )
-        self._button_3 = wx.Button( self, label = '', id = 3 )
+        self._button_7 = QW.QPushButton( '', self )
+        self._button_8 = QW.QPushButton( '', self )
+        self._button_9 = QW.QPushButton( '', self )
+        self._button_4 = QW.QPushButton( '', self )
+        self._button_5 = QW.QPushButton( '', self )
+        self._button_6 = QW.QPushButton( '', self )
+        self._button_1 = QW.QPushButton( '', self )
+        self._button_2 = QW.QPushButton( '', self )
+        self._button_3 = QW.QPushButton( '', self )
         
-        gridbox = wx.GridSizer( 3 )
+        size_policy = self._button_1.sizePolicy()
+        size_policy.setVerticalPolicy( QW.QSizePolicy.Expanding )
+        size_policy.setRetainSizeWhenHidden( True )
         
-        gridbox.Add( self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._button_7.setSizePolicy( size_policy )
+        self._button_8.setSizePolicy( size_policy )
+        self._button_9.setSizePolicy( size_policy )
+        self._button_4.setSizePolicy( size_policy )
+        self._button_5.setSizePolicy( size_policy )
+        self._button_6.setSizePolicy( size_policy )
+        self._button_1.setSizePolicy( size_policy )
+        self._button_2.setSizePolicy( size_policy )
+        self._button_3.setSizePolicy( size_policy )
         
-        self.SetSizer( gridbox )
+        self._button_7.setObjectName('7')
+        self._button_8.setObjectName('8')
+        self._button_9.setObjectName('9')
+        self._button_4.setObjectName('4')
+        self._button_5.setObjectName('5')
+        self._button_6.setObjectName('6')
+        self._button_1.setObjectName('1')
+        self._button_2.setObjectName('2')
+        self._button_3.setObjectName('3')
         
-        self.SetInitialSize( ( 420, 210 ) )
+        # this ensures these buttons won't get focus and receive key events, letting dialog handle arrow/number shortcuts
+        self._button_7.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_8.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_9.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_4.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_5.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_6.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_1.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_2.setFocusPolicy( QC.Qt.NoFocus )
+        self._button_3.setFocusPolicy( QC.Qt.NoFocus )
+        
+        gridbox = QP.GridLayout( cols = 3 )
+        
+        QP.AddToLayout( gridbox, self._button_7 )
+        QP.AddToLayout( gridbox, self._button_8 )
+        QP.AddToLayout( gridbox, self._button_9 )
+        QP.AddToLayout( gridbox, self._button_4 )
+        QP.AddToLayout( gridbox, self._button_5 )
+        QP.AddToLayout( gridbox, self._button_6 )
+        QP.AddToLayout( gridbox, self._button_1 )
+        QP.AddToLayout( gridbox, self._button_2 )
+        QP.AddToLayout( gridbox, self._button_3 )
+        
+        self.setLayout( gridbox )
+        
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 64, 14 ) )
+        
+        self.setMinimumWidth( width )
+        self.setMinimumHeight( height )
         
         self._services = HG.client_controller.services_manager.GetServices()
         
@@ -74,17 +116,24 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         self._InitButtons( 'home' )
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self._button_7.clicked.connect( lambda: self._HitButton( 7 ) )
+        self._button_8.clicked.connect( lambda: self._HitButton( 8 ) )
+        self._button_9.clicked.connect( lambda: self._HitButton( 9 ) )
+        self._button_4.clicked.connect( lambda: self._HitButton( 4 ) )
+        self._button_5.clicked.connect( lambda: self._HitButton( 5 ) )
+        self._button_6.clicked.connect( lambda: self._HitButton( 6 ) )
+        self._button_1.clicked.connect( lambda: self._HitButton( 1 ) )
+        self._button_2.clicked.connect( lambda: self._HitButton( 2 ) )
+        self._button_3.clicked.connect( lambda: self._HitButton( 3 ) )
         
         #
         
-        self.Show( True )
+        self.show()
         
     
     def _AddEntry( self, button, entry ):
         
-        id = button.GetId()
+        id = int( button.objectName() )
         
         self._command_dict[ id ] = entry
         
@@ -92,40 +141,40 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         if entry_type == 'menu':
             
-            button.SetLabelText( obj )
+            button.setText( obj )
             
         elif entry_type == 'page_duplicate_filter':
             
-            button.SetLabelText( 'duplicates processing' )
+            button.setText( 'duplicates processing' )
             
         elif entry_type == 'pages_notebook':
             
-            button.SetLabelText( 'page of pages' )
+            button.setText( 'page of pages' )
             
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
             name = HG.client_controller.services_manager.GetService( obj ).GetName()
             
-            button.SetLabelText( name )
+            button.setText( name )
             
         elif entry_type == 'page_import_gallery':
             
-            button.SetLabelText( 'gallery' )
+            button.setText( 'gallery' )
             
         elif entry_type == 'page_import_simple_downloader':
             
-            button.SetLabelText( 'simple downloader' )
+            button.setText( 'simple downloader' )
             
         elif entry_type == 'page_import_watcher':
             
-            button.SetLabelText( 'watcher' )
+            button.setText( 'watcher' )
             
         elif entry_type == 'page_import_urls':
             
-            button.SetLabelText( 'urls' )
+            button.setText( 'urls' )
             
         
-        button.Show()
+        button.show()
         
     
     def _HitButton( self, id ):
@@ -192,7 +241,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerPetitions( petition_service_key ) )
                     
                 
-                self.EndModal( wx.ID_OK )
+                self.done( QW.QDialog.Accepted )
                 
             
         
@@ -252,11 +301,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         if len( entries ) <= 4:
             
-            self._button_1.Hide()
-            self._button_3.Hide()
-            self._button_5.Hide()
-            self._button_7.Hide()
-            self._button_9.Hide()
+            self._button_1.setVisible( False )
+            self._button_3.setVisible( False )
+            self._button_5.setVisible( False )
+            self._button_7.setVisible( False )
+            self._button_9.setVisible( False )
             
             potential_buttons = [ self._button_8, self._button_4, self._button_6, self._button_2 ]
             
@@ -281,52 +330,38 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         for button in unused_buttons:
             
-            button.Hide()
+            button.setVisible( False )
             
         
     
-    def EventButton( self, event ):
-        
-        id = event.GetId()
-        
-        if id == wx.ID_CANCEL:
-            
-            self.EndModal( wx.ID_CANCEL )
-            
-        else:
-            
-            self._HitButton( id )
-            
-        
-    
-    def EventCharHook( self, event ):
+    def keyPressEvent( self, event ):
         
         id = None
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key == wx.WXK_UP: id = 8
-        elif key == wx.WXK_LEFT: id = 4
-        elif key == wx.WXK_RIGHT: id = 6
-        elif key == wx.WXK_DOWN: id = 2
-        elif key == wx.WXK_NUMPAD1: id = 1
-        elif key == wx.WXK_NUMPAD2: id = 2
-        elif key == wx.WXK_NUMPAD3: id = 3
-        elif key == wx.WXK_NUMPAD4: id = 4
-        elif key == wx.WXK_NUMPAD5: id = 5
-        elif key == wx.WXK_NUMPAD6: id = 6
-        elif key == wx.WXK_NUMPAD7: id = 7
-        elif key == wx.WXK_NUMPAD8: id = 8
-        elif key == wx.WXK_NUMPAD9: id = 9
-        elif key == wx.WXK_ESCAPE:
+        if key == QC.Qt.Key_Up: id = 8
+        elif key == QC.Qt.Key_Left: id = 4
+        elif key == QC.Qt.Key_Right: id = 6
+        elif key == QC.Qt.Key_Down: id = 2
+        elif key == QC.Qt.Key_1 and modifier == QC.Qt.KeypadModifier: id = 1
+        elif key == QC.Qt.Key_2 and modifier == QC.Qt.KeypadModifier: id = 2
+        elif key == QC.Qt.Key_3 and modifier == QC.Qt.KeypadModifier: id = 3
+        elif key == QC.Qt.Key_4 and modifier == QC.Qt.KeypadModifier: id = 4
+        elif key == QC.Qt.Key_5 and modifier == QC.Qt.KeypadModifier: id = 5
+        elif key == QC.Qt.Key_6 and modifier == QC.Qt.KeypadModifier: id = 6
+        elif key == QC.Qt.Key_7 and modifier == QC.Qt.KeypadModifier: id = 7
+        elif key == QC.Qt.Key_8 and modifier == QC.Qt.KeypadModifier: id = 8
+        elif key == QC.Qt.Key_9 and modifier == QC.Qt.KeypadModifier: id = 9
+        elif key == QC.Qt.Key_Escape:
             
-            self.EndModal( wx.ID_CANCEL )
+            self.done( QW.QDialog.Rejected )
             
             return
             
         else:
             
-            event.Skip()
+            event.ignore()
             
         
         if id is not None:
@@ -340,11 +375,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         return self._result
         
     
-class Page( wx.SplitterWindow ):
+class Page( QW.QSplitter ):
     
     def __init__( self, parent, controller, management_controller, initial_hashes ):
         
-        wx.SplitterWindow.__init__( self, parent )
+        QW.QSplitter.__init__( self, parent )
         
         self._controller = controller
         
@@ -360,33 +395,46 @@ class Page( wx.SplitterWindow ):
         
         self._pretty_status = ''
         
-        self.SetMinimumPaneSize( 120 )
-        self.SetSashGravity( 0.0 )
-        
-        self.Bind( wx.EVT_SPLITTER_DCLICK, self.EventUnsplit )
-        
-        self._search_preview_split = wx.SplitterWindow( self, style = wx.SP_NOBORDER )
-        
-        self._search_preview_split.SetMinimumPaneSize( 180 )
-        self._search_preview_split.SetSashGravity( 1.0 )
-        
-        self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
+        self._search_preview_split = QW.QSplitter( self )
         
         self._management_panel = ClientGUIManagement.CreateManagementPanel( self._search_preview_split, self, self._controller, self._management_controller )
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
         
-        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key )
+        self._preview_panel = QW.QFrame( self._search_preview_split )
+        self._preview_panel.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
+        
+        self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key )
         
         self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, [] )
         
-        self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
+        vbox = QP.VBoxLayout( margin = 0 )
         
-        self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
+        QP.AddToLayout( vbox, self._preview_canvas, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self._preview_panel.setLayout( vbox )
+        
+        self.SetupSplits()
+        
+        self.widget( 0 ).setMinimumWidth( 120 )
+        self.widget( 1 ).setMinimumWidth( 120 )
+        self.setStretchFactor( 0, 0 )
+        self.setStretchFactor( 1, 1 )
+        
+        self._handle_event_filter = QP.WidgetEventFilter( self.handle( 1 ) )
+        self._handle_event_filter.EVT_LEFT_DCLICK( self.EventUnsplit )
+        
+        self._search_preview_split.widget( 0 ).setMinimumHeight( 180 )
+        self._search_preview_split.widget( 1 ).setMinimumHeight( 180 )
+        self._search_preview_split.setStretchFactor( 0, 1 )
+        self._search_preview_split.setStretchFactor( 1, 0 )
+
+        self._search_preview_split._handle_event_filter = QP.WidgetEventFilter( self._search_preview_split.handle( 1 ) )
+        self._search_preview_split._handle_event_filter.EVT_LEFT_DCLICK( self.EventPreviewUnsplit )
         
         if HC.options[ 'hide_preview' ]:
             
-            wx.CallAfter( self._search_preview_split.Unsplit, self._preview_panel )
+            QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
             
         
         self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
@@ -407,12 +455,14 @@ class Page( wx.SplitterWindow ):
         
         if self._controller.MenuIsOpen():
             
-            self._controller.CallLaterWXSafe( self, 0.5, self._SwapMediaPanel, new_panel )
+            self._controller.CallLaterQtSafe( self, 0.5, self._SwapMediaPanel, new_panel )
             
             return
             
         
-        self._preview_panel.SetMedia( None )
+        previous_sizes = self.sizes()
+        
+        self._preview_canvas.SetMedia( None )
         
         self._media_panel.ClearPageKey()
         
@@ -427,9 +477,13 @@ class Page( wx.SplitterWindow ):
             new_panel.Sort( self._page_key, sort_by )
             
         
-        self.ReplaceWindow( self._media_panel, new_panel )
+        self._media_panel.setParent( None )
         
-        self._media_panel.DestroyLater()
+        self.addWidget( new_panel )
+        
+        self.setSizes( previous_sizes )
+        
+        self._media_panel.deleteLater()
         
         self._media_panel = new_panel
         
@@ -452,21 +506,21 @@ class Page( wx.SplitterWindow ):
         
         self._management_panel.CleanBeforeDestroy()
         
-        self._preview_panel.CleanBeforeDestroy()
+        self._preview_canvas.CleanBeforeDestroy()
         
         self._controller.ReleasePageKey( self._page_key )
         
     
     def EventPreviewUnsplit( self, event ):
         
-        self._search_preview_split.Unsplit( self._preview_panel )
+        QP.Unsplit( self._search_preview_split, self._preview_panel )
         
         self._controller.pub( 'set_focus', self._page_key, None )
         
     
     def EventUnsplit( self, event ):
         
-        self.Unsplit( self._search_preview_split )
+        QP.Unsplit( self, self._search_preview_split )
         
         self._controller.pub( 'set_focus', self._page_key, None )
         
@@ -578,32 +632,23 @@ class Page( wx.SplitterWindow ):
     
     def GetSashPositions( self ):
         
-        if self.IsSplit():
+        if QP.SplitterVisibleCount( self ) > 1:
             
-            x = self.GetSashPosition()
+            x = self.widget( 0 ).width()
             
         else:
             
             x = HC.options[ 'hpos' ]
             
         
-        if self._search_preview_split.IsSplit():
+        if QP.SplitterVisibleCount( self._search_preview_split ) > 1:
             
-            # I used to do:
-            # y = -1 * self._preview_panel.GetSize()[1]
-            # but that crept 4 pixels smaller every time, I assume due to sash nub height
-            
-            ( sps_x, sps_y ) = self._search_preview_split.GetClientSize()
-            
-            sash_y = self._search_preview_split.GetSashPosition()
-            
-            y = -1 * ( sps_y - sash_y )
+            y = self._search_preview_split.widget( 0 ).height()
             
         else:
             
             y = HC.options[ 'vpos' ]
             
-        
         return ( x, y )
         
     
@@ -651,25 +696,30 @@ class Page( wx.SplitterWindow ):
             
         
     
+    def SetupSplits( self ):
+
+        QP.SplitVertically( self, self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
+
+        QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
+        
+        
     def ShowHideSplit( self ):
         
-        if self.IsSplit():
+        if QP.SplitterVisibleCount( self ) > 1:
             
-            self.Unsplit( self._search_preview_split )
+            QP.Unsplit( self, self._search_preview_split )
             
             self._controller.pub( 'set_focus', self._page_key, None )
             
         else:
             
-            self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
-            
-            self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
+            self.SetupSplits()
             
         
     
     def SetMediaFocus( self ):
         
-        self._media_panel.SetFocus()
+        self._media_panel.setFocus( QC.Qt.OtherFocusReason )
         
     
     def SetMediaResults( self, media_results ):
@@ -683,7 +733,7 @@ class Page( wx.SplitterWindow ):
         self._initialised = True
         self._initial_hashes = []
         
-        wx.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
+        QP.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
         
     
     def SetName( self, name ):
@@ -709,27 +759,27 @@ class Page( wx.SplitterWindow ):
     
     def SetSplitterPositions( self, hpos, vpos ):
         
-        if self._search_preview_split.IsSplit():
+        if QP.SplitterVisibleCount( self._search_preview_split ) > 1:
             
-            self._search_preview_split.SetSashPosition( vpos )
+            self._search_preview_split.widget( 0 ).resize( self._search_preview_split.widget( 0 ).width(), vpos )
             
         else:
             
-            self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, vpos )
+            QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
             
         
-        if self.IsSplit():
+        if QP.SplitterVisibleCount( self ) > 1:
             
-            self.SetSashPosition( hpos )
+            self.widget( 0 ).resize( hpos, self.widget( 0 ).height() )
             
         else:
             
-            self.SplitVertically( self._search_preview_split, self._media_panel, hpos )
+            QP.SplitVertically( self, self._search_preview_split, self._media_panel, hpos )
             
         
         if HC.options[ 'hide_preview' ]:
             
-            wx.CallAfter( self._search_preview_split.Unsplit, self._preview_panel )
+            QP.CallAfter( QP.Unsplit, self._search_preview_split, self._preview_panel )
             
         
     
@@ -748,7 +798,7 @@ class Page( wx.SplitterWindow ):
             
             self._initialised = True
             
-            wx.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
+            QP.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
             
         
     
@@ -771,7 +821,7 @@ class Page( wx.SplitterWindow ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_NO:
+            if result == QW.QDialog.Rejected:
                 
                 raise HydrusExceptions.VetoException()
                 
@@ -780,9 +830,9 @@ class Page( wx.SplitterWindow ):
     
     def THREADLoadInitialMediaResults( self, controller, initial_hashes ):
         
-        def wx_code_status( status ):
+        def qt_code_status( status ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -790,9 +840,9 @@ class Page( wx.SplitterWindow ):
             self._SetPrettyStatus( status )
             
         
-        def wx_code_publish( media_results ):
+        def qt_code_publish( media_results ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -810,14 +860,14 @@ class Page( wx.SplitterWindow ):
             
             status = 'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
             
-            wx.CallAfter( wx_code_status, status )
+            QP.CallAfter( qt_code_status, status )
             
         
         hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }
         
         sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in initial_hashes if hash in hashes_to_media_results ]
         
-        wx.CallAfter( wx_code_publish, sorted_initial_media_results )
+        QP.CallAfter( qt_code_publish, sorted_initial_media_results )
         
     
     def REPEATINGPageUpdate( self ):
@@ -825,20 +875,19 @@ class Page( wx.SplitterWindow ):
         self._management_panel.REPEATINGPageUpdate()
         
     
-class PagesNotebook( wx.Notebook ):
+class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def __init__( self, parent, controller, name ):
         
+        QP.TabWidgetWithDnD.__init__( self, parent )
+        
         if controller.new_options.GetBoolean( 'notebook_tabs_on_left' ):
             
-            style = wx.NB_LEFT
+            self.setTabPosition( QW.QTabWidget.West )
             
         else:
             
-            style = wx.NB_TOP
-            
-        
-        wx.Notebook.__init__( self, parent, style = style )
+            self.setTabPosition( QW.QTabWidget.North )
         
         self._controller = controller
         
@@ -857,14 +906,34 @@ class PagesNotebook( wx.Notebook ):
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
         
-        self.Bind( wx.EVT_MOTION, self.EventDrag )
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
-        self.Bind( wx.EVT_LEFT_UP, self.EventLeftUp )
-        self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDoubleClick )
-        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMiddleClick )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventMenu )
-        self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventPageChanged )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventLeftDoubleClick )
+        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMiddleClick )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMenu )
+        self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
+        self._widget_event_filter.EVT_LEFT_DOWN( lambda ev: ev.accept() )
         
+        self.currentChanged.connect( self.EventPageChanged )
+        self.pageDragAndDropped.connect( self._RefreshPageNamesAfterDnD )
+        
+        self._previous_page_index = -1
+        
+    
+    def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
+        
+        if hasattr( page_widget, 'GetPageKey' ):
+            
+            self._controller.pub( 'refresh_page_name', page_widget.GetPageKey() )
+            
+
+        if hasattr( source_widget.parentWidget(), 'GetPageKey' ):
+            
+            self._controller.pub( 'refresh_page_name', source_widget.parentWidget().GetPageKey() )
+            
+        
+    def _UpdatePreviousPageIndex( self ):
+        
+        self._previous_page_index = self.currentIndex()
     
     def _ChooseNewPage( self, insertion_index = None ):
         
@@ -872,7 +941,7 @@ class PagesNotebook( wx.Notebook ):
         
         with DialogPageChooser( self, self._controller ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 ( page_type, page_data ) = dlg.GetValue()
                 
@@ -892,7 +961,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _CloseAllPages( self, polite = True, delete_pages = False ):
         
-        closees = [ index for index in range( self.GetPageCount() ) ]
+        closees = [ index for index in range( self.count() ) ]
         
         self._ClosePages( closees, polite, delete_pages = delete_pages )
         
@@ -903,9 +972,9 @@ class PagesNotebook( wx.Notebook ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
-            closees = [ index for index in range( self.GetPageCount() ) if index < from_index ]
+            closees = [ index for index in range( self.count() ) if index < from_index ]
             
             self._ClosePages( closees )
             
@@ -917,9 +986,9 @@ class PagesNotebook( wx.Notebook ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
-            closees = [ index for index in range( self.GetPageCount() ) if index != except_index ]
+            closees = [ index for index in range( self.count() ) if index != except_index ]
             
             self._ClosePages( closees )
             
@@ -930,12 +999,12 @@ class PagesNotebook( wx.Notebook ):
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
         
-        if index == -1 or index > self.GetPageCount() - 1:
+        if index == -1 or index > self.count() - 1:
             
             return False
             
         
-        page = self.GetPage( index )
+        page = self.widget( index )
         
         if polite:
             
@@ -955,7 +1024,9 @@ class PagesNotebook( wx.Notebook ):
         
         self._closed_pages.append( ( index, page_key ) )
         
-        self.RemovePage( index )
+        self.removeTab( index )
+        
+        self._UpdatePreviousPageIndex()
         
         self._controller.pub( 'refresh_page_name', self._page_key )
         
@@ -995,9 +1066,9 @@ class PagesNotebook( wx.Notebook ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
-            closees = [ index for index in range( self.GetPageCount() ) if index > from_index ]
+            closees = [ index for index in range( self.count() ) if index > from_index ]
             
             self._ClosePages( closees )
             
@@ -1009,9 +1080,9 @@ class PagesNotebook( wx.Notebook ):
         
         new_page_goes = new_options.GetInteger( 'default_new_page_goes' )
         
-        current_index = self.GetSelection()
+        current_index = self.currentIndex()
         
-        if current_index == wx.NOT_FOUND:
+        if current_index == -1:
             
             new_page_goes = CC.NEW_PAGE_GOES_FAR_LEFT
             
@@ -1030,7 +1101,7 @@ class PagesNotebook( wx.Notebook ):
             
         elif new_page_goes == CC.NEW_PAGE_GOES_FAR_RIGHT:
             
-            insertion_index = self.GetPageCount()
+            insertion_index = self.count()
             
         
         return insertion_index
@@ -1060,7 +1131,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _GetIndex( self, page_key ):
         
-        for ( page, index ) in ( ( self.GetPage( index ), index ) for index in range( self.GetPageCount() ) ):
+        for ( page, index ) in ( ( self.widget( index ), index ) for index in range( self.count() ) ):
             
             if page.GetPageKey() == page_key:
                 
@@ -1073,7 +1144,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _GetNotebookFromScreenPosition( self, screen_position ):
         
-        current_page = self.GetCurrentPage()
+        current_page = self.currentWidget()
         
         if current_page is None or not isinstance( current_page, PagesNotebook ):
             
@@ -1081,24 +1152,18 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
+            tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
             
-            if tab_index != wx.NOT_FOUND:
+            if tab_index != -1:
                 
                 return self
                 
             
-            if HC.PLATFORM_OSX:
+            ( x, y ) = screen_position.toTuple()
+            ( child_x, child_y ) = current_page.pos().toTuple()
                 
-                ( x, y ) = screen_position
-                ( child_x, child_y ) = current_page.GetPosition()
-                
-                on_child_notebook_somewhere = y > child_y # wew lad, OSX not delivering onpage maybe?
-                
-            else:
-                
-                on_child_notebook_somewhere = flags & wx.NB_HITTEST_ONPAGE
-                
+            on_child_notebook_somewhere = y > child_y
+            
             
             if on_child_notebook_somewhere:
                 
@@ -1111,7 +1176,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _GetPages( self ):
         
-        return [ self.GetPage( i ) for i in range( self.GetPageCount() ) ]
+        return [ self.widget( i ) for i in range( self.count() ) ]
         
     
     def _GetPageFromName( self, page_name ):
@@ -1141,13 +1206,13 @@ class PagesNotebook( wx.Notebook ):
         
         top_notebook = self
         
-        parent = top_notebook.GetParent()
+        parent = top_notebook.parentWidget()
         
         while isinstance( parent, PagesNotebook ):
             
             top_notebook = parent
             
-            parent = top_notebook.GetParent()
+            parent = top_notebook.parentWidget()
             
         
         return top_notebook
@@ -1155,13 +1220,15 @@ class PagesNotebook( wx.Notebook ):
     
     def _MovePage( self, page, dest_notebook, insertion_tab_index, follow_dropped_page = False ):
         
-        source_notebook = page.GetParent()
+        source_notebook = page.parentWidget().parentWidget() # page.parentWidget() is a QStackedWidget
         
         for ( index, p ) in enumerate( source_notebook._GetPages() ):
             
             if p == page:
                 
-                source_notebook.RemovePage( index )
+                source_notebook.removeTab( index )
+                
+                source_notebook._UpdatePreviousPageIndex()
                 
                 break
                 
@@ -1169,14 +1236,15 @@ class PagesNotebook( wx.Notebook ):
         
         if source_notebook != dest_notebook:
             
-            page.Reparent( dest_notebook )
+            page.setParent( dest_notebook )
             
             self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
             
         
-        insertion_tab_index = min( insertion_tab_index, dest_notebook.GetPageCount() )
+        insertion_tab_index = min( insertion_tab_index, dest_notebook.count() )
         
-        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName(), select = follow_dropped_page )
+        dest_notebook.insertTab( insertion_tab_index, page, page.GetName() )
+        if follow_dropped_page: dest_notebook.setCurrentIndex( insertion_tab_index )
         
         if follow_dropped_page:
             
@@ -1192,7 +1260,7 @@ class PagesNotebook( wx.Notebook ):
         
         for page in pages:
             
-            if page.GetParent() != dest_notebook:
+            if page.parentWidget() != dest_notebook:
                 
                 self._MovePage( page, dest_notebook, insertion_tab_index )
                 
@@ -1203,7 +1271,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _RefreshPageName( self, index ):
         
-        if index == -1 or index > self.GetPageCount() - 1:
+        if index == -1 or index > self.count() - 1:
             
             return
             
@@ -1216,7 +1284,7 @@ class PagesNotebook( wx.Notebook ):
         
         import_page_progress_display = new_options.GetBoolean( 'import_page_progress_display' )
         
-        page = self.GetPage( index )
+        page = self.widget( index )
         
         page_name = page.GetName()
         
@@ -1254,30 +1322,30 @@ class PagesNotebook( wx.Notebook ):
             page_name += ' (' + num_string + ')'
             
         
-        safe_page_name = self.EscapeMnemonics( page_name )
+        safe_page_name = QP.EscapeMnemonics( page_name )
         
-        existing_page_name = self.GetPageText( index )
+        existing_page_name = self.tabText( index )
         
         if existing_page_name not in ( safe_page_name, page_name ):
             
-            self.SetPageText( index, safe_page_name )
+            self.setTabText( index, safe_page_name )
             
         
     
     def _RenamePage( self, index ):
         
-        if index == -1 or index > self.GetPageCount() - 1:
+        if index == -1 or index > self.count() - 1:
             
             return
             
         
-        page = self.GetPage( index )
+        page = self.widget( index )
         
         current_name = page.GetName()
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 new_name = dlg.GetValue()
                 
@@ -1290,9 +1358,9 @@ class PagesNotebook( wx.Notebook ):
     
     def _SendPageToNewNotebook( self, index ):
         
-        if 0 <= index and index <= self.GetPageCount() - 1:
+        if 0 <= index and index <= self.count() - 1:
             
-            page = self.GetPage( index )
+            page = self.widget( index )
             
             dest_notebook = self.NewPagesNotebook( forced_insertion_index = index, give_it_a_blank_page = False )
             
@@ -1306,9 +1374,9 @@ class PagesNotebook( wx.Notebook ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
-            pages_index = self.GetPageCount()
+            pages_index = self.count()
             
             dest_notebook = self.NewPagesNotebook( forced_insertion_index = pages_index, give_it_a_blank_page = False )
             
@@ -1318,7 +1386,7 @@ class PagesNotebook( wx.Notebook ):
             
             for index in movees:
                 
-                page = self.GetPage( index )
+                page = self.widget( index )
                 
                 self._MovePage( page, dest_notebook, 0 )
                 
@@ -1344,24 +1412,27 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
-        if 0 <= new_page_index and new_page_index <= self.GetPageCount() - 1:
+        if 0 <= new_page_index and new_page_index <= self.count() - 1:
             
-            page_is_selected = self.GetSelection() == page_index
+            page_is_selected = self.currentIndex() == page_index
             
-            page = self.GetPage( page_index )
-            name = self.GetPageText( page_index )
+            page = self.widget( page_index )
+            name = self.tabText( page_index )
             
-            self.RemovePage( page_index )
+            self.removeTab( page_index )
             
-            self.InsertPage( new_page_index, page, name, page_is_selected )
+            self._UpdatePreviousPageIndex()
+            
+            self.insertTab( new_page_index, page, name )
+            if page_is_selected: self.setCurrentIndex( new_page_index )
             
         
     
     def _ShowMenu( self, screen_position ):
         
-        ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
+        tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
         
-        num_pages = self.GetPageCount()
+        num_pages = self.count()
         
         end_index = num_pages - 1
         
@@ -1374,41 +1445,38 @@ class PagesNotebook( wx.Notebook ):
         
         click_over_page_of_pages = False
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         if click_over_tab:
             
-            page = self.GetPage( tab_index )
+            page = self.widget( tab_index )
             
             click_over_page_of_pages = isinstance( page, PagesNotebook )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
+            ClientGUIMenus.AppendMenuItem( menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             
             if num_pages > 1:
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
+                ClientGUIMenus.AppendMenuItem( menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
                 
                 if can_go_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
+                    ClientGUIMenus.AppendMenuItem( menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
                     
                 
                 if can_go_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
+                    ClientGUIMenus.AppendMenuItem( menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
                     
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
+            ClientGUIMenus.AppendMenuItem( menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
+        ClientGUIMenus.AppendMenuItem( menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
         
         if click_over_tab:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
+            ClientGUIMenus.AppendMenuItem( menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
             
             if more_than_one_tab:
                 
@@ -1420,46 +1488,41 @@ class PagesNotebook( wx.Notebook ):
                 can_end = tab_index < end_index - 1
                 
                 if can_home:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to left end', 'Move this page all the way to the left.', self._ShiftPage, tab_index, new_index = 0 )
+                    ClientGUIMenus.AppendMenuItem( menu, 'move to left end', 'Move this page all the way to the left.', self._ShiftPage, tab_index, new_index=0 )
                     
                 
                 if can_move_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._ShiftPage, tab_index, delta = -1 )
+                    ClientGUIMenus.AppendMenuItem( menu, 'move left', 'Move this page one to the left.', self._ShiftPage, tab_index, delta=-1 )
                     
                 
                 if can_move_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move right', 'Move this page one to the right.', self._ShiftPage, tab_index, 1 )
+                    ClientGUIMenus.AppendMenuItem( menu, 'move right', 'Move this page one to the right.', self._ShiftPage, tab_index, 1 )
                     
                 
                 if can_end:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index = end_index )
+                    ClientGUIMenus.AppendMenuItem( menu, 'move to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index=end_index )
                     
                 
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'sort pages by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'sort pages by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
+                ClientGUIMenus.AppendMenuItem( menu, 'sort pages by most files first', 'Sort these pages according to how many files they appear to have.', self._SortPagesByFileCount, 'desc' )
+                ClientGUIMenus.AppendMenuItem( menu, 'sort pages by fewest files first', 'Sort these pages according to how few files they appear to have.', self._SortPagesByFileCount, 'asc' )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'send this page down to a new page of pages', 'Make a new page of pages and put this page in it.', self._SendPageToNewNotebook, tab_index )
+            ClientGUIMenus.AppendMenuItem( menu, 'send this page down to a new page of pages', 'Make a new page of pages and put this page in it.', self._SendPageToNewNotebook, tab_index )
             
             if can_go_right:
+                ClientGUIMenus.AppendMenuItem( menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
-            
-            if click_over_page_of_pages and page.GetPageCount() > 0:
+            if click_over_page_of_pages and page.count() > 0:
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'refresh all this page\'s pages', 'Command every page below this one to refresh.', page.RefreshAllPages )
+                ClientGUIMenus.AppendMenuItem( menu, 'refresh all this page\'s pages', 'Command every page below this one to refresh.', page.RefreshAllPages )
                 
             
         
@@ -1472,11 +1535,10 @@ class PagesNotebook( wx.Notebook ):
         
         if len( existing_session_names ) > 0:
             
-            submenu = wx.Menu()
+            submenu = QW.QMenu( menu )
             
             for name in existing_session_names:
-                
-                ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Load this session here.', self.AppendGUISession, name )
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Load this session here.', self.AppendGUISession, name )
                 
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'append session' )
@@ -1484,7 +1546,7 @@ class PagesNotebook( wx.Notebook ):
         
         if click_over_page_of_pages:
             
-            submenu = wx.Menu()
+            submenu = QW.QMenu( menu )
             
             for name in existing_session_names:
                 
@@ -1492,11 +1554,9 @@ class PagesNotebook( wx.Notebook ):
                     
                     continue
                     
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
                 
-                ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name = page.GetName() )
+            ClientGUIMenus.AppendMenuItem( submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name=page.GetName() )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
             
@@ -1522,19 +1582,21 @@ class PagesNotebook( wx.Notebook ):
             ordered_pages.reverse()
             
         
-        selected_page = self.GetCurrentPage()
+        selected_page = self.currentWidget()
         
         pages_to_names = {}
         
-        for i in range( self.GetPageCount() ):
+        for i in range( self.count() ):
             
-            page = self.GetPage( 0 )
+            page = self.widget( 0 )
             
-            name = self.GetPageText( 0 )
+            name = self.tabText( 0 )
             
             pages_to_names[ page ] = name
             
-            self.RemovePage( 0 )
+            self.removeTab( 0 )
+            
+            self._UpdatePreviousPageIndex()
             
         
         for page in ordered_pages:
@@ -1543,7 +1605,8 @@ class PagesNotebook( wx.Notebook ):
             
             name = pages_to_names[ page ]
             
-            self.AddPage( page, name, select = is_selected )
+            self.addTab( page, name )
+            if is_selected: self.setCurrentIndex( self.count() - 1 )
             
         
     
@@ -1663,7 +1726,7 @@ class PagesNotebook( wx.Notebook ):
     
     def ChooseNewPageForDeepestNotebook( self ):
         
-        current_page = self.GetCurrentPage()
+        current_page = self.currentWidget()
         
         if isinstance( current_page, PagesNotebook ):
             
@@ -1695,11 +1758,11 @@ class PagesNotebook( wx.Notebook ):
     
     def CloseCurrentPage( self, polite = True ):
         
-        selection = self.GetSelection()
+        selection = self.currentIndex()
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            page = self.GetPage( selection )
+            page = self.widget( selection )
             
             if isinstance( page, PagesNotebook ):
                 
@@ -1715,102 +1778,27 @@ class PagesNotebook( wx.Notebook ):
             else:
                 
                 self._ClosePage( selection, polite = polite )
-                
-            
-        
-    
-    def EventDrag( self, event ):
-        
-        if event.Dragging() and self._potential_drag_page is not None:
-            
-            drop_source = wx.DropSource( self._controller.gui )
-            
-            #
-            
-            hydrus_page_tab_data_object = wx.CustomDataObject( 'application/hydrus-page-tab' )
-            
-            data = self._potential_drag_page.GetPageKey()
-            
-            hydrus_page_tab_data_object.SetData( data )
-            
-            #
-            
-            drop_source.SetData( hydrus_page_tab_data_object )
-            
-            drop_source.DoDragDrop( wx.Drag_DefaultMove )
-            
-            self._potential_drag_page = None
-            
-        
-        event.Skip()
-        
-    
-    def EventLeftDown( self, event ):
-        
-        event_skip_ok = True
-        
-        position = event.GetPosition()
-        
-        ( tab_index, flags ) = self.HitTest( position )
-        
-        if tab_index != -1:
-            
-            page = self.GetPage( tab_index )
-            
-            if HC.PLATFORM_OSX and page == self.GetCurrentPage():
-                
-                # drag doesn't work if we allow the event to go ahead
-                # but we do want the event to go ahead if it is a 'select different page' event
-                
-                event_skip_ok = False
-                
-            
-            self._potential_drag_page = page
-            
-        
-        if event_skip_ok:
-            
-            event.Skip()
-            
         
     
     def EventLeftDoubleClick( self, event ):
         
-        position = event.GetPosition()
+        position = event.pos()
         
-        ( tab_index, flags ) = self.HitTest( position )
+        tab_index = self.tabBar().tabAt( position )
         
-        if tab_index == wx.NOT_FOUND:
+        if tab_index == -1:
             
-            if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
+            self.ChooseNewPage()
                 
-                screen_position = ClientGUIFunctions.ClientToScreen( self, position )
-                
-                notebook = self._GetNotebookFromScreenPosition( screen_position )
-                
-                notebook.EventNewPageFromScreenPosition( screen_position )
-                
-            else:
-                
-                self.ChooseNewPage()
-                
-            
         else:
             
-            event.Skip()
-            
+            return True # was: event.ignore()
         
-    
-    def EventLeftUp( self, event ):
-        
-        self._potential_drag_page = None
-        
-        event.Skip()
         
     
     def EventMenu( self, event ):
         
-        screen_position = ClientGUIFunctions.ClientToScreen( self, event.GetPosition() )
+        screen_position = ClientGUIFunctions.ClientToScreen( self, event.pos() )
         
         self._ShowMenu( screen_position )
         
@@ -1829,24 +1817,13 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
-        position = event.GetPosition()
+        position = event.pos()
         
-        ( tab_index, flags ) = self.HitTest( position )
+        tab_index = self.tabBar().tabAt( position )
         
-        if tab_index == wx.NOT_FOUND:
+        if tab_index == -1:
             
-            if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
-                
-                screen_position = ClientGUIFunctions.ClientToScreen( self, position )
-                
-                notebook = self._GetNotebookFromScreenPosition( screen_position )
-                
-                notebook.EventNewPageFromScreenPosition( screen_position )
-                
-            else:
-                
-                self.ChooseNewPage()
-                
+            self.ChooseNewPage()    
             
         else:
             
@@ -1861,30 +1838,24 @@ class PagesNotebook( wx.Notebook ):
         notebook._ChooseNewPage()
         
     
-    def EventPageChanged( self, event ):
+    def EventPageChanged( self, index ):
         
-        if event.EventObject == self: # because OS X wants to bump this up to parent notebooks
+        old_selection = self._previous_page_index
+        selection = index
             
-            old_selection = event.GetOldSelection()
-            selection = event.GetSelection()
+        if old_selection != -1 and old_selection < self.count():
             
-            if old_selection != wx.NOT_FOUND:
+            self.widget( old_selection ).PageHidden()
                 
-                self.GetPage( old_selection ).PageHidden()
-                
-            
-            if selection != wx.NOT_FOUND:
-                
-                self.GetPage( selection ).PageShown()
-                
-            
-            self._controller.gui.RefreshStatusBar()
-            
         
-        if HC.PLATFORM_OSX:
+        if selection != -1:
             
-            event.Skip() # need this or OS X spergs out and never .Show()s new page, wew
+            self.widget( selection ).PageShown()
+                
             
+        self._controller.gui.RefreshStatusBar()
+            
+        self._previous_page_index = index
         
         self._controller.pub( 'notify_page_change' )
         
@@ -1896,7 +1867,7 @@ class PagesNotebook( wx.Notebook ):
     
     def GetCurrentMediaPage( self ):
         
-        page = self.GetCurrentPage()
+        page = self.currentWidget()
         
         if isinstance( page, PagesNotebook ):
             
@@ -1940,7 +1911,7 @@ class PagesNotebook( wx.Notebook ):
         
         if only_my_level:
             
-            return self.GetPageCount()
+            return self.count()
             
         else:
             
@@ -2075,7 +2046,7 @@ class PagesNotebook( wx.Notebook ):
     
     def GetSessionAPIInfoDict( self, is_selected = True ):
         
-        current_page = self.GetCurrentPage()
+        current_page = self.currentWidget()
         
         my_pages_list = []
         
@@ -2115,7 +2086,7 @@ class PagesNotebook( wx.Notebook ):
             num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
             
         
-        return HydrusData.ToHumanInt( self.GetPageCount() ) + ' pages, ' + num_string + ' files'
+        return HydrusData.ToHumanInt( self.count() ) + ' pages, ' + num_string + ' files'
         
     
     def GetTestAbleToCloseStatement( self ):
@@ -2271,13 +2242,13 @@ class PagesNotebook( wx.Notebook ):
     
     def LoadGUISession( self, name ):
         
-        if self.GetPageCount() > 0:
+        if self.count() > 0:
             
             message = 'Close the current pages and load session "{}"?'.format( name )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Clear and load session?' )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return
                 
@@ -2293,7 +2264,7 @@ class PagesNotebook( wx.Notebook ):
             
             self._CloseAllPages( polite = False, delete_pages = True )
             
-            self._controller.CallLaterWXSafe( self, 1.0, self.AppendGUISession, name, load_in_a_page_of_pages = False )
+            self._controller.CallLaterQtSafe(self, 1.0, self.AppendGUISession, name, load_in_a_page_of_pages = False)
             
         else:
             
@@ -2310,23 +2281,21 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
-        screen_position = wx.GetMousePosition()
+        screen_position = QG.QCursor.pos()
         
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
         
-        ( x, y ) = screen_position
-        
-        ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
+        tab_index = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, screen_position )
         
         do_add = True
         # do chase - if we need to chase to an existing dest page on which we dropped files
         # do return - if we need to return to source page if we created a new one
         
-        if flags & wx.NB_HITTEST_ONPAGE:
+        if tab_index == -1 and dest_notebook.currentWidget() and dest_notebook.currentWidget().rect().contains( dest_notebook.currentWidget().mapFromGlobal( screen_position ) ):
             
-            dest_page = dest_notebook.GetCurrentPage()
+            dest_page = dest_notebook.currentWidget()
             
-        elif tab_index == wx.NOT_FOUND:
+        elif tab_index == -1:
             
             dest_page = dest_notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
             
@@ -2334,7 +2303,7 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            dest_page = dest_notebook.GetPage( tab_index )
+            dest_page = dest_notebook.widget( tab_index )
             
             if isinstance( dest_page, PagesNotebook ):
                 
@@ -2374,7 +2343,8 @@ class PagesNotebook( wx.Notebook ):
             self.ShowPage( source_page )
             
         
-        ctrl_down = wx.GetKeyState( wx.WXK_COMMAND ) or wx.GetKeyState( wx.WXK_CONTROL )
+        # queryKBM here for instant check, not waiting for event processing to catch up u wot mate
+        ctrl_down = QW.QApplication.queryKeyboardModifiers() & QC.Qt.ControlModifier
         
         if not ctrl_down:
             
@@ -2384,12 +2354,12 @@ class PagesNotebook( wx.Notebook ):
     
     def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
         
-        if self.GetTopLevelParent().IsIconized():
+        if self.window().isMinimized():
             
             return None
             
         
-        current_page = self.GetCurrentPage()
+        current_page = self.currentWidget()
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
@@ -2414,7 +2384,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Too many pages!', yes_label = 'yes, and do not tell me again', no_label = 'no' )
                 
-                if result == wx.ID_YES:
+                if result == QW.QDialog.Accepted:
                     
                     HG.no_page_limit_mode = True
                     
@@ -2463,14 +2433,19 @@ class PagesNotebook( wx.Notebook ):
         page_name = page.GetName()
         
         # in some unusual circumstances, this gets out of whack
-        insertion_index = min( insertion_index, self.GetPageCount() )
+        insertion_index = min( insertion_index, self.count() )
         
-        self.InsertPage( insertion_index, page, page_name, select = select_page )
+        self.insertTab( insertion_index, page, page_name )
+        if select_page: self.setCurrentIndex( insertion_index )
+        
+        self.LayoutPages()
+        
+        page.SetupSplits()
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         self._controller.pub( 'notify_new_pages' )
         
-        wx.CallAfter( page.Start )
+        QP.CallAfter( page.Start )
         
         if select_page:
             
@@ -2478,7 +2453,7 @@ class PagesNotebook( wx.Notebook ):
             
             # this is here for now due to the pagechooser having a double-layer dialog on a booru choice, which messes up some focus inheritance
             
-            self._controller.CallLaterWXSafe( self, 0.5, page.SetSearchFocus )
+            self._controller.CallLaterQtSafe( self, 0.5, page.SetSearchFocus )
             
         
         return page
@@ -2570,7 +2545,7 @@ class PagesNotebook( wx.Notebook ):
     
     def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None, on_deepest_notebook = False, give_it_a_blank_page = True, select_page = True ):
         
-        current_page = self.GetCurrentPage()
+        current_page = self.currentWidget()
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
@@ -2602,7 +2577,10 @@ class PagesNotebook( wx.Notebook ):
         
         page_name = page.GetName()
         
-        self.InsertPage( insertion_index, page, page_name, select = select_page )
+        self.insertTab( insertion_index, page, page_name )
+        if select_page: self.setCurrentIndex( insertion_index )
+        
+        self.LayoutPages()
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         
@@ -2622,13 +2600,14 @@ class PagesNotebook( wx.Notebook ):
             
             if page_key == closed_page_key:
                 
-                page.Show()
+                page.show()
                 
-                insert_index = min( index, self.GetPageCount() )
+                insert_index = min( index, self.count() )
                 
                 name = page.GetName()
                 
-                self.InsertPage( insert_index, page, name, True )
+                self.insertTab( insert_index, page, name )
+                self.setCurrentIndex( insert_index )
                 
                 self._controller.pub( 'refresh_page_name', page.GetPageKey() )
                 
@@ -2641,7 +2620,7 @@ class PagesNotebook( wx.Notebook ):
     
     def PageHidden( self ):
         
-        result = self.GetCurrentPage()
+        result = self.currentWidget()
         
         if result is not None:
             
@@ -2651,134 +2630,11 @@ class PagesNotebook( wx.Notebook ):
     
     def PageShown( self ):
         
-        result = self.GetCurrentPage()
+        result = self.currentWidget()
         
         if result is not None:
             
             result.PageShown()
-            
-        
-    
-    def PageDragAndDropDropped( self, page_key ):
-        
-        page = self.GetPageFromPageKey( page_key )
-        
-        if page is None:
-            
-            return
-            
-        
-        screen_position = wx.GetMousePosition()
-        
-        dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
-        
-        ( x, y ) = screen_position
-        
-        ( tab_index, flags ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
-        
-        if flags & wx.NB_HITTEST_ONPAGE:
-            
-            # was not dropped on label area, so ditch DnD
-            
-            return
-            
-        
-        if tab_index == wx.NOT_FOUND:
-            
-            # if it isn't dropped on anything, put it on the end
-            
-            tab_index = dest_notebook.GetPageCount()
-            
-            if tab_index > 0:
-                
-                if dest_notebook.GetPage( tab_index - 1 ) == page:
-                    
-                    return
-                    
-                
-            
-        else:
-            
-            EDGE_PADDING = 10
-            
-            ( left_tab_index, gumpf ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, ( x - EDGE_PADDING, y ) )
-            ( right_tab_index, gumpf ) = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook,  ( x + EDGE_PADDING, y ) )
-            
-            landed_near_left_edge = left_tab_index != tab_index
-            landed_near_right_edge = right_tab_index != tab_index
-            
-            landed_on_edge = landed_near_right_edge or landed_near_left_edge
-            landed_in_middle = not landed_on_edge
-            
-            there_is_a_page_to_the_left = tab_index > 0
-            there_is_a_page_to_the_right = tab_index < dest_notebook.GetPageCount() - 1
-            
-            page_on_left_is_source = there_is_a_page_to_the_left and dest_notebook.GetPage( tab_index - 1 ) == page
-            page_on_right_is_source = there_is_a_page_to_the_right and dest_notebook.GetPage( tab_index + 1 ) == page
-            
-            # dropped on source and not on the right edge: do nothing
-            
-            landee_page = dest_notebook.GetPage( tab_index )
-            
-            if landee_page == page:
-                
-                if landed_near_right_edge and there_is_a_page_to_the_right:
-                    
-                    tab_index += 1
-                    
-                else:
-                    
-                    return
-                    
-                
-            
-            # dropped just to the left of source: do nothing
-            
-            if landed_near_right_edge and page_on_right_is_source:
-                
-                return
-                
-            
-            # dropped on left side of an edge: insert on right side
-            
-            if landed_near_right_edge:
-                
-                tab_index += 1
-                
-            
-            if landed_in_middle and isinstance( landee_page, PagesNotebook ):
-                
-                dest_notebook = landee_page
-                tab_index = dest_notebook.GetPageCount()
-                
-            
-        
-        if dest_notebook == page or ClientGUIFunctions.IsWXAncestor( dest_notebook, page ):
-            
-            # can't drop a notebook beneath itself!
-            return
-            
-        
-        insertion_tab_index = tab_index
-        
-        shift_down = wx.GetKeyState( wx.WXK_SHIFT )
-        
-        follow_dropped_page = not shift_down
-        
-        new_options = HG.client_controller.new_options
-        
-        if new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ):
-            
-            follow_dropped_page = not follow_dropped_page
-            
-        
-        self._MovePage( page, dest_notebook, insertion_tab_index, follow_dropped_page )
-        
-        self.Refresh()
-        
-        if dest_notebook != self:
-            
-            dest_notebook.Refresh()
             
         
     
@@ -2792,7 +2648,7 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            def wx_finish( page, media_results ):
+            def qt_finish( page, media_results ):
                 
                 if not page:
                     
@@ -2806,7 +2662,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 media_results = self._controller.Read( 'media_results', hashes, sorted = True )
                 
-                wx.CallAfter( wx_finish, page, media_results )
+                QP.CallAfter( qt_finish, page, media_results )
                 
             
             HG.client_controller.CallToThread( do_it, page, hashes )
@@ -2834,7 +2690,7 @@ class PagesNotebook( wx.Notebook ):
         
         if page_key is None:
             
-            for index in range( self.GetPageCount() ):
+            for index in range( self.count() ):
                 
                 self._RefreshPageName( index )
                 
@@ -2872,13 +2728,13 @@ class PagesNotebook( wx.Notebook ):
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.', default = suggested_name ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         name = dlg.GetValue()
                         
                         if name in RESERVED_SESSION_NAMES:
                             
-                            wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
+                            QW.QMessageBox.critical( self, 'Error', 'Sorry, you cannot have that name! Try another.' )
                             
                         else:
                             
@@ -2888,15 +2744,15 @@ class PagesNotebook( wx.Notebook ):
                                 
                                 message = 'Session "{}" already exists! Do you want to overwrite it?'.format( name )
                                 
-                                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' )
+                                result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name', check_for_cancelled = True )
                                 
-                                if result == wx.ID_NO:
-                                    
-                                    continue
-                                    
-                                elif result == wx.ID_CANCEL:
+                                if closed_by_user:
                                     
                                     return
+                                    
+                                elif result == QW.QDialog.Rejected:
+                                    
+                                    continue
                                     
                                 
                             
@@ -2916,7 +2772,7 @@ class PagesNotebook( wx.Notebook ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return
                 
@@ -2959,9 +2815,9 @@ class PagesNotebook( wx.Notebook ):
         
         for ( i, page ) in enumerate( self._GetPages() ):
             
-            if isinstance( page, wx.Notebook ) and page.HasPage( showee ):
+            if isinstance( page, QW.QTabWidget ) and page.HasPage( showee ):
                 
-                self.SetSelection( i )
+                self.setCurrentIndex( i )
                 
                 page.ShowPage( showee )
                 
@@ -2969,7 +2825,7 @@ class PagesNotebook( wx.Notebook ):
                 
             elif page == showee:
                 
-                self.SetSelection( i )
+                self.setCurrentIndex( i )
                 
                 break
                 
@@ -2988,7 +2844,7 @@ class PagesNotebook( wx.Notebook ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_NO:
+            if result == QW.QDialog.Rejected:
                 
                 raise HydrusExceptions.VetoException()
                 

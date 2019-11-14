@@ -5,7 +5,8 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 import os
-import wx
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 class ShowKeys( ClientGUITopLevelWindows.Frame ):
     
@@ -14,21 +15,23 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         if key_type == 'registration': title = 'Registration Keys'
         elif key_type == 'access': title = 'Access Keys'
         
-        # give it no parent, so this doesn't close when the dialog is closed!
-        ClientGUITopLevelWindows.Frame.__init__( self, None, HG.client_controller.PrepStringForDisplay( title ), float_on_parent = False )
+        # have to give it a parent so we won't get garbage collected, use the main gui
+        ClientGUITopLevelWindows.Frame.__init__( self, HG.client_controller.gui, HG.client_controller.PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys
         
         #
         
-        self._text_ctrl = ClientGUICommon.SaneMultilineTextCtrl( self, style = wx.TE_READONLY | wx.TE_DONTWRAP )
+        self._text_ctrl = QW.QPlainTextEdit( self )
+        self._text_ctrl.setLineWrapMode( QW.QPlainTextEdit.NoWrap )
+        self._text_ctrl.setReadOnly( True )
         
-        self._save_to_file = wx.Button( self, label = 'save to file' )
-        self._save_to_file.Bind( wx.EVT_BUTTON, self.EventSaveToFile )
+        self._save_to_file = QW.QPushButton( 'save to file', self )
+        self._save_to_file.clicked.connect( self.EventSaveToFile )
         
-        self._done = wx.Button( self, label = 'done' )
-        self._done.Bind( wx.EVT_BUTTON, self.EventDone )
+        self._done = QW.QPushButton( 'done', self )
+        self._done.clicked.connect( self.close )
         
         #
         
@@ -37,40 +40,35 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         self._text = os.linesep.join( [ prepend + key.hex() for key in self._keys ] )
         
-        self._text_ctrl.SetValue( self._text )
+        self._text_ctrl.setPlainText( self._text )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._save_to_file, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._done, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._save_to_file, CC.FLAGS_LONE_BUTTON )
+        QP.AddToLayout( vbox, self._done, CC.FLAGS_LONE_BUTTON )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        ( x, y ) = self.GetEffectiveMinSize()
+        ( x, y ) = QP.GetEffectiveMinSize( self )
         
         if x < 500: x = 500
         if y < 200: y = 200
         
-        self.SetInitialSize( ( x, y ) )
+        QP.SetInitialSize( self, (x,y) )
         
-        self.Show( True )
-        
-    
-    def EventDone( self, event ):
-        
-        self.Close()
+        self.show()
         
     
-    def EventSaveToFile( self, event ):
+    def EventSaveToFile( self ):
         
         filename = 'keys.txt'
         
-        with wx.FileDialog( self, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
+        with QP.FileDialog( self, acceptMode = QW.QFileDialog.AcceptSave, defaultFile = filename ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
                 

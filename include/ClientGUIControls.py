@@ -18,7 +18,10 @@ from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusText
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
@@ -59,7 +62,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 new_rule = panel.GetValue()
                 
@@ -105,7 +108,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_rule = panel.GetValue()
                     
@@ -145,13 +148,13 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             self._bandwidth_type = ClientGUICommon.BetterChoice( self )
             
-            self._bandwidth_type.Append( 'data', HC.BANDWIDTH_TYPE_DATA )
-            self._bandwidth_type.Append( 'requests', HC.BANDWIDTH_TYPE_REQUESTS )
+            self._bandwidth_type.addItem( 'data', HC.BANDWIDTH_TYPE_DATA )
+            self._bandwidth_type.addItem( 'requests', HC.BANDWIDTH_TYPE_REQUESTS )
             
-            self._bandwidth_type.Bind( wx.EVT_CHOICE, self.EventBandwidth )
+            self._bandwidth_type.currentIndexChanged.connect( self._UpdateEnabled )
             
             self._max_allowed_bytes = BytesControl( self )
-            self._max_allowed_requests = wx.SpinCtrl( self, min = 1, max = 1048576 )
+            self._max_allowed_requests = QP.MakeQSpinBox( self, min=1, max=1048576 )
             
             self._time_delta = ClientGUITime.TimeDeltaButton( self, min = 1, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = True )
             
@@ -169,22 +172,22 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
             else:
                 
-                self._max_allowed_requests.SetValue( max_allowed )
+                self._max_allowed_requests.setValue( max_allowed )
                 
             
             self._UpdateEnabled()
             
             #
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._max_allowed_bytes, CC.FLAGS_VCENTER )
-            hbox.Add( self._max_allowed_requests, CC.FLAGS_VCENTER )
-            hbox.Add( self._bandwidth_type, CC.FLAGS_VCENTER )
-            hbox.Add( ClientGUICommon.BetterStaticText( self, ' every ' ), CC.FLAGS_VCENTER )
-            hbox.Add( self._time_delta, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._max_allowed_bytes, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._max_allowed_requests, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._bandwidth_type, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' every '), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._time_delta, CC.FLAGS_VCENTER )
             
-            self.SetSizer( hbox )
+            self.widget().setLayout( hbox )
             
         
         def _UpdateEnabled( self ):
@@ -193,23 +196,15 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
                 
-                self._max_allowed_bytes.Show()
-                self._max_allowed_requests.Hide()
+                self._max_allowed_bytes.show()
+                self._max_allowed_requests.hide()
                 
             elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
                 
-                self._max_allowed_bytes.Hide()
-                self._max_allowed_requests.Show()
-                
+                self._max_allowed_bytes.hide()
+                self._max_allowed_requests.show()
             
-            self.Layout()
             
-        
-        def EventBandwidth( self, event ):
-            
-            self._UpdateEnabled()
-            
-        
         def GetValue( self ):
             
             bandwidth_type = self._bandwidth_type.GetValue()
@@ -222,31 +217,29 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
             elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
                 
-                max_allowed = self._max_allowed_requests.GetValue()
+                max_allowed = self._max_allowed_requests.value()
                 
             
             return ( bandwidth_type, time_delta, max_allowed )
             
         
     
-class BytesControl( wx.Panel ):
+class BytesControl( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, initial_value = 65536 ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._spin = wx.SpinCtrl( self, min = 0, max = 1048576 )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._spin, 12 )
-        
-        self._spin.SetSize( ( width, -1 ) )
+        self._spin = QP.MakeQSpinBox( self, min=0, max=1048576 )
         
         self._unit = ClientGUICommon.BetterChoice( self )
         
-        self._unit.Append( 'B', 1 )
-        self._unit.Append( 'KB', 1024 )
-        self._unit.Append( 'MB', 1024 * 1024 )
-        self._unit.Append( 'GB', 1024 * 1024 * 1024 )
+        self._unit.addItem( 'B', 1 )
+        self._unit.addItem( 'KB', 1024 )
+        self._unit.addItem( 'MB', 1024 * 1024 )
+        self._unit.addItem( 'GB', 1024 * 1024 * 1024 )
         
         #
         
@@ -254,46 +247,34 @@ class BytesControl( wx.Panel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._spin, CC.FLAGS_VCENTER )
-        hbox.Add( self._unit, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._spin, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._unit, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
-    
-    def Bind( self, event_type, callback ):
+        self._spin.valueChanged.connect( self._HandleValueChanged )
+        self._unit.currentIndexChanged.connect( self._HandleValueChanged )
         
-        self._spin.Bind( wx.EVT_SPINCTRL, callback )
+    def _HandleValueChanged( self, val ):
         
-        self._unit.Bind( wx.EVT_CHOICE, callback )
-        
-    
-    def Disable( self ):
-        
-        self._spin.Disable()
-        self._unit.Disable()
-        
-    
-    def Enable( self ):
-        
-        self._spin.Enable()
-        self._unit.Enable()
-        
+        self.valueChanged.emit()
+              
     
     def GetSeparatedValue( self ):
         
-        return ( self._spin.GetValue(), self._unit.GetValue() )
+        return (self._spin.value(), self._unit.GetValue())
         
     
     def GetValue( self ):
         
-        return self._spin.GetValue() * self._unit.GetValue()
+        return self._spin.value() * self._unit.GetValue()
         
     
     def SetSeparatedValue( self, value, unit ):
         
-        return ( self._spin.SetValue( value ), self._unit.SetValue( unit ) )
+        return (self._spin.setValue( value ), self._unit.SetValue( unit ))
         
     
     def SetValue( self, value ):
@@ -309,7 +290,7 @@ class BytesControl( wx.Panel ):
             unit *= 1024
             
         
-        self._spin.SetValue( value )
+        self._spin.setValue( value )
         self._unit.SetValue( unit )
         
     
@@ -336,7 +317,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         transformations_panel.AddButton( 'move up', self._MoveUp, enabled_check_func = self._CanMoveUp )
         transformations_panel.AddButton( 'move down', self._MoveDown, enabled_check_func = self._CanMoveDown )
         
-        self._example_string = wx.TextCtrl( self )
+        self._example_string = QW.QLineEdit( self )
         
         #
         
@@ -344,11 +325,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if example_string_override is None:
             
-            self._example_string.SetValue( string_converter.example_string )
+            self._example_string.setText( string_converter.example_string )
             
         else:
             
-            self._example_string.SetValue( example_string_override )
+            self._example_string.setText( example_string_override )
             
         
         self._transformations.UpdateDatas() # to refresh, now they are all in the list
@@ -363,16 +344,16 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._example_string.textChanged.connect( self.EventUpdate )
         
     
     def _AddTransformation( self ):
@@ -386,9 +367,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
-                number = self._transformations.GetItemCount() + 1
+                number = self._transformations.topLevelItemCount() + 1
                 
                 ( transformation_type, data ) = panel.GetValue()
                 
@@ -411,7 +392,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( number, transformation_type, data ) = selected_data[0]
             
-            if number < self._transformations.GetItemCount():
+            if number < self._transformations.topLevelItemCount():
                 
                 return True
                 
@@ -448,7 +429,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            pretty_result = ClientParsing.MakeParsedTextPretty( string_converter.Convert( self._example_string.GetValue(), number ) )
+            pretty_result = ClientParsing.MakeParsedTextPretty( string_converter.Convert( self._example_string.text(), number ) )
             
         except HydrusExceptions.StringConvertException as e:
             
@@ -471,7 +452,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 self._transformations.DeleteSelected()
                 
@@ -479,7 +460,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # now we need to shuffle up any missing numbers
         
-        num_rows = self._transformations.GetItemCount()
+        num_rows = self._transformations.topLevelItemCount()
         
         i = 1
         search_i = i
@@ -529,7 +510,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._transformations.DeleteDatas( ( enumerated_transformation, ) )
                     
@@ -574,7 +555,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         transformations = [ ( transformation_type, data ) for ( number, transformation_type, data ) in enumerated_transformations ]
         
-        example_string = self._example_string.GetValue()
+        example_string = self._example_string.text()
         
         string_converter = ClientParsing.StringConverter( transformations, example_string )
         
@@ -639,7 +620,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def EventUpdate( self, event ):
+    def EventUpdate( self, text ):
         
         self._transformations.UpdateDatas()
         
@@ -650,7 +631,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            string_converter.Convert( self._example_string.GetValue() )
+            string_converter.Convert( self._example_string.text() )
             
         except HydrusExceptions.StringConvertException:
             
@@ -670,26 +651,26 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
                 
-                self._transformation_type.Append( ClientParsing.transformation_type_str_lookup[ t_type ], t_type )
+                self._transformation_type.addItem( ClientParsing.transformation_type_str_lookup[ t_type], t_type )
                 
             
-            self._data_text = wx.TextCtrl( self )
-            self._data_number = wx.SpinCtrl( self, min = 0, max = 65535 )
+            self._data_text = QW.QLineEdit( self )
+            self._data_number = QP.MakeQSpinBox( self, min=0, max=65535 )
             self._data_encoding = ClientGUICommon.BetterChoice( self )
-            self._data_regex_pattern = wx.TextCtrl( self )
-            self._data_regex_repl = wx.TextCtrl( self )
-            self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior' )
+            self._data_regex_pattern = QW.QLineEdit( self )
+            self._data_regex_repl = QW.QLineEdit( self )
+            self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone = ClientGUICommon.BetterChoice( self )
-            self._data_timezone_offset = wx.SpinCtrl( self, min = -86400, max = 86400 )
+            self._data_timezone_offset = QP.MakeQSpinBox( self, min=-86400, max=86400 )
             
             for e in ( 'hex', 'base64' ):
                 
-                self._data_encoding.Append( e, e )
+                self._data_encoding.addItem( e, e )
                 
             
-            self._data_timezone.Append( 'GMT', HC.TIMEZONE_GMT )
-            self._data_timezone.Append( 'Local', HC.TIMEZONE_LOCAL )
-            self._data_timezone.Append( 'Offset', HC.TIMEZONE_OFFSET )
+            self._data_timezone.addItem( 'GMT', HC.TIMEZONE_GMT )
+            self._data_timezone.addItem( 'Local', HC.TIMEZONE_LOCAL )
+            self._data_timezone.addItem( 'Offset', HC.TIMEZONE_OFFSET )
             
             #
             
@@ -707,26 +688,26 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ( pattern, repl ) = data
                 
-                self._data_regex_pattern.SetValue( pattern )
-                self._data_regex_repl.SetValue( repl )
+                self._data_regex_pattern.setText( pattern )
+                self._data_regex_repl.setText( repl )
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                 
                 ( phrase, timezone_type, timezone_offset ) = data
                 
-                self._data_text.SetValue( phrase )
+                self._data_text.setText( phrase )
                 self._data_timezone.SetValue( timezone_type )
-                self._data_timezone_offset.SetValue( timezone_offset )
+                self._data_timezone_offset.setValue( timezone_offset )
                 
             elif data is not None:
                 
                 if isinstance( data, int ):
                     
-                    self._data_number.SetValue( data )
+                    self._data_number.setValue( data )
                     
                 else:
                     
-                    self._data_text.SetValue( data )
+                    self._data_text.setText( data )
                     
                 
             
@@ -745,72 +726,68 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            self.SetSizer( vbox )
+            self.widget().setLayout( vbox )
             
             #
             
-            self._transformation_type.Bind( wx.EVT_CHOICE, self.EventChoice )
-            self._data_timezone.Bind( wx.EVT_CHOICE, self.EventChoice )
+            self._transformation_type.currentIndexChanged.connect( self._UpdateDataControls )
+            self._data_encoding.currentIndexChanged.connect( self._UpdateDataControls )
+            self._data_timezone.currentIndexChanged.connect( self._UpdateDataControls )
             
         
         def _UpdateDataControls( self ):
             
-            self._data_text.Disable()
-            self._data_number.Disable()
-            self._data_encoding.Disable()
-            self._data_regex_pattern.Disable()
-            self._data_regex_repl.Disable()
-            self._data_timezone.Disable()
-            self._data_timezone_offset.Disable()
+            self._data_text.setEnabled( False )
+            self._data_number.setEnabled( False )
+            self._data_encoding.setEnabled( False )
+            self._data_regex_pattern.setEnabled( False )
+            self._data_regex_repl.setEnabled( False )
+            self._data_timezone.setEnabled( False )
+            self._data_timezone_offset.setEnabled( False )
             
             transformation_type = self._transformation_type.GetValue()
             
             if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
                 
-                self._data_encoding.Enable()
+                self._data_encoding.setEnabled( True )
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE ):
                 
-                self._data_text.Enable()
+                self._data_text.setEnabled( True )
                 
                 if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                     
-                    self._data_timezone.Enable()
+                    self._data_timezone.setEnabled( True )
                     
                     if self._data_timezone.GetValue() == HC.TIMEZONE_OFFSET:
                         
-                        self._data_timezone_offset.Enable()
+                        self._data_timezone_offset.setEnabled( True )
                         
                     
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
                 
-                self._data_number.Enable()
+                self._data_number.setEnabled( True )
                 
                 if transformation_type == ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION:
                     
-                    self._data_number.SetMin( -65535 )
+                    self._data_number.setMinimum( -65535 )
                     
                 else:
                     
-                    self._data_number.SetMin( 0 )
+                    self._data_number.setMinimum( 0 )
                     
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
                 
-                self._data_regex_pattern.Enable()
-                self._data_regex_repl.Enable()
+                self._data_regex_pattern.setEnabled( True )
+                self._data_regex_repl.setEnabled( True )
                 
-            
-        
-        def EventChoice( self, event ):
-            
-            self._UpdateDataControls()
             
         
         def GetValue( self ):
@@ -823,24 +800,24 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT ):
                 
-                data = self._data_text.GetValue()
+                data = self._data_text.text()
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
                 
-                data = self._data_number.GetValue()
+                data = self._data_number.value()
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
                 
-                pattern = self._data_regex_pattern.GetValue()
-                repl = self._data_regex_repl.GetValue()
+                pattern = self._data_regex_pattern.text()
+                repl = self._data_regex_repl.text()
                 
                 data = ( pattern, repl )
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                 
-                phrase = self._data_text.GetValue()
+                phrase = self._data_text.text()
                 timezone_time = self._data_timezone.GetValue()
-                timezone_offset = self._data_timezone_offset.GetValue()
+                timezone_offset = self._data_timezone_offset.value()
                 
                 data = ( phrase, timezone_time, timezone_offset )
                 
@@ -866,23 +843,23 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_type = ClientGUICommon.BetterChoice( self )
         
-        self._match_type.Append( 'any characters', ClientParsing.STRING_MATCH_ANY )
-        self._match_type.Append( 'fixed characters', ClientParsing.STRING_MATCH_FIXED )
-        self._match_type.Append( 'character set', ClientParsing.STRING_MATCH_FLEXIBLE )
-        self._match_type.Append( 'regex', ClientParsing.STRING_MATCH_REGEX )
+        self._match_type.addItem( 'any characters', ClientParsing.STRING_MATCH_ANY )
+        self._match_type.addItem( 'fixed characters', ClientParsing.STRING_MATCH_FIXED )
+        self._match_type.addItem( 'character set', ClientParsing.STRING_MATCH_FLEXIBLE )
+        self._match_type.addItem( 'regex', ClientParsing.STRING_MATCH_REGEX )
         
-        self._match_value_text_input = wx.TextCtrl( self )
+        self._match_value_text_input = QW.QLineEdit( self )
         
         self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
         
-        self._match_value_flexible_input.Append( 'alphabetic characters (a-zA-Z)', ClientParsing.ALPHA )
-        self._match_value_flexible_input.Append( 'alphanumeric characters (a-zA-Z0-9)', ClientParsing.ALPHANUMERIC )
-        self._match_value_flexible_input.Append( 'numeric characters (0-9)', ClientParsing.NUMERIC )
+        self._match_value_flexible_input.addItem( 'alphabetic characters (a-zA-Z)', ClientParsing.ALPHA )
+        self._match_value_flexible_input.addItem( 'alphanumeric characters (a-zA-Z0-9)', ClientParsing.ALPHANUMERIC )
+        self._match_value_flexible_input.addItem( 'numeric characters (0-9)', ClientParsing.NUMERIC )
         
         self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
         self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
         
-        self._example_string = wx.TextCtrl( self )
+        self._example_string = QW.QLineEdit( self )
         
         self._example_string_matches = ClientGUICommon.BetterStaticText( self )
         
@@ -903,21 +880,21 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._match_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._match_value_text_input.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self._match_value_flexible_input.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._min_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
-        self._max_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
-        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._match_type.currentIndexChanged.connect( self._UpdateControls )
+        self._match_value_text_input.textChanged.connect( self._UpdateControls )
+        self._match_value_flexible_input.currentIndexChanged.connect( self._UpdateControls )
+        self._min_chars.valueChanged.connect( self._UpdateControls )
+        self._max_chars.valueChanged.connect( self._UpdateControls )
+        self._example_string.textChanged.connect( self._UpdateControls )
         
     
     def _GetValue( self ):
@@ -934,13 +911,13 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            match_value = self._match_value_text_input.GetValue()
+            match_value = self._match_value_text_input.text()
             
         
         min_chars = self._min_chars.GetValue()
         max_chars = self._max_chars.GetValue()
         
-        example_string = self._example_string.GetValue()
+        example_string = self._example_string.text()
         
         string_match = ClientParsing.StringMatch( match_type = match_type, match_value = match_value, min_chars = min_chars, max_chars = max_chars, example_string = example_string )
         
@@ -953,18 +930,18 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if match_type == ClientParsing.STRING_MATCH_ANY:
             
-            self._match_value_text_input.Disable()
-            self._match_value_flexible_input.Disable()
+            self._match_value_text_input.setEnabled( False )
+            self._match_value_flexible_input.setEnabled( False )
             
         elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
             
-            self._match_value_text_input.Disable()
-            self._match_value_flexible_input.Enable()
+            self._match_value_text_input.setEnabled( False )
+            self._match_value_flexible_input.setEnabled( True )
             
         else:
             
-            self._match_value_text_input.Enable()
-            self._match_value_flexible_input.Disable()
+            self._match_value_text_input.setEnabled( True )
+            self._match_value_flexible_input.setEnabled( False )
             
         
         if match_type == ClientParsing.STRING_MATCH_FIXED:
@@ -972,42 +949,37 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             self._min_chars.SetValue( None )
             self._max_chars.SetValue( None )
             
-            self._min_chars.Disable()
-            self._max_chars.Disable()
+            self._min_chars.setEnabled( False )
+            self._max_chars.setEnabled( False )
             
-            self._example_string.ChangeValue( self._match_value_text_input.GetValue() )
+            self._example_string.blockSignals( True ) # Temporarily block the text changed signal here so we won't end up in infinite recursion
+            self._example_string.setText( self._match_value_text_input.text() )
+            self._example_string.blockSignals( False )
             
-            self._example_string_matches.SetLabelText( '' )
+            self._example_string_matches.setText( '' )
             
         else:
             
-            self._min_chars.Enable()
-            self._max_chars.Enable()
+            self._min_chars.setEnabled( True )
+            self._max_chars.setEnabled( True )
             
             string_match = self._GetValue()
             
             try:
                 
-                string_match.Test( self._example_string.GetValue() )
+                string_match.Test( self._example_string.text() )
                 
-                self._example_string_matches.SetLabelText( 'Example matches ok!' )
-                self._example_string_matches.SetForegroundColour( ( 0, 128, 0 ) )
+                self._example_string_matches.setText( 'Example matches ok!' )
+                QP.SetForegroundColour( self._example_string_matches, (0,128,0) )
                 
             except HydrusExceptions.StringMatchException as e:
                 
                 reason = str( e )
                 
-                self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
-                self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
+                self._example_string_matches.setText( 'Example does not match - '+reason )
+                QP.SetForegroundColour( self._example_string_matches, (128,0,0) )
                 
             
-        
-    
-    def EventUpdate( self, event ):
-        
-        self._UpdateControls()
-        
-        event.Skip()
         
     
     def GetValue( self ):
@@ -1016,7 +988,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            string_match.Test( self._example_string.GetValue() )
+            string_match.Test( self._example_string.text() )
             
         except HydrusExceptions.StringMatchException:
             
@@ -1040,26 +1012,28 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._match_value_flexible_input.SetValue( ClientParsing.ALPHA )
             
-            self._match_value_text_input.SetValue( match_value )
+            self._match_value_text_input.setText( match_value )
             
         
         self._min_chars.SetValue( min_chars )
         self._max_chars.SetValue( max_chars )
         
-        self._example_string.SetValue( example_string )
+        self._example_string.setText( example_string )
         
         self._UpdateControls()
         
     
-class NoneableBytesControl( wx.Panel ):
+class NoneableBytesControl( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, initial_value = 65536, none_label = 'no limit' ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._bytes = BytesControl( self )
         
-        self._none_checkbox = wx.CheckBox( self, label = none_label )
+        self._none_checkbox = QW.QCheckBox( none_label, self )
         
         #
         
@@ -1067,45 +1041,41 @@ class NoneableBytesControl( wx.Panel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._bytes, CC.FLAGS_SIZER_VCENTER )
-        hbox.Add( self._none_checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._bytes, CC.FLAGS_SIZER_VCENTER )
+        QP.AddToLayout( hbox, self._none_checkbox, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
         #
         
-        self._none_checkbox.Bind( wx.EVT_CHECKBOX, self.EventNoneChecked )
+        self._none_checkbox.clicked.connect( self._UpdateEnabled )
+        
+        self._bytes.valueChanged.connect( self._HandleValueChanged )
+        self._none_checkbox.clicked.connect( self._HandleValueChanged )
         
     
     def _UpdateEnabled( self ):
         
-        if self._none_checkbox.GetValue():
+        if self._none_checkbox.isChecked():
             
-            self._bytes.Disable()
+            self._bytes.setEnabled( False )
             
         else:
             
-            self._bytes.Enable()
+            self._bytes.setEnabled( True )
             
         
     
-    def EventNoneChecked( self, event ):
+    def _HandleValueChanged( self ):
         
-        self._UpdateEnabled()
-        
-    
-    def Bind( self, event_type, callback ):
-        
-        self._bytes.Bind( wx.EVT_SPINCTRL, callback )
-        
-        self._none_checkbox.Bind( wx.EVT_CHECKBOX, callback )
+        self.valueChanged.emit()
         
     
     def GetValue( self ):
         
-        if self._none_checkbox.GetValue():
+        if self._none_checkbox.isChecked():
             
             return None
             
@@ -1115,13 +1085,15 @@ class NoneableBytesControl( wx.Panel ):
             
         
     
-    def SetToolTip( self, text ):
+    def setToolTip( self, text ):
         
-        wx.Panel.SetToolTip( self, text )
+        QW.QWidget.setToolTip( self, text )
         
-        for c in self.GetChildren():
+        for c in self.children():
             
-            c.SetToolTip( text )
+            if isinstance( c, QW.QWidget ):
+                
+                c.setToolTip( text )
             
         
     
@@ -1129,11 +1101,11 @@ class NoneableBytesControl( wx.Panel ):
         
         if value is None:
             
-            self._none_checkbox.SetValue( True )
+            self._none_checkbox.setChecked( True )
             
         else:
             
-            self._none_checkbox.SetValue( False )
+            self._none_checkbox.setChecked( False )
             
             self._bytes.SetValue( value )
             
@@ -1141,26 +1113,29 @@ class NoneableBytesControl( wx.Panel ):
         self._UpdateEnabled()
         
     
-class NetworkJobControl( wx.Panel ):
+class NetworkJobControl( QW.QFrame ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
+        QW.QFrame.__init__( self, parent )
+        
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         self._network_job = None
         self._download_started = False
         
         self._auto_override_bandwidth_rules = False
         
-        self._left_text = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
-        self._right_text = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT )
+        self._left_text = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+        self._right_text = ClientGUICommon.BetterStaticText( self )
+        self._right_text.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
         
-        self._last_right_min_width = ( -1, -1 )
+        self._last_right_min_width = 0
         
         self._gauge = ClientGUICommon.Gauge( self )
         
-        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.cog, self._ShowCogMenu )
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.Cancel )
+        self._cog_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.cog, self._ShowCogMenu )
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, self.Cancel )
         
         #
         
@@ -1168,50 +1143,46 @@ class NetworkJobControl( wx.Panel ):
         
         #
         
-        st_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        st_hbox = QP.HBoxLayout()
         
-        st_hbox.Add( self._left_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        st_hbox.Add( self._right_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( st_hbox, self._left_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( st_hbox, self._right_text, CC.FLAGS_VCENTER )
         
-        left_vbox = wx.BoxSizer( wx.VERTICAL )
+        left_vbox = QP.VBoxLayout()
         
-        left_vbox.Add( st_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        left_vbox.Add( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, st_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
-        hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._cog_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
     
     def _ShowCogMenu( self ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         if self._network_job is not None:
             
             if self._network_job.CurrentlyWaitingOnConnectionError():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'reattempt connection now', 'Stop waiting on a connection error and reattempt the job now.', self._network_job.OverrideConnectionErrorWait )
+                ClientGUIMenus.AppendMenuItem( menu, 'reattempt connection now', 'Stop waiting on a connection error and reattempt the job now.', self._network_job.OverrideConnectionErrorWait )
                 
             
             if self._network_job.ObeysBandwidth():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'override bandwidth rules for this job', 'Tell the current job to ignore existing bandwidth rules and go ahead anyway.', self._network_job.OverrideBandwidth )
+                ClientGUIMenus.AppendMenuItem( menu, 'override bandwidth rules for this job', 'Tell the current job to ignore existing bandwidth rules and go ahead anyway.', self._network_job.OverrideBandwidth )
                 
             
             if not self._network_job.TokensOK():
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'override gallery slot requirements for this job', 'Force-allow this download to proceed, ignoring the normal gallery wait times.', self._network_job.OverrideToken )
+                ClientGUIMenus.AppendMenuItem( menu, 'override gallery slot requirements for this job', 'Force-allow this download to proceed, ignoring the normal gallery wait times.', self._network_job.OverrideToken )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-        
-        ClientGUIMenus.AppendMenuCheckItem( self, menu, 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', self._auto_override_bandwidth_rules, self.FlipAutoOverrideBandwidth )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', self._auto_override_bandwidth_rules, self.FlipAutoOverrideBandwidth )
         
         HG.client_controller.PopupMenu( self._cog_button, menu )
         
@@ -1235,8 +1206,8 @@ class NetworkJobControl( wx.Panel ):
         
         if self._network_job is None or self._network_job.NoEngineYet():
             
-            self._left_text.SetLabelText( '' )
-            self._right_text.SetLabelText( '' )
+            self._left_text.setText( '' )
+            self._right_text.setText( '' )
             self._gauge.SetRange( 1 )
             self._gauge.SetValue( 0 )
             
@@ -1255,7 +1226,7 @@ class NetworkJobControl( wx.Panel ):
             
             ( status_text, current_speed, bytes_read, bytes_to_read ) = self._network_job.GetStatus()
             
-            self._left_text.SetLabelText( status_text )
+            self._left_text.setText( status_text )
             
             if not self._download_started and current_speed > 0:
                 
@@ -1284,19 +1255,17 @@ class NetworkJobControl( wx.Panel ):
                     
                 
             
-            self._right_text.SetLabelText( speed_text )
+            self._right_text.setText( speed_text )
             
             right_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._right_text, len( speed_text ) )
             
-            right_min_size = ( right_width, -1 )
+            right_min_width = right_width
             
-            if right_min_size != self._last_right_min_width:
+            if right_min_width != self._last_right_min_width:
                 
-                self._last_right_min_width = right_min_size
+                self._last_right_min_width = right_min_width
                 
-                self._right_text.SetMinSize( right_min_size )
-                
-                self.Layout()
+                self._right_text.setMinimumWidth( right_min_width )
                 
             
             self._gauge.SetRange( bytes_to_read )
@@ -1305,16 +1274,16 @@ class NetworkJobControl( wx.Panel ):
         
         if can_cancel:
             
-            if not self._cancel_button.IsEnabled():
+            if not self._cancel_button.isEnabled():
                 
-                self._cancel_button.Enable()
+                self._cancel_button.setEnabled( True )
                 
             
         else:
             
-            if self._cancel_button.IsEnabled():
+            if self._cancel_button.isEnabled():
                 
-                self._cancel_button.Disable()
+                self._cancel_button.setEnabled( False )
                 
             
         
@@ -1372,9 +1341,9 @@ class NetworkJobControl( wx.Panel ):
             
         
     
-( StringConverterEvent, EVT_STRING_CONVERTER ) = wx.lib.newevent.NewCommandEvent()
-
 class StringConverterButton( ClientGUICommon.BetterButton ):
+    
+    stringConverterUpdate = QC.Signal()
     
     def __init__( self, parent, string_converter ):
         
@@ -1395,15 +1364,14 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._string_converter = panel.GetValue()
                 
                 self._UpdateLabel()
                 
             
-        
-        wx.QueueEvent( self.GetEventHandler(), StringConverterEvent( -1 ) )
+        self.stringConverterUpdate.emit()
         
     
     def _UpdateLabel( self ):
@@ -1419,7 +1387,7 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
             label = HydrusData.ToHumanInt( num_rules ) + ' string transformations'
             
         
-        self.SetLabelText( label )
+        self.setText( label )
         
     
     def GetValue( self ):
@@ -1458,7 +1426,7 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._string_match = panel.GetValue()
                 
@@ -1471,7 +1439,7 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         
         label = self._string_match.ToString()
         
-        self.SetLabelText( label )
+        self.setText( label )
         
     
     def GetValue( self ):
@@ -1486,11 +1454,11 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         self._UpdateLabel()
         
     
-class StringMatchToStringMatchDictControl( wx.Panel ):
+class StringMatchToStringMatchDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key' ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._key_name = key_name
         
@@ -1514,11 +1482,11 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def _ConvertDataToListCtrlTuples( self, data ):
@@ -1544,7 +1512,7 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 key_string_match = panel.GetValue()
                 
@@ -1562,7 +1530,7 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 value_string_match = panel.GetValue()
                 
@@ -1585,7 +1553,7 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     key_string_match = panel.GetValue()
                     
@@ -1601,7 +1569,7 @@ class StringMatchToStringMatchDictControl( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     value_string_match = panel.GetValue()
                     
@@ -1649,7 +1617,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._value = control.GetValue()
                 
@@ -1666,11 +1634,13 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
         self._value = value
         
     
-class StringToStringDictControl( wx.Panel ):
+class StringToStringDictControl( QW.QWidget ):
+    
+    listCtrlChanged = QC.Signal()
     
     def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key', value_name = 'value', allow_add_delete = True, edit_keys = True ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._key_name = key_name
         self._value_name = value_name
@@ -1684,6 +1654,7 @@ class StringToStringDictControl( wx.Panel ):
         use_simple_delete = allow_add_delete
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', min_height, 36, columns, self._ConvertDataToListCtrlTuples, use_simple_delete = use_simple_delete, activation_callback = self._Edit )
+        self._listctrl.listCtrlChanged.connect( self.listCtrlChanged )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -1707,11 +1678,11 @@ class StringToStringDictControl( wx.Panel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def _ConvertDataToListCtrlTuples( self, data ):
@@ -1728,20 +1699,20 @@ class StringToStringDictControl( wx.Panel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._key_name, allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 key = dlg.GetValue()
                 
                 if key in self._GetExistingKeys():
                     
-                    wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                    QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
                     
                     return
                     
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._value_name, allow_blank = True ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         value = dlg.GetValue()
                         
@@ -1764,13 +1735,13 @@ class StringToStringDictControl( wx.Panel ):
                 
                 with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         edited_key = dlg.GetValue()
                         
                         if edited_key != key and edited_key in self._GetExistingKeys():
                             
-                            wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                            QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
                             
                             break
                             
@@ -1788,7 +1759,7 @@ class StringToStringDictControl( wx.Panel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._value_name, default = value, allow_blank = True ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_value = dlg.GetValue()
                     
@@ -1820,11 +1791,11 @@ class StringToStringDictControl( wx.Panel ):
         return value_dict
         
     
-class StringToStringMatchDictControl( wx.Panel ):
+class StringToStringMatchDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict, min_height = 10, key_name = 'key' ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._key_name = key_name
         
@@ -1848,11 +1819,11 @@ class StringToStringMatchDictControl( wx.Panel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def _ConvertDataToListCtrlTuples( self, data ):
@@ -1871,13 +1842,13 @@ class StringToStringMatchDictControl( wx.Panel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._key_name, allow_blank = False ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 key = dlg.GetValue()
                 
                 if key in self._GetExistingKeys():
                     
-                    wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                    QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
                     
                     return
                     
@@ -1890,7 +1861,7 @@ class StringToStringMatchDictControl( wx.Panel ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         string_match = panel.GetValue()
                         
@@ -1911,13 +1882,13 @@ class StringToStringMatchDictControl( wx.Panel ):
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_key = dlg.GetValue()
                     
                     if edited_key != key and edited_key in self._GetExistingKeys():
                         
-                        wx.MessageBox( 'That ' + self._key_name + ' already exists!' )
+                        QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
                         
                         break
                         
@@ -1936,7 +1907,7 @@ class StringToStringMatchDictControl( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_string_match = panel.GetValue()
                     
@@ -1968,29 +1939,29 @@ class StringToStringMatchDictControl( wx.Panel ):
         return value_dict
         
     
-class TextAndPasteCtrl( wx.Panel ):
+class TextAndPasteCtrl( QW.QWidget ):
     
     def __init__( self, parent, add_callable, allow_empty_input = False ):
         
         self._add_callable = add_callable
         self._allow_empty_input = allow_empty_input
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._text_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-        self._text_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self._text_input = QW.QLineEdit( self )
+        self._text_input.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text_input, self.EnterText ) )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
-        self._paste_button.SetToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
     
     def _Paste( self ):
@@ -2001,7 +1972,7 @@ class TextAndPasteCtrl( wx.Panel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -2022,42 +1993,38 @@ class TextAndPasteCtrl( wx.Panel ):
             
         except:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
         
     
-    def EventKeyDown( self, event ):
+    def EnterText( self ):
         
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        text = self._text_input.text()
         
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        text = HydrusText.StripIOInputLine( text )
+        
+        if text == '' and not self._allow_empty_input:
             
-            text = self._text_input.GetValue()
+            return
             
-            text = HydrusText.StripIOInputLine( text )
-            
-            if text == '' and not self._allow_empty_input:
-                
-                return
-                
-            
-            self._add_callable( ( text, ) )
-            
-            self._text_input.SetValue( '' )
-            
-        else:
-            
-            event.Skip()
-            
+        
+        self._add_callable( ( text, ) )
+        
+        self._text_input.setText( '' )
         
     
     def GetValue( self ):
         
-        return self._text_input.GetValue()
+        return self._text_input.text()
+        
+    
+    def setPlaceholderText( self, text ):
+        
+        self._text_input.setPlaceholderText( text )
         
     
     def SetValue( self, text ):
         
-        self._text_input.SetValue( text )
+        self._text_input.setText( text )
         
     

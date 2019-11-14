@@ -19,20 +19,19 @@ import sys
 import threading
 import time
 import traceback
-import wx
-import wx.lib.newevent
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
-ID_TIMER_ANIMATED = wx.NewId()
-ID_TIMER_SLIDESHOW = wx.NewId()
-ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
-
-def WrapInGrid( parent, rows, expand_text = False ):
+def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
-    gridbox = wx.FlexGridSizer( 2 )
+    gridbox = QP.GridLayout( cols = 2 )
     
     if expand_text:
         
-        gridbox.AddGrowableCol( 0, 1 )
+        gridbox.setColumnStretch( 0, 1 )
         
         text_flags = CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY # Trying to expand both ways nixes the center. This seems to work right.
         control_flags = CC.FLAGS_VCENTER
@@ -40,10 +39,10 @@ def WrapInGrid( parent, rows, expand_text = False ):
         
     else:
         
-        gridbox.AddGrowableCol( 1, 1 )
+        gridbox.setColumnStretch( 1, 1 )
         
         text_flags = CC.FLAGS_VCENTER
-        control_flags = CC.FLAGS_EXPAND_BOTH_WAYS
+        control_flags = CC.FLAGS_NONE
         sizer_flags = CC.FLAGS_EXPAND_SIZER_BOTH_WAYS
         
     
@@ -51,7 +50,7 @@ def WrapInGrid( parent, rows, expand_text = False ):
         
         st = BetterStaticText( parent, text )
         
-        if isinstance( control, wx.Sizer ):
+        if isinstance( control, QW.QLayout ):
             
             cflags = sizer_flags
             
@@ -59,31 +58,32 @@ def WrapInGrid( parent, rows, expand_text = False ):
             
             cflags = control_flags
             
-            if control.GetToolTipText() != '':
+            if control.toolTip() != '':
                 
-                st.SetToolTip( control.GetToolTipText() )
+                st.setToolTip( control.toolTip() )
                 
             
         
-        gridbox.Add( st, text_flags )
-        gridbox.Add( control, cflags )
+        QP.AddToLayout( gridbox, st, text_flags )
+        QP.AddToLayout( gridbox, control, cflags )
         
+    if add_stretch_at_end: gridbox.setRowStretch( gridbox.rowCount(), 1 )
     
     return gridbox
     
 def WrapInText( control, parent, text, colour = None ):
     
-    hbox = wx.BoxSizer( wx.HORIZONTAL )
+    hbox = QP.HBoxLayout()
     
     st = BetterStaticText( parent, text )
     
     if colour is not None:
         
-        st.SetForegroundColour( colour )
+        QP.SetForegroundColour( st, colour )
         
     
-    hbox.Add( st, CC.FLAGS_VCENTER )
-    hbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+    QP.AddToLayout( hbox, st, CC.FLAGS_VCENTER )
+    QP.AddToLayout( hbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
     
     return hbox
     
@@ -157,238 +157,85 @@ class ShortcutAwareToolTipMixin( object ):
         self._RefreshToolTip()
         
     
-class BetterBitmapButton( wx.BitmapButton, ShortcutAwareToolTipMixin ):
+class BetterBitmapButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def __init__( self, parent, bitmap, func, *args, **kwargs ):
         
-        wx.BitmapButton.__init__( self, parent, bitmap = bitmap )
-        ShortcutAwareToolTipMixin.__init__( self, self.SetToolTip )
+        QW.QPushButton.__init__( self, parent )
+        self.setIcon( QG.QIcon( bitmap ) )
+        self.setIconSize( bitmap.size() )
+        self.setSizePolicy( QW.QSizePolicy.Maximum, QW.QSizePolicy.Maximum )
+        ShortcutAwareToolTipMixin.__init__( self, self.setToolTip )
         
         self._func = func
         self._args = args
         self._kwargs = kwargs
         
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.clicked.connect( self.EventButton )
         
     
-    def EventButton( self, event ):
+    def EventButton( self ):
         
         self._func( *self._args,  **self._kwargs )
         
     
-# this hands out additional space according to proportion, but only on the pixels beyond min size
-# so two items with weight 1 that have min size 100 & 200 will have min size of 300, not 400
-# given a size of 400, they will size 150 & 250, sharing the 'additional' pixels
-# I may be stupid, but I cannot see a vanilla wx flag or layout method that does this
-class BetterBoxSizer( wx.BoxSizer ):
-    
-    def CalcMin( self ):
-        
-        horizontal_total_width = 0
-        horizontal_max_height = 0
-        vertical_max_width = 0
-        vertical_total_height = 0
-        
-        for sizer_item in self.GetChildren():
-            
-            if not sizer_item.IsShown():
-                
-                continue
-                
-            
-            ( width, height ) = sizer_item.CalcMin()
-            
-            horizontal_total_width += width
-            horizontal_max_height = max( horizontal_max_height, height )
-            vertical_max_width = max( vertical_max_width, width )
-            vertical_total_height += height
-            
-        
-        if self.GetOrientation() == wx.HORIZONTAL:
-            
-            return wx.Size( horizontal_total_width, horizontal_max_height )
-            
-        else:
-            
-            return wx.Size( vertical_max_width, vertical_total_height )
-            
-        
-    
-    def RecalcSizes( self ):
-        
-        my_orientation = self.GetOrientation()
-        
-        ( x, y ) = self.GetPosition()
-        ( my_width, my_height ) = self.GetSize()
-        
-        ( min_my_width, min_my_height ) = self.CalcMin()
-        
-        extra_height = my_height - min_my_height
-        extra_width = my_width - min_my_width
-        
-        i_am_too_small = ( my_orientation == wx.HORIZONTAL and extra_width < 0 ) or ( my_orientation == wx.VERTICAL and extra_height < 0 )
-        
-        total_proportion = sum( ( sizer_item.GetProportion() for sizer_item in self.GetChildren() if sizer_item.IsShown() ) )
-        
-        for sizer_item in self.GetChildren():
-            
-            if not sizer_item.IsShown():
-                
-                continue
-                
-            
-            ( sizer_min_width, sizer_min_height ) = sizer_item.CalcMin()
-            
-            flag = sizer_item.GetFlag()
-            
-            #
-            
-            if wx.EXPAND & flag:
-                
-                horizontal_height = my_height
-                vertical_width = my_width
-                
-            else:
-                
-                horizontal_height = sizer_min_height
-                vertical_width = sizer_min_width
-                
-            
-            #
-            
-            proportion = sizer_item.GetProportion()
-            
-            if proportion == 0 or i_am_too_small:
-                
-                horizontal_width = sizer_min_width
-                vertical_height = sizer_min_height
-                
-            else:
-                
-                share_of_extra_pixels = proportion / total_proportion
-                
-                horizontal_width = sizer_min_width + int( share_of_extra_pixels * extra_width )
-                vertical_height = sizer_min_height + int( share_of_extra_pixels * extra_height )
-                
-            
-            #
-            
-            x_offset = 0
-            y_offset = 0
-            
-            if my_orientation == wx.HORIZONTAL:
-                
-                if wx.ALIGN_BOTTOM & flag:
-                    
-                    y_offset = my_height - horizontal_height
-                    
-                elif wx.ALIGN_CENTER_VERTICAL & flag:
-                    
-                    y_offset = ( my_height - horizontal_height ) // 2
-                    
-                
-            else:
-                
-                if wx.ALIGN_RIGHT & flag:
-                    
-                    x_offset = my_width - vertical_width
-                    
-                elif wx.ALIGN_CENTER_HORIZONTAL & flag:
-                    
-                    x_offset = ( my_width - vertical_width ) // 2
-                    
-                
-            
-            #
-            
-            pos = wx.Point( x + x_offset, y + y_offset )
-            
-            if my_orientation == wx.HORIZONTAL:
-                
-                size = wx.Size( horizontal_width, horizontal_height )
-                
-                x += horizontal_width
-                
-            else:
-                
-                size = wx.Size( vertical_width, vertical_height )
-                
-                y += vertical_height
-                
-            
-            sizer_item.SetDimension( pos, size )
-            
-        
-    
-class BetterButton( wx.Button, ShortcutAwareToolTipMixin ):
+class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
         
-        wx.Button.__init__( self, parent, style = wx.BU_EXACTFIT )
-        ShortcutAwareToolTipMixin.__init__( self, self.SetToolTip )
+        QW.QPushButton.__init__( self, parent )
+        ShortcutAwareToolTipMixin.__init__( self, self.setToolTip )
         
-        self.SetLabelText( label )
+        self.setText( label )
         
         self._func = func
         self._args = args
         self._kwargs = kwargs
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.clicked.connect( self.EventButton )
         
     
-    def EventButton( self, event ):
+    def EventButton( self ):
         
         self._func( *self._args,  **self._kwargs )
         
     
-class BetterCheckListBox( wx.CheckListBox ):
-    
-    def __init__( self, parent ):
+    def setText( self, label ):
         
-        wx.CheckListBox.__init__( self, parent, style = wx.LB_EXTENDED )
+        button_label = QP.EscapeMnemonics( label )
         
-    
-    def GetChecked( self ):
-        
-        result = [ self.GetClientData( index ) for index in self.GetCheckedItems() ]
-        
-        return result
+        QW.QPushButton.setText( self, button_label )
         
     
-    def SetCheckedData( self, datas ):
+class BetterChoice( QW.QComboBox ):
+    
+    def __init__( self, *args, **kwargs ):
         
-        for index in range( self.GetCount() ):
-            
-            data = self.GetClientData( index )
-            
-            check_it = data in datas
-            
-            self.Check( index, check_it )
-            
+        QW.QComboBox.__init__( self, *args, **kwargs )
+        
+        self.setMaxVisibleItems( 32 )
         
     
-class BetterChoice( wx.Choice ):
-    
-    def Append( self, display_string, client_data ):
+    def addItem( self, display_string, client_data ):
         
-        wx.Choice.Append( self, display_string, client_data )
+        QW.QComboBox.addItem( self, display_string, client_data )
         
-        if self.GetCount() == 1:
+        if self.count() == 1:
             
-            self.Select( 0 )
+            self.setCurrentIndex( 0 )
             
         
     
     def GetValue( self ):
         
-        selection = self.GetSelection()
+        selection = self.currentIndex()
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            return self.GetClientData( selection )
+            return QP.GetClientData( self, selection )
             
-        elif self.GetCount() > 0:
+        elif self.count() > 0:
             
-            return self.GetClientData( 0 )
+            return QP.GetClientData( self, 0 )
             
         else:
             
@@ -398,29 +245,30 @@ class BetterChoice( wx.Choice ):
     
     def SetValue( self, data ):
         
-        for i in range( self.GetCount() ):
+        for i in range( self.count() ):
             
-            if data == self.GetClientData( i ):
+            if data == QP.GetClientData( self, i ):
                 
-                self.Select( i )
+                self.setCurrentIndex( i )
                 
                 return
                 
             
         
-        if self.GetCount() > 0:
+        if self.count() > 0:
             
-            self.Select( 0 )
+            self.setCurrentIndex( 0 )
             
         
     
-class BetterColourControl( wx.ColourPickerCtrl ):
+class BetterColourControl( QP.ColourPickerCtrl ):
     
     def __init__( self, *args, **kwargs ):
         
-        wx.ColourPickerCtrl.__init__( self, *args, **kwargs )
+        QP.ColourPickerCtrl.__init__( self, *args, **kwargs )
         
-        self.GetPickerCtrl().Bind( wx.EVT_RIGHT_DOWN, self.EventMenu )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMenu )
         
     
     def _ImportHexFromClipboard( self ):
@@ -431,7 +279,7 @@ class BetterColourControl( wx.ColourPickerCtrl ):
             
         except Exception as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -445,18 +293,18 @@ class BetterColourControl( wx.ColourPickerCtrl ):
         
         if len( import_string ) != 7:
             
-            wx.MessageBox( 'That did not appear to be a hex string!' )
+            QW.QMessageBox.critical( self, 'Error', 'That did not appear to be a hex string!' )
             
             return
             
         
         try:
             
-            colour = wx.Colour( import_string )
+            colour = QG.QColor( import_string )
             
         except Exception as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             HydrusData.ShowException( e )
             
@@ -468,36 +316,36 @@ class BetterColourControl( wx.ColourPickerCtrl ):
     
     def EventMenu( self, event ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
-        hex_string = self.GetColour().GetAsString( wx.C2S_HTML_SYNTAX )
+        hex_string = self.GetColour().name( QG.QColor.HexRgb )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', HG.client_controller.pub, 'clipboard', 'text', hex_string )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'import a hex colour from the clipboard', 'Look at the clipboard for a colour in the format #FF0000, and set the colour.', self._ImportHexFromClipboard )
+        ClientGUIMenus.AppendMenuItem( menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', HG.client_controller.pub, 'clipboard', 'text', hex_string )
+        ClientGUIMenus.AppendMenuItem( menu, 'import a hex colour from the clipboard', 'Look at the clipboard for a colour in the format #FF0000, and set the colour.', self._ImportHexFromClipboard )
         
         HG.client_controller.PopupMenu( self, menu )
         
     
-class BetterNotebook( wx.Notebook ):
+class BetterNotebook( QW.QTabWidget ):
     
     def _ShiftSelection( self, delta ):
         
-        existing_selection = self.GetSelection()
+        existing_selection = self.currentIndex()
         
-        if existing_selection != wx.NOT_FOUND:
+        if existing_selection != -1:
             
-            new_selection = ( existing_selection + delta ) % self.GetPageCount()
+            new_selection = ( existing_selection + delta ) % self.count()
             
             if new_selection != existing_selection:
                 
-                self.SetSelection( new_selection )
+                self.setCurrentIndex( new_selection )
                 
             
         
     
     def GetPages( self ):
         
-        return [ self.GetPage( i ) for i in range( self.GetPageCount() ) ]
+        return [ self.widget( i ) for i in range( self.count() ) ]
         
     
     def SelectLeft( self ):
@@ -507,11 +355,11 @@ class BetterNotebook( wx.Notebook ):
     
     def SelectPage( self, page ):
         
-        for i in range( self.GetPageCount() ):
+        for i in range( self.count() ):
             
-            if self.GetPage( i ) == page:
+            if self.widget( i ) == page:
                 
-                self.SetSelection( i )
+                self.setCurrentIndex( i )
                 
                 return
                 
@@ -523,7 +371,7 @@ class BetterNotebook( wx.Notebook ):
         self._ShiftSelection( 1 )
         
     
-class BetterRadioBox( wx.RadioBox ):
+class BetterRadioBox( QP.RadioBox ):
     
     def __init__( self, *args, **kwargs ):
         
@@ -531,25 +379,27 @@ class BetterRadioBox( wx.RadioBox ):
         
         kwargs[ 'choices' ] = [ s for ( s, data ) in kwargs[ 'choices' ] ]
         
-        wx.RadioBox.__init__( self, *args, **kwargs )
+        QP.RadioBox.__init__( self, *args, **kwargs )
         
     
     def GetValue( self ):
         
-        index = self.GetSelection()
+        index = self.GetCurrentIndex()
         
         return self._indices_to_data[ index ]
         
     
-class BetterStaticText( wx.StaticText ):
+class BetterStaticText( QP.EllipsizedLabel ):
     
     def __init__( self, parent, label = None, tooltip_label = False, **kwargs ):
         
-        wx.StaticText.__init__( self, parent, **kwargs )
+        ellipsize_end = 'ellipsize_end' in kwargs and kwargs[ 'ellipsize_end' ]
+
+        QP.EllipsizedLabel.__init__( self, parent, ellipsize_end = ellipsize_end )
         
         self._tooltip_label = tooltip_label
         
-        if 'style' in kwargs and kwargs[ 'style' ] & wx.ST_ELLIPSIZE_END:
+        if 'ellipsize_end' in kwargs and kwargs[ 'ellipsize_end' ]:
             
             self._tooltip_label = True
             
@@ -560,29 +410,29 @@ class BetterStaticText( wx.StaticText ):
         
         if label is not None:
             
-            # to escape mnemonic '&' swallowing
-            self.SetLabelText( label )
+            self.setText( label )
             
         
-        # wx.lib.wordwrap mite be cool here to pre-calc the wrapped text, which may be more reliable in init than wrap, but it needs a dc
         
-    
-    def SetLabelText( self, text ):
+    def setText( self, text ):
+        
+        # this doesn't need mnemonic escape _unless_ a buddy is set, wew lad
         
         if text != self._last_set_text:
             
             self._last_set_text = text
             
-            wx.StaticText.SetLabelText( self, text )
+            QP.EllipsizedLabel.setText( self, text )
             
             if self._wrap_width is not None:
                 
-                self.Wrap( self._wrap_width )
+                self.setWordWrap( True )
+                self.setMaximumWidth( self._wrap_width )
                 
             
             if self._tooltip_label:
                 
-                self.SetToolTip( text )
+                self.setToolTip( text )
                 
             
         
@@ -593,7 +443,8 @@ class BetterStaticText( wx.StaticText ):
         
         if self._wrap_width is not None:
             
-            self.Wrap( self._wrap_width )
+            self.setWordWrap( True )
+            self.setMaximumWidth( wrap_width )
             
         
     
@@ -605,109 +456,72 @@ class BetterHyperLink( BetterStaticText ):
         
         self._url = url
         
-        self.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
-        self.SetForegroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_HOTLIGHT ) )
+        self.setToolTip( self._url )
+
+        self.setTextFormat( QC.Qt.RichText )
+        self.setTextInteractionFlags( QC.Qt.TextBrowserInteraction )
+        self.setOpenExternalLinks( True )
         
-        font = self.GetFont()
-        
-        font.SetUnderlined( True )
-        
-        self.SetFont( font )
-        
-        self.SetToolTip( self._url )
-        
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventClick )
-        
+        self.setText( '<a href="{}">{}</a>'.format( url, label ) )
     
-    def EventClick( self, event ):
-        
-        ClientPaths.LaunchURLInWebBrowser( self._url )
-        
-    
-class BufferedWindow( wx.Window ):
+
+class BufferedWindow( QW.QWidget ):
     
     def __init__( self, *args, **kwargs ):
         
-        wx.Window.__init__( self, *args, **kwargs )
+        QW.QWidget.__init__( self, *args )
         
         if 'size' in kwargs:
             
-            ( x, y ) = kwargs[ 'size' ]
+            ( x, y ) = kwargs[ 'size' ].toTuple()
             
-            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( x, y, 24 )
-            
-        else:
-            
-            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
-            
-        
-        self._dirty = True
-        
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+            self.setFixedSize( x, y )
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
         raise NotImplementedError()
         
     
-    def EventEraseBackground( self, event ): pass
-    
-    def EventPaint( self, event ):
+    def paintEvent( self, event ):
         
-        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        painter = QG.QPainter( self )
         
-        if self._dirty:
-            
-            self._Draw( dc )
-            
-        
-    
-    def EventResize( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
-        
-        if my_width != current_bmp_width or my_height != current_bmp_height:
-            
-            self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, my_height, 24 )
-            
-            self._dirty = True
-            
-        
-        self.Refresh()
+        self._Draw( painter )
         
     
 class BufferedWindowIcon( BufferedWindow ):
     
     def __init__( self, parent, bmp ):
         
-        BufferedWindow.__init__( self, parent, size = bmp.GetSize() )
+        BufferedWindow.__init__( self, parent, size = bmp.size() )
         
         self._bmp = bmp
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
-        background_colour = self.GetParent().GetBackgroundColour()
+        background_colour = QP.GetBackgroundColour( self.parentWidget() )
         
-        dc.SetBackground( wx.Brush( background_colour ) )
+        painter.setBackground( QG.QBrush( background_colour ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
-        dc.DrawBitmap( self._bmp, 0, 0 )
-        
-        self._dirty = False
+        if isinstance( self._bmp, QG.QImage ):
+            
+            painter.drawImage( 0, 0, self._bmp )
+            
+        else:
+            
+            painter.drawPixmap( 0, 0, self._bmp )
+            
         
     
-class CheckboxCollect( wx.Panel ):
+class CheckboxCollect( QW.QWidget ):
     
     def __init__( self, parent, management_controller = None, silent = False ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         # this is trash, rewrite it to deal with the media_collect object, not the management controller
         
@@ -724,22 +538,16 @@ class CheckboxCollect( wx.Panel ):
         
         self._silent = silent
         
-        self._collect_comboctrl = wx.ComboCtrl( self, style = wx.CB_READONLY )
-        
-        self._collect_combopopup = self._Popup( self._media_collect, self )
-        
-        #self._collect_comboctrl.UseAltPopupWindow( True )
-        
-        self._collect_comboctrl.SetPopupControl( self._collect_combopopup )
+        self._collect_comboctrl = QP.CollectComboCtrl( self, self._media_collect )
         
         self._collect_unmatched = BetterChoice( self )
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self._collect_unmatched, 19 )
         
-        self._collect_unmatched.SetMinSize( ( width, -1 ) )
+        self._collect_unmatched.setMinimumWidth( width )
         
-        self._collect_unmatched.Append( 'collect unmatched', True )
-        self._collect_unmatched.Append( 'leave unmatched', False )
+        self._collect_unmatched.addItem( 'collect unmatched', True )
+        self._collect_unmatched.addItem( 'leave unmatched', False )
         
         #
         
@@ -747,25 +555,20 @@ class CheckboxCollect( wx.Panel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
-        hbox.Add( self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._collect_unmatched, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._collect_comboctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._collect_unmatched, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
         #
         
         self._collect_comboctrl.SetValue( 'no collections' ) # initialising to this because if there are no collections, no broadcast call goes through
         
-        self._collect_unmatched.Bind( wx.EVT_CHOICE, self.EventChanged )
+        self._collect_unmatched.currentIndexChanged.connect( self.CollectValuesChanged )
+        self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
         
-    
-    def EventChanged( self, event ):
-        
-        self.CollectValuesChanged()
-        
-    
     def GetValue( self ):
         
         return self._media_collect
@@ -773,7 +576,7 @@ class CheckboxCollect( wx.Panel ):
     
     def CollectValuesChanged( self ):
         
-        ( namespaces, rating_service_keys, description ) = self._collect_combopopup._control.GetValues()
+        ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
         
         collect_unmatched = self._collect_unmatched.GetValue()
         
@@ -791,195 +594,6 @@ class CheckboxCollect( wx.Panel ):
             
         
     
-    class _Popup( wx.ComboPopup ):
-        
-        def __init__( self, media_collect, parent_panel ):
-            
-            wx.ComboPopup.__init__( self )
-            
-            self._initial_media_collect = media_collect
-            
-            self._parent_panel = parent_panel
-            
-            self._control = None
-            
-        
-        def Create( self, parent ):
-            
-            self._control = self._Control( parent, self._parent_panel, self._initial_media_collect )
-            
-            return True
-            
-        
-        def GetAdjustedSize( self, preferred_width, preferred_height, max_height ):
-            
-            return( ( preferred_width, -1 ) )
-            
-        
-        def GetControl( self ):
-            
-            return self._control
-            
-        
-        def GetStringValue( self ):
-            
-            # this is an abstract method that provides the string to put in the comboctrl
-            # I've never used/needed it, but one user reported getting the NotImplemented thing by repeatedly clicking, so let's add it anyway
-            
-            if self._control is None:
-                
-                return 'initialising'
-                
-            else:
-                
-                return self._control.GetDescription()
-                
-            
-        
-        class _Control( wx.CheckListBox ):
-            
-            def __init__( self, parent, parent_panel, media_collect ):
-                
-                text_and_data_tuples = set()
-                
-                sort_by = HC.options[ 'sort_by' ]
-                
-                for ( sort_by_type, namespaces ) in sort_by:
-                    
-                    text_and_data_tuples.update( namespaces )
-                    
-                
-                text_and_data_tuples = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ] )
-                text_and_data_tuples.sort()
-                
-                ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-                
-                for ratings_service in ratings_services:
-                    
-                    text_and_data_tuples.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
-                    
-                
-                texts = [ text for ( text, data ) in text_and_data_tuples ] # we do this so it sizes its height properly on init
-                
-                wx.CheckListBox.__init__( self, parent, choices = texts )
-                
-                self.Clear()
-                
-                for ( text, data ) in text_and_data_tuples:
-                    
-                    self.Append( text, data )
-                    
-                
-                self._parent_panel = parent_panel
-                
-                self.Bind( wx.EVT_CHECKLISTBOX, self.EventChanged )
-                
-                self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
-                
-                wx.CallAfter( self.SetValue, media_collect )
-                
-            
-            def _BroadcastCollect( self ):
-                
-                self._parent_panel.CollectValuesChanged()
-                
-            
-            def GetValues( self ):
-                
-                namespaces = []
-                rating_service_keys = []
-                
-                for index in self.GetCheckedItems():
-                    
-                    ( collect_type, collect_data ) = self.GetClientData( index )
-                    
-                    if collect_type == 'namespace':
-                        
-                        namespaces.append( collect_data )
-                        
-                    elif collect_type == 'rating':
-                        
-                        rating_service_keys.append( collect_data )
-                        
-                    
-                
-                collect_strings = self.GetCheckedStrings()
-                
-                if len( collect_strings ) > 0:
-                    
-                    description = 'collect by ' + '-'.join( collect_strings )
-                    
-                else:
-                    
-                    description = 'no collections'
-                    
-                
-                return ( namespaces, rating_service_keys, description )
-                
-            
-            # as inspired by http://trac.wxwidgets.org/attachment/ticket/14413/test_clb_workaround.py
-            # what a clusterfuck
-            
-            def EventLeftDown( self, event ):
-                
-                index = self.HitTest( event.GetPosition() )
-                
-                if index != wx.NOT_FOUND:
-                    
-                    self.Check( index, not self.IsChecked( index ) )
-                    
-                    self.EventChanged( event )
-                    
-                
-                event.Skip()
-                
-            
-            def EventChanged( self, event ):
-                
-                self._BroadcastCollect()
-                
-            
-            def GetDescription( self ):
-                
-                ( namespaces, rating_service_keys, description ) = self.GetValues()
-                
-                return description
-                
-            
-            def SetValue( self, media_collect ):
-                
-                try:
-                    
-                    indices_to_check = []
-                    
-                    for index in range( self.GetCount() ):
-                        
-                        ( collect_type, collect_data ) = self.GetClientData( index )
-                        
-                        p1 = collect_type == 'namespace' and collect_data in media_collect.namespaces
-                        p2 = collect_type == 'rating' and collect_data in media_collect.rating_service_keys
-                        
-                        if p1 or p2:
-                            
-                            indices_to_check.append( index )
-                            
-                        
-                    
-                    if len( indices_to_check ) > 0:
-                        
-                        self.SetCheckedItems( indices_to_check )
-                        
-                        self._BroadcastCollect()
-                        
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowText( 'Failed to set a collect-by value!' )
-                    
-                    HydrusData.ShowException( e )
-                    
-                
-            
         
     
 class CheckboxManager( object ):
@@ -1071,11 +685,11 @@ class CheckboxManagerOptions( CheckboxManager ):
         HG.client_controller.pub( 'checkbox_manager_inverted' )
         
     
-class ChoiceSort( wx.Panel ):
+class ChoiceSort( QW.QWidget ):
     
     def __init__( self, parent, management_controller = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._management_controller = management_controller
         
@@ -1084,7 +698,7 @@ class ChoiceSort( wx.Panel ):
         
         asc_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
         
-        self._sort_asc_choice.SetMinSize( ( asc_width, -1 ) )
+        self._sort_asc_choice.setMinimumWidth( asc_width )
         
         sort_types = ClientData.GetSortTypeChoices()
         
@@ -1101,28 +715,28 @@ class ChoiceSort( wx.Panel ):
         
         for ( display_string, value ) in choice_tuples:
             
-            self._sort_type_choice.Append( display_string, value )
+            self._sort_type_choice.addItem( display_string, value )
             
         
         type_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._sort_type_choice, 10 )
         
-        self._sort_type_choice.SetMinSize( ( type_width, -1 ) )
+        self._sort_type_choice.setMinimumWidth( type_width )
         
-        self._sort_asc_choice.Append( '', CC.SORT_ASC )
+        self._sort_asc_choice.addItem( '', CC.SORT_ASC )
         
         self._UpdateAscLabels()
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
-        hbox.Add( self._sort_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._sort_asc_choice, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._sort_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._sort_asc_choice, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
-        self._sort_type_choice.Bind( wx.EVT_CHOICE, self.EventSortTypeChoice )
-        self._sort_asc_choice.Bind( wx.EVT_CHOICE, self.EventSortAscChoice )
+        self._sort_type_choice.currentIndexChanged.connect( self.EventSortTypeChoice )
+        self._sort_asc_choice.currentIndexChanged.connect( self.EventSortAscChoice )
         
         HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
         HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
@@ -1172,14 +786,14 @@ class ChoiceSort( wx.Panel ):
         
         media_sort = self._GetCurrentSort()
         
-        self._sort_asc_choice.Clear()
+        self._sort_asc_choice.clear()
         
         if media_sort.CanAsc():
             
             ( asc_str, desc_str, default_asc ) = media_sort.GetSortAscStrings()
             
-            self._sort_asc_choice.Append( asc_str, CC.SORT_ASC )
-            self._sort_asc_choice.Append( desc_str, CC.SORT_DESC )
+            self._sort_asc_choice.addItem( asc_str, CC.SORT_ASC )
+            self._sort_asc_choice.addItem( desc_str, CC.SORT_DESC )
             
             if set_default_asc:
                 
@@ -1192,16 +806,16 @@ class ChoiceSort( wx.Panel ):
             
             self._sort_asc_choice.SetValue( asc_to_set )
             
-            self._sort_asc_choice.Enable()
+            self._sort_asc_choice.setEnabled( True )
             
         else:
             
-            self._sort_asc_choice.Append( '', CC.SORT_ASC )
-            self._sort_asc_choice.Append( '', CC.SORT_DESC )
+            self._sort_asc_choice.addItem( '', CC.SORT_ASC )
+            self._sort_asc_choice.addItem( '', CC.SORT_DESC )
             
             self._sort_asc_choice.SetValue( CC.SORT_ASC )
             
-            self._sort_asc_choice.Disable()
+            self._sort_asc_choice.setEnabled( False )
             
         
     
@@ -1238,14 +852,14 @@ class ChoiceSort( wx.Panel ):
         self._BroadcastSort()
         
     
-    def EventSortAscChoice( self, event ):
+    def EventSortAscChoice( self, index ):
         
         self._UserChoseASort()
         
         self._BroadcastSort()
         
     
-    def EventSortTypeChoice( self, event ):
+    def EventSortTypeChoice( self, index ):
         
         self._UserChoseASort()
         
@@ -1267,47 +881,49 @@ class ChoiceSort( wx.Panel ):
         self._UpdateAscLabels()
         
     
-class AlphaColourControl( wx.Panel ):
+class AlphaColourControl( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._colour_picker = BetterColourControl( self )
         
-        self._alpha_selector = wx.SpinCtrl( self, min = 0, max = 255 )
+        self._alpha_selector = QP.MakeQSpinBox( self, min=0, max=255 )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( spacing = 5 )
         
-        hbox.Add( self._colour_picker, CC.FLAGS_VCENTER )
-        hbox.Add( BetterStaticText( self, 'alpha: ' ), CC.FLAGS_VCENTER )
-        hbox.Add( self._alpha_selector, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._colour_picker, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, BetterStaticText(self,'alpha:'), CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._alpha_selector, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
         
     
     def GetValue( self ):
         
         colour = self._colour_picker.GetColour()
         
-        ( r, g, b, a ) = colour.Get() # no alpha support here, so it'll be 255
+        ( r, g, b, a ) = colour.toTuple() # no alpha support here, so it'll be 255
         
-        a = self._alpha_selector.GetValue()
+        a = self._alpha_selector.value()
         
-        colour = wx.Colour( r, g, b, a )
+        colour = QG.QColor( r, g, b, a )
         
         return colour
         
     
     def SetValue( self, colour ):
         
-        ( r, g, b, a ) = colour.Get()
+        ( r, g, b, a ) = colour.toTuple()
         
-        picker_colour = wx.Colour( r, g, b )
+        picker_colour = QG.QColor( r, g, b )
         
         self._colour_picker.SetColour( picker_colour )
         
-        self._alpha_selector.SetValue( a )
+        self._alpha_selector.setValue( a )
         
     
 class ExportPatternButton( BetterButton ):
@@ -1319,32 +935,32 @@ class ExportPatternButton( BetterButton ):
     
     def _Hit( self ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, 'the file\'s hash - {hash}', 'copy "{hash}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{hash}' )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'all the file\'s tags - {tags}', 'copy "{tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{tags}' )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'all the file\'s non-namespaced tags - {nn tags}', 'copy "{nn tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{nn tags}' )
+        ClientGUIMenus.AppendMenuItem( menu, 'the file\'s hash - {hash}', 'copy "{hash}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{hash}' )
+        ClientGUIMenus.AppendMenuItem( menu, 'all the file\'s tags - {tags}', 'copy "{tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{tags}' )
+        ClientGUIMenus.AppendMenuItem( menu, 'all the file\'s non-namespaced tags - {nn tags}', 'copy "{nn tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{nn tags}' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, 'all instances of a particular namespace - [\u2026]', 'copy "[\u2026]" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[\u2026]' )
+        ClientGUIMenus.AppendMenuItem( menu, 'all instances of a particular namespace - [\u2026]', 'copy "[\u2026]" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[\u2026]' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, 'a particular tag, if the file has it - (\u2026)', 'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(\u2026)' )
+        ClientGUIMenus.AppendMenuItem( menu, 'a particular tag, if the file has it - (\u2026)', 'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(\u2026)' )
         
         HG.client_controller.PopupMenu( self, menu )
         
     
-class Gauge( wx.Gauge ):
+class Gauge( QW.QProgressBar ):
     
     def __init__( self, *args, **kwargs ):
         
-        wx.Gauge.__init__( self, *args, **kwargs )
+        QW.QProgressBar.__init__( self, *args, **kwargs )
         
         self._actual_value = None
         self._actual_range = None
@@ -1356,7 +972,7 @@ class Gauge( wx.Gauge ):
         
         if self._actual_range is None:
             
-            range = self.GetRange()
+            range = self.maximum()
             
         else:
             
@@ -1391,9 +1007,9 @@ class Gauge( wx.Gauge ):
                 self._actual_range = None
                 
             
-            if range != self.GetRange():
+            if range != self.maximum():
                 
-                wx.Gauge.SetRange( self, range )
+                QW.QProgressBar.setMaximum( self, range )
                 
             
         
@@ -1417,11 +1033,11 @@ class Gauge( wx.Gauge ):
                     value = min( int( 1000 * ( value / self._actual_range ) ), 1000 )
                     
                 
-                value = min( value, self.GetRange() )
+                value = min( value, self.maximum() )
                 
-                if value != self.GetValue():
+                if value != self.value():
                     
-                    wx.Gauge.SetValue( self, value )
+                    QW.QProgressBar.setValue( self, value )
                     
                 
             
@@ -1436,40 +1052,49 @@ class Gauge( wx.Gauge ):
         self.SetValue( 0 )
         
     
-class ListBook( wx.Panel ):
+    def Pulse( self ):
+        
+        self.setMaximum( 0 )
+        
+        self.setMinimum( 0 )
+        
+        self._is_pulsing = True
+        
+    
+class ListBook( QW.QWidget ):
     
     def __init__( self, *args, **kwargs ):
         
-        wx.Panel.__init__( self, *args, **kwargs )
+        QW.QWidget.__init__( self, *args, **kwargs )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._keys_to_active_pages = {}
         self._keys_to_proto_pages = {}
         
-        # Don't use LB_SORT! Linux can't handle clientdata that jumps around!
-        self._list_box = wx.ListBox( self, style = wx.LB_SINGLE )
+        self._list_box = QW.QListWidget( self )
+        self._list_box.setSelectionMode( QW.QListWidget.SingleSelection )
         
-        self._empty_panel = wx.Panel( self )
+        self._empty_panel = QW.QWidget( self )
         
-        self._empty_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self._empty_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._current_key = None
         
         self._current_panel = self._empty_panel
         
-        self._panel_sizer = wx.BoxSizer( wx.VERTICAL )
+        self._panel_sizer = QP.VBoxLayout()
         
-        self._panel_sizer.Add( self._empty_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._panel_sizer, self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
-        hbox.Add( self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        hbox.Add( self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self._list_box.Bind( wx.EVT_LISTBOX, self.EventSelection )
+        self._list_box.itemSelectionChanged.connect( self.EventSelection )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
     
     def _ActivatePage( self, key ):
@@ -1478,24 +1103,20 @@ class ListBook( wx.Panel ):
         
         page = classname( *args, **kwargs )
         
-        page.Hide()
+        page.setVisible( False )
         
-        self._panel_sizer.Add( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( self._panel_sizer, page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._keys_to_active_pages[ key ] = page
         
         del self._keys_to_proto_pages[ key ]
         
-        self._panel_sizer.CalcMin()
-        
-        self._RecalcListBoxWidth()
-        
     
     def _GetIndex( self, key ):
         
-        for i in range( self._list_box.GetCount() ):
+        for i in range( self._list_box.count() ):
             
-            i_key = self._list_box.GetClientData( i )
+            i_key = QP.GetClientData( self._list_box, i )
             
             if i_key == key:
                 
@@ -1503,30 +1124,29 @@ class ListBook( wx.Panel ):
                 
             
         
-        return wx.NOT_FOUND
-        
-    
-    def _RecalcListBoxWidth( self ):
-        
-        self.Layout()
+        return -1
         
     
     def _Select( self, selection ):
         
-        if selection == wx.NOT_FOUND:
+        if selection == -1:
             
             self._current_key = None
             
         else:
             
-            self._current_key = self._list_box.GetClientData( selection )
+            self._current_key = QP.GetClientData( self._list_box, selection )
             
         
-        self._current_panel.Hide()
+        self._current_panel.setVisible( False )
         
-        self._list_box.SetSelection( selection )
+        self._list_box.blockSignals( True )
         
-        if selection == wx.NOT_FOUND:
+        QP.ListWidgetSetSelection( self._list_box, selection )
+        
+        self._list_box.blockSignals( False )
+        
+        if selection == -1:
             
             self._current_panel = self._empty_panel
             
@@ -1540,42 +1160,28 @@ class ListBook( wx.Panel ):
             self._current_panel = self._keys_to_active_pages[ self._current_key ]
             
         
-        self._current_panel.Show()
+        self._current_panel.show()
         
-        self.Layout()
-        
-        self.Refresh()
-        
-        # this tells any parent scrolled panel to update its virtualsize and recalc its scrollbars
-        event = wx.NotifyEvent( wx.wxEVT_SIZE, self.GetId() )
-        
-        wx.QueueEvent( self.GetEventHandler(), event )
-        
-        # now the virtualsize is updated, we now tell any parent resizing frame/dialog that is interested in resizing that now is the time
-        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
-        
-        event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED, -1 )
-        
-        wx.QueueEvent( self.GetEventHandler(), event )
+        self.update()
         
     
     def AddPage( self, display_name, key, page, select = False ):
         
-        if self._GetIndex( key ) != wx.NOT_FOUND:
+        if self._GetIndex( key ) != -1:
             
             raise HydrusExceptions.NameException( 'That entry already exists!' )
             
         
         if not isinstance( page, tuple ):
             
-            page.Hide()
+            page.setVisible( False )
             
-            self._panel_sizer.Add( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( self._panel_sizer, page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        # Can't do LB_SORT because of Linux not being able to track clientdata, have to do it manually.
+        # Could call QListWidget.sortItems() here instead of doing it manually
         
-        current_display_names = self._list_box.GetStrings()
+        current_display_names = QP.ListWidgetGetStrings( self._list_box )
         
         insertion_index = len( current_display_names )
         
@@ -1588,14 +1194,14 @@ class ListBook( wx.Panel ):
                 break
                 
             
-        
-        self._list_box.Insert( display_name, insertion_index, key )
+        item = QW.QListWidgetItem()
+        item.setText( display_name )
+        item.setData( QC.Qt.UserRole, key )
+        self._list_box.insertItem( insertion_index, item )
         
         self._keys_to_active_pages[ key ] = page
         
-        self._RecalcListBoxWidth()
-        
-        if self._list_box.GetCount() == 1:
+        if self._list_box.count() == 1:
             
             self._Select( 0 )
             
@@ -1609,14 +1215,14 @@ class ListBook( wx.Panel ):
     
     def AddPageArgs( self, display_name, key, classname, args, kwargs ):
         
-        if self._GetIndex( key ) != wx.NOT_FOUND:
+        if self._GetIndex( key ) != -1:
             
             raise HydrusExceptions.NameException( 'That entry already exists!' )
             
         
-        # Can't do LB_SORT because of Linux not being able to track clientdata, have to do it manually.
+        # Could call QListWidget.sortItems() here instead of doing it manually
         
-        current_display_names = self._list_box.GetStrings()
+        current_display_names = QP.ListWidgetGetStrings( self._list_box )
         
         insertion_index = len( current_display_names )
         
@@ -1629,14 +1235,14 @@ class ListBook( wx.Panel ):
                 break
                 
             
-        
-        self._list_box.Insert( display_name, insertion_index, key )
+        item = QW.QListWidgetItem()
+        item.setText( display_name )
+        item.setData( QC.Qt.UserRole, key )
+        self._list_box.insertItem( insertion_index, item )
         
         self._keys_to_proto_pages[ key ] = ( classname, args, kwargs )
         
-        self._RecalcListBoxWidth()
-        
-        if self._list_box.GetCount() == 1:
+        if self._list_box.count() == 1:
             
             self._Select( 0 )
             
@@ -1644,11 +1250,11 @@ class ListBook( wx.Panel ):
     
     def DeleteAllPages( self ):
         
-        self._panel_sizer.Detach( self._empty_panel )
+        self._panel_sizer.removeWidget( self._empty_panel )
         
-        self._panel_sizer.Clear( delete_windows = True )
+        QP.ClearLayout( self._panel_sizer, delete_widgets=True )
         
-        self._panel_sizer.Add( self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( self._panel_sizer, self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._current_key = None
         
@@ -1657,14 +1263,14 @@ class ListBook( wx.Panel ):
         self._keys_to_active_pages = {}
         self._keys_to_proto_pages = {}
         
-        self._list_box.Clear()
+        self._list_box.clear()
         
     
     def DeleteCurrentPage( self ):
         
-        selection = self._list_box.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._list_box )
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
             key_to_delete = self._current_key
             page_to_delete = self._current_panel
@@ -1672,7 +1278,7 @@ class ListBook( wx.Panel ):
             next_selection = selection + 1
             previous_selection = selection - 1
             
-            if next_selection < self._list_box.GetCount():
+            if next_selection < self._list_box.count():
                 
                 self._Select( next_selection )
                 
@@ -1682,36 +1288,26 @@ class ListBook( wx.Panel ):
                 
             else:
                 
-                self._Select( wx.NOT_FOUND )
+                self._Select( -1 )
                 
             
-            self._panel_sizer.Detach( page_to_delete )
+            self._panel_sizer.removeWidget( page_to_delete )
             
-            page_to_delete.DestroyLater()
+            page_to_delete.deleteLater()
             
             del self._keys_to_active_pages[ key_to_delete ]
             
-            self._list_box.Delete( selection )
-            
-            self._RecalcListBoxWidth()
+            QP.ListWidgetDelete( self._list_box, selection )
             
         
     
-    def EventSelection( self, event ):
+    def EventSelection( self ):
         
-        if self._list_box.GetSelection() != self._GetIndex( self._current_key ):
+        selection = QP.ListWidgetGetSelection( self._list_box )
+        
+        if selection != self._GetIndex( self._current_key ):
             
-            event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
-            
-            wx.QueueEvent( self.GetEventHandler(), event )
-            
-            if event.IsAllowed():
-                
-                self._Select( self._list_box.GetSelection() )
-                
-            else:
-                
-                self._list_box.SetSelection( self._GetIndex( self._current_key ) )
+            self._Select( selection )
                 
             
         
@@ -1767,13 +1363,7 @@ class ListBook( wx.Panel ):
         
         index = self._GetIndex( key )
         
-        if index != wx.NOT_FOUND and index != self._list_box.GetSelection():
-            
-            event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
-            
-            wx.QueueEvent( self.GetEventHandler(), event )
-            
-            if event.IsAllowed():
+        if index != -1 and index != QP.ListWidgetGetSelection( self._list_box ) :
                 
                 self._Select( index )
                 
@@ -1782,11 +1372,11 @@ class ListBook( wx.Panel ):
     
     def SelectDown( self ):
         
-        current_selection = self._list_box.GetSelection()
+        current_selection = QP.ListWidgetGetSelection( self._list_box )
         
-        if current_selection != wx.NOT_FOUND:
+        if current_selection != -1:
             
-            num_entries = self._list_box.GetCount()
+            num_entries = self._list_box.count()
             
             if current_selection == num_entries - 1: selection = 0
             else: selection = current_selection + 1
@@ -1813,11 +1403,11 @@ class ListBook( wx.Panel ):
     
     def SelectUp( self ):
         
-        current_selection = self._list_box.GetSelection()
+        current_selection = QP.ListWidgetGetSelection( self._list_box )
         
-        if current_selection != wx.NOT_FOUND:
+        if current_selection != -1:
             
-            num_entries = self._list_box.GetCount()
+            num_entries = self._list_box.count()
             
             if current_selection == 0: selection = num_entries - 1
             else: selection = current_selection - 1
@@ -1840,7 +1430,7 @@ class MenuBitmapButton( BetterBitmapButton ):
     
     def DoMenu( self ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         for ( item_type, title, description, data ) in self._menu_items:
             
@@ -1848,7 +1438,7 @@ class MenuBitmapButton( BetterBitmapButton ):
                 
                 func = data
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, title, description, func )
+                ClientGUIMenus.AppendMenuItem( menu, title, description, func )
                 
             elif item_type == 'check':
                 
@@ -1858,8 +1448,7 @@ class MenuBitmapButton( BetterBitmapButton ):
                 func = check_manager.Invert
                 
                 if current_value is not None:
-                    
-                    ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, current_value, func )
+                    ClientGUIMenus.AppendMenuCheckItem( menu, title, description, current_value, func )
                     
                 
             elif item_type == 'separator':
@@ -1882,7 +1471,7 @@ class MenuButton( BetterButton ):
     
     def DoMenu( self ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         for ( item_type, title, description, data ) in self._menu_items:
             
@@ -1890,7 +1479,7 @@ class MenuButton( BetterButton ):
                 
                 callable = data
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, title, description, callable )
+                ClientGUIMenus.AppendMenuItem( menu, title, description, callable )
                 
             elif item_type == 'check':
                 
@@ -1898,7 +1487,7 @@ class MenuButton( BetterButton ):
                 
                 initial_value = check_manager.GetInitialValue()
                 
-                ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, initial_value, check_manager.Invert )
+                ClientGUIMenus.AppendMenuCheckItem( menu, title, description, initial_value, check_manager.Invert )
                 
                 
             elif item_type == 'separator':
@@ -1941,7 +1530,7 @@ class NetworkContextButton( BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._network_context = panel.GetValue()
                 
@@ -1952,7 +1541,7 @@ class NetworkContextButton( BetterButton ):
     
     def _Update( self ):
         
-        self.SetLabelText( self._network_context.ToString() )
+        self.setText( self._network_context.ToString() )
         
     
     def GetValue( self ):
@@ -1967,97 +1556,98 @@ class NetworkContextButton( BetterButton ):
         self._Update()
         
     
-class NoneableSpinCtrl( wx.Panel ):
+class NoneableSpinCtrl( QW.QWidget ):
+
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._unit = unit
         self._multiplier = multiplier
         self._num_dimensions = num_dimensions
         
-        self._checkbox = wx.CheckBox( self )
-        self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
-        self._checkbox.SetLabelText( none_phrase )
+        self._checkbox = QW.QCheckBox( self )
+        self._checkbox.stateChanged.connect( self.EventCheckBox )
+        self._checkbox.setText( none_phrase )
         
-        self._one = wx.SpinCtrl( self, min = min, max = max )
+        self._one = QP.MakeQSpinBox( self, min=min, max=max )
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 5 )
         
-        self._one.SetInitialSize( ( width, -1 ) )
+        self._one.setMaximumWidth( width )
         
         if num_dimensions == 2:
             
-            self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max )
+            self._two = QP.MakeQSpinBox( self, initial=0, min=min, max=max )
+            self._two.valueChanged.connect( self._HandleValueChanged )
             
             width = ClientGUIFunctions.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 5 )
             
-            self._two.SetInitialSize( ( width, -1 ) )
+            self._two.setMinimumWidth( width )
             
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
         if len( message ) > 0:
             
-            hbox.Add( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_VCENTER )
             
         
-        hbox.Add( self._one, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._one, CC.FLAGS_VCENTER )
         
         if self._num_dimensions == 2:
             
-            hbox.Add( BetterStaticText( self, 'x' ), CC.FLAGS_VCENTER )
-            hbox.Add( self._two, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,'x'), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._two, CC.FLAGS_VCENTER )
             
         
         if self._unit is not None:
             
-            hbox.Add( BetterStaticText( self, self._unit ), CC.FLAGS_VCENTER )
-            
+            QP.AddToLayout( hbox, BetterStaticText(self,self._unit), CC.FLAGS_VCENTER )
         
-        hbox.Add( self._checkbox, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_VCENTER )
         
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
     
-    def Bind( self, event_type, callback ):
+        self._one.valueChanged.connect( self._HandleValueChanged )
+        self._checkbox.stateChanged.connect( self._HandleValueChanged )
         
-        self._checkbox.Bind( wx.EVT_CHECKBOX, callback )
         
-        self._one.Bind( wx.EVT_SPINCTRL, callback )
+    def _HandleValueChanged( self, val ):
         
-        if self._num_dimensions == 2:
+        self.valueChanged.emit()
             
-            self._two.Bind( wx.EVT_SPINCTRL, callback )
             
+    def EventCheckBox( self, state ):
         
+        if self._checkbox.isChecked():
     
-    def EventCheckBox( self, event ):
-        
-        if self._checkbox.GetValue():
-            
-            self._one.Disable()
+            self._one.setEnabled( False )
             
             if self._num_dimensions == 2:
                 
-                self._two.Disable()
+                self._two.setEnabled( False )
                 
             
         else:
             
-            self._one.Enable()
+            self._one.setEnabled( True )
             
             if self._num_dimensions == 2:
                 
-                self._two.Enable()
+                self._two.setEnabled( True )
                 
             
         
     
     def GetValue( self ):
         
-        if self._checkbox.GetValue():
+        if self._checkbox.isChecked():
             
             return None
             
@@ -2065,22 +1655,24 @@ class NoneableSpinCtrl( wx.Panel ):
             
             if self._num_dimensions == 2:
                 
-                return ( self._one.GetValue() * self._multiplier, self._two.GetValue() * self._multiplier )
+                return ( self._one.value() * self._multiplier, self._two.value() * self._multiplier )
                 
             else:
                 
-                return self._one.GetValue() * self._multiplier
+                return self._one.value() * self._multiplier
                 
             
         
     
-    def SetToolTip( self, text ):
+    def setToolTip( self, text ):
         
-        wx.Panel.SetToolTip( self, text )
+        QW.QWidget.setToolTip( self, text )
         
-        for c in self.GetChildren():
+        for c in self.children():
             
-            c.SetToolTip( text )
+            if isinstance( c, QW.QWidget ):
+                
+                c.setToolTip( text )
             
         
     
@@ -2088,93 +1680,97 @@ class NoneableSpinCtrl( wx.Panel ):
         
         if value is None:
             
-            self._checkbox.SetValue( True )
+            self._checkbox.setChecked( True )
             
-            self._one.Disable()
-            if self._num_dimensions == 2: self._two.Disable()
+            self._one.setEnabled( False )
+            if self._num_dimensions == 2: self._two.setEnabled( False )
             
         else:
             
-            self._checkbox.SetValue( False )
+            self._checkbox.setChecked( False )
             
             if self._num_dimensions == 2:
                 
-                self._two.Enable()
+                self._two.setEnabled( True )
                 
                 ( value, y ) = value
                 
-                self._two.SetValue( y // self._multiplier )
+                self._two.setValue( y // self._multiplier )
                 
             
-            self._one.Enable()
+            self._one.setEnabled( True )
             
-            self._one.SetValue( value // self._multiplier )
+            self._one.setValue( value // self._multiplier )
             
         
     
-class NoneableTextCtrl( wx.Panel ):
+class NoneableTextCtrl( QW.QWidget ):
+
+    valueChanged = QC.Signal()
     
     def __init__( self, parent, message = '', none_phrase = 'none' ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._checkbox = wx.CheckBox( self )
-        self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
-        self._checkbox.SetLabelText( none_phrase )
+        self._checkbox = QW.QCheckBox( self )
+        self._checkbox.stateChanged.connect( self.EventCheckBox )
+        self._checkbox.setText( none_phrase )
         
-        self._text = wx.TextCtrl( self )
+        self._text = QW.QLineEdit( self )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout( margin = 0 )
         
         if len( message ) > 0:
             
-            hbox.Add( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_VCENTER )
             
         
-        hbox.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._checkbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_VCENTER )
         
-        self.SetSizer( hbox )
+        self.setLayout( hbox )
         
+        self._checkbox.stateChanged.connect( self._HandleValueChanged )
+        self._text.textChanged.connect( self._HandleValueChanged )
     
-    def Bind( self, event_type, callback ):
+    def _HandleValueChanged( self, val ):
         
-        self._checkbox.Bind( wx.EVT_CHECKBOX, callback )
+        self.valueChanged.emit()
         
-        self._text.Bind( wx.EVT_TEXT, callback )
         
+    def EventCheckBox( self, state ):
     
-    def EventCheckBox( self, event ):
+        if self._checkbox.isChecked():
         
-        if self._checkbox.GetValue():
-            
-            self._text.Disable()
+            self._text.setEnabled( False )
             
         else:
             
-            self._text.Enable()
+            self._text.setEnabled( True )
             
         
     
     def GetValue( self ):
         
-        if self._checkbox.GetValue():
+        if self._checkbox.isChecked():
             
             return None
             
         else:
             
-            return self._text.GetValue()
+            return self._text.text()
             
         
     
-    def SetToolTip( self, text ):
+    def setToolTip( self, text ):
         
-        wx.Panel.SetToolTip( self, text )
+        QW.QWidget.setToolTip( self, text )
         
-        for c in self.GetChildren():
+        for c in self.children():
             
-            c.SetToolTip( text )
+            if isinstance( c, QW.QWidget ):
+                
+                c.setToolTip( text )
             
         
     
@@ -2182,28 +1778,29 @@ class NoneableTextCtrl( wx.Panel ):
         
         if value is None:
             
-            self._checkbox.SetValue( True )
+            self._checkbox.setChecked( True )
             
-            self._text.Disable()
+            self._text.setEnabled( False )
             
         else:
             
-            self._checkbox.SetValue( False )
+            self._checkbox.setChecked( False )
             
-            self._text.Enable()
+            self._text.setEnabled( True )
             
-            self._text.SetValue( value )
+            self._text.setText( value )
             
         
     
-class OnOffButton( wx.Button ):
+class OnOffButton( QW.QPushButton ):
     
     def __init__( self, parent, page_key, topic, on_label, off_label = None, start_on = True ):
         
         if start_on: label = on_label
         else: label = off_label
         
-        wx.Button.__init__( self, parent, label = label )
+        QW.QPushButton.__init__( self, parent )
+        QW.QPushButton.setText( self, label )
         
         self._page_key = page_key
         self._topic = topic
@@ -2214,23 +1811,23 @@ class OnOffButton( wx.Button ):
         
         self._on = start_on
         
-        if self._on: self.SetForegroundColour( ( 0, 128, 0 ) )
-        else: self.SetForegroundColour( ( 128, 0, 0 ) )
+        if self._on: QP.SetForegroundColour( self, (0,128,0) )
+        else: QP.SetForegroundColour( self, (128,0,0) )
         
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.clicked.connect( self.EventButton )
         
         HG.client_controller.sub( self, 'HitButton', 'hit_on_off_button' )
         
     
-    def EventButton( self, event ):
+    def EventButton( self ):
         
         if self._on:
             
             self._on = False
             
-            self.SetLabelText( self._off_label )
+            self.setText( self._off_label )
             
-            self.SetForegroundColour( ( 128, 0, 0 ) )
+            QP.SetForegroundColour( self, (128,0,0) )
             
             HG.client_controller.pub( self._topic, self._page_key, False )
             
@@ -2238,9 +1835,9 @@ class OnOffButton( wx.Button ):
             
             self._on = True
             
-            self.SetLabelText( self._on_label )
+            self.setText( self._on_label )
             
-            self.SetForegroundColour( ( 0, 128, 0 ) )
+            QP.SetForegroundColour( self, (0,128,0) )
             
             HG.client_controller.pub( self._topic, self._page_key, True )
             
@@ -2248,49 +1845,39 @@ class OnOffButton( wx.Button ):
     
     def IsOn( self ): return self._on
     
-class RatingLike( wx.Window ):
+class RatingLike( QW.QWidget ):
     
     def __init__( self, parent, service_key ):
         
-        wx.Window.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         
-        self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( 16, 16, 24 )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
         
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        self._widget_event_filter.EVT_LEFT_DOWN( self.EventLeftDown )
+        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventLeftDown )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
+        self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
-        self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDown )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventRightDown )
-        self.Bind( wx.EVT_RIGHT_DCLICK, self.EventRightDown )
-        
-        self.SetMinSize( ( 16, 16 ) )
-        
-        self._dirty = True
+        self.setMinimumSize( QP.TupleToQSize( (16,16) ) )
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
         raise NotImplementedError()
         
-    
-    def EventEraseBackground( self, event ): pass
     
     def EventLeftDown( self, event ):
         
         raise NotImplementedError()
         
     
-    def EventPaint( self, event ):
+    def paintEvent( self, event ):
         
-        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        painter = QG.QPainter( self )
         
-        if self._dirty:
-            
-            self._Draw( dc )
-            
+        self._Draw( painter )
         
     
     def EventRightDown( self, event ):
@@ -2312,15 +1899,15 @@ class RatingLikeDialog( RatingLike ):
         self._rating_state = ClientRatings.NULL
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
-        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         ( pen_colour, brush_colour ) = ClientRatings.GetPenAndBrushColours( self._service_key, self._rating_state )
         
-        ClientRatings.DrawLike( dc, 0, 0, self._service_key, self._rating_state )
+        ClientRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
         
         self._dirty = False
         
@@ -2332,7 +1919,7 @@ class RatingLikeDialog( RatingLike ):
         
         self._dirty = True
         
-        self.Refresh()
+        self.update()
         
     
     def EventRightDown( self, event ):
@@ -2342,7 +1929,7 @@ class RatingLikeDialog( RatingLike ):
         
         self._dirty = True
         
-        self.Refresh()
+        self.update()
         
     
     def GetRatingState( self ):
@@ -2356,7 +1943,7 @@ class RatingLikeDialog( RatingLike ):
         
         self._dirty = True
         
-        self.Refresh()
+        self.update()
         
     
 class RatingLikeCanvas( RatingLike ):
@@ -2373,23 +1960,23 @@ class RatingLikeCanvas( RatingLike ):
         
         name = service.GetName()
         
-        self.SetToolTip( name )
+        self.setToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
-        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         if self._current_media is not None:
             
             self._rating_state = ClientRatings.GetLikeStateFromMedia( ( self._current_media, ), self._service_key )
             
-            ClientRatings.DrawLike( dc, 0, 0, self._service_key, self._rating_state )
+            ClientRatings.DrawLike( painter, 0, 0, self._service_key, self._rating_state )
             
         
         self._dirty = False
@@ -2439,7 +2026,7 @@ class RatingLikeCanvas( RatingLike ):
                             
                             self._dirty = True
                             
-                            self.Refresh()
+                            self.update()
                             
                             return
                             
@@ -2466,15 +2053,15 @@ class RatingLikeCanvas( RatingLike ):
             
             self._dirty = True
             
-            self.Refresh()
+            self.update()
             
         
     
-class RatingNumerical( wx.Window ):
+class RatingNumerical( QW.QWidget ):
     
     def __init__( self, parent, service_key ):
         
-        wx.Window.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         
@@ -2485,32 +2072,27 @@ class RatingNumerical( wx.Window ):
         
         my_width = ClientRatings.GetNumericalWidth( self._service_key )
         
-        self._canvas_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_width, 16, 24 )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
         
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        self._widget_event_filter.EVT_LEFT_DOWN( self.EventLeftDown )
+        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventLeftDown )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventRightDown )
+        self._widget_event_filter.EVT_RIGHT_DCLICK( self.EventRightDown )
         
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
-        self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDown )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventRightDown )
-        self.Bind( wx.EVT_RIGHT_DCLICK, self.EventRightDown )
-        
-        self.SetMinSize( ( my_width, 16 ) )
-        
-        self._dirty = True
+        self.setMinimumSize( QP.TupleToQSize( (my_width,16) ) )
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
         raise NotImplementedError()
         
     
     def _GetRatingFromClickEvent( self, event ):
         
-        x = event.GetX()
-        y = event.GetY()
+        x = event.pos().x()
+        y = event.pos().y()
         
-        ( my_width, my_height ) = self.GetClientSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         # assuming a border of 2 on every side here
         
@@ -2542,21 +2124,16 @@ class RatingNumerical( wx.Window ):
         return None
         
     
-    def EventEraseBackground( self, event ): pass
-    
     def EventLeftDown( self, event ):
         
         raise NotImplementedError()
         
     
-    def EventPaint( self, event ):
+    def paintEvent( self, event ):
         
-        dc = wx.BufferedPaintDC( self, self._canvas_bmp )
+        painter = QG.QPainter( self )
         
-        if self._dirty:
-            
-            self._Draw( dc )
-            
+        self._Draw( painter )
         
     
     def EventRightDown( self, event ):
@@ -2579,13 +2156,13 @@ class RatingNumericalDialog( RatingNumerical ):
         self._rating = None
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
-        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
-        ClientRatings.DrawNumerical( dc, 0, 0, self._service_key, self._rating_state, self._rating )
+        ClientRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
         
         self._dirty = False
         
@@ -2602,7 +2179,7 @@ class RatingNumericalDialog( RatingNumerical ):
             
             self._dirty = True
             
-            self.Refresh()
+            self.update()
             
         
     
@@ -2612,7 +2189,7 @@ class RatingNumericalDialog( RatingNumerical ):
         
         self._dirty = True
         
-        self.Refresh()
+        self.update()
         
     
     def GetRating( self ):
@@ -2633,7 +2210,7 @@ class RatingNumericalDialog( RatingNumerical ):
         
         self._dirty = True
         
-        self.Refresh()
+        self.update()
         
     
     def SetRatingState( self, rating_state ):
@@ -2642,7 +2219,7 @@ class RatingNumericalDialog( RatingNumerical ):
         
         self._dirty = True
         
-        self.Refresh()
+        self.update()
         
     
 class RatingNumericalCanvas( RatingNumerical ):
@@ -2658,23 +2235,23 @@ class RatingNumericalCanvas( RatingNumerical ):
         
         name = self._service.GetName()
         
-        self.SetToolTip( name )
+        self.setToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
-    def _Draw( self, dc ):
+    def _Draw( self, painter ):
         
-        dc.SetBackground( wx.Brush( self.GetParent().GetBackgroundColour() ) )
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         if self._current_media is not None:
             
             ( self._rating_state, self._rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), self._service_key )
             
-            ClientRatings.DrawNumerical( dc, 0, 0, self._service_key, self._rating_state, self._rating )
+            ClientRatings.DrawNumerical( painter, 0, 0, self._service_key, self._rating_state, self._rating )
             
         
         self._dirty = False
@@ -2725,7 +2302,7 @@ class RatingNumericalCanvas( RatingNumerical ):
                             
                             self._dirty = True
                             
-                            self.Refresh()
+                            self.update()
                             
                             return
                             
@@ -2752,7 +2329,7 @@ class RatingNumericalCanvas( RatingNumerical ):
             
             self._dirty = True
             
-            self.Refresh()
+            self.update()
             
         
     
@@ -2765,59 +2342,58 @@ class RegexButton( BetterButton ):
     
     def _ShowMenu( self ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy it to the clipboard' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        submenu = wx.Menu()
+        submenu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'whitespace character - \s', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\s' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'number character - \d', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\d' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'alphanumeric or backspace character - \w', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\w' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'any character - .', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'.' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'backslash character - \\', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\\' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'beginning of line - ^', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'^' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'end of line - $', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'$' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'any of these - [\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[\u2026]' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'anything other than these - [^\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[^\u2026]' )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or more matches, consuming as many as possible - *', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'*' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'1 or more matches, consuming as many as possible - +', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'+' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or 1 matches, preferring 1 - ?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'?' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or more matches, consuming as few as possible - *?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'*?' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'1 or more matches, consuming as few as possible - +?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'+?' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or 1 matches, preferring 0 - ??', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'??' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'exactly m matches - {m}', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m}' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'm to n matches, consuming as many as possible - {m,n}', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m,n}' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'm to n matches, consuming as few as possible - {m,n}?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m,n}?' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'whitespace character - \s', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\s' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'number character - \d', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\d' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'alphanumeric or backspace character - \w', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\w' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'any character - .', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'.' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'backslash character - \\', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\\' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'beginning of line - ^', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'^' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'end of line - $', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'$' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'any of these - [\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[\u2026]' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'anything other than these - [^\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '[^\u2026]' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'the next characters are: (non-consuming) - (?=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?=\u2026)' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'the next characters are not: (non-consuming) - (?!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?!\u2026)' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'the previous characters are: (non-consuming) - (?<=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=\u2026)' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'the previous characters are not: (non-consuming) - (?<!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<!\u2026)' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'0 or more matches, consuming as many as possible - *', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'*' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'1 or more matches, consuming as many as possible - +', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'+' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'0 or 1 matches, preferring 1 - ?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'?' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'0 or more matches, consuming as few as possible - *?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'*?' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'1 or more matches, consuming as few as possible - +?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'+?' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'0 or 1 matches, preferring 0 - ??', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'??' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'exactly m matches - {m}', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m}' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'm to n matches, consuming as many as possible - {m,n}', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m,n}' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'm to n matches, consuming as few as possible - {m,n}?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m,n}?' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'0074 -> 74 - [1-9]+\d*', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'[1-9]+\d*' )
-        ClientGUIMenus.AppendMenuItem( self, submenu, r'filename - (?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'the next characters are: (non-consuming) - (?=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?=\u2026)' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'the next characters are not: (non-consuming) - (?!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?!\u2026)' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'the previous characters are: (non-consuming) - (?<=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=\u2026)' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'the previous characters are not: (non-consuming) - (?<!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<!\u2026)' )
+        
+        ClientGUIMenus.AppendSeparator( submenu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, r'0074 -> 74 - [1-9]+\d*', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'[1-9]+\d*' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'filename - (?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)' )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'regex components' )
         
-        submenu = wx.Menu()
+        submenu = QW.QMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
         for ( regex_phrase, description ) in HC.options[ 'regex_favourites' ]:
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, description, 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', regex_phrase )
+            ClientGUIMenus.AppendMenuItem( submenu, description, 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', regex_phrase )
             
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'favourites' )
@@ -2837,7 +2413,7 @@ class RegexButton( BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 regex_favourites = panel.GetValue()
                 
@@ -2848,68 +2424,44 @@ class RegexButton( BetterButton ):
             
         
     
-class SaneMultilineTextCtrl( wx.TextCtrl ):
-    
-    def __init__( self, parent, style = None ):
-        
-        if style is None:
-            
-            style = wx.TE_MULTILINE
-            
-        else:
-            
-            style |= wx.TE_MULTILINE
-            
-        
-        wx.TextCtrl.__init__( self, parent, style = style )
-        
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ctrl = event.CmdDown()
-        
-        key_code = event.GetKeyCode()
-        
-        if ctrl and key_code in ( ord( 'A' ), ord( 'a' ) ):
-            
-            self.SelectAll()
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-class StaticBox( wx.Panel ):
+class StaticBox( QW.QFrame ):
     
     def __init__( self, parent, title ):
         
-        wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
+        QW.QFrame.__init__( self, parent )
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
-        self._sizer = BetterBoxSizer( wx.VERTICAL )
+        self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Minimum, QW.QSizePolicy.MinimumExpanding )
         
-        normal_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        normal_font_size = normal_font.GetPointSize()
-        normal_font_family = normal_font.GetFamily()
+        self._sizer = QP.VBoxLayout()
         
-        title_font = wx.Font( int( normal_font_size ), normal_font_family, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD )
+        normal_font = QW.QApplication.font()
         
-        title_text = wx.StaticText( self, label = title )
-        title_text.SetFont( title_font )
+        normal_font_size = normal_font.pointSize()
+        normal_font_family = normal_font.family()
         
-        self._sizer.Add( title_text, CC.FLAGS_CENTER )
+        title_font = QG.QFont( normal_font_family, int( normal_font_size ), QG.QFont.Bold )
         
-        self.SetSizer( self._sizer )
+        title_text = QW.QLabel( title, self )
+        title_text.setFont( title_font )
+        
+        QP.AddToLayout( self._sizer, title_text, CC.FLAGS_CENTER )
+        
+        self.setLayout( self._sizer )
+        
+        self.layout().addSpacerItem( self._spacer )
         
     
-    def Add( self, widget, flags ):
+    def Add( self, widget, flags = None ):
         
-        self._sizer.Add( widget, flags )
+        self.layout().removeItem( self._spacer )
+        
+        QP.AddToLayout( self._sizer, widget, flags )
+
+        self.layout().addSpacerItem( self._spacer )
         
     
 class StaticBoxSorterForListBoxTags( StaticBox ):
@@ -2920,20 +2472,20 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         self._sorter = BetterChoice( self )
         
-        self._sorter.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-        self._sorter.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-        self._sorter.Append( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
-        self._sorter.Append( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
-        self._sorter.Append( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
-        self._sorter.Append( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
-        self._sorter.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-        self._sorter.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-        self._sorter.Append( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
-        self._sorter.Append( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
+        self._sorter.addItem( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
+        self._sorter.addItem( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+        self._sorter.addItem( 'lexicographic (a-z) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC )
+        self._sorter.addItem( 'lexicographic (z-a) (group unnamespaced)', CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC )
+        self._sorter.addItem( 'lexicographic (a-z) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_ASC )
+        self._sorter.addItem( 'lexicographic (z-a) (ignore namespace)', CC.SORT_BY_LEXICOGRAPHIC_IGNORE_NAMESPACE_DESC )
+        self._sorter.addItem( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
+        self._sorter.addItem( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+        self._sorter.addItem( 'incidence (desc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_DESC )
+        self._sorter.addItem( 'incidence (asc) (grouped by namespace)', CC.SORT_BY_INCIDENCE_NAMESPACE_ASC )
         
         self._sorter.SetValue( HC.options[ 'default_tag_sort' ] )
         
-        self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
+        self._sorter.currentIndexChanged.connect( self.EventSort )
         
         self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2943,13 +2495,13 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self._tags_box.ChangeTagService( service_key )
         
     
-    def EventSort( self, event ):
+    def EventSort( self, index ):
         
-        selection = self._sorter.GetSelection()
+        selection = self._sorter.currentIndex()
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            sort = self._sorter.GetClientData( selection )
+            sort = QP.GetClientData( self._sorter, selection )
             
             self._tags_box.SetSort( sort )
             
@@ -2976,19 +2528,9 @@ class RadioBox( StaticBox ):
         self._indices_to_radio_buttons = {}
         self._radio_buttons_to_data = {}
         
-        first_button = True
-        
         for ( index, ( text, data ) ) in enumerate( choice_pairs ):
             
-            if first_button:
-                
-                style = wx.RB_GROUP
-                
-                first_button = False
-                
-            else: style = 0
-            
-            radio_button = wx.RadioButton( self, label = text, style = style )
+            radio_button = QW.QRadioButton( text, self )
             
             self.Add( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2996,52 +2538,73 @@ class RadioBox( StaticBox ):
             self._radio_buttons_to_data[ radio_button ] = data
             
         
-        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ initial_index ].SetValue( True )
+        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ initial_index ].setChecked( True )
         
     
     def GetSelectedClientData( self ):
         
         for radio_button in list(self._radio_buttons_to_data.keys()):
             
-            if radio_button.GetValue() == True: return self._radio_buttons_to_data[ radio_button ]
+            if radio_button.isDown(): return self._radio_buttons_to_data[ radio_button]
             
         
     
     def SetSelection( self, index ):
         
-        self._indices_to_radio_buttons[ index ].SetValue( True )
+        self._indices_to_radio_buttons[ index ].setChecked( True )
         
     
     def SetString( self, index, text ):
         
-        self._indices_to_radio_buttons[ index ].SetLabelText( text )
+        self._indices_to_radio_buttons[ index ].setText( text )
         
     
-class TextAndGauge( wx.Panel ):
+class TextCatchEnterEventFilter( QC.QObject ):
+    
+    def __init__( self, parent, callable, *args, **kwargs ):
+        
+        QC.QObject.__init__( self, parent )
+        
+        self._callable = HydrusData.Call( callable, *args, **kwargs )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if event.type() == QC.QEvent.KeyPress and event.key() in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+            
+            self._callable()
+            
+            return True
+            
+        
+        return False
+        
+    
+class TextAndGauge( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._st = BetterStaticText( self )
         self._gauge = Gauge( self )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout( margin = 0 )
         
-        vbox.Add( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def SetValue( self, text, value, range ):
         
-        if not self:
+        if not self or not QP.isValid( self ):
             
             return
             
         
-        self._st.SetLabelText( text )
+        self._st.setText( text )
         
         self._gauge.SetRange( range )
         self._gauge.SetValue( value )
@@ -3063,11 +2626,11 @@ class ThreadToGUIUpdater( object ):
         self._doing_it = False
         
     
-    def WXDoIt( self ):
+    def QtDoIt( self ):
         
         with self._lock:
             
-            if not self._win:
+            if not self._win or not QP.isValid( self._win ):
                 
                 self._win = None
                 
@@ -3088,8 +2651,8 @@ class ThreadToGUIUpdater( object ):
             
         
     
-    # the point here is that we can spam this a hundred times a second, updating the args and kwargs, and wx will catch up to it when it can
-    # if wx feels like running fast, it'll update at 60fps
+    # the point here is that we can spam this a hundred times a second, updating the args and kwargs, and Qt will catch up to it when it can
+    # if Qt feels like running fast, it'll update at 60fps
     # if not, we won't get bungled up with 10,000+ pubsub events in the event queue
     def Update( self, *args, **kwargs ):
         
@@ -3100,7 +2663,7 @@ class ThreadToGUIUpdater( object ):
             
             if not self._doing_it and not HG.view_shutdown:
                 
-                wx.CallAfter( self.WXDoIt )
+                QP.CallAfter( self.QtDoIt )
                 
                 self._doing_it = True
                 
@@ -3110,7 +2673,7 @@ class ThreadToGUIUpdater( object ):
             take_a_break = self._dirty_count % 1000 == 0
             
         
-        # just in case we are choking the wx thread, let's give it a break every now and then
+        # just in case we are choking the Qt thread, let's give it a break every now and then
         if take_a_break:
             
             time.sleep( 0.25 )

@@ -3,7 +3,7 @@ from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUITopLevelWindows
 from . import HydrusExceptions
 from . import HydrusGlobals as HG
-import wx
+from qtpy import QtWidgets as QW
 
 def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key = None ):
     
@@ -22,7 +22,7 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             return ( involves_physical_delete, jobs )
             
         
-        if dlg.ShowModal() == wx.ID_OK:
+        if dlg.exec() == QW.QDialog.Accepted:
             
             ( involves_physical_delete, jobs ) = panel.GetValue()
             
@@ -42,7 +42,7 @@ def GetFinishFilteringAnswer( win, label ):
         
         dlg.SetPanel( panel )
         
-        return dlg.ShowModal()
+        return ( dlg.exec(), dlg.WasCancelled() )
         
     
 def GetInterstitialFilteringAnswer( win, label ):
@@ -53,10 +53,10 @@ def GetInterstitialFilteringAnswer( win, label ):
         
         dlg.SetPanel( panel )
         
-        return dlg.ShowModal()
+        return dlg.exec()
         
     
-def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None ):
+def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
     
     with ClientGUITopLevelWindows.DialogCustomButtonQuestion( win, title ) as dlg:
         
@@ -66,22 +66,22 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
         
         if auto_yes_time is None and auto_no_time is None:
             
-            return dlg.ShowModal()
+            return dlg.exec() if not check_for_cancelled else ( dlg.exec(), dlg.WasCancelled() )
             
         else:
             
             if auto_yes_time is not None:
                 
-                job = HG.client_controller.CallLaterWXSafe( dlg, auto_yes_time, dlg.EndModal, wx.ID_YES )
+                job = HG.client_controller.CallLaterQtSafe( dlg, auto_yes_time, dlg.done, QW.QDialog.Accepted )
                 
             elif auto_no_time is not None:
                 
-                job = HG.client_controller.CallLaterWXSafe( dlg, auto_no_time, dlg.EndModal, wx.ID_NO )
+                job = HG.client_controller.CallLaterQtSafe( dlg, auto_no_time, dlg.done, QW.QDialog.Rejected )
                 
             
             try:
                 
-                return dlg.ShowModal()
+                return dlg.exec() if not check_for_cancelled else ( dlg.exec(), dlg.WasCancelled() )
                 
             finally:
                 
@@ -98,7 +98,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
         
         dlg.SetPanel( panel )
         
-        if dlg.ShowModal() == wx.ID_OK:
+        if dlg.exec() == QW.QDialog.Accepted:
             
             result = panel.GetValue()
             
@@ -118,7 +118,7 @@ def SelectFromListButtons( win, title, choice_tuples ):
         
         dlg.SetPanel( panel )
         
-        if dlg.ShowModal() == wx.ID_OK:
+        if dlg.exec() == QW.QDialog.Accepted:
             
             result = panel.GetValue()
             

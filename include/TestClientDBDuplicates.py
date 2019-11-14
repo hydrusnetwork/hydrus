@@ -33,7 +33,6 @@ from . import TestController
 import time
 import threading
 import unittest
-import wx
 
 class TestClientDBDuplicates( unittest.TestCase ):
     

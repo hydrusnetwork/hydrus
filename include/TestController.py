@@ -9,7 +9,6 @@ import tempfile
 import time
 import traceback
 import unittest
-import wx
 from . import HydrusConstants as HC
 from . import ClientConstants as CC
 from . import HydrusGlobals as HG
@@ -58,6 +57,10 @@ from . import ClientData
 from . import ClientOptions
 from . import HydrusData
 from . import HydrusPaths
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 
 DB_DIR = None
@@ -139,24 +142,22 @@ class FakeWebSessionManager():
         return { 'session_cookie' : 'blah' }
         
     
-class TestFrame( wx.Frame ):
+class TestFrame( QW.QWidget ):
     
     def __init__( self ):
         
-        wx.Frame.__init__( self, None )
+        QW.QWidget.__init__( self, None )
         
     
     def SetPanel( self, panel ):
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        self.Fit()
-        
-        self.Show()
+        self.show()
         
 
 only_run = None
@@ -193,7 +194,7 @@ class Controller( object ):
         
         self._call_to_threads = []
         
-        self._pubsub = HydrusPubSub.HydrusPubSub( self )
+        self._pubsub = HydrusPubSub.HydrusPubSub( self, lambda o: True )
         
         self.new_options = ClientOptions.ClientOptions()
         
@@ -310,13 +311,13 @@ class Controller( object ):
         return call_to_thread
         
     
-    def _SetupWx( self ):
+    def _SetupQt( self ):
         
-        self.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
+        self.locale = QC.QLocale() # Very important to init this here and keep it non garbage collected
         
-        CC.GlobalBMPs.STATICInitialise()
+        CC.GlobalPixmaps.STATICInitialise()
         
-        self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
+        self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
         
     
     def pub( self, topic, *args, **kwargs ):
@@ -339,22 +340,22 @@ class Controller( object ):
         return HydrusData.GenerateKey()
         
     
-    def CallBlockingToWX( self, win, func, *args, **kwargs ):
+    def CallBlockingToQt( self, win, func, *args, **kwargs ):
         
-        def wx_code( win, job_key ):
+        def qt_code( win, job_key ):
             
             try:
                 
-                if win is not None and not win:
+                if win is not None and not QP.isValid( win ):
                     
-                    raise HydrusExceptions.WXDeadWindowException( 'Parent Window was destroyed before wx command was called!' )
+                    raise HydrusExceptions.QtDeadWindowException('Parent Window was destroyed before Qt command was called!')
                     
                 
                 result = func( *args, **kwargs )
                 
                 job_key.SetVariable( 'result', result )
                 
-            except ( HydrusExceptions.WXDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException ) as e:
+            except (HydrusExceptions.QtDeadWindowException, HydrusExceptions.InsufficientCredentialsException, HydrusExceptions.ShutdownException) as e:
                 
                 job_key.SetVariable( 'error', e )
                 
@@ -362,7 +363,7 @@ class Controller( object ):
                 
                 job_key.SetVariable( 'error', e )
                 
-                HydrusData.Print( 'CallBlockingToWX just caught this error:' )
+                HydrusData.Print( 'CallBlockingToQt just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
@@ -375,7 +376,7 @@ class Controller( object ):
         
         job_key.Begin()
         
-        wx.CallAfter( wx_code, win, job_key )
+        QP.CallAfter( qt_code, win, job_key )
         
         while not job_key.IsDone():
             
@@ -389,7 +390,7 @@ class Controller( object ):
         
         if job_key.HasVariable( 'result' ):
             
-            # result can be None, for wx_code that has no return variable
+            # result can be None, for qt_code that has no return variable
             
             result = job_key.GetIfHasVariable( 'result' )
             
@@ -426,11 +427,11 @@ class Controller( object ):
         return job
         
     
-    def CallLaterWXSafe( self, window, initial_delay, func, *args, **kwargs ):
+    def CallLaterQtSafe( self, window, initial_delay, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, initial_delay, call )
+        job = ClientThreading.QtAwareJob(self, self._job_scheduler, window, initial_delay, call)
         
         self._job_scheduler.AddJob( job )
         
@@ -448,11 +449,11 @@ class Controller( object ):
         return job
         
     
-    def CallRepeatingWXSafe( self, window, initial_delay, period, func, *args, **kwargs ):
+    def CallRepeatingQtSafe( self, window, initial_delay, period, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, initial_delay, period, call )
+        job = ClientThreading.QtAwareRepeatingJob(self, self._job_scheduler, window, initial_delay, period, call)
         
         self._job_scheduler.AddJob( job )
         
@@ -625,8 +626,8 @@ class Controller( object ):
     
     def Run( self, window ):
         
-        # we are in wx thread here, we can do this
-        self._SetupWx()
+        # we are in Qt thread here, we can do this
+        self._SetupQt()
         
         suites = []
         
@@ -713,11 +714,11 @@ class Controller( object ):
                 
             finally:
                 
-                wx.CallAfter( self.win.DestroyLater )
+                QP.CallAfter( self.win.deleteLater )
                 
             
         
-        self.win.Show()
+        self.win.show()
         
         test_thread = threading.Thread( target = do_it )
         

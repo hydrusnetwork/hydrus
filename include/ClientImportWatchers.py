@@ -15,7 +15,6 @@ from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 import threading
 import time
-import wx
 
 class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     

@@ -1393,7 +1393,16 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        return 'Credentials: ' + str( ( self._host, self._port, self._access_key.hex() ) )
+        if self._access_key is None:
+            
+            access_key_str = 'no access key'
+            
+        else:
+            
+            access_key_str = self._access_key.hex()
+            
+        
+        return 'Credentials: ' + str( ( self._host, self._port, access_key_str ) )
         
     
     def _GetSerialisableInfo( self ):

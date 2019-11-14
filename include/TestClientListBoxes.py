@@ -8,30 +8,36 @@ import random
 from . import TestController
 import time
 import unittest
-import wx
 from . import HydrusGlobals as HG
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
-    wx.QueueEvent( panel, click )
+    QW.QApplication.postEvent( panel.widget(), click )
     
     if do_delayed_ok_afterwards:
         
-        HG.test_controller.CallLaterWXSafe( panel, 1, PressKeyOnFocusedWindow, wx.WXK_RETURN )
+        HG.test_controller.CallLaterQtSafe( panel, 1, PressKeyOnFocusedWindow, QC.Qt.Key_Return )
         
     
-    wx.YieldIfNeeded()
+    QW.QApplication.processEvents()
     
-    time.sleep( 0.1 )
+def GenerateClick( window, pos, click_type, click_button, modifier ):
+    
+    screen_pos = QC.QPointF( window.mapToGlobal( pos.toPoint() ) )
+    
+    click = QG.QMouseEvent( click_type, pos, screen_pos, click_button, click_button, modifier )
+    
+    return click
     
 def GetAllClickableIndices( panel ):
     
-    click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-    
     current_y = 5
     
-    click.SetX( 10 )
-    click.SetY( current_y )
+    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
     
     all_clickable_indices = {}
     
@@ -46,22 +52,22 @@ def GetAllClickableIndices( panel ):
         
         current_y += 5
         
-        click.SetY( current_y )
+        click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
         
     
     return all_clickable_indices
     
 def PressKey( window, key ):
     
-    window.SetFocus()
+    window.setFocus( QC.Qt.OtherFocusReason )
     
-    uias = wx.UIActionSimulator()
+    uias = QP.UIActionSimulator()
     
     uias.Char( key )
     
 def PressKeyOnFocusedWindow( key ):
     
-    uias = wx.UIActionSimulator()
+    uias = QP.UIActionSimulator()
     
     uias.Char( key )
     
@@ -69,7 +75,7 @@ class TestListBoxes( unittest.TestCase ):
     
     def test_listbox_colour_options( self ):
         
-        def wx_code():
+        def qt_code():
             
             frame = TestController.TestFrame()
             
@@ -88,7 +94,7 @@ class TestListBoxes( unittest.TestCase ):
                 new_namespace_colours = dict( initial_namespace_colours )
                 new_namespace_colours[ 'character' ] = ( 0, 170, 0 )
                 
-                colour = wx.Colour( 0, 170, 0 )
+                colour = QG.QColor( 0, 170, 0 )
                 
                 panel.SetNamespaceColour( 'character', colour )
                 
@@ -110,12 +116,9 @@ class TestListBoxes( unittest.TestCase ):
                 
                 #
                 
-                for ( index, y ) in list(all_clickable_indices.items()):
+                for ( index, y ) in list( all_clickable_indices.items() ):
                     
-                    click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-                    
-                    click.SetX( 10 )
-                    click.SetY( y )
+                    click = GenerateClick( panel, QC.QPointF( 10, y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
                     
                     DoClick( click, panel )
                     
@@ -126,16 +129,13 @@ class TestListBoxes( unittest.TestCase ):
                 
                 current_y = 5
                 
-                click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-                
-                click.SetX( 10 )
-                click.SetY( current_y )
+                click = QG.QMouseEvent( QC.QEvent.MouseButtonPress, QC.QPointF( 10, current_y ), QC.Qt.LeftButton, QC.Qt.LeftButton, QC.Qt.NoModifier )
                 
                 while panel._GetIndexUnderMouse( click ) is not None:
                     
                     current_y += 5
                     
-                    click.SetY( current_y )
+                    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
                     
                 
                 DoClick( click, panel )
@@ -152,12 +152,7 @@ class TestListBoxes( unittest.TestCase ):
                     
                     for index in indices:
                         
-                        click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-                        
-                        click.SetControlDown( True )
-                        
-                        click.SetX( 10 )
-                        click.SetY( all_clickable_indices[ index ] )
+                        click = GenerateClick( panel, QC.QPointF( 10, all_clickable_indices[ index ] ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.ControlModifier )
                         
                         DoClick( click, panel )
                         
@@ -182,46 +177,29 @@ class TestListBoxes( unittest.TestCase ):
                 
                 current_y = 5
                 
-                click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-                
-                click.SetX( 10 )
-                click.SetY( current_y )
+                click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
                 
                 while panel._GetIndexUnderMouse( click ) is not None:
                     
                     current_y += 5
                     
-                    click.SetY( current_y )
+                    click = GenerateClick( panel, QC.QPointF( 10, current_y ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
                     
                 
                 DoClick( click, panel )
                 
                 # select the random index
                 
-                click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-                
-                click.SetX( 10 )
-                click.SetY( all_clickable_indices[ random_index ] )
+                click = GenerateClick( panel, QC.QPointF( 10, all_clickable_indices[ random_index ] ), QC.QEvent.MouseButtonPress, QC.Qt.LeftButton, QC.Qt.NoModifier )
                 
                 DoClick( click, panel )
                 
-                # now double-click to activate and hence remove
-                
-                doubleclick = wx.MouseEvent( wx.wxEVT_LEFT_DCLICK )
-                
-                doubleclick.SetX( 5 )
-                doubleclick.SetY( all_clickable_indices[ random_index ] )
-                
-                DoClick( doubleclick, panel, do_delayed_ok_afterwards = True )
-                
-                self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
-                
             finally:
                 
-                frame.DestroyLater()
+                frame.deleteLater()
                 
             
         
-        HG.test_controller.CallBlockingToWX( HG.test_controller.win, wx_code )
+        HG.test_controller.CallBlockingToQt( HG.test_controller.win, qt_code )
         
     

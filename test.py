@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from include import QtPorting as QP
+from qtpy import QtWidgets as QW
+from qtpy import QtCore as QC
 
 import locale
 
@@ -12,7 +15,6 @@ from include import TestController
 import sys
 import threading
 import traceback
-import wx
 from twisted.internet import reactor
 
 if __name__ == '__main__':
@@ -32,14 +34,20 @@ if __name__ == '__main__':
         
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
-        app = wx.App()
+        QP.MonkeyPatchMissingMethods()
+        app = QW.QApplication( sys.argv )
+        
+        app.call_after_catcher = QC.QObject( app )
+        
+        app.call_after_catcher.installEventFilter( QP.CallAfterEventFilter( app.call_after_catcher ) )
         
         try:
             
-            # we run the tests on the wx thread atm
+            # we run the tests on the Qt thread atm
             # keep a window alive the whole time so the app doesn't finish its mainloop
             
-            win = wx.Frame( None, title = 'Running tests...' )
+            win = QW.QWidget( None )
+            win.setWindowTitle( 'Running tests...' )
             
             controller = TestController.Controller( win, only_run )
             
@@ -48,9 +56,9 @@ if __name__ == '__main__':
                 controller.Run( win )
                 
             
-            wx.CallAfter( do_it )
+            QP.CallAfter( do_it )
             
-            app.MainLoop()
+            app.exec_()
             
         except:
             

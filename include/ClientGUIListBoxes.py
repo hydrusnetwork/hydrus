@@ -18,11 +18,15 @@ from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 from . import HydrusTags
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
+from . import QtPorting as QP
 
-( ListBoxEvent, EVT_LIST_BOX ) = wx.lib.newevent.NewCommandEvent()
-
-class AddEditDeleteListBox( wx.Panel ):
+class AddEditDeleteListBox( QW.QWidget ):
+    
+    listBoxChanged = QC.Signal()
     
     def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable, edit_callable ):
         
@@ -30,9 +34,10 @@ class AddEditDeleteListBox( wx.Panel ):
         self._add_callable = add_callable
         self._edit_callable = edit_callable
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._listbox = wx.ListBox( self, style = wx.LB_EXTENDED )
+        self._listbox = QW.QListWidget( self )
+        self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
@@ -44,31 +49,32 @@ class AddEditDeleteListBox( wx.Panel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        self._buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._buttons_hbox = QP.HBoxLayout()
         
-        self._buttons_hbox.Add( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._buttons_hbox.Add( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._buttons_hbox.Add( self._delete_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._buttons_hbox, self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._buttons_hbox, self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._buttons_hbox, self._delete_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         #
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
         
-        self._listbox.SetInitialSize( ( width, height ) )
+        self._listbox.setMinimumWidth( width )
+        self._listbox.setMinimumHeight( height )
         
         #
         
         self._ShowHideButtons()
         
-        self._listbox.Bind( wx.EVT_LISTBOX, self.EventSelection )
-        self._listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventEdit )
+        self._listbox.itemSelectionChanged.connect( self._ShowHideButtons )
+        self._listbox.itemDoubleClicked.connect( self._Edit )
         
     
     def _Add( self ):
@@ -101,7 +107,10 @@ class AddEditDeleteListBox( wx.Panel ):
         
         pretty_data = self._data_to_pretty_callable( data )
         
-        self._listbox.Append( pretty_data, data )
+        item = QW.QListWidgetItem()
+        item.setText( pretty_data )
+        item.setData( QC.Qt.UserRole, data )
+        self._listbox.addItem( item )
         
     
     def _AddSomeDefaults( self, defaults_callable ):
@@ -121,7 +130,7 @@ class AddEditDeleteListBox( wx.Panel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 defaults_to_add = panel.GetValue()
                 
@@ -135,7 +144,7 @@ class AddEditDeleteListBox( wx.Panel ):
     
     def _Delete( self ):
         
-        indices = list( self._listbox.GetSelections() )
+        indices = list( map( lambda idx: idx.row(), self._listbox.selectedIndexes() ) )
         
         if len( indices ) == 0:
             
@@ -148,27 +157,27 @@ class AddEditDeleteListBox( wx.Panel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             for i in indices:
                 
-                self._listbox.Delete( i )
+                QP.ListWidgetDelete( self._listbox, i )
                 
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
     def _Edit( self ):
         
-        for i in range( self._listbox.GetCount() ):
+        for i in range( self._listbox.count() ):
             
-            if not self._listbox.IsSelected( i ):
+            if not QP.ListWidgetIsSelected( self._listbox, i ):
                 
                 continue
                 
             
-            data = self._listbox.GetClientData( i )
+            data = QP.GetClientData( self._listbox, i )
             
             try:
                 
@@ -179,16 +188,20 @@ class AddEditDeleteListBox( wx.Panel ):
                 break
                 
             
-            self._listbox.Delete( i )
+            QP.ListWidgetDelete( self._listbox, i )
             
             self._SetNoneDupeName( new_data )
             
             pretty_new_data = self._data_to_pretty_callable( new_data )
             
-            self._listbox.Insert( pretty_new_data, i, new_data )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_new_data )
+            item.setData( QC.Qt.UserRole, new_data )
+            self._listbox.addItem( item )
+            self._listbox.insertItem( i, item )
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
     def _Duplicate( self ):
@@ -230,7 +243,7 @@ class AddEditDeleteListBox( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                dlg.ShowModal()
+                dlg.exec()
                 
             
         
@@ -260,7 +273,7 @@ class AddEditDeleteListBox( wx.Panel ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
         
@@ -296,7 +309,7 @@ class AddEditDeleteListBox( wx.Panel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -309,15 +322,15 @@ class AddEditDeleteListBox( wx.Panel ):
             
         except Exception as e:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
         
     
     def _ImportFromPng( self ):
         
-        with wx.FileDialog( self, 'select the png or pngs with the encoded data', style = wx.FD_OPEN | wx.FD_MULTIPLE, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptOpen, fileMode = QW.QFileDialog.ExistingFiles, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 for path in dlg.GetPaths():
                     
@@ -327,7 +340,7 @@ class AddEditDeleteListBox( wx.Panel ):
                         
                     except Exception as e:
                         
-                        wx.MessageBox( str( e ) )
+                        QW.QMessageBox.critical( self, 'Error', str(e) )
                         
                         return
                         
@@ -340,7 +353,7 @@ class AddEditDeleteListBox( wx.Panel ):
                         
                     except:
                         
-                        wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                        QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the png!' )
                         
                         return
                         
@@ -382,7 +395,7 @@ class AddEditDeleteListBox( wx.Panel ):
             message += os.linesep * 2
             message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
             
-            wx.MessageBox( message )
+            QW.QMessageBox.critical( self, 'Error', message )
             
         
     
@@ -393,24 +406,24 @@ class AddEditDeleteListBox( wx.Panel ):
     
     def _ShowHideButtons( self ):
         
-        if len( self._listbox.GetSelections() ) == 0:
+        if len( self._listbox.selectedItems() ) == 0:
             
-            self._edit_button.Disable()
-            self._delete_button.Disable()
+            self._edit_button.setEnabled( False )
+            self._delete_button.setEnabled( False )
             
             for button in self._enabled_only_on_selection_buttons:
                 
-                button.Disable()
+                button.setEnabled( False )
                 
             
         else:
             
-            self._edit_button.Enable()
-            self._delete_button.Enable()
+            self._edit_button.setEnabled( True )
+            self._delete_button.setEnabled( True )
             
             for button in self._enabled_only_on_selection_buttons:
                 
-                button.Enable()
+                button.setEnabled( True )
                 
             
         
@@ -422,7 +435,7 @@ class AddEditDeleteListBox( wx.Panel ):
             self._AddData( data )
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
     def AddDefaultsButton( self, defaults_callable ):
@@ -437,7 +450,7 @@ class AddEditDeleteListBox( wx.Panel ):
         
         button = ClientGUICommon.MenuButton( self, 'add defaults', import_menu_items )
         
-        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
         
     
     def AddImportExportButtons( self, permitted_object_types ):
@@ -462,14 +475,14 @@ class AddEditDeleteListBox( wx.Panel ):
         import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPng ) )
         
         button = ClientGUICommon.MenuButton( self, 'export', export_menu_items )
-        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
         self._enabled_only_on_selection_buttons.append( button )
         
         button = ClientGUICommon.MenuButton( self, 'import', import_menu_items )
-        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
         
         button = ClientGUICommon.BetterButton( self, 'duplicate', self._Duplicate )
-        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_VCENTER )
         self._enabled_only_on_selection_buttons.append( button )
         
         self._ShowHideButtons()
@@ -477,43 +490,26 @@ class AddEditDeleteListBox( wx.Panel ):
     
     def AddSeparator( self ):
         
-        self._buttons_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-    
-    def Bind( self, event, handler ):
-        
-        self._listbox.Bind( event, handler )
-        
-    
-    def EventEdit( self, event ):
-        
-        self._Edit()
-        
-    
-    def EventSelection( self, event ):
-        
-        self._ShowHideButtons()
-        
-        event.Skip()
+        QP.AddToLayout( self._buttons_hbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def GetCount( self ):
         
-        return self._listbox.GetCount()
+        return self._listbox.count()
         
     
     def GetData( self, only_selected = False ):
         
         datas = []
         
-        for i in range( self._listbox.GetCount() ):
+        for i in range( self._listbox.count() ):
             
-            if only_selected and not self._listbox.IsSelected( i ):
+            if only_selected and not QP.ListWidgetIsSelected( self._listbox, i ):
                 
                 continue
                 
             
-            data = self._listbox.GetClientData( i )
+            data = QP.GetClientData( self._listbox, i )
             
             datas.append( data )
             
@@ -535,7 +531,9 @@ class AddEditDeleteListBoxUniqueNamedObjects( AddEditDeleteListBox ):
         HydrusSerialisable.SetNonDupeName( obj, disallowed_names )
         
     
-class QueueListBox( wx.Panel ):
+class QueueListBox( QW.QWidget ):
+    
+    listBoxChanged = QC.Signal()
     
     def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable = None, edit_callable = None ):
         
@@ -543,9 +541,10 @@ class QueueListBox( wx.Panel ):
         self._add_callable = add_callable
         self._edit_callable = edit_callable
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
-        self._listbox = wx.ListBox( self, style = wx.LB_EXTENDED )
+        self._listbox = QW.QListWidget( self )
+        self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
         
         self._up_button = ClientGUICommon.BetterButton( self, '\u2191', self._Up )
         
@@ -558,49 +557,50 @@ class QueueListBox( wx.Panel ):
         
         if self._add_callable is None:
             
-            self._add_button.Hide()
+            self._add_button.hide()
             
         
         if self._edit_callable is None:
             
-            self._edit_button.Hide()
+            self._edit_button.hide()
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        buttons_vbox = wx.BoxSizer( wx.VERTICAL )
+        buttons_vbox = QP.VBoxLayout()
         
-        buttons_vbox.Add( self._up_button, CC.FLAGS_VCENTER )
-        buttons_vbox.Add( self._delete_button, CC.FLAGS_VCENTER )
-        buttons_vbox.Add( self._down_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttons_vbox, self._up_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttons_vbox, self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( buttons_vbox, self._down_button, CC.FLAGS_VCENTER )
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( buttons_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, buttons_vbox, CC.FLAGS_VCENTER )
         
-        buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        buttons_hbox = QP.HBoxLayout()
         
-        buttons_hbox.Add( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        buttons_hbox.Add( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( buttons_hbox, self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( buttons_hbox, self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         #
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
         
-        self._listbox.SetInitialSize( ( width, height ) )
+        self._listbox.setMinimumWidth( width )
+        self._listbox.setMinimumHeight( height )
         
         #
         
-        self._listbox.Bind( wx.EVT_LISTBOX, self.EventSelection )
-        self._listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventEdit )
+        self._listbox.itemSelectionChanged.connect( self.EventSelection )
+        self._listbox.itemDoubleClicked.connect( self._Edit )
         
     
     def _Add( self ):
@@ -621,12 +621,15 @@ class QueueListBox( wx.Panel ):
         
         pretty_data = self._data_to_pretty_callable( data )
         
-        self._listbox.Append( pretty_data, data )
+        item = QW.QListWidgetItem()
+        item.setText( pretty_data )
+        item.setData( QC.Qt.UserRole, data )
+        self._listbox.addItem( item )
         
     
     def _Delete( self ):
         
-        indices = list( self._listbox.GetSelections() )
+        indices = list( self._listbox.selectedIndexes() )
         
         if len( indices ) == 0:
             
@@ -639,47 +642,46 @@ class QueueListBox( wx.Panel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             for i in indices:
                 
-                self._listbox.Delete( i )
+                QP.ListWidgetDelete( self._listbox, i )
                 
             
-            wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
-            
+            self.listBoxChanged.emit()
         
     
     def _Down( self ):
         
-        indices = list( self._listbox.GetSelections() )
+        indices = list( map( lambda idx: idx.row(), self._listbox.selectedIndexes() ) )
         
         indices.sort( reverse = True )
         
         for i in indices:
             
-            if i < self._listbox.GetCount() - 1:
+            if i < self._listbox.count() - 1:
                 
-                if not self._listbox.IsSelected( i + 1 ): # is the one below not selected?
+                if not QP.ListWidgetIsSelected( self._listbox, i+1 ): # is the one below not selected?
                     
                     self._SwapRows( i, i + 1 )
                     
                 
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
     def _Edit( self ):
         
-        for i in range( self._listbox.GetCount() ):
+        for i in range( self._listbox.count() ):
             
-            if not self._listbox.IsSelected( i ):
+            if not QP.ListWidgetIsSelected( self._listbox, i ):
                 
                 continue
                 
             
-            data = self._listbox.GetClientData( i )
+            data = QP.GetClientData( self._listbox, i )
             
             try:
                 
@@ -690,60 +692,72 @@ class QueueListBox( wx.Panel ):
                 break
                 
             
-            self._listbox.Delete( i )
+            QP.ListWidgetDelete( self._listbox, i )
             
             pretty_new_data = self._data_to_pretty_callable( new_data )
             
-            self._listbox.Insert( pretty_new_data, i, new_data )
+            new_item = QW.QListWidgetItem()
+            new_item.setText( pretty_new_data )
+            new_item.setData( QC.Qt.UserRole, new_data )
             
+            self._listbox.insertItem( i, new_item )
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
+        self.listBoxChanged.emit()
         
     
     def _SwapRows( self, index_a, index_b ):
         
-        a_was_selected = self._listbox.IsSelected( index_a )
-        b_was_selected = self._listbox.IsSelected( index_b )
+        a_was_selected = QP.ListWidgetIsSelected( self._listbox, index_a )
+        b_was_selected = QP.ListWidgetIsSelected( self._listbox, index_b )
         
-        data_a = self._listbox.GetClientData( index_a )
-        data_b = self._listbox.GetClientData( index_b )
+        data_a = QP.GetClientData( self._listbox, index_a )
+        data_b = QP.GetClientData( self._listbox, index_b )
         
         pretty_data_a = self._data_to_pretty_callable( data_a )
         pretty_data_b = self._data_to_pretty_callable( data_b )
         
-        self._listbox.Delete( index_a )
-        self._listbox.Insert( pretty_data_b, index_a, data_b )
+        QP.ListWidgetDelete( self._listbox, index_a )
         
-        self._listbox.Delete( index_b )
-        self._listbox.Insert( pretty_data_a, index_b, data_a )
+        item_b = QW.QListWidgetItem()
+        item_b.setText( pretty_data_b )
+        item_b.setData( QC.Qt.UserRole, data_b )
+        self._listbox.insertItem( index_a, item_b )
+        
+        QP.ListWidgetDelete( self._listbox, index_b )
+        
+        item_a = QW.QListWidgetItem()
+        item_a.setText( pretty_data_a )
+        item_a.setData( QC.Qt.UserRole, data_a )
+        self._listbox.insertItem( index_b, item_a )
         
         if b_was_selected:
             
-            self._listbox.Select( index_a )
+            QP.ListWidgetSetSelection( self._listbox, index_a )
             
         
         if a_was_selected:
             
-            self._listbox.Select( index_b )
+            QP.ListWidgetSetSelection( self._listbox, index_b )
             
         
     
     def _Up( self ):
         
-        indices = self._listbox.GetSelections()
+        indices = map( lambda idx: idx.row(), self._listbox.selectedIndexes() )
         
         for i in indices:
             
             if i > 0:
                 
-                if not self._listbox.IsSelected( i - 1 ): # is the one above not selected?
+                if not QP.ListWidgetIsSelected( self._listbox, i-1 ): # is the one above not selected?
                     
                     self._SwapRows( i, i - 1 )
                     
                 
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
     def AddDatas( self, datas ):
@@ -753,53 +767,41 @@ class QueueListBox( wx.Panel ):
             self._AddData( data )
             
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
-    def Bind( self, event, handler ):
+    def EventSelection( self ):
         
-        self._listbox.Bind( event, handler )
-        
-    
-    def EventEdit( self, event ):
-        
-        self._Edit()
-        
-    
-    def EventSelection( self, event ):
-        
-        if len( self._listbox.GetSelections() ) == 0:
+        if len( self._listbox.selectedIndexes() ) == 0:
             
-            self._up_button.Disable()
-            self._delete_button.Disable()
-            self._down_button.Disable()
+            self._up_button.setEnabled( False )
+            self._delete_button.setEnabled( False )
+            self._down_button.setEnabled( False )
             
-            self._edit_button.Disable()
+            self._edit_button.setEnabled( False )
             
         else:
             
-            self._up_button.Enable()
-            self._delete_button.Enable()
-            self._down_button.Enable()
+            self._up_button.setEnabled( True )
+            self._delete_button.setEnabled( True )
+            self._down_button.setEnabled( True )
             
-            self._edit_button.Enable()
+            self._edit_button.setEnabled( True )
             
-        
-        event.Skip()
-        
+                
     
     def GetCount( self ):
         
-        return self._listbox.GetCount()
+        return self._listbox.count()
         
     
     def GetData( self, only_selected = False ):
         
         datas = []
         
-        for i in range( self._listbox.GetCount() ):
+        for i in range( self._listbox.count() ):
             
-            data = self._listbox.GetClientData( i )
+            data = QP.GetClientData( self._listbox, i )
             
             datas.append( data )
             
@@ -809,27 +811,34 @@ class QueueListBox( wx.Panel ):
     
     def Pop( self ):
         
-        if self._listbox.GetCount() == 0:
+        if self._listbox.count() == 0:
             
             return None
             
         
-        data = self._listbox.GetClientData( 0 )
+        data = QP.GetClientData( self._listbox, 0 )
         
-        self._listbox.Delete( 0 )
+        QP.ListWidgetDelete( self._listbox, 0 )
         
         return data
         
     
-class ListBox( wx.ScrolledWindow ):
+class ListBox( QW.QScrollArea ):
+    
+    listBoxChanged = QC.Signal()
     
     TEXT_X_PADDING = 3
     
     def __init__( self, parent, height_num_chars = 10 ):
         
-        wx.ScrolledWindow.__init__( self, parent, style = wx.VSCROLL | wx.BORDER_DOUBLE )
+        QW.QScrollArea.__init__( self, parent )
+        self.setFrameShape( QW.QFrame.StyledPanel )
+        self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
+        self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
+        self.setWidget( ListBox._InnerWidget( self ) )
+        self.setWidgetResizable( True )
         
-        self._background_colour = wx.Colour( 255, 255, 255 )
+        self._background_colour = QG.QColor( 255, 255, 255 )
         
         self._terms = set()
         self._ordered_terms = []
@@ -839,32 +848,21 @@ class ListBox( wx.ScrolledWindow ):
         self._last_hit_index = None
         
         self._last_view_start = None
-        self._dirty = True
         
-        self._client_bmp = HG.client_controller.bitmap_manager.GetBitmap( 20, 20, 24 )
-        
-        dc = wx.MemoryDC( self._client_bmp )
-        
-        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-        
-        ( text_x, self._text_y ) = dc.GetTextExtent( 'abcdefghijklmnopqrstuvwxyz' )
+        self._text_y = QW.QApplication.fontMetrics().height()
         
         self._num_rows_per_page = 0
         
-        self.SetScrollRate( 0, self._text_y )
+        self.verticalScrollBar().setSingleStep( self._text_y )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 16, height_num_chars ) )
         
-        self.SetMinClientSize( ( min_width, min_height ) )
+        QP.SetMinClientSize( self, (min_width,min_height) )
         
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
         
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseSelect )
-        self.Bind( wx.EVT_LEFT_DCLICK, self.EventDClick )
-        
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._widget_event_filter.EVT_LEFT_DOWN( self.EventMouseSelect )
+        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventDClick )
         
     
     def __len__( self ):
@@ -872,6 +870,20 @@ class ListBox( wx.ScrolledWindow ):
         return len( self._ordered_terms )
         
     
+    def __bool__( self ):
+        
+        return QP.isValid( self )
+        
+    
+    def sizeHint( self ):
+        
+        size_hint = QW.QScrollArea.sizeHint( self )
+        
+        size_hint.setHeight( 9 * self._text_y + self.height() - self.viewport().height()  )
+        
+        return size_hint
+        
+        
     def _Activate( self ):
         
         pass
@@ -922,16 +934,15 @@ class ListBox( wx.ScrolledWindow ):
         self._last_hit_index = None
         
         self._last_view_start = None
-        self._dirty = True
         
     
     def _DataHasChanged( self ):
         
         self._SetVirtualSize()
         
-        self._SetDirty()
+        self.widget().update()
         
-        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        self.listBoxChanged.emit()
         
     
     def _Deselect( self, index ):
@@ -948,13 +959,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def _GetIndexUnderMouse( self, mouse_event ):
         
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        ( x_scroll, y_scroll ) = self.GetViewStart()
-        
-        y_offset = y_scroll * yUnit
-        
-        y = mouse_event.GetY() + y_offset
+        y = mouse_event.pos().y()
         
         row_index = y // self._text_y
         
@@ -1085,8 +1090,8 @@ class ListBox( wx.ScrolledWindow ):
         
         hit_index = self._GetIndexUnderMouse( event )
         
-        shift = event.ShiftDown()
-        ctrl = event.CmdDown()
+        shift = event.modifiers() & QC.Qt.ShiftModifier
+        ctrl = event.modifiers() & QC.Qt.ControlModifier
         
         self._Hit( shift, ctrl, hit_index )
         
@@ -1168,31 +1173,23 @@ class ListBox( wx.ScrolledWindow ):
             
             y = self._text_y * self._last_hit_index
             
-            ( start_x, start_y ) = self.GetViewStart()
+            visible_rect = QP.ScrollAreaVisibleRect( self )
             
-            ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
+            visible_rect_y = visible_rect.y()
             
-            ( width, height ) = self.GetClientSize()
+            visible_rect_height = visible_rect.height()
             
-            if y < start_y * y_unit:
+            if y < visible_rect_y:
                 
-                y_to_scroll_to = y // y_unit
+                self.ensureVisible( 0, y, 0, 0 )
                 
-                #self.Scroll( -1, y_to_scroll_to )
+            elif y > visible_rect_y + visible_rect_height - self._text_y:
                 
-                wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
-                
-            elif y > ( start_y * y_unit ) + height - self._text_y:
-                
-                y_to_scroll_to = ( y - height ) // y_unit
-                
-                #self.Scroll( -1, y_to_scroll_to + 2 )
-                
-                wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
+                self.ensureVisible( 0, y + self._text_y , 0, 0 )
                 
             
         
-        self._SetDirty()
+        self.widget().update()
         
     
     def _IsSelected( self, index ):
@@ -1209,34 +1206,31 @@ class ListBox( wx.ScrolledWindow ):
         return term in self._selected_terms
         
     
-    def _Redraw( self, dc ):
+    def _Redraw( self, painter ):
         
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+        visible_rect = QP.ScrollAreaVisibleRect( self )
         
-        ( x_scroll, y_scroll ) = self.GetViewStart()
+        visible_rect_y = visible_rect.y()
         
-        self._last_view_start = self.GetViewStart()
+        visible_rect_width = visible_rect.width()
+        visible_rect_height = visible_rect.height()
         
-        y_offset = y_scroll * yUnit
+        first_visible_index = visible_rect_y // self._text_y
         
-        ( my_width, my_height ) = self.GetClientSize()
+        last_visible_index = ( visible_rect_y + visible_rect_height ) // self._text_y
         
-        first_visible_index = y_offset // self._text_y
-        
-        last_visible_index = ( y_offset + my_height ) // self._text_y
-        
-        if ( y_offset + my_height ) % self._text_y != 0:
+        if ( visible_rect_y + visible_rect_height ) % self._text_y != 0:
             
             last_visible_index += 1
             
         
         last_visible_index = min( last_visible_index, len( self._ordered_terms ) - 1 )
         
-        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        painter.setFont( QW.QApplication.font() )
         
-        dc.SetBackground( wx.Brush( self._background_colour ) )
+        painter.setBackground( QG.QBrush( self._background_colour ) )
         
-        dc.Clear()
+        painter.eraseRect( painter.viewport() )
         
         for ( i, current_index ) in enumerate( range( first_visible_index, last_visible_index + 1 ) ):
             
@@ -1250,13 +1244,13 @@ class ListBox( wx.ScrolledWindow ):
             
             for ( text, ( r, g, b ) ) in texts_and_colours:
                 
-                text_colour = wx.Colour( r, g, b )
+                text_colour = QG.QColor( r, g, b )
                 
                 if term in self._selected_terms:
                     
-                    dc.SetBrush( wx.Brush( text_colour ) )
+                    painter.setBrush( QG.QBrush( text_colour ) )
                     
-                    dc.SetPen( wx.TRANSPARENT_PEN )
+                    painter.setPen( QC.Qt.NoPen )
                     
                     if x_start == self.TEXT_X_PADDING:
                         
@@ -1267,34 +1261,32 @@ class ListBox( wx.ScrolledWindow ):
                         background_colour_x = x_start
                         
                     
-                    dc.DrawRectangle( background_colour_x, i * self._text_y, my_width, self._text_y )
+                    painter.drawRect( background_colour_x, current_index*self._text_y, visible_rect_width, self._text_y )
                     
                     text_colour = self._background_colour
                     
                 
-                dc.SetTextForeground( text_colour )
+                painter.setPen( QG.QPen( text_colour ) )
                 
-                ( x, y ) = ( x_start, i * self._text_y )
+                ( x, y ) = ( x_start, current_index * self._text_y )
                 
-                dc.DrawText( text, x, y )
+                ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
+                
+                painter.drawText( QC.QRectF( x, y, text_width, text_height ), text )
                 
                 if there_is_more_than_one_text:
-                    
-                    ( text_width, text_height ) = dc.GetTextExtent( text )
                     
                     x_start += text_width
                     
                 
             
         
-        self._dirty = False
-        
     
     def _RefreshTexts( self ):
         
         self._terms_to_texts = { term : self._GetTextFromTerm( term ) for term in self._terms }
         
-        self._SetDirty()
+        self.widget().update()
         
     
     def _RemoveSelectedTerms( self ):
@@ -1336,22 +1328,17 @@ class ListBox( wx.ScrolledWindow ):
         self._selected_terms = set( self._terms )
         
     
-    def _SetDirty( self ):
-        
-        self._dirty = True
-        
-        self.Refresh()
-        
-    
     def _SetVirtualSize( self ):
         
-        ( my_x, my_y ) = self.GetClientSize()
+        self.setWidgetResizable( True )
         
-        ideal_virtual_size = ( my_x, max( self._text_y * len( self._ordered_terms ), my_y ) )
+        ( my_x, my_y ) = self.widget().size().toTuple()
         
-        if ideal_virtual_size != self.GetVirtualSize():
+        ideal_virtual_size = QC.QSize( my_x, self._text_y * len( self._ordered_terms ) )
+        
+        if ideal_virtual_size != self.widget().size():
             
-            self.SetVirtualSize( ideal_virtual_size )
+            self.widget().setMinimumSize( ideal_virtual_size )
             
         
     
@@ -1365,18 +1352,18 @@ class ListBox( wx.ScrolledWindow ):
         self._ordered_terms.sort( key = lexicographic_key )
         
     
-    def EventCharHook( self, event ):
+    def keyPressEvent( self, event ):
         
-        shift = event.ShiftDown()
-        ctrl = event.CmdDown()
+        shift = event.modifiers() & QC.Qt.ShiftModifier
+        ctrl = event.modifiers() & QC.Qt.ControlModifier
         
-        key_code = event.GetKeyCode()
+        key_code = event.key()
         
-        if ClientGUIFunctions.WindowHasFocus( self ) and key_code in CC.DELETE_KEYS:
+        if self.hasFocus() and key_code in CC.DELETE_KEYS:
             
             self._DeleteActivate()
             
-        elif key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        elif key_code in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
             
             self._Activate()
             
@@ -1386,7 +1373,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 self._SelectAll()
                 
-                self._SetDirty()
+                self.widget().update()
                 
             else:
                 
@@ -1397,11 +1384,11 @@ class ListBox( wx.ScrolledWindow ):
                     roll_up = False
                     roll_down = False
                     
-                    if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
+                    if key_code in ( QC.Qt.Key_Home, ):
                         
                         hit_index = 0
                         
-                    elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
+                    elif key_code in ( QC.Qt.Key_End, ):
                         
                         hit_index = len( self._ordered_terms ) - 1
                         
@@ -1409,25 +1396,25 @@ class ListBox( wx.ScrolledWindow ):
                         
                     elif self._last_hit_index is not None:
                         
-                        if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                        if key_code in ( QC.Qt.Key_Up, ):
                             
                             hit_index = self._last_hit_index - 1
                             
                             roll_up = True
                             
-                        elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                        elif key_code in ( QC.Qt.Key_Down, ):
                             
                             hit_index = self._last_hit_index + 1
                             
                             roll_down = True
                             
-                        elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                        elif key_code in ( QC.Qt.Key_PageUp, ):
                             
                             hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
                             
                             roll_up = True
                             
-                        elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                        elif key_code in ( QC.Qt.Key_PageDown, ):
                             
                             hit_index = min( len( self._ordered_terms ) - 1, self._last_hit_index + self._num_rows_per_page )
                             
@@ -1438,7 +1425,8 @@ class ListBox( wx.ScrolledWindow ):
                 
                 if hit_index is None:
                     
-                    event.Skip()
+                    # don't send to parent, which will do silly scroll window business with arrow key presses
+                    event.ignore()
                     
                 else:
                     
@@ -1463,43 +1451,43 @@ class ListBox( wx.ScrolledWindow ):
         self._Activate()
         
     
-    def EventEraseBackground( self, event ): pass
-    
     def EventMouseSelect( self, event ):
         
         self._HandleClick( event )
         
-        event.Skip()
+        return True # was: event.ignore()
         
     
-    def EventPaint( self, event ):
+    class _InnerWidget( QW.QWidget ):
         
-        ( my_x, my_y ) = self.GetClientSize()
-        
-        if ( my_x, my_y ) != self._client_bmp.GetSize():
+        def __init__( self, parent ):
             
-            self._client_bmp = HG.client_controller.bitmap_manager.GetBitmap( my_x, my_y, 24 )
+            QW.QWidget.__init__( self, parent )
             
-            self._dirty = True
+            self._parent = parent
             
         
-        dc = wx.BufferedPaintDC( self, self._client_bmp )
-        
-        if self._dirty or self._last_view_start != self.GetViewStart():
+        def paintEvent( self, event ):
             
-            self._Redraw( dc )
+            self._parent._SetVirtualSize()
+            
+            painter = QG.QPainter( self )
+            
+            self._parent._Redraw( painter )
             
         
     
-    def EventResize( self, event ):
+    def resizeEvent( self, event ):
         
-        ( my_x, my_y ) = self.GetClientSize()
+        visible_rect = QP.ScrollAreaVisibleRect( self )
         
-        self._num_rows_per_page = my_y // self._text_y
+        visible_rect_y = visible_rect.y()
+        
+        self._num_rows_per_page = visible_rect_y // self._text_y
         
         self._SetVirtualSize()
         
-        self._SetDirty()
+        self.widget().update()
         
     
     def GetClientData( self, index = None ):
@@ -1528,7 +1516,11 @@ class ListBox( wx.ScrolledWindow ):
         
         if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
             
-            self._Hit( False, False, self._last_hit_index + 1 )
+            hit_index = ( self._last_hit_index + 1 ) % len( self._ordered_terms )
+            
+            hit_index = self._GetSafeHitIndex( hit_index, 1 )
+            
+            self._Hit( False, False, hit_index )
             
         
     
@@ -1536,7 +1528,11 @@ class ListBox( wx.ScrolledWindow ):
         
         if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
             
-            self._Hit( False, False, self._last_hit_index - 1 )
+            hit_index = ( self._last_hit_index - 1 ) % len( self._ordered_terms )
+            
+            hit_index = self._GetSafeHitIndex( hit_index, -1 )
+            
+            self._Hit( False, False, hit_index )
             
         
     
@@ -1559,8 +1555,8 @@ class ListBoxTags( ListBox ):
         
         self._UpdateBackgroundColour()
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
-        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventMouseRightClick )
+        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseMiddleClick )
         
         HG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
@@ -1637,7 +1633,7 @@ class ListBoxTags( ListBox ):
                 
             
         
-        predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
+        predicates = HG.client_controller.gui.FleshOutPredicates( predicates )
         
         if len( predicates ) > 0:
             
@@ -1667,7 +1663,7 @@ class ListBoxTags( ListBox ):
                 
             
         
-        predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
+        predicates = HG.client_controller.gui.FleshOutPredicates( predicates )
         
         for predicate in predicates:
             
@@ -1725,11 +1721,13 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuTagEvent( self, command ):
         
+        tags = [ self._GetTextFromTerm( term ) for term in self._selected_terms ]
+        
         if command in ( 'hide', 'hide_namespace' ):
             
-            if len( self._selected_terms ) == 1:
+            if len( tags ) == 1:
                 
-                ( tag, ) = self._selected_terms
+                ( tag, ) = tags
                 
                 if command == 'hide':
                     
@@ -1767,16 +1765,16 @@ class ListBoxTags( ListBox ):
                 
                 if command == 'parent':
                     
-                    panel = ClientGUITags.ManageTagParents( dlg, self._selected_terms )
+                    panel = ClientGUITags.ManageTagParents( dlg, tags )
                     
                 elif command == 'sibling':
                     
-                    panel = ClientGUITags.ManageTagSiblings( dlg, self._selected_terms )
+                    panel = ClientGUITags.ManageTagSiblings( dlg, tags )
                     
                 
                 dlg.SetPanel( panel )
                 
-                dlg.ShowModal()
+                dlg.exec()
                 
             
         
@@ -1787,7 +1785,7 @@ class ListBoxTags( ListBox ):
         
         self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
         
-        self.Refresh()
+        self.widget().update()
         
     
     def EventMouseMiddleClick( self, event ):
@@ -1806,9 +1804,9 @@ class ListBoxTags( ListBox ):
         
         if len( self._ordered_terms ) > 0:
             
-            menu = wx.Menu()
+            menu = QW.QMenu()
             
-            copy_menu = wx.Menu()
+            copy_menu = QW.QMenu( menu )
             
             selected_tags = set()
             
@@ -1863,23 +1861,19 @@ class ListBoxTags( ListBox ):
                         ( include_predicates, exclude_predicates ) = self._GetSelectedIncludeExcludePredicates()
                         
                         if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( self, menu, 'discard ' + selection_string + ' from current search', 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_include_predicates' )
+                            ClientGUIMenus.AppendMenuItem( menu, 'discard ' + selection_string + ' from current search', 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_include_predicates' )
                             
                         
                         if True in ( include_predicate not in current_predicates for include_predicate in include_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( self, menu, 'require ' + selection_string + ' for current search', 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_include_predicates' )
+                            ClientGUIMenus.AppendMenuItem( menu, 'require ' + selection_string + ' for current search', 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_include_predicates' )
                             
                         
                         if True in ( exclude_predicate in current_predicates for exclude_predicate in exclude_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( self, menu, 'permit ' + selection_string + ' for current search', 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_exclude_predicates' )
+                            ClientGUIMenus.AppendMenuItem( menu, 'permit ' + selection_string + ' for current search', 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_exclude_predicates' )
                             
                         
                         if True in ( exclude_predicate not in current_predicates for exclude_predicate in exclude_predicates ):
-                            
-                            ClientGUIMenus.AppendMenuItem( self, menu, 'exclude ' + selection_string + ' from current search', 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_exclude_predicates' )
+                            ClientGUIMenus.AppendMenuItem( menu, 'exclude ' + selection_string + ' from current search', 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_exclude_predicates' )
                             
                         
                     
@@ -1888,11 +1882,10 @@ class ListBoxTags( ListBox ):
                 
                 if self.can_spawn_new_windows:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPage )
+                    ClientGUIMenus.AppendMenuItem( menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPage )
                     
                     if len( self._selected_terms ) > 1:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPageForEach )
+                        ClientGUIMenus.AppendMenuItem( menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPageForEach )
                         
                     
                 
@@ -1902,7 +1895,7 @@ class ListBoxTags( ListBox ):
                     
                     if self._page_key is not None:
                         
-                        select_menu = wx.Menu()
+                        select_menu = QW.QMenu( menu )
                         
                         tags_sorted_to_show_on_menu = HydrusTags.SortNumericTags( selected_tags )
                         
@@ -1931,19 +1924,19 @@ class ListBoxTags( ListBox ):
                             label = 'files with all of "{}"'.format( tags_sorted_to_show_on_menu_string )
                             
                         
-                        ClientGUIMenus.AppendMenuItem( self, select_menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_tags ) )
+                        ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'AND', set( selected_tags ) )
                         
                         if len( selected_tags ) > 1:
                             
                             label = 'files with any of "{}"'.format( tags_sorted_to_show_on_menu_string )
                             
-                            ClientGUIMenus.AppendMenuItem( self, select_menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_tags ) )
+                            ClientGUIMenus.AppendMenuItem( select_menu, label, 'Select the files with any of these tags.', HG.client_controller.pub, 'select_files_with_tags', self._page_key, 'OR', set( selected_tags ) )
                             
                         
                         ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
                         
                     
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_terms' )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_terms' )
                     
                     if len( self._selected_terms ) == 1:
                         
@@ -1953,12 +1946,12 @@ class ListBoxTags( ListBox ):
                             
                             sub_selection_string = '"' + subtag
                             
-                            ClientGUIMenus.AppendMenuItem( self, copy_menu, sub_selection_string, 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                            ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
                             
                         
                     else:
                         
-                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
+                        ClientGUIMenus.AppendMenuItem( copy_menu, 'selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
                         
                     
                 
@@ -1967,11 +1960,11 @@ class ListBoxTags( ListBox ):
                 
                 ClientGUIMenus.AppendSeparator( copy_menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
                 
                 if self.has_counts:
                     
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
                     
                 
             
@@ -1988,10 +1981,10 @@ class ListBoxTags( ListBox ):
                     
                     ( namespace, subtag ) = HydrusTags.SplitTag( tag )
                     
-                    hide_menu = wx.Menu()
+                    hide_menu = QW.QMenu( menu )
                     
-                    ClientGUIMenus.AppendMenuItem( self, hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
-                    ClientGUIMenus.AppendMenuItem( self, hide_menu, '"{}" from here'.format( tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
+                    ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
+                    ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
                     
                     ClientGUIMenus.AppendMenu( menu, hide_menu, 'hide' )
                     
@@ -2024,7 +2017,7 @@ class ListBoxTags( ListBox ):
                     description = 'Add this tag from your favourites'
                     
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, label, description, set_favourite_tags, favourite_tags )
+                ClientGUIMenus.AppendMenuItem( menu, label, description, set_favourite_tags, favourite_tags )
                 
             
             if len( selected_tags ) > 0 and self.can_spawn_new_windows:
@@ -2042,14 +2035,11 @@ class ListBoxTags( ListBox ):
                     text = 'selection'
                     
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                ClientGUIMenus.AppendMenuItem( menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                ClientGUIMenus.AppendMenuItem( menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
                 
             
             HG.client_controller.PopupMenu( self, menu )
-            
-        
-        event.Skip()
         
     
     def GetSelectedTags( self ):
@@ -2341,11 +2331,11 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
     
     def _Activate( self ):
         
-        shift_down = wx.GetKeyState( wx.WXK_SHIFT )
+        shift_down = QW.QApplication.keyboardModifiers() & QC.Qt.ShiftModifier
         
         predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
         
-        predicates = HG.client_controller.GetGUI().FleshOutPredicates( predicates )
+        predicates = HG.client_controller.gui.FleshOutPredicates( predicates )
         
         if len( predicates ) > 0:
             
@@ -2571,7 +2561,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         ListBoxTags.__init__( self, parent )
         
-        for ( namespace, colour ) in list(initial_namespace_colours.items()):
+        for ( namespace, colour ) in initial_namespace_colours.items():
             
             colour = tuple( colour ) # tuple to convert from list, for oooold users who have list colours
             
@@ -2593,7 +2583,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Delete all selected colours?' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 self._RemoveNamespaces( namespaces )
                 
@@ -2653,7 +2643,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def SetNamespaceColour( self, namespace, colour ):
         
-        ( r, g, b, a ) = colour.Get()
+        ( r, g, b, a ) = colour.toTuple()
         
         colour_tuple = ( r, g, b )
         
@@ -2777,7 +2767,7 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def ForceTagRecalc( self ):
         
-        if self.GetTopLevelParent().IsIconized():
+        if self.window().isMinimized():
             
             return
             
@@ -2862,7 +2852,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
             
         
     
-    def EventCharHook( self, event ):
+    def keyPressEvent( self, event ):
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
@@ -2872,7 +2862,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
             
         else:
             
-            event.Skip()
+            ListBoxTagsStrings.keyPressEvent( self, event )
             
         
     
@@ -3174,7 +3164,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def ForceTagRecalc( self ):
         
-        if self.GetTopLevelParent().IsIconized():
+        if self.window().isMinimized():
             
             return
             

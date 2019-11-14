@@ -18,7 +18,6 @@ import os
 import random
 import threading
 import time
-import wx
 from . import HydrusData
 from . import ClientData
 from . import ClientConstants as CC
@@ -27,6 +26,10 @@ import collections
 from . import HydrusTags
 import traceback
 import weakref
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 # now let's fill out grandparents
 def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
@@ -231,97 +234,23 @@ class BitmapManager( object ):
         
         self._controller = controller
         
-        self._unusued_bitmaps = collections.defaultdict( list )
-        self._destroyee_bitmaps = []
-        self._total_unused_memory_size = 0
-        
-        self._media_background_bmp_path = None
-        self._media_background_bmp = None
-        
-        self._awaiting_destruction = False
-        
-        HG.client_controller.sub( self, 'MaintainMemory', 'memory_maintenance_pulse' )
+        self._media_background_pixmap_path = None
+        self._media_background_pixmap = None
         
     
-    def _AdjustTotalMemory( self, direction, key ):
+    def _GetQtImageFormat( self, depth ):
         
-        ( width, height, depth ) = key
-        
-        amount = width * height * depth / 8
-        
-        self._total_unused_memory_size += direction * amount
-        
-    
-    def _ClearDestroyees( self ):
-        
-        def action_destroyee( item ):
+        if depth == 24:
             
-            ( destroy_timestamp, bitmap ) = item
+            return QG.QImage.Format_RGB888
             
-            if HydrusData.TimeHasPassedPrecise( destroy_timestamp ) and bitmap:
-                
-                bitmap.Destroy()
-                
-                return False
-                
-            else:
-                
-                return True
-                
-            
-        
-        try:
-            
-            self._destroyee_bitmaps = list( filter( action_destroyee, self._destroyee_bitmaps ) )
-            
-        finally:
-            
-            self._awaiting_destruction = False
-            
-        
-        if len( self._destroyee_bitmaps ) > 0:
-            
-            self._ScheduleDestruction()
+        elif depth == 32:
+
+            return QG.QImage.Format_RGBA8888
             
         
     
-    def _ScheduleDestruction( self ):
-        
-        if not self._awaiting_destruction:
-            
-            self._controller.CallLaterWXSafe( self._controller, 1.0, self._ClearDestroyees )
-            
-            self._awaiting_destruction = True
-            
-        
-    
-    def ReleaseBitmap( self, bitmap ):
-        
-        ( width, height ) = bitmap.GetSize()
-        depth = bitmap.GetDepth()
-        
-        key = ( width, height, depth )
-        
-        if key in self._unusued_bitmaps and len( self._unusued_bitmaps[ key ] ) > 10:
-            
-            self._destroyee_bitmaps.append( ( HydrusData.GetNowPrecise() + 0.5, bitmap ) )
-            
-            self._ScheduleDestruction()
-            
-        else:
-            
-            self._unusued_bitmaps[ key ].append( bitmap )
-            
-            self._AdjustTotalMemory( 1, key )
-            
-            if self._total_unused_memory_size > self.MAX_MEMORY_ALLOWANCE:
-                
-                self._controller.CallLaterWXSafe( self._controller, 1.0, self.MaintainMemory )
-                
-            
-        
-    
-    def GetBitmap( self, width, height, depth = 24 ):
+    def GetQtImage( self, width, height, depth = 24 ):
         
         if width < 0:
             
@@ -333,69 +262,76 @@ class BitmapManager( object ):
             height = 20
             
         
-        key = ( width, height, depth )
+        qt_image_format = self._GetQtImageFormat( depth )
         
-        if key in self._unusued_bitmaps:
-            
-            bitmaps = self._unusued_bitmaps[ key ]
-            
-            if len( bitmaps ) > 0:
-                
-                bitmap = bitmaps.pop()
-                
-                self._AdjustTotalMemory( -1, key )
-                
-                return bitmap
-                
-            else:
-                
-                del self._unusued_bitmaps[ key ]
-                
-            
-        
-        bitmap = wx.Bitmap( width, height, depth )
-        
-        return bitmap
+        return QG.QImage( width, height, qt_image_format )
         
     
-    def GetBitmapFromBuffer( self, width, height, depth, data ):
+    def GetQtPixmap( self, width, height ):
         
-        bitmap = self.GetBitmap( width, height, depth = depth )
-        
-        if depth == 24:
+        if width < 0:
             
-            bitmap.CopyFromBuffer( data, format = wx.BitmapBufferFormat_RGB )
-            
-        elif depth == 32:
-            
-            bitmap.CopyFromBuffer( data, format = wx.BitmapBufferFormat_RGBA )
+            width = 20
             
         
-        return bitmap
+        if height < 0:
+            
+            height = 20
+            
+        
+        key = ( width, height )
+        
+        return QG.QPixmap( width, height )
         
     
-    def GetMediaBackgroundBitmap( self ):
+    def GetQtImageFromBuffer( self, width, height, depth, data ):
         
-        bmp_path = self._controller.new_options.GetNoneableString( 'media_background_bmp_path' )
+        qt_image_format = self._GetQtImageFormat( depth )
         
-        if bmp_path != self._media_background_bmp_path:
+        bytes_per_line = ( depth / 8 ) * width
+        
+        # no copy here
+        qt_image = QG.QImage( data, width, height, bytes_per_line, qt_image_format )
+        
+        # cheeky solution here
+        # the QImage init does not take python ownership of the data, so if it gets garbage collected, we crash
+        # so, add a beardy python ref to it, no problem :^)
+        # other anwser here is to do a .copy, but this can be a _little_ expensive and eats memory
+        qt_image.python_data_reference = data
+        
+        return qt_image
+        
+    
+    def GetQtPixmapFromBuffer( self, width, height, depth, data ):
+        
+        qt_image_format = self._GetQtImageFormat( depth )
+        
+        bytes_per_line = ( depth / 8 ) * width
+        
+        # no copy, no new data allocated
+        qt_image = QG.QImage( data, width, height, bytes_per_line, qt_image_format )
+        
+        # _should_ be a safe copy of the hot data
+        pixmap = QG.QPixmap.fromImage( qt_image )
+        
+        return pixmap
+        
+    
+    def GetMediaBackgroundPixmap( self ):
+        
+        pixmap_path = self._controller.new_options.GetNoneableString( 'media_background_bmp_path' )
+        
+        if pixmap_path != self._media_background_pixmap_path:
             
-            self._media_background_bmp_path = bmp_path
-            
-            if self._media_background_bmp is not None:
-                
-                self.ReleaseBitmap( self._media_background_bmp )
-                
+            self._media_background_pixmap_path = pixmap_path
             
             try:
                 
-                bmp = wx.Bitmap( self._media_background_bmp_path )
-                
-                self._media_background_bmp = bmp
+                self._media_background_pixmap = QG.QPixmap( self._media_background_pixmap_path )
                 
             except Exception as e:
                 
-                self._media_background_bmp = None
+                self._media_background_pixmap = None
                 
                 HydrusData.ShowText( 'Loading a bmp caused an error!' )
                 
@@ -405,23 +341,7 @@ class BitmapManager( object ):
                 
             
         
-        return self._media_background_bmp
-        
-    
-    def MaintainMemory( self ):
-        
-        destroy_time = HydrusData.GetNowPrecise() + 0.5
-        
-        for bitmaps in self._unusued_bitmaps.values():
-            
-            self._destroyee_bitmaps.extend( ( ( destroy_time, bitmap ) for bitmap in bitmaps ) )
-            
-        
-        self._unusued_bitmaps = collections.defaultdict( list )
-        
-        self._total_unused_memory_size = 0
-        
-        self._ScheduleDestruction()
+        return self._media_background_pixmap
         
     
 class DataCache( object ):
@@ -1054,102 +974,6 @@ class MediaResultCache( object ):
         
     
     
-class MenuEventIdToActionCache( object ):
-    
-    def __init__( self ):
-        
-        self._ids_to_actions = {}
-        self._actions_to_ids = {}
-        
-        self._temporary_ids = set()
-        self._free_temporary_ids = set()
-        
-    
-    def _ClearTemporaries( self ):
-        
-        for temporary_id in self._temporary_ids.difference( self._free_temporary_ids ):
-            
-            temporary_action = self._ids_to_actions[ temporary_id ]
-            
-            del self._ids_to_actions[ temporary_id ]
-            del self._actions_to_ids[ temporary_action ]
-            
-        
-        self._free_temporary_ids = set( self._temporary_ids )
-        
-    
-    def _GetNewId( self, temporary ):
-        
-        if temporary:
-            
-            if len( self._free_temporary_ids ) == 0:
-                
-                new_id = wx.NewId()
-                
-                self._temporary_ids.add( new_id )
-                self._free_temporary_ids.add( new_id )
-                
-                
-            
-            return self._free_temporary_ids.pop()
-            
-        else:
-            
-            return wx.NewId()
-            
-        
-    
-    def GetAction( self, event_id ):
-        
-        action = None
-        
-        if event_id in self._ids_to_actions:
-            
-            action = self._ids_to_actions[ event_id ]
-            
-            if event_id in self._temporary_ids:
-                
-                self._ClearTemporaries()
-                
-            
-        
-        return action
-        
-    
-    def GetId( self, command, data = None, temporary = False ):
-        
-        action = ( command, data )
-        
-        if action not in self._actions_to_ids:
-            
-            event_id = self._GetNewId( temporary )
-            
-            self._ids_to_actions[ event_id ] = action
-            self._actions_to_ids[ action ] = event_id
-            
-        
-        return self._actions_to_ids[ action ]
-        
-    
-    def GetPermanentId( self, command, data = None ):
-        
-        return self.GetId( command, data, False )
-        
-    
-    def GetTemporaryId( self, command, data = None ):
-        
-        temporary = True
-        
-        if data is None:
-            
-            temporary = False
-            
-        
-        return self.GetId( command, data, temporary )
-        
-    
-MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
-
 class ParsingCache( object ):
     
     def __init__( self ):
@@ -1721,7 +1545,7 @@ class TagSiblingsManager( object ):
             
             tag_predicates = [ predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG ]
             
-            tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG }
+            tags_to_predicates = {predicate.GetValue() : predicate for predicate in predicates if predicate.GetType() == HC.PREDICATE_TYPE_TAG}
             
             tags = list( tags_to_predicates.keys() )
             

@@ -11,7 +11,6 @@ import os
 import random
 import time
 import traceback
-import wx
 from . import HydrusData
 from . import HydrusFileHandling
 from . import HydrusExceptions
@@ -1660,6 +1659,8 @@ class MediaCollection( MediaList, Media ):
         self._locations_manager = None
         self._file_viewing_stats_manager = None
         
+        self._internals_dirty = False
+        
         self._RecalcInternals()
         
     
@@ -1684,6 +1685,21 @@ class MediaCollection( MediaList, Media ):
         
         self._tags_manager = TagsManager.MergeTagsManagers( tags_managers )
         
+        all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
+        
+        current = HydrusData.IntelligentMassIntersect( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
+        deleted = HydrusData.IntelligentMassIntersect( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
+        pending = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
+        petitioned = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
+        
+        self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
+        
+        self._RecalcRatings()
+        self._RecalcFileViewingStats()
+        
+    
+    def _RecalcRatings( self ):
+        
         # horrible compromise
         if len( self._sorted_media ) > 0:
             
@@ -1694,14 +1710,8 @@ class MediaCollection( MediaList, Media ):
             self._ratings_manager = ClientRatings.RatingsManager( {} )
             
         
-        all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
-        
-        current = HydrusData.IntelligentMassIntersect( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
-        deleted = HydrusData.IntelligentMassIntersect( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
-        pending = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
-        petitioned = HydrusData.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
-        
-        self._locations_manager = LocationsManager( current, deleted, pending, petitioned )
+    
+    def _RecalcFileViewingStats( self ):
         
         preview_views = 0
         preview_viewtime = 0.0
@@ -1735,24 +1745,34 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    def GetDisplayMedia( self ): return self._GetFirst().GetDisplayMedia()
+    def GetDisplayMedia( self ):
+        
+        return self._GetFirst().GetDisplayMedia()
+        
     
-    def GetDuration( self ): return self._duration
+    def GetDuration( self ):
+        
+        return self._duration
+        
     
     def GetFileViewingStatsManager( self ):
         
         return self._file_viewing_stats_manager
         
     
-    def GetHash( self ): return self.GetDisplayMedia().GetHash()
-    
-    def GetLocationsManager( self ): return self._locations_manager
-    
-    def GetMime( self ): return HC.APPLICATION_HYDRUS_CLIENT_COLLECTION
-    
-    def GetNumFiles( self ):
+    def GetHash( self ):
         
-        return len( self._hashes )
+        return self.GetDisplayMedia().GetHash()
+        
+    
+    def GetLocationsManager( self ): 
+        
+        return self._locations_manager
+        
+    
+    def GetMime( self ):
+        
+        return HC.APPLICATION_HYDRUS_CLIENT_COLLECTION
         
     
     def GetNumInbox( self ):
@@ -1842,7 +1862,37 @@ class MediaCollection( MediaList, Media ):
         
         MediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
-        self._RecalcInternals()
+        data_types = set()
+        
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            
+            for content_update in content_updates:
+                
+                data_types.add( content_update.GetDataType() )
+                
+            
+        
+        if len( data_types ) == 1:
+            
+            ( data_type, ) = data_types
+            
+            if data_type == HC.CONTENT_TYPE_RATINGS:
+                
+                self._RecalcRatings()
+                
+            elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
+                
+                self._RecalcFileViewingStats()
+                
+            else:
+                
+                self._RecalcInternals()
+                
+            
+        else:
+            
+            self._RecalcInternals()
+            
         
     
     def RecalcInternals( self ):
@@ -2853,6 +2903,8 @@ class SortedList( object ):
     def _DirtyIndices( self ):
         
         self._indices_dirty = True
+        
+        self._items_to_indices = {}
         
     
     def _RecalcIndices( self ):

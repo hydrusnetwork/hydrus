@@ -17,7 +17,8 @@ import os
 import random
 import threading
 import time
-import wx
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
 REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1
@@ -265,7 +266,7 @@ class ClientFilesManager( object ):
             
             message = 'Hydrus found multiple missing locations in your file storage. Some of these locations seemed to be fixable, others did not. The client will now inform you about both problems.'
             
-            wx.SafeShowMessage( 'Multiple file location problems.', message )
+            self._controller.SafeShowCriticalMessage( 'Multiple file location problems.', message )
             
         
         if len( correct_rows ) > 0:
@@ -282,7 +283,7 @@ class ClientFilesManager( object ):
             
             HydrusData.Print( summary_message )
             
-            wx.SafeShowMessage( 'About to auto-heal client file folders.', summary_message )
+            self._controller.SafeShowCriticalMessage( 'About to auto-heal client file folders.', summary_message )
             
             HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
             
@@ -596,7 +597,7 @@ class ClientFilesManager( object ):
                 
                 text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( location )
                 
-                wx.SafeShowMessage( 'unable to create file structure', text )
+                self._controller.SafeShowCriticalMessage( 'unable to create file structure', text )
                 
                 raise
                 
@@ -650,9 +651,8 @@ class ClientFilesManager( object ):
                     text += os.linesep * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
-                    wx.SafeShowMessage( 'missing locations', text )
+                    self._controller.SafeShowCriticalMessage( 'missing locations', text )
                     
-                    HydrusData.DebugPrint( text )
                     HydrusData.DebugPrint( 'Missing locations follow:' )
                     HydrusData.DebugPrint( missing_string )
                     
@@ -664,8 +664,7 @@ class ClientFilesManager( object ):
                     text += os.linesep * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
-                    wx.SafeShowMessage( 'missing locations', text )
-                    HydrusData.DebugPrint( text )
+                    self._controller.SafeShowCriticalMessage( 'missing locations', text )
                     
                 
             
@@ -1153,7 +1152,7 @@ class ClientFilesManager( object ):
             
             if self._bad_error_occurred:
                 
-                wx.MessageBox( 'A serious file error has previously occurred during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
+                QW.QMessageBox.warning( None, 'Warning', 'A serious file error has previously occurred during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
                 
                 return
                 
@@ -1314,6 +1313,8 @@ class FilesMaintenanceManager( object ):
         
         self._idle_work_rules = HydrusNetworking.BandwidthRules()
         self._active_work_rules = HydrusNetworking.BandwidthRules()
+        
+        self._jobs_since_last_gc_collect = 0
         
         self._ReInitialiseWorkRules()
         
@@ -1780,16 +1781,16 @@ class FilesMaintenanceManager( object ):
                     cleared_jobs.append( ( hash, job_type, additional_data ) )
                     
                 
-                if HydrusData.TimeHasPassed( next_gc_collect ):
+                self._jobs_since_last_gc_collect += 1
+                
+                if self._jobs_since_last_gc_collect > 100:
                     
                     gc.collect()
                     
-                    next_gc_collect = HydrusData.GetNow() + 10
+                    self._jobs_since_last_gc_collect = 0
                     
                 
                 if len( cleared_jobs ) > 100:
-                    
-                    gc.collect()
                     
                     self._controller.WriteSynchronous( 'file_maintenance_clear_jobs', cleared_jobs )
                     
@@ -1800,8 +1801,6 @@ class FilesMaintenanceManager( object ):
         finally:
             
             if len( cleared_jobs ) > 0:
-                
-                gc.collect()
                 
                 self._controller.Write( 'file_maintenance_clear_jobs', cleared_jobs )
                 

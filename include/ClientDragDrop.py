@@ -3,42 +3,24 @@ from . import HydrusGlobals as HG
 from . import HydrusPaths
 import json
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtGui as QG
+from qtpy import QtWidgets as QW
+from . import QtPorting as QP
 
 def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
-    drop_source = wx.DropSource( window )
+    drop_source = QG.QDrag( window )
     
-    data_object = wx.DataObjectComposite()
-    
-    #
-    
-    hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
-    
-    hashes = [ m.GetHash() for m in media ]
-    
-    if page_key is None:
-        
-        encoded_page_key = None
-        
-    else:
-        
-        encoded_page_key = page_key.hex()
-        
-    
-    data_obj = ( encoded_page_key, [ hash.hex() for hash in hashes ] )
-    
-    data_str = json.dumps( data_obj )
-    
-    data_bytes = bytes( data_str, 'utf-8' )
-    
-    hydrus_media_data_object.SetData( data_bytes )
-    
-    data_object.Add( hydrus_media_data_object, True )
+    data_object = QC.QMimeData()
     
     #
     
-    file_data_object = wx.FileDataObject()
+    new_options = HG.client_controller.new_options
+    
+    do_secret_discord_dnd_fix = new_options.GetBoolean( 'secret_discord_dnd_fix' ) and alt_down
+    
+    #
     
     client_files_manager = HG.client_controller.client_files_manager
     
@@ -60,19 +42,15 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     #
     
-    new_options = HG.client_controller.new_options
-    
-    secret_discord_dnd_fix_possible = new_options.GetBoolean( 'secret_discord_dnd_fix' ) and alt_down
-    
     discord_dnd_fix_possible = new_options.GetBoolean( 'discord_dnd_fix' ) and len( original_paths ) <= 50 and total_size < 200 * 1048576
     
     temp_dir = HG.client_controller.temp_dir
     
-    if secret_discord_dnd_fix_possible:
+    if do_secret_discord_dnd_fix:
         
         dnd_paths = original_paths
         
-        flags = wx.Drag_AllowMove
+        flags = QC.Qt.MoveAction
         
     elif discord_dnd_fix_possible and os.path.exists( temp_dir ):
         
@@ -92,123 +70,155 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
             dnd_paths.append( dnd_path )
             
         
-        flags = wx.Drag_AllowMove
+        flags = QC.Qt.MoveAction | QC.Qt.CopyAction
         
     else:
         
         dnd_paths = original_paths
-        flags = wx.Drag_CopyOnly
+        flags = QC.Qt.CopyAction
         
+    
+    uri_list = []
     
     for path in dnd_paths:
         
-        file_data_object.AddFile( path )
+        uri_list.append( QC.QUrl.fromLocalFile( path ) )
         
     
-    data_object.Add( file_data_object )
+    data_object.setUrls( uri_list )
     
     #
     
-    drop_source.SetData( data_object )
+    hashes = [ m.GetHash() for m in media ]
     
-    result = drop_source.DoDragDrop( flags )
+    if page_key is None:
+        
+        encoded_page_key = None
+        
+    else:
+        
+        encoded_page_key = page_key.hex()
+        
+    
+    data_obj = ( encoded_page_key, [ hash.hex() for hash in hashes ] )
+    
+    data_str = json.dumps( data_obj )
+    
+    data_bytes = bytes( data_str, 'utf-8' )
+    
+    data_object.setData( 'application/hydrus-media', data_bytes )
+    
+    #
+    
+    drop_source.setMimeData( data_object )
+    
+    result = drop_source.exec_( flags, QC.Qt.CopyAction )
     
     return result
     
-class FileDropTarget( wx.DropTarget ):
+class FileDropTarget( QC.QObject ):
     
-    def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None, page_callable = None ):
+    def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None ):
         
-        wx.DropTarget.__init__( self )
+        QC.QObject.__init__( self, parent )
         
         self._parent = parent
+        
+        if parent:
+            
+            parent.setAcceptDrops( True )
+            
         
         self._filenames_callable = filenames_callable
         self._url_callable = url_callable
         self._media_callable = media_callable
-        self._page_callable = page_callable
-        
-        self._receiving_data_object = wx.DataObjectComposite()
-        
-        self._hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
-        self._hydrus_page_tab_data_object = wx.CustomDataObject( 'application/hydrus-page-tab' )
-        self._file_data_object = wx.FileDataObject()
-        self._text_data_object = wx.TextDataObject()
-        
-        self._receiving_data_object.Add( self._hydrus_media_data_object, True )
-        self._receiving_data_object.Add( self._hydrus_page_tab_data_object )
-        self._receiving_data_object.Add( self._file_data_object )
-        self._receiving_data_object.Add( self._text_data_object )
-        
-        self.SetDataObject( self._receiving_data_object )
         
     
-    def OnData( self, x, y, result ):
+    def eventFilter( self, object, event ):
         
-        if self.GetData():
+        if event.type() == QC.QEvent.Drop:
             
-            received_format = self._receiving_data_object.GetReceivedFormat()
+            if self.OnDrop( event.pos().x(), event.pos().y() ):
+
+                event.setDropAction( self.OnData( event.mimeData(), event.proposedAction() ) )
+                event.accept()
+                
             
-            received_format_type = received_format.GetType()
+        elif event.type() == QC.QEvent.DragEnter:
             
-            if received_format_type == wx.DF_FILENAME and self._filenames_callable is not None:
-                
-                paths = self._file_data_object.GetFilenames()
-                
-                wx.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
-                
-                result = wx.DragNone
-                
-            elif received_format_type in ( wx.DF_TEXT, wx.DF_UNICODETEXT ) and self._url_callable is not None:
-                
-                text = self._text_data_object.GetText()
-                
-                wx.CallAfter( self._url_callable, text ) # callafter to terminate dnd event now
-                
-                result = wx.DragCopy
-                
-            else:
-                
-                try:
+            event.accept()
+            
+        
+        return False
+        
+    
+    def OnData( self, mime_data, result ):
+        
+        if mime_data.formats():
+
+            if mime_data.formats().count( 'application/hydrus-media' ) and self._media_callable is not None:
+
+                mview = mime_data.data( 'application/hydrus-media' )
+
+                data_bytes = mview.data()
+
+                data_str = str( data_bytes, 'utf-8' )
+
+                (encoded_page_key, encoded_hashes) = json.loads( data_str )
+
+                if encoded_page_key is not None:
                     
-                    format_id = received_format.GetId()
+                    page_key = bytes.fromhex( encoded_page_key )
+                    hashes = [ bytes.fromhex( encoded_hash ) for encoded_hash in encoded_hashes ]
+
+                    QP.CallAfter( self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
                     
-                except:
-                    
-                    format_id = None
-                    
+
+                result = QC.Qt.MoveAction
                 
-                if format_id == 'application/hydrus-media' and self._media_callable is not None:
+            elif mime_data.hasUrls() and self._filenames_callable is not None:
+                
+                paths = []
+                urls = []
+                
+                for url in mime_data.urls():
                     
-                    mview = self._hydrus_media_data_object.GetData()
-                    
-                    data_bytes = mview.tobytes()
-                    
-                    data_str = str( data_bytes, 'utf-8' )
-                    
-                    ( encoded_page_key, encoded_hashes ) = json.loads( data_str )
-                    
-                    if encoded_page_key is not None:
+                    if url.isLocalFile():
                         
-                        page_key = bytes.fromhex( encoded_page_key )
-                        hashes = [ bytes.fromhex( encoded_hash ) for encoded_hash in encoded_hashes ]
+                        paths.append( os.path.normpath( url.toLocalFile() ) )
                         
-                        wx.CallAfter( self._media_callable, page_key, hashes ) # callafter so we can terminate dnd event now
+                    else:
                         
-                    
-                    result = wx.DragMove
+                        urls.append( url.url() )
+                        
                     
                 
-                if format_id == 'application/hydrus-page-tab' and self._page_callable is not None:
+                if len( paths ) > 0:
                     
-                    mview = self._hydrus_page_tab_data_object.GetData()
+                    QP.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
                     
-                    page_key = mview.tobytes()
+                
+                if len( urls ) > 0:
                     
-                    wx.CallAfter( self._page_callable, page_key ) # callafter so we can terminate dnd event now
+                    for url in urls:
+                        
+                        QP.CallAfter( self._url_callable, url ) # callafter to terminate dnd event now
+                        
                     
-                    result = wx.DragMove
-                    
+                
+                result = QC.Qt.IgnoreAction
+                
+            elif mime_data.hasText() and self._url_callable is not None:
+                
+                text = mime_data.text()
+                
+                QP.CallAfter( self._url_callable, text ) # callafter to terminate dnd event now
+                
+                result = QC.Qt.CopyAction
+                
+            else:                      
+                
+                result = QC.Qt.MoveAction
                 
             
         
@@ -219,8 +229,8 @@ class FileDropTarget( wx.DropTarget ):
         
         screen_position = ClientGUIFunctions.ClientToScreen( self._parent, ( x, y ) )
         
-        drop_tlp = ClientGUIFunctions.GetXYTopTLP( screen_position )
-        my_tlp = ClientGUIFunctions.GetTLP( self._parent )
+        drop_tlp = QW.QApplication.topLevelAt( screen_position )
+        my_tlp = self._parent.window()
         
         if drop_tlp == my_tlp:
             

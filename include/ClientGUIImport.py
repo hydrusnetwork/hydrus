@@ -34,7 +34,10 @@ from . import HydrusTags
 from . import HydrusText
 import os
 import re
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
@@ -56,7 +59,7 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 checker_options = panel.GetValue()
                 
@@ -67,7 +70,7 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
     
     def _SetToolTip( self ):
         
-        self.SetToolTip( self._checker_options.GetSummary() )
+        self.setToolTip( self._checker_options.GetSummary() )
         
     
     def _SetValue( self, checker_options ):
@@ -113,7 +116,7 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 file_import_options = panel.GetValue()
                 
@@ -124,7 +127,7 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _SetToolTip( self ):
         
-        self.SetToolTip( self._file_import_options.GetSummary() )
+        self.setToolTip( self._file_import_options.GetSummary() )
         
     
     def _SetValue( self, file_import_options ):
@@ -149,7 +152,7 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
         self._SetValue( file_import_options )
         
     
-class FilenameTaggingOptionsPanel( wx.Panel ):
+class FilenameTaggingOptionsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, tag_update_callable, filename_tagging_options = None, present_for_accompanying_file_list = False ):
         
@@ -160,25 +163,26 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
             
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         
-        self._notebook = wx.Notebook( self )
+        self._notebook = QW.QTabWidget( self )
         
         # eventually these will take 'regexoptions' or whatever object and 'showspecificfiles' as well
         
         self._simple_panel = self._SimplePanel( self._notebook, self._service_key, tag_update_callable, filename_tagging_options, present_for_accompanying_file_list )
         self._advanced_panel = self._AdvancedPanel( self._notebook, self._service_key, tag_update_callable, filename_tagging_options, present_for_accompanying_file_list )
         
-        self._notebook.AddPage( self._simple_panel, 'simple', select = True )
-        self._notebook.AddPage( self._advanced_panel, 'advanced' )
+        self._notebook.addTab( self._simple_panel, 'simple' )
+        self._notebook.setCurrentWidget( self._simple_panel )
+        self._notebook.addTab( self._advanced_panel, 'advanced' )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def GetFilenameTaggingOptions( self ):
@@ -215,11 +219,11 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         self._simple_panel.SetSelectedPaths( paths )
         
     
-    class _AdvancedPanel( wx.Panel ):
+    class _AdvancedPanel( QW.QWidget ):
         
         def __init__( self, parent, service_key, refresh_callable, filename_tagging_options, present_for_accompanying_file_list ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._service_key = service_key
             self._refresh_callable = refresh_callable
@@ -245,11 +249,11 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
             
-            self._regexes = wx.ListBox( self._regexes_panel )
-            self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
+            self._regexes = QW.QListWidget( self._regexes_panel )
+            self._regexes.itemDoubleClicked.connect( self.EventRemoveRegex )
             
-            self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
-            self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
+            self._regex_box = QW.QLineEdit()
+            self._regex_box.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._regexes, self.AddRegex ) )
             
             self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
             
@@ -260,20 +264,21 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._num_panel = ClientGUICommon.StaticBox( self, '#' )
             
-            self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 60, -1 ) )
-            self._num_base.SetValue( 1 )
-            self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+            self._num_base = QP.MakeQSpinBox( self._num_panel, min=-10000000, max=10000000, width = 60 )
+            self._num_base.setValue( 1 )
+            self._num_base.valueChanged.connect( self.EventRecalcNum )
             
-            self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 60, -1 ) )
-            self._num_step.SetValue( 1 )
-            self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+            self._num_step = QP.MakeQSpinBox( self._num_panel, min=-1000000, max=1000000, width = 60 )
+            self._num_step.setValue( 1 )
+            self._num_step.valueChanged.connect( self.EventRecalcNum )
             
-            self._num_namespace = wx.TextCtrl( self._num_panel, size = ( 100, -1 ) )
-            self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
+            self._num_namespace = QW.QLineEdit()
+            self._num_namespace.setFixedWidth( 100 )
+            self._num_namespace.textChanged.connect( self.EventNumNamespaceChanged )
             
             if not self._present_for_accompanying_file_list:
                 
-                self._num_panel.Hide()
+                self._num_panel.hide()
                 
             
             #
@@ -284,7 +289,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             for regex in regexes:
                 
-                self._regexes.Append( regex )
+                self._regexes.addItem( regex )
                 
             
             #
@@ -301,34 +306,34 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             #
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_VCENTER )
-            hbox.Add( self._num_base, CC.FLAGS_VCENTER )
-            hbox.Add( self._num_step, CC.FLAGS_VCENTER )
-            
-            self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.Add( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_VCENTER )
-            hbox.Add( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, QW.QLabel( '# base/step: ', self._num_panel ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._num_base, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._num_step, CC.FLAGS_VCENTER )
             
             self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            second_vbox = wx.BoxSizer( wx.VERTICAL )
+            hbox = QP.HBoxLayout()
             
-            second_vbox.Add( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            second_vbox.Add( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( hbox, QW.QLabel( '# namespace: ', self._num_panel ), CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            second_vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( second_vbox, self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( second_vbox, self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.Add( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
-            self.SetSizer( hbox )
+            self.setLayout( hbox )
             
         
         def _ConvertQuickRegexDataToListCtrlTuples( self, data ):
@@ -347,7 +352,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             with ClientGUIDialogs.DialogInputNamespaceRegex( self ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     ( namespace, regex ) = dlg.GetInfo()
                     
@@ -372,7 +377,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
                 with ClientGUIDialogs.DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         ( new_namespace, new_regex ) = dlg.GetInfo()
                         
@@ -391,9 +396,9 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._refresh_callable()
             
         
-        def EventAddRegex( self, event ):
+        def AddRegex( self ):
             
-            regex = self._regex_box.GetValue()
+            regex = self._regex_box.text()
             
             if regex != '':
                 
@@ -407,38 +412,41 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                     text += os.linesep * 2
                     text += str( e )
                     
-                    wx.MessageBox( text )
+                    QW.QMessageBox.critical( self, 'Error', text )
                     
                     return
                     
                 
-                self._regexes.Append( regex )
+                self._regexes.addItem( regex )
                 
-                self._regex_box.ChangeValue( '' )
+                self._regex_box.setText( '' )
                 
                 self._refresh_callable()
                 
             
         
-        def EventNumNamespaceChanged( self, event ):
+        def EventNumNamespaceChanged( self, val ):
             
             self._refresh_callable()
             
         
-        def EventRecalcNum( self, event ):
+        def EventRecalcNum( self, val ):
             
             self._refresh_callable()
             
         
-        def EventRemoveRegex( self, event ):
+        def EventRemoveRegex( self, item ):
             
-            selection = self._regexes.GetSelection()
+            selection = QP.ListWidgetGetSelection( self._regexes ) 
             
-            if selection != wx.NOT_FOUND:
+            if selection != -1:
                 
-                if len( self._regex_box.GetValue() ) == 0: self._regex_box.SetValue( self._regexes.GetString( selection ) )
+                if len( self._regex_box.text() ) == 0:
+                    
+                    self._regex_box.setText( self._regexes.item( selection ).text() )
+                    
                 
-                self._regexes.Delete( selection )
+                QP.ListWidgetDelete( self._regexes, selection )
                 
                 self._refresh_callable()
                 
@@ -448,12 +456,12 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             tags = set()
             
-            num_namespace = self._num_namespace.GetValue()
+            num_namespace = self._num_namespace.text()
             
             if num_namespace != '':
                 
-                num_base = self._num_base.GetValue()
-                num_step = self._num_step.GetValue()
+                num_base = self._num_base.value()
+                num_step = self._num_step.value()
                 
                 tag_num = num_base + index * num_step
                 
@@ -467,17 +475,17 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             quick_namespaces = self._quick_namespaces_list.GetData()
             
-            regexes = self._regexes.GetStrings()
+            regexes = QP.ListWidgetGetStrings( self._regexes )
             
             filename_tagging_options.AdvancedSetTuple( quick_namespaces, regexes )
             
         
     
-    class _SimplePanel( wx.Panel ):
+    class _SimplePanel( QW.QWidget ):
         
         def __init__( self, parent, service_key, refresh_callable, filename_tagging_options, present_for_accompanying_file_list ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._service_key = service_key
             self._refresh_callable = refresh_callable
@@ -513,22 +521,22 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             if not self._present_for_accompanying_file_list:
                 
-                self._single_tags_panel.Hide()
+                self._single_tags_panel.hide()
                 
             
             #
             
             self._checkboxes_panel = ClientGUICommon.StaticBox( self, 'misc' )
             
-            self._load_from_txt_files_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'try to load tags from neighbouring .txt files' )
+            self._load_from_txt_files_checkbox = QW.QCheckBox( 'try to load tags from neighbouring .txt files', self._checkboxes_panel )
             
-            txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.GlobalBMPs.help, self._ShowTXTHelp )
-            txt_files_help_button.SetToolTip( 'Show help regarding importing tags from .txt files.' )
+            txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.GlobalPixmaps.help, self._ShowTXTHelp )
+            txt_files_help_button.setToolTip( 'Show help regarding importing tags from .txt files.' )
             
-            self._filename_namespace = wx.TextCtrl( self._checkboxes_panel )
-            self._filename_namespace.SetMinSize( ( 100, -1 ) )
+            self._filename_namespace = QW.QLineEdit( self._checkboxes_panel )
+            self._filename_namespace.setMinimumWidth( 100 )
             
-            self._filename_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'add filename? [namespace]' )
+            self._filename_checkbox = QW.QCheckBox( 'add filename? [namespace]', self._checkboxes_panel )
             
             self._directory_namespace_controls = {}
             
@@ -543,10 +551,10 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             for ( index, phrase ) in directory_items:
                 
-                dir_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'add ' + phrase + ' directory? [namespace]' )
+                dir_checkbox = QW.QCheckBox( 'add '+phrase+' directory? [namespace]', self._checkboxes_panel )
                 
-                dir_namespace_textctrl = wx.TextCtrl( self._checkboxes_panel )
-                dir_namespace_textctrl.SetMinSize( ( 100, -1 ) )
+                dir_namespace_textctrl = QW.QLineEdit( self._checkboxes_panel )
+                dir_namespace_textctrl.setMinimumWidth( 100 )
                 
                 self._directory_namespace_controls[ index ] = ( dir_checkbox, dir_namespace_textctrl )
                 
@@ -556,72 +564,72 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             ( tags_for_all, load_from_neighbouring_txt_files, add_filename, directory_dict ) = filename_tagging_options.SimpleToTuple()
             
             self._tags.AddTags( tags_for_all )
-            self._load_from_txt_files_checkbox.SetValue( load_from_neighbouring_txt_files )
+            self._load_from_txt_files_checkbox.setChecked( load_from_neighbouring_txt_files )
             
             ( add_filename_boolean, add_filename_namespace ) = add_filename
             
-            self._filename_checkbox.SetValue( add_filename_boolean )
-            self._filename_namespace.SetValue( add_filename_namespace )
+            self._filename_checkbox.setChecked( add_filename_boolean )
+            self._filename_namespace.setText( add_filename_namespace )
             
             for ( index, ( dir_boolean, dir_namespace ) ) in list(directory_dict.items()):
                 
                 ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
                 
-                dir_checkbox.SetValue( dir_boolean )
-                dir_namespace_textctrl.SetValue( dir_namespace )
+                dir_checkbox.setChecked( dir_boolean )
+                dir_namespace_textctrl.setText( dir_namespace )
                 
-                dir_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
-                dir_namespace_textctrl.Bind( wx.EVT_TEXT, self.EventRefresh )
+                dir_checkbox.clicked.connect( self.EventRefresh )
+                dir_namespace_textctrl.textChanged.connect( self.EventRefresh )
                 
             
             #
             
             self._tags_panel.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._tags_panel.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._tags_panel.Add( self._tag_box )
             self._tags_panel.Add( self._tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._single_tags_panel.Add( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._single_tags_panel.Add( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._single_tags_panel.Add( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            txt_hbox = QP.HBoxLayout()
             
-            txt_hbox.Add( self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-            txt_hbox.Add( txt_files_help_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( txt_hbox, self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( txt_hbox, txt_files_help_button, CC.FLAGS_VCENTER )
             
-            filename_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            filename_hbox = QP.HBoxLayout()
             
-            filename_hbox.Add( self._filename_checkbox, CC.FLAGS_VCENTER )
-            filename_hbox.Add( self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( filename_hbox, self._filename_checkbox, CC.FLAGS_VCENTER )
+            QP.AddToLayout( filename_hbox, self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self._checkboxes_panel.Add( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self._checkboxes_panel.Add( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             for index in ( 0, 1, 2, -3, -2, -1 ):
                 
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                hbox = QP.HBoxLayout()
                 
                 ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
                 
-                hbox.Add( dir_checkbox, CC.FLAGS_VCENTER )
-                hbox.Add( dir_namespace_textctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+                QP.AddToLayout( hbox, dir_checkbox, CC.FLAGS_VCENTER )
+                QP.AddToLayout( hbox, dir_namespace_textctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._checkboxes_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.Add( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.Add( self._checkboxes_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( hbox, self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._checkboxes_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self.SetSizer( hbox )
+            self.setLayout( hbox )
             
             #
             
-            self._load_from_txt_files_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
-            self._filename_namespace.Bind( wx.EVT_TEXT, self.EventRefresh )
-            self._filename_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+            self._load_from_txt_files_checkbox.clicked.connect( self.EventRefresh )
+            self._filename_namespace.textChanged.connect( self.EventRefresh )
+            self._filename_checkbox.clicked.connect( self.EventRefresh )
             
         
         def _GetTagsFromClipboard( self ):
@@ -632,7 +640,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.critical( self, 'Error', str(e) )
                 
                 return
                 
@@ -659,7 +667,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.critical( self, 'Error', str(e) )
                 
                 return
                 
@@ -675,7 +683,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.critical( self, 'Error', str(e) )
                 
                 return
                 
@@ -695,7 +703,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             message += os.linesep * 2
             message += 'Make sure you preview the results in the table above to be certain everything is parsing correctly. Until you are comfortable with this, you should test it on just one or two files.'
             
-            wx.MessageBox( message )
+            QW.QMessageBox.information( self, 'Information', message )
             
         
         def EnterTags( self, tags ):
@@ -754,7 +762,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
             
         
-        def EventRefresh( self, event ):
+        def EventRefresh( self ):
             
             self._refresh_callable()
             
@@ -799,13 +807,13 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                         
                     
                 
-                self._single_tag_box.Enable()
-                self._single_tags_paste_button.Enable()
+                self._single_tag_box.setEnabled( True )
+                self._single_tags_paste_button.setEnabled( True )
                 
             else:
                 
-                self._single_tag_box.Disable()
-                self._single_tags_paste_button.Disable()
+                self._single_tag_box.setEnabled( False )
+                self._single_tags_paste_button.setEnabled( False )
                 
             
             self._single_tags.SetTags( single_tags )
@@ -819,15 +827,15 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         def UpdateFilenameTaggingOptions( self, filename_tagging_options ):
             
             tags_for_all = self._tags.GetTags()
-            load_from_neighbouring_txt_files = self._load_from_txt_files_checkbox.GetValue()
+            load_from_neighbouring_txt_files = self._load_from_txt_files_checkbox.isChecked()
             
-            add_filename = ( self._filename_checkbox.GetValue(), self._filename_namespace.GetValue() )
+            add_filename = ( self._filename_checkbox.isChecked(), self._filename_namespace.text() )
             
             directories_dict = {}
             
-            for ( index, ( dir_checkbox, dir_namespace_textctrl ) ) in list(self._directory_namespace_controls.items()):
+            for ( index, ( dir_checkbox, dir_namespace_textctrl ) ) in self._directory_namespace_controls.items():
                 
-                directories_dict[ index ] = ( dir_checkbox.GetValue(), dir_namespace_textctrl.GetValue() )
+                directories_dict[ index ] = ( dir_checkbox.isChecked(), dir_namespace_textctrl.text() )
                 
             
             filename_tagging_options.SimpleSetTuple( tags_for_all, load_from_neighbouring_txt_files, add_filename, directories_dict )
@@ -860,22 +868,22 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         intro = 'Here you can set the client to regularly check certain folders for new files to import.'
         
-        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         warning = 'WARNING: Import folders check (and potentially move/delete!) the contents of all subdirectories as well as the base directory!'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         
-        warning_st.SetForegroundColour( ( 128, 0, 0 ) )
+        QP.SetForegroundColour( warning_st, (128,0,0) )
         
-        vbox.Add( warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( import_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, import_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _Add( self ):
@@ -888,7 +896,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 import_folder = panel.GetValue()
                 
@@ -941,7 +949,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_import_folder = panel.GetValue()
                     
@@ -987,31 +995,29 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = self._import_folder.ToTuple()
         
-        self._panel = wx.ScrolledWindow( self )
+        self._folder_box = ClientGUICommon.StaticBox( self, 'folder options' )
         
-        self._folder_box = ClientGUICommon.StaticBox( self._panel, 'folder options' )
+        self._name = QW.QLineEdit( self._folder_box )
         
-        self._name = wx.TextCtrl( self._folder_box )
+        self._path = QP.DirPickerCtrl( self._folder_box )
         
-        self._path = wx.DirPickerCtrl( self._folder_box, style = wx.DIRP_USE_TEXTCTRL )
-        
-        self._check_regularly = wx.CheckBox( self._folder_box )
+        self._check_regularly = QW.QCheckBox( self._folder_box )
         
         self._period = ClientGUITime.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
-        self._paused = wx.CheckBox( self._folder_box )
+        self._paused = QW.QCheckBox( self._folder_box )
         
-        self._check_now = wx.CheckBox( self._folder_box )
+        self._check_now = QW.QCheckBox( self._folder_box )
         
-        self._show_working_popup = wx.CheckBox( self._folder_box )
-        self._publish_files_to_popup_button = wx.CheckBox( self._folder_box )
-        self._publish_files_to_page = wx.CheckBox( self._folder_box )
+        self._show_working_popup = QW.QCheckBox( self._folder_box )
+        self._publish_files_to_popup_button = QW.QCheckBox( self._folder_box )
+        self._publish_files_to_page = QW.QCheckBox( self._folder_box )
         
         self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
         
         #
         
-        self._file_box = ClientGUICommon.StaticBox( self._panel, 'file options' )
+        self._file_box = ClientGUICommon.StaticBox( self, 'file options' )
         
         self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( self._file_box, HC.ALLOWED_MIMES )
         
@@ -1021,25 +1027,25 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for if_id in ( CC.IMPORT_FOLDER_DELETE, CC.IMPORT_FOLDER_IGNORE, CC.IMPORT_FOLDER_MOVE ):
                 
-                choice.Append( CC.import_folder_string_lookup[ if_id ], if_id )
+                choice.addItem( CC.import_folder_string_lookup[ if_id], if_id )
                 
             
-            choice.Bind( wx.EVT_CHOICE, self.EventCheckLocations )
+            choice.currentIndexChanged.connect( self._CheckLocations )
             
             return choice
             
         
         self._action_successful = create_choice()
-        self._location_successful = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        self._location_successful = QP.DirPickerCtrl( self._file_box )
         
         self._action_redundant = create_choice()
-        self._location_redundant = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        self._location_redundant = QP.DirPickerCtrl( self._file_box )
         
         self._action_deleted = create_choice()
-        self._location_deleted = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        self._location_deleted = QP.DirPickerCtrl( self._file_box )
         
         self._action_failed = create_choice()
-        self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
+        self._location_failed = QP.DirPickerCtrl( self._file_box )
         
         show_downloader_options = False
         
@@ -1047,7 +1053,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
+        self._tag_box = ClientGUICommon.StaticBox( self, 'tag options' )
         
         self._tag_import_options = TagImportOptionsButton( self._tag_box, tag_import_options, show_downloader_options )
         
@@ -1069,17 +1075,17 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         self._path.SetPath( path )
         
-        self._check_regularly.SetValue( check_regularly )
+        self._check_regularly.setChecked( check_regularly )
         
         self._period.SetValue( period )
-        self._paused.SetValue( paused )
+        self._paused.setChecked( paused )
         
-        self._show_working_popup.SetValue( show_working_popup )
-        self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
-        self._publish_files_to_page.SetValue( publish_files_to_page )
+        self._show_working_popup.setChecked( show_working_popup )
+        self._publish_files_to_popup_button.setChecked( publish_files_to_popup_button )
+        self._publish_files_to_page.setChecked( publish_files_to_page )
         
         self._mimes.SetValue( mimes )
         
@@ -1140,25 +1146,25 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         mimes_gridbox = ClientGUICommon.WrapInGrid( self._file_box, rows, expand_text = True )
         
-        gridbox = wx.FlexGridSizer( 3 )
+        gridbox = QP.GridLayout( cols = 3 )
         
-        gridbox.AddGrowableCol( 1, 1 )
+        gridbox.setColumnStretch( 1, 1 )
         
-        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_VCENTER )
-        gridbox.Add( self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file imports successfully: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_VCENTER )
-        gridbox.Add( self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file is already in the db: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file has previously been deleted from the db: '), CC.FLAGS_VCENTER )
-        gridbox.Add( self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file has previously been deleted from the db: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_VCENTER )
-        gridbox.Add( self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, QW.QLabel( 'when a file fails to import: ', self._file_box ), CC.FLAGS_VCENTER )
+        QP.AddToLayout( gridbox, self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._file_box.Add( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1173,23 +1179,17 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._panel.SetSizer( vbox )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._CheckLocations()
         
-        self._check_regularly.Bind( wx.EVT_CHECKBOX, self.EventCheckRegularly )
+        self._check_regularly.clicked.connect( self._UpdateCheckRegularly )
         
         self._UpdateCheckRegularly()
         
@@ -1207,7 +1207,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if service_key in existing_service_keys:
             
-            wx.MessageBox( 'You already have an entry for that service key! Please try editing it instead!' )
+            QW.QMessageBox.critical( self, 'Error', 'You already have an entry for that service key! Please try editing it instead!' )
             
             return
             
@@ -1220,7 +1220,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 filename_tagging_options = panel.GetValue()
                 
@@ -1235,38 +1235,38 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._action_successful.GetValue() == CC.IMPORT_FOLDER_MOVE:
             
-            self._location_successful.Enable()
+            self._location_successful.setEnabled( True )
             
         else:
             
-            self._location_successful.Disable()
+            self._location_successful.setEnabled( False )
             
         
         if self._action_redundant.GetValue() == CC.IMPORT_FOLDER_MOVE:
             
-            self._location_redundant.Enable()
+            self._location_redundant.setEnabled( True )
             
         else:
             
-            self._location_redundant.Disable()
+            self._location_redundant.setEnabled( False )
             
         
         if self._action_deleted.GetValue() == CC.IMPORT_FOLDER_MOVE:
             
-            self._location_deleted.Enable()
+            self._location_deleted.setEnabled( True )
             
         else:
             
-            self._location_deleted.Disable()
+            self._location_deleted.setEnabled( False )
             
         
         if self._action_failed.GetValue() == CC.IMPORT_FOLDER_MOVE:
             
-            self._location_failed.Enable()
+            self._location_failed.setEnabled( True )
             
         else:
             
-            self._location_failed.Disable()
+            self._location_failed.setEnabled( False )
             
         
     
@@ -1281,7 +1281,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not os.path.exists( path ):
             
-            wx.MessageBox( 'The path you have entered--"' + path + '"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
+            QW.QMessageBox.warning( self, 'Warning', 'The path you have entered--"'+path+'"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
             
         
         if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):
@@ -1300,7 +1300,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                wx.MessageBox( 'The path you have entered for your successful file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your successful file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -1315,7 +1315,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                wx.MessageBox( 'The path you have entered for your redundant file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your redundant file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -1330,7 +1330,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                wx.MessageBox( 'The path you have entered for your deleted file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your deleted file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -1345,7 +1345,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                wx.MessageBox( 'The path you have entered for your failed file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your failed file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -1376,7 +1376,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._filename_tagging_options.DeleteDatas( ( data, ) )
                     
@@ -1394,31 +1394,21 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateCheckRegularly( self ):
         
-        if self._check_regularly.GetValue():
+        if self._check_regularly.isChecked():
             
-            self._period.Enable()
+            self._period.setEnabled( True )
             
         else:
             
-            self._period.Disable()
+            self._period.setEnabled( False )
             
-        
-    
-    def EventCheckRegularly( self, event ):
-        
-        self._UpdateCheckRegularly()
-        
-    
-    def EventCheckLocations( self, event ):
-        
-        self._CheckLocations()
         
     
     def GetValue( self ):
         
         self._CheckValid()
         
-        name = self._name.GetValue()
+        name = self._name.text()
         path = self._path.GetPath()
         mimes = self._mimes.GetValue()
         file_import_options = self._file_import_options.GetValue()
@@ -1452,15 +1442,15 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         period = self._period.GetValue()
-        check_regularly = self._check_regularly.GetValue()
+        check_regularly = self._check_regularly.isChecked()
         
-        paused = self._paused.GetValue()
+        paused = self._paused.isChecked()
         
-        check_now = self._check_now.GetValue()
+        check_now = self._check_now.isChecked()
         
-        show_working_popup = self._show_working_popup.GetValue()
-        publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
-        publish_files_to_page = self._publish_files_to_page.GetValue()
+        show_working_popup = self._show_working_popup.isChecked()
+        publish_files_to_popup_button = self._publish_files_to_popup_button.isChecked()
+        publish_files_to_page = self._publish_files_to_page.isChecked()
         
         tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
         
@@ -1495,16 +1485,17 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             select = service_key == default_tag_repository_key
             
-            self._tag_repositories.AddPage( page, name, select = select )
+            tab_index = self._tag_repositories.addTab( page, name )
+            if select: self._tag_repositories.setCurrentIndex( tab_index )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
@@ -1529,11 +1520,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         return paths_to_service_keys_to_tags
         
     
-    class _Panel( wx.Panel ):
+    class _Panel( QW.QWidget ):
         
         def __init__( self, parent, service_key, paths ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._service_key = service_key
             self._paths = paths
@@ -1542,8 +1533,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 10, 40, columns, self._ConvertDataToListCtrlTuples )
             
-            self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            self._paths_list.itemSelectionChanged.connect( self.EventItemSelected )
             
             #
             
@@ -1558,12 +1548,12 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._filename_tagging_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._filename_tagging_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self.SetSizer( vbox )
+            self.setLayout( vbox )
             
         
         def _ConvertDataToListCtrlTuples( self, data ):
@@ -1598,14 +1588,12 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             return tags
             
         
-        def EventItemSelected( self, event ):
+        def EventItemSelected( self ):
             
             paths = [ path for ( index, path ) in self._paths_list.GetData( only_selected = True ) ]
             
             self._filename_tagging_panel.SetSelectedPaths( paths )
-            
-            event.Skip()
-            
+                        
         
         def GetInfo( self ):
             
@@ -1628,7 +1616,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._schedule_refresh_file_list_job = None
                 
             
-            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.RefreshFileList )
+            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe(self, 0.5, self.RefreshFileList)
             
         
     
@@ -1640,8 +1628,8 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._service_key = service_key
         
-        self._example_path_input = wx.TextCtrl( self )
-        self._example_output = wx.TextCtrl( self )
+        self._example_path_input = QW.QLineEdit( self )
+        self._example_output = QW.QLineEdit( self )
         
         self._filename_tagging_options_panel = FilenameTaggingOptionsPanel( self, self._service_key, self.ScheduleRefreshTags, filename_tagging_options = filename_tagging_options, present_for_accompanying_file_list = False )
         
@@ -1649,27 +1637,22 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._example_path_input.SetValue( 'enter example path here' )
-        self._example_output.Disable()
+        self._example_path_input.setText( 'enter example path here' )
+        self._example_output.setEnabled( False )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._example_path_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._example_output, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._example_path_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_output, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._example_path_input.Bind( wx.EVT_TEXT, self.EventText )
-        
-    
-    def EventText( self, event ):
-        
-        self.ScheduleRefreshTags()
+        self._example_path_input.textChanged.connect( self.ScheduleRefreshTags )
         
     
     def GetValue( self ):
@@ -1679,7 +1662,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def RefreshTags( self ):
         
-        example_path_input = self._example_path_input.GetValue()
+        example_path_input = self._example_path_input.text()
         
         filename_tagging_options = self.GetValue()
         
@@ -1692,7 +1675,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
             tags = [ 'could not parse' ]
             
         
-        self._example_output.SetValue( ', '.join( tags ) )
+        self._example_output.setText( ', '.join( tags ) )
         
     
     def ScheduleRefreshTags( self ):
@@ -1704,7 +1687,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._schedule_refresh_tags_job = None
             
         
-        self._schedule_refresh_tags_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.RefreshTags )
+        self._schedule_refresh_tags_job = HG.client_controller.CallLaterQtSafe(self, 0.5, self.RefreshTags)
         
     
 class GalleryImportPanel( ClientGUICommon.StaticBox ):
@@ -1719,30 +1702,30 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._query_text = wx.TextCtrl( self )
-        self._query_text.SetEditable( False )
+        self._query_text = QW.QLineEdit( self )
+        self._query_text.setReadOnly( True )
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
         
-        self._file_status = ClientGUICommon.BetterStaticText( self._import_queue_panel, style = wx.ST_ELLIPSIZE_END )
+        self._file_status = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
-        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.pause, self.PauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalPixmaps.pause, self.PauseFiles )
         
         self._gallery_panel = ClientGUICommon.StaticBox( self, 'gallery parser' )
         
-        self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, style = wx.ST_ELLIPSIZE_END )
+        self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, ellipsize_end = True )
         
-        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.GlobalBMPs.pause, self.PauseGallery )
+        self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.GlobalPixmaps.pause, self.PauseGallery )
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, page_key = self._page_key )
         
         self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self, 'stop after this many files', min = 1, none_phrase = 'no limit' )
-        self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
-        self._file_limit.SetToolTip( 'stop searching the gallery once this many files has been reached' )
+        self._file_limit.valueChanged.connect( self.EventFileLimit )
+        self._file_limit.setToolTip( 'stop searching the gallery once this many files has been reached' )
         
         file_import_options = ClientImportOptions.FileImportOptions()
         tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
@@ -1754,10 +1737,10 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._gallery_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._gallery_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._gallery_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._gallery_pause_button, CC.FLAGS_VCENTER )
         
         self._gallery_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1765,10 +1748,10 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._files_pause_button, CC.FLAGS_VCENTER )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1808,18 +1791,18 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         if self._gallery_import is None:
             
-            self._import_queue_panel.Disable()
-            self._gallery_panel.Disable()
+            self._import_queue_panel.setEnabled( False )
+            self._gallery_panel.setEnabled( False )
             
-            self._file_limit.Disable()
-            self._file_import_options.Disable()
-            self._tag_import_options.Disable()
+            self._file_limit.setEnabled( False )
+            self._file_import_options.setEnabled( False )
+            self._tag_import_options.setEnabled( False )
             
-            self._query_text.SetValue( '' )
+            self._query_text.setText( '' )
             
-            self._file_status.SetLabelText( '' )
+            self._file_status.setText( '' )
             
-            self._gallery_status.SetLabelText( '' )
+            self._gallery_status.setText( '' )
             
             self._file_seed_cache_control.SetFileSeedCache( None )
             
@@ -1830,16 +1813,16 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            self._import_queue_panel.Enable()
-            self._gallery_panel.Enable()
+            self._import_queue_panel.setEnabled( True )
+            self._gallery_panel.setEnabled( True )
             
-            self._file_limit.Enable()
-            self._file_import_options.Enable()
-            self._tag_import_options.Enable()
+            self._file_limit.setEnabled( True )
+            self._file_import_options.setEnabled( True )
+            self._tag_import_options.setEnabled( True )
             
             query = self._gallery_import.GetQueryText()
             
-            self._query_text.SetValue( query )
+            self._query_text.setText( query )
             
             file_limit = self._gallery_import.GetFileLimit()
             
@@ -1871,20 +1854,20 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
             if files_paused:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.pause )
                 
             
             if gallery_paused:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalPixmaps.pause )
                 
             
             if gallery_paused:
@@ -1899,7 +1882,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
                     
                 
             
-            self._gallery_status.SetLabelText( gallery_status )
+            self._gallery_status.setText( gallery_status )
             
             if files_paused:
                 
@@ -1913,7 +1896,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
                     
                 
             
-            self._file_status.SetLabelText( file_status )
+            self._file_status.setText( file_status )
             
             ( file_network_job, gallery_network_job ) = self._gallery_import.GetNetworkJobs()
             
@@ -1923,14 +1906,12 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         
     
-    def EventFileLimit( self, event ):
+    def EventFileLimit( self ):
         
         if self._gallery_import is not None:
             
             self._gallery_import.SetFileLimit( self._file_limit.GetValue() )
             
-        
-        event.Skip()
         
     
     def PauseFiles( self ):
@@ -2079,7 +2060,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
             label = 'not found: ' + label
             
         
-        self.SetLabelText( label )
+        self.setText( label )
         
     
     def _SetValue( self, gug_key_and_name ):
@@ -2119,7 +2100,8 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         
         #
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         
     
     def _Copy( self ):
@@ -2137,7 +2119,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 tag_import_options = panel.GetValue()
                 
@@ -2154,7 +2136,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -2172,7 +2154,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         except Exception as e:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
             HydrusData.ShowException( e )
             
@@ -2187,7 +2169,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         
         summary = self._tag_import_options.GetSummary( self._show_downloader_options )
         
-        self.SetToolTip( summary )
+        self.setToolTip( summary )
         
     
     def _SetValue( self, tag_import_options ):
@@ -2204,19 +2186,19 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def EventShowMenu( self, event ):
         
-        menu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'copy to clipboard', 'Serialise this tag import options and copy it to clipboard.', self._Copy )
+        menu = QW.QMenu()
+
+        ClientGUIMenus.AppendMenuItem( menu, 'copy to clipboard', 'Serialise this tag import options and copy it to clipboard.', self._Copy )
         
         ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'paste from clipboard', 'Try to import serialised tag import options from the clipboard.', self._Paste )
+
+        ClientGUIMenus.AppendMenuItem( menu, 'paste from clipboard', 'Try to import serialised tag import options from the clipboard.', self._Paste )
         
         if not self._tag_import_options.IsDefault():
             
             ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'set to default', 'Set this tag import options to defer to the defaults.', self._SetDefault )
+
+            ClientGUIMenus.AppendMenuItem( menu, 'set to default', 'Set this tag import options to defer to the defaults.', self._SetDefault )
             
         
         HG.client_controller.PopupMenu( self, menu )
@@ -2246,20 +2228,20 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._page_key = page_key
         self._watcher = None
         
-        self._watcher_subject = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
+        self._watcher_subject = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         
-        self._watcher_url = wx.TextCtrl( self )
-        self._watcher_url.SetEditable( False )
+        self._watcher_url = QW.QLineEdit( self )
+        self._watcher_url.setReadOnly( True )
         
-        self._options_panel = wx.Panel( self )
+        self._options_panel = QW.QWidget( self )
         
         #
         
         imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'file imports' )
         
-        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalBMPs.pause, self.PauseFiles )
+        self._files_pause_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalPixmaps.pause, self.PauseFiles )
         
-        self._file_status = ClientGUICommon.BetterStaticText( imports_panel, style = wx.ST_ELLIPSIZE_END )
+        self._file_status = ClientGUICommon.BetterStaticText( imports_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
         
@@ -2267,14 +2249,14 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         checker_panel = ClientGUICommon.StaticBox( self._options_panel, 'checker' )
         
-        self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
+        self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, ellipsize_end = True )
         
-        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.GlobalBMPs.pause, self.PauseChecking )
+        self._checking_pause_button = ClientGUICommon.BetterBitmapButton( checker_panel, CC.GlobalPixmaps.pause, self.PauseChecking )
         
-        self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
+        self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, ellipsize_end = True )
         
-        self._check_now_button = wx.Button( checker_panel, label = 'check now' )
-        self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
+        self._check_now_button = QW.QPushButton( 'check now', checker_panel )
+        self._check_now_button.clicked.connect( self.EventCheckNow )
         
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, HG.client_controller, True, False, page_key = self._page_key )
         
@@ -2294,10 +2276,10 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._file_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._files_pause_button, CC.FLAGS_VCENTER )
         
         imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         imports_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2305,15 +2287,15 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
+        hbox_1 = QP.HBoxLayout()
         
-        hbox_1.Add( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox_1.Add( self._checking_pause_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox_1, self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox_1, self._checking_pause_button, CC.FLAGS_VCENTER )
         
-        hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
+        hbox_2 = QP.HBoxLayout()
         
-        hbox_2.Add( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox_2.Add( self._check_now_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox_2, self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox_2, self._check_now_button, CC.FLAGS_VCENTER )
         
         checker_panel.Add( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         checker_panel.Add( hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2321,12 +2303,12 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.Add( self._checker_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._options_panel.SetSizer( vbox )
+        self._options_panel.setLayout( vbox )
         
         self.Add( self._watcher_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._watcher_url, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2369,20 +2351,20 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         if self._watcher is None:
             
-            self._options_panel.Disable()
+            self._options_panel.setEnabled( False )
             
-            self._file_import_options.Disable()
-            self._tag_import_options.Disable()
+            self._file_import_options.setEnabled( False )
+            self._tag_import_options.setEnabled( False )
             
-            self._watcher_subject.SetLabelText( '' )
+            self._watcher_subject.setText( '' )
             
-            self._watcher_url.SetValue( '' )
+            self._watcher_url.setText( '' )
             
-            self._file_status.SetLabelText( '' )
+            self._file_status.setText( '' )
             
-            self._file_velocity_status.SetLabelText( '' )
+            self._file_velocity_status.setText( '' )
             
-            self._watcher_status.SetLabelText( '' )
+            self._watcher_status.setText( '' )
             
             self._file_seed_cache_control.SetFileSeedCache( None )
             
@@ -2393,20 +2375,20 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            self._options_panel.Enable()
+            self._options_panel.setEnabled( True )
             
-            self._file_import_options.Enable()
-            self._tag_import_options.Enable()
+            self._file_import_options.setEnabled( True )
+            self._tag_import_options.setEnabled( True )
             
             if self._watcher.HasURL():
                 
                 url = self._watcher.GetURL()
                 
-                self._watcher_url.SetValue( url )
+                self._watcher_url.setText( url )
                 
             else:
                 
-                self._watcher_url.SetValue( '' )
+                self._watcher_url.setText( '' )
                 
             
             checker_options = self._watcher.GetCheckerOptions()
@@ -2448,16 +2430,16 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                     file_status = 'pausing, ' + file_status
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.play )
                 
             else:
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalPixmaps.pause )
                 
             
-            self._file_status.SetLabelText( file_status )
+            self._file_status.setText( file_status )
             
-            self._file_velocity_status.SetLabelText( file_velocity_status )
+            self._file_velocity_status.setText( file_velocity_status )
             
             if checking_paused:
                 
@@ -2466,7 +2448,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                     watcher_status = 'paused'
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.play )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.play )
                 
             else:
                 
@@ -2482,22 +2464,22 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                         
                     
                 
-                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.pause )
+                ClientGUIFunctions.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalPixmaps.pause )
                 
             
-            self._watcher_status.SetLabelText( watcher_status )
+            self._watcher_status.setText( watcher_status )
             
             if checking_status == ClientImporting.CHECKER_STATUS_404:
                 
-                self._checking_pause_button.Disable()
+                self._checking_pause_button.setEnabled( False )
                 
             elif checking_status == ClientImporting.CHECKER_STATUS_DEAD:
                 
-                self._checking_pause_button.Disable()
+                self._checking_pause_button.setEnabled( False )
                 
             else:
                 
-                self._checking_pause_button.Enable()
+                self._checking_pause_button.setEnabled( True )
                 
             
             if subject in ( '', 'unknown subject' ):
@@ -2505,15 +2487,15 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
                 subject = 'no subject'
                 
             
-            self._watcher_subject.SetLabelText( subject )
+            self._watcher_subject.setText( subject )
             
             if check_now:
                 
-                self._check_now_button.Disable()
+                self._check_now_button.setEnabled( False )
                 
             else:
                 
-                self._check_now_button.Enable()
+                self._check_now_button.setEnabled( True )
                 
             
             ( file_network_job, checker_network_job ) = self._watcher.GetNetworkJobs()
@@ -2524,7 +2506,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
             
         
     
-    def EventCheckNow( self, event ):
+    def EventCheckNow( self ):
         
         if self._watcher is not None:
             

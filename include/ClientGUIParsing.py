@@ -35,7 +35,11 @@ import sys
 import threading
 import traceback
 import time
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -51,9 +55,9 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items.append( ( 'normal', 'open the downloader sharing help', 'Open the help page for sharing downloaders in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -76,12 +80,12 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddDomainMetadata( self ):
@@ -90,7 +94,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 domain = dlg.GetValue()
                 
@@ -108,7 +112,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            wx.MessageBox( 'No headers/bandwidth rules found!' )
+            QW.QMessageBox.information( self, 'Information', 'No headers/bandwidth rules found!' )
             
         
     
@@ -126,7 +130,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 gugs_to_include = panel.GetValue()
                 
@@ -168,7 +172,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 login_scripts_to_include = panel.GetValue()
                 
@@ -195,7 +199,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 parsers_to_include = panel.GetValue()
                 
@@ -222,7 +226,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 url_classes_to_include = panel.GetValue()
                 
@@ -286,7 +290,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result != wx.ID_YES:
+        if result != QW.QDialog.Accepted:
             
             return
             
@@ -326,7 +330,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
     
@@ -427,7 +431,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for domain_metadata in domain_metadatas:
             
-            wx.MessageBox( domain_metadata.GetDetailedSafeSummary() )
+            QW.QMessageBox.information( self, 'Information', domain_metadata.GetDetailedSafeSummary() )
             
         
         return domain_metadatas
@@ -520,18 +524,19 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._formulae = wx.ListBox( edit_panel, style = wx.LB_SINGLE )
-        self._formulae.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+        self._formulae = QW.QListWidget( edit_panel )
+        self._formulae.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+        self._formulae.itemDoubleClicked.connect( self.Edit )
         
         self._add_formula = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
         
@@ -543,7 +548,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._move_formula_down = ClientGUICommon.BetterButton( edit_panel, '\u2193', self.MoveDown )
         
-        self._sub_phrase = wx.TextCtrl( edit_panel )
+        self._sub_phrase = QW.QLineEdit( edit_panel )
         
         ( formulae, sub_phrase, string_match, string_converter ) = formula.ToTuple()
         
@@ -555,7 +560,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -565,30 +570,33 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_formula = formula.ToPrettyString()
             
-            self._formulae.Append( pretty_formula, formula )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_formula )
+            item.setData( QC.Qt.UserRole, formula )
+            self._formulae.addItem( item )
             
         
-        self._sub_phrase.SetValue( sub_phrase )
+        self._sub_phrase.setText( sub_phrase )
         
         #
         
-        udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        udd_button_vbox = QP.VBoxLayout()
         
-        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        udd_button_vbox.Add( self._move_formula_up, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( self._delete_formula, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( self._move_formula_down, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( udd_button_vbox, self._move_formula_up, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, self._delete_formula, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, self._move_formula_down, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        formulae_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        formulae_hbox = QP.HBoxLayout()
         
-        formulae_hbox.Add( self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
-        formulae_hbox.Add( udd_button_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( formulae_hbox, self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( formulae_hbox, udd_button_vbox, CC.FLAGS_VCENTER )
         
-        ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        ae_button_hbox = QP.HBoxLayout()
         
-        ae_button_hbox.Add( self._add_formula, CC.FLAGS_VCENTER )
-        ae_button_hbox.Add( self._edit_formula, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._add_formula, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._edit_formula, CC.FLAGS_VCENTER )
         
         rows = []
         
@@ -599,7 +607,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -609,17 +617,17 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def Add( self ):
@@ -632,41 +640,44 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 new_formula = panel.GetValue()
                 
                 pretty_formula = new_formula.ToPrettyString()
                 
-                self._formulae.Append( pretty_formula, new_formula )
+                item = QW.QListWidgetItem()
+                item.setText( pretty_formula )
+                item.setData( QC.Qt.UserRole, new_formula )
+                self._formulae.addItem( item )
                 
             
         
     
     def Delete( self ):
         
-        selection = self._formulae.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._formulae ) 
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            if self._formulae.GetCount() == 1:
+            if self._formulae.count() == 1:
                 
-                wx.MessageBox( 'A compound formula needs at least one sub-formula!' )
+                QW.QMessageBox.critical( self, 'Error', 'A compound formula needs at least one sub-formula!' )
                 
             else:
                 
-                self._formulae.Delete( selection )
+                QP.ListWidgetDelete( self._formulae, selection )
                 
             
         
     
     def Edit( self ):
         
-        selection = self._formulae.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._formulae ) 
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            old_formula = self._formulae.GetClientData( selection )
+            old_formula = QP.GetClientData( self._formulae, selection )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
@@ -674,29 +685,24 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     new_formula = panel.GetValue()
                     
                     pretty_formula = new_formula.ToPrettyString()
                     
-                    self._formulae.SetString( selection, pretty_formula )
-                    self._formulae.SetClientData( selection, new_formula )
+                    self._formulae.item( selection ).setText( pretty_formula )
+                    self._formulae.item( selection ).setData( QC.Qt.UserRole, new_formula )
                     
                 
             
         
     
-    def EventEdit( self, event ):
-        
-        self.Edit()
-        
-    
     def GetValue( self ):
         
-        formulae = [ self._formulae.GetClientData( i ) for i in range( self._formulae.GetCount() ) ]
+        formulae = [ QP.GetClientData( self._formulae, i ) for i in range( self._formulae.count() ) ]
         
-        sub_phrase = self._sub_phrase.GetValue()
+        sub_phrase = self._sub_phrase.text()
         
         string_match = self._string_match_button.GetValue()
         
@@ -709,31 +715,37 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def MoveDown( self ):
         
-        selection = self._formulae.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._formulae ) 
         
-        if selection != wx.NOT_FOUND and selection + 1 < self._formulae.GetCount():
+        if selection != -1 and selection + 1 < self._formulae.count():
             
-            pretty_rule = self._formulae.GetString( selection )
-            rule = self._formulae.GetClientData( selection )
+            pretty_rule = self._formulae.item( selection ).text()
+            rule = QP.GetClientData( self._formulae, selection )
             
-            self._formulae.Delete( selection )
+            QP.ListWidgetDelete( self._formulae, selection )
             
-            self._formulae.Insert( pretty_rule, selection + 1, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._formulae.insertItem( selection + 1, item )
             
         
     
     def MoveUp( self ):
         
-        selection = self._formulae.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._formulae ) 
         
-        if selection != wx.NOT_FOUND and selection > 0:
+        if selection != -1 and selection > 0:
             
-            pretty_rule = self._formulae.GetString( selection )
-            rule = self._formulae.GetClientData( selection )
+            pretty_rule = self._formulae.item( selection ).text()
+            rule = QP.GetClientData( self._formulae, selection )
             
-            self._formulae.Delete( selection )
+            QP.ListWidgetDelete( self._formulae, selection )
             
-            self._formulae.Insert( pretty_rule, selection - 1, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._formulae.insertItem( selection - 1, item )
             
         
     
@@ -751,17 +763,17 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the context variable formula help', 'Open the help page for context variable formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._variable_name = wx.TextCtrl( edit_panel )
+        self._variable_name = QW.QLineEdit( edit_panel )
         
         ( variable_name, string_match, string_converter ) = formula.ToTuple()
         
@@ -773,13 +785,13 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
         #
         
-        self._variable_name.SetValue( variable_name )
+        self._variable_name.setText( variable_name )
         
         #
         
@@ -790,7 +802,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -800,22 +812,22 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def GetValue( self ):
         
-        variable_name = self._variable_name.GetValue()
+        variable_name = self._variable_name.text()
         
         string_match = self._string_match_button.GetValue()
         
@@ -839,13 +851,14 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         my_panel = ClientGUICommon.StaticBox( self, 'formula' )
         
-        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( my_panel )
+        self._formula_description = QW.QPlainTextEdit( my_panel )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._formula_description, ( 90, 8 ) )
         
-        self._formula_description.SetInitialSize( ( width, height ) )
+        self._formula_description.setMinimumWidth( width )
+        self._formula_description.setMinimumHeight( height )
         
-        self._formula_description.Disable()
+        self._formula_description.setEnabled( False )
         
         self._edit_formula = ClientGUICommon.BetterButton( my_panel, 'edit formula', self._EditFormula )
         
@@ -857,21 +870,21 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._edit_formula, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox.Add( self._change_formula_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._edit_formula, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._change_formula_type, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         my_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
         my_panel.Add( button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( my_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, my_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ChangeFormulaType( self ):
@@ -970,7 +983,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._current_formula = panel.GetValue()
                 
@@ -983,17 +996,17 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._current_formula is None:
             
-            self._formula_description.SetValue( '' )
+            self._formula_description.setPlainText( '' )
             
-            self._edit_formula.Disable()
-            self._change_formula_type.Disable()
+            self._edit_formula.setEnabled( False )
+            self._change_formula_type.setEnabled( False )
             
         else:
             
-            self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
+            self._formula_description.setPlainText( self._current_formula.ToPrettyMultilineString() )
             
-            self._edit_formula.Enable()
-            self._change_formula_type.Enable()
+            self._edit_formula.setEnabled( True )
+            self._change_formula_type.setEnabled( True )
             
         
     
@@ -1029,34 +1042,34 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._rule_type = ClientGUICommon.BetterChoice( self )
         
-        self._rule_type.Append( 'search descendents', ClientParsing.HTML_RULE_TYPE_DESCENDING )
-        self._rule_type.Append( 'walk back up ancestors', ClientParsing.HTML_RULE_TYPE_ASCENDING )
+        self._rule_type.addItem( 'search descendents', ClientParsing.HTML_RULE_TYPE_DESCENDING )
+        self._rule_type.addItem( 'walk back up ancestors', ClientParsing.HTML_RULE_TYPE_ASCENDING )
         
-        self._tag_name = wx.TextCtrl( self )
+        self._tag_name = QW.QLineEdit( self )
         
         self._tag_attributes = ClientGUIControls.StringToStringDictControl( self, tag_attributes, min_height = 4 )
         
         self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = 0, max = 255 )
         
-        self._tag_depth = wx.SpinCtrl( self, min = 1, max = 255 )
+        self._tag_depth = QP.MakeQSpinBox( self, min=1, max=255 )
         
-        self._should_test_tag_string = wx.CheckBox( self )
+        self._should_test_tag_string = QW.QCheckBox( self )
         
         self._tag_string_string_match = ClientGUIControls.StringMatchButton( self, tag_string_string_match )
         
         #
         
         self._rule_type.SetValue( rule_type )
-        self._tag_name.SetValue( tag_name )
+        self._tag_name.setText( tag_name )
         self._tag_index.SetValue( tag_index )
-        self._tag_depth.SetValue( tag_depth )
-        self._should_test_tag_string.SetValue( should_test_tag_string )
+        self._tag_depth.setValue( tag_depth )
+        self._should_test_tag_string.setChecked( should_test_tag_string )
         
         self._UpdateTypeControls()
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -1079,37 +1092,37 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox_3 = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( self._current_description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._current_description, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.Add( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._tag_attributes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( gridbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_attributes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._UpdateShouldTest()
         
         #
         
-        self._rule_type.Bind( wx.EVT_CHOICE, self.EventTypeChanged )
-        self._tag_name.Bind( wx.EVT_TEXT, self.EventVariableChanged )
-        self._tag_attributes.Bind( ClientGUIListCtrl.EVT_LIST_CTRL, self.EventVariableChanged)
-        self._tag_index.Bind( wx.EVT_SPINCTRL, self.EventVariableChanged )
-        self._tag_depth.Bind( wx.EVT_SPINCTRL, self.EventVariableChanged )
+        self._rule_type.currentIndexChanged.connect( self.EventTypeChanged )
+        self._tag_name.textChanged.connect( self.EventVariableChanged )
+        self._tag_attributes.listCtrlChanged.connect( self.EventVariableChanged )
+        self._tag_index.valueChanged.connect( self.EventVariableChanged )
+        self._tag_depth.valueChanged.connect( self.EventVariableChanged )
         
-        self._should_test_tag_string.Bind( wx.EVT_CHECKBOX, self.EventShouldTestChanged )
+        self._should_test_tag_string.clicked.connect( self.EventShouldTestChanged )
         
     
     def _UpdateShouldTest( self ):
         
-        if self._should_test_tag_string.GetValue():
+        if self._should_test_tag_string.isChecked():
             
-            self._tag_string_string_match.Enable()
+            self._tag_string_string_match.setEnabled( True )
             
         else:
             
-            self._tag_string_string_match.Disable()
+            self._tag_string_string_match.setEnabled( False )
             
         
     
@@ -1119,17 +1132,17 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
             
-            self._tag_attributes.Enable()
-            self._tag_index.Enable()
+            self._tag_attributes.setEnabled( True )
+            self._tag_index.setEnabled( True )
             
-            self._tag_depth.Disable()
+            self._tag_depth.setEnabled( False )
             
         else:
             
-            self._tag_attributes.Disable()
-            self._tag_index.Disable()
+            self._tag_attributes.setEnabled( False )
+            self._tag_index.setEnabled( False )
             
-            self._tag_depth.Enable()
+            self._tag_depth.setEnabled( True )
             
         
         self._UpdateDescription()
@@ -1141,40 +1154,36 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         label = tag_rule.ToString()
         
-        self._current_description.SetLabelText( label )
+        self._current_description.setText( label )
         
     
-    def EventShouldTestChanged( self, event ):
+    def EventShouldTestChanged( self ):
         
         self._UpdateShouldTest()
         
     
-    def EventTypeChanged( self, event ):
+    def EventTypeChanged( self, index ):
         
         self._UpdateTypeControls()
         
-        event.Skip()
-        
-    
-    def EventVariableChanged( self, event ):
+                          
+    def EventVariableChanged( self ):
         
         self._UpdateDescription()
-        
-        event.Skip()
         
     
     def GetValue( self ):
         
         rule_type = self._rule_type.GetValue()
         
-        tag_name = self._tag_name.GetValue()
+        tag_name = self._tag_name.text()
         
         if tag_name == '':
             
             tag_name = None
             
         
-        should_test_tag_string = self._should_test_tag_string.GetValue()
+        should_test_tag_string = self._should_test_tag_string.isChecked()
         tag_string_string_match = self._tag_string_string_match.GetValue()
         
         if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
@@ -1186,7 +1195,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif rule_type == ClientParsing.HTML_RULE_TYPE_ASCENDING:
             
-            tag_depth = self._tag_depth.GetValue()
+            tag_depth = self._tag_depth.value()
             
             tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_depth = tag_depth, should_test_tag_string = should_test_tag_string, tag_string_string_match = tag_string_string_match )
             
@@ -1208,18 +1217,20 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the html formula help', 'Open the help page for html formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._tag_rules = wx.ListBox( edit_panel, style = wx.LB_SINGLE )
-        self._tag_rules.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+        self._tag_rules = QW.QListWidget( edit_panel )
+        self._tag_rules.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+
+        self._tag_rules.itemDoubleClicked.connect( self.Edit )
         
         self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
         
@@ -1233,13 +1244,13 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
-        self._content_to_fetch.Append( 'attribute', ClientParsing.HTML_CONTENT_ATTRIBUTE )
-        self._content_to_fetch.Append( 'string', ClientParsing.HTML_CONTENT_STRING )
-        self._content_to_fetch.Append( 'html', ClientParsing.HTML_CONTENT_HTML )
+        self._content_to_fetch.addItem( 'attribute', ClientParsing.HTML_CONTENT_ATTRIBUTE )
+        self._content_to_fetch.addItem( 'string', ClientParsing.HTML_CONTENT_STRING )
+        self._content_to_fetch.addItem( 'html', ClientParsing.HTML_CONTENT_HTML )
         
-        self._content_to_fetch.Bind( wx.EVT_CHOICE, self.EventContentChoice )
+        self._content_to_fetch.currentIndexChanged.connect( self._UpdateControls )
         
-        self._attribute_to_fetch = wx.TextCtrl( edit_panel )
+        self._attribute_to_fetch = QW.QLineEdit( edit_panel )
         
         ( tag_rules, content_to_fetch, attribute_to_fetch, string_match, string_converter ) = formula.ToTuple()
         
@@ -1251,7 +1262,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -1261,34 +1272,37 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_rule = rule.ToString()
             
-            self._tag_rules.Append( pretty_rule, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._tag_rules.addItem( item )
             
         
         self._content_to_fetch.SetValue( content_to_fetch )
         
-        self._attribute_to_fetch.SetValue( attribute_to_fetch )
+        self._attribute_to_fetch.setText( attribute_to_fetch )
         
         self._UpdateControls()
         
         #
         
-        udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        udd_button_vbox = QP.VBoxLayout()
         
-        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        udd_button_vbox.Add( self._move_rule_up, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( self._delete_rule, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( self._move_rule_down, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        tag_rules_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        tag_rules_hbox = QP.HBoxLayout()
         
-        tag_rules_hbox.Add( self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        tag_rules_hbox.Add( udd_button_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( tag_rules_hbox, self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( tag_rules_hbox, udd_button_vbox, CC.FLAGS_VCENTER )
         
-        ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        ae_button_hbox = QP.HBoxLayout()
         
-        ae_button_hbox.Add( self._add_rule, CC.FLAGS_VCENTER )
-        ae_button_hbox.Add( self._edit_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_VCENTER )
         
         rows = []
         
@@ -1300,7 +1314,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1310,28 +1324,28 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _UpdateControls( self ):
         
         if self._content_to_fetch.GetValue() == ClientParsing.HTML_CONTENT_ATTRIBUTE:
             
-            self._attribute_to_fetch.Enable()
+            self._attribute_to_fetch.setEnabled( True )
             
         else:
             
-            self._attribute_to_fetch.Disable()
+            self._attribute_to_fetch.setEnabled( False )
             
         
     
@@ -1347,34 +1361,37 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 rule = panel.GetValue()
                 
                 pretty_rule = rule.ToString()
                 
-                self._tag_rules.Append( pretty_rule, rule )
+                item = QW.QListWidgetItem()
+                item.setText( pretty_rule )
+                item.setData( QC.Qt.UserRole, rule )
+                self._tag_rules.addItem( item )
                 
             
         
     
     def Delete( self ):
         
-        selection = self._tag_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._tag_rules ) 
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            self._tag_rules.Delete( selection )
+            QP.ListWidgetDelete( self._tag_rules, selection )
             
         
     
     def Edit( self ):
         
-        selection = self._tag_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._tag_rules ) 
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            rule = self._tag_rules.GetClientData( selection )
+            rule = QP.GetClientData( self._tag_rules, selection )
             
             dlg_title = 'edit tag rule'
             
@@ -1384,36 +1401,26 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     rule = panel.GetValue()
                     
                     pretty_rule = rule.ToString()
                     
-                    self._tag_rules.SetString( selection, pretty_rule )
-                    self._tag_rules.SetClientData( selection, rule )
+                    self._tag_rules.item( selection ).setText( pretty_rule )
+                    self._tag_rules.item( selection ).setData( QC.Qt.UserRole, rule )
                     
                 
             
         
     
-    def EventContentChoice( self, event ):
-        
-        self._UpdateControls()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
-        
-    
     def GetValue( self ):
         
-        tags_rules = [ self._tag_rules.GetClientData( i ) for i in range( self._tag_rules.GetCount() ) ]
+        tags_rules = [ QP.GetClientData( self._tag_rules, i ) for i in range( self._tag_rules.count() ) ]
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
-        attribute_to_fetch = self._attribute_to_fetch.GetValue()
+        attribute_to_fetch = self._attribute_to_fetch.text()
         
         if content_to_fetch == ClientParsing.HTML_CONTENT_ATTRIBUTE and attribute_to_fetch == '':
             
@@ -1431,31 +1438,37 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def MoveDown( self ):
         
-        selection = self._tag_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._tag_rules ) 
         
-        if selection != wx.NOT_FOUND and selection + 1 < self._tag_rules.GetCount():
+        if selection != -1 and selection + 1 < self._tag_rules.count():
             
-            pretty_rule = self._tag_rules.GetString( selection )
-            rule = self._tag_rules.GetClientData( selection )
+            pretty_rule = self._tag_rules.item( selection ).text()
+            rule = QP.GetClientData( self._tag_rules, selection )
             
-            self._tag_rules.Delete( selection )
+            QP.ListWidgetDelete( self._tag_rules, selection )
             
-            self._tag_rules.Insert( pretty_rule, selection + 1, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._tag_rules.insertItem( selection + 1, item )
             
         
     
     def MoveUp( self ):
         
-        selection = self._tag_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._tag_rules ) 
         
-        if selection != wx.NOT_FOUND and selection > 0:
+        if selection != -1 and selection > 0:
             
-            pretty_rule = self._tag_rules.GetString( selection )
-            rule = self._tag_rules.GetClientData( selection )
+            pretty_rule = self._tag_rules.item( selection ).text()
+            rule = QP.GetClientData( self._tag_rules, selection )
             
-            self._tag_rules.Delete( selection )
+            QP.ListWidgetDelete( self._tag_rules, selection )
             
-            self._tag_rules.Insert( pretty_rule, selection - 1, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._tag_rules.insertItem( selection - 1, item )
             
         
     
@@ -1467,13 +1480,13 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parse_rule_type = ClientGUICommon.BetterChoice( self )
         
-        self._parse_rule_type.Append( 'dictionary entry', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
-        self._parse_rule_type.Append( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
-        self._parse_rule_type.Append( 'indexed list item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
+        self._parse_rule_type.addItem( 'dictionary entry', ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY )
+        self._parse_rule_type.addItem( 'all dictionary/list items', ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS )
+        self._parse_rule_type.addItem( 'indexed list item', ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM )
         
         self._string_match = ClientGUIControls.EditStringMatchPanel( self, string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
         
-        self._index = wx.SpinCtrl( self, min = 0, max = 65535 )
+        self._index = QP.MakeQSpinBox( self, min=0, max=65535 )
         
         #
         
@@ -1483,7 +1496,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
-            self._index.SetValue( parse_rule )
+            self._index.setValue( parse_rule )
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
@@ -1494,7 +1507,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -1502,37 +1515,32 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( self._parse_rule_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._string_match, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._parse_rule_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._string_match, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._parse_rule_type.Bind( wx.EVT_CHOICE, self.EventChoice )
+        self._parse_rule_type.currentIndexChanged.connect( self._UpdateHideShow )
         
     
     def _UpdateHideShow( self ):
         
-        self._string_match.Disable()
-        self._index.Disable()
+        self._string_match.setEnabled( False )
+        self._index.setEnabled( False )
         
         parse_rule_type = self._parse_rule_type.GetValue()
         
         if parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY:
             
-            self._string_match.Enable()
+            self._string_match.setEnabled( True )
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
-            self._index.Enable()
+            self._index.setEnabled( True )
             
-        
-    
-    def EventChoice( self, event ):
-        
-        self._UpdateHideShow()
         
     
     def GetValue( self ):
@@ -1545,7 +1553,7 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_INDEXED_ITEM:
             
-            parse_rule = self._index.GetValue()
+            parse_rule = self._index.value()
             
         elif parse_rule_type == ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS:
             
@@ -1569,18 +1577,19 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the json formula help', 'Open the help page for json formulae in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._parse_rules = wx.ListBox( edit_panel, style = wx.LB_SINGLE )
-        self._parse_rules.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+        self._parse_rules = QW.QListWidget( edit_panel )
+        self._parse_rules.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+        self._parse_rules.itemDoubleClicked.connect( self.Edit )
         
         self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
         
@@ -1594,9 +1603,9 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
-        self._content_to_fetch.Append( 'string', ClientParsing.JSON_CONTENT_STRING )
-        self._content_to_fetch.Append( 'dictionary keys', ClientParsing.JSON_CONTENT_DICT_KEYS )
-        self._content_to_fetch.Append( 'json', ClientParsing.JSON_CONTENT_JSON )
+        self._content_to_fetch.addItem( 'string', ClientParsing.JSON_CONTENT_STRING )
+        self._content_to_fetch.addItem( 'dictionary keys', ClientParsing.JSON_CONTENT_DICT_KEYS )
+        self._content_to_fetch.addItem( 'json', ClientParsing.JSON_CONTENT_JSON )
         
         ( parse_rules, content_to_fetch, string_match, string_converter ) = formula.ToTuple()
         
@@ -1608,7 +1617,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
@@ -1618,30 +1627,33 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_rule = ClientParsing.RenderJSONParseRule( rule )
             
-            self._parse_rules.Append( pretty_rule, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._parse_rules.addItem( item )
             
         
         self._content_to_fetch.SetValue( content_to_fetch )
         
         #
         
-        udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        udd_button_vbox = QP.VBoxLayout()
         
-        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        udd_button_vbox.Add( self._move_rule_up, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( self._delete_rule, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( self._move_rule_down, CC.FLAGS_VCENTER )
-        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_up, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, self._delete_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, self._move_rule_down, CC.FLAGS_VCENTER )
+        QP.AddToLayout( udd_button_vbox, (20,20), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        parse_rules_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        parse_rules_hbox = QP.HBoxLayout()
         
-        parse_rules_hbox.Add( self._parse_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        parse_rules_hbox.Add( udd_button_vbox, CC.FLAGS_VCENTER )
+        QP.AddToLayout( parse_rules_hbox, self._parse_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( parse_rules_hbox, udd_button_vbox, CC.FLAGS_VCENTER )
         
-        ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        ae_button_hbox = QP.HBoxLayout()
         
-        ae_button_hbox.Add( self._add_rule, CC.FLAGS_VCENTER )
-        ae_button_hbox.Add( self._edit_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._add_rule, CC.FLAGS_VCENTER )
+        QP.AddToLayout( ae_button_hbox, self._edit_rule, CC.FLAGS_VCENTER )
         
         rows = []
         
@@ -1652,7 +1664,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', style = wx.ST_ELLIPSIZE_END ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before this String Match is tested.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1662,17 +1674,17 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def Add( self ):
@@ -1687,34 +1699,37 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 rule = panel.GetValue()
                 
                 pretty_rule = ClientParsing.RenderJSONParseRule( rule )
-                
-                self._parse_rules.Append( pretty_rule, rule )
+
+                item = QW.QListWidgetItem()
+                item.setText( pretty_rule )
+                item.setData( QC.Qt.UserRole, rule )
+                self._parse_rules.addItem( item )
                 
             
         
     
     def Delete( self ):
         
-        selection = self._parse_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._parse_rules ) 
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            self._parse_rules.Delete( selection )
+            QP.ListWidgetDelete( self._parse_rules, selection )
             
         
     
     def Edit( self ):
         
-        selection = self._parse_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._parse_rules ) 
         
-        if selection != wx.NOT_FOUND:
+        if selection != -1:
             
-            rule = self._parse_rules.GetClientData( selection )
+            rule = QP.GetClientData( self._parse_rules, selection )
             
             dlg_title = 'edit parse rule'
             
@@ -1724,27 +1739,22 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     rule = panel.GetValue()
                     
                     pretty_rule = ClientParsing.RenderJSONParseRule( rule )
                     
-                    self._parse_rules.SetString( selection, pretty_rule )
-                    self._parse_rules.SetClientData( selection, rule )
+                    self._parse_rules.item( selection ).setText( pretty_rule )
+                    self._parse_rules.item( selection ).setData( QC.Qt.UserRole, rule )
                     
                 
             
         
     
-    def EventEdit( self, event ):
-        
-        self.Edit()
-        
-    
     def GetValue( self ):
         
-        parse_rules = [ self._parse_rules.GetClientData( i ) for i in range( self._parse_rules.GetCount() ) ]
+        parse_rules = [ QP.GetClientData( self._parse_rules, i ) for i in range( self._parse_rules.count() ) ]
         
         content_to_fetch = self._content_to_fetch.GetValue()
         
@@ -1759,31 +1769,37 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def MoveDown( self ):
         
-        selection = self._parse_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._parse_rules ) 
         
-        if selection != wx.NOT_FOUND and selection + 1 < self._parse_rules.GetCount():
+        if selection != -1 and selection + 1 < self._parse_rules.count():
             
-            pretty_rule = self._parse_rules.GetString( selection )
-            rule = self._parse_rules.GetClientData( selection )
+            pretty_rule = self._parse_rules.item( selection ).text()
+            rule = QP.GetClientData( self._parse_rules, selection )
             
-            self._parse_rules.Delete( selection )
+            QP.ListWidgetDelete( self._parse_rules, selection )
             
-            self._parse_rules.Insert( pretty_rule, selection + 1, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._parse_rules.insertItem( selection + 1, item )
             
         
     
     def MoveUp( self ):
         
-        selection = self._parse_rules.GetSelection()
+        selection = QP.ListWidgetGetSelection( self._parse_rules ) 
         
-        if selection != wx.NOT_FOUND and selection > 0:
+        if selection != -1 and selection > 0:
             
-            pretty_rule = self._parse_rules.GetString( selection )
-            rule = self._parse_rules.GetClientData( selection )
+            pretty_rule = self._parse_rules.item( selection ).text()
+            rule = QP.GetClientData( self._parse_rules, selection )
             
-            self._parse_rules.Delete( selection )
+            QP.ListWidgetDelete( self._parse_rules, selection )
             
-            self._parse_rules.Insert( pretty_rule, selection - 1, rule )
+            item = QW.QListWidgetItem()
+            item.setText( pretty_rule )
+            item.setData( QC.Qt.UserRole, rule )
+            self._parse_rules.insertItem( selection - 1, item )
             
         
     
@@ -1801,17 +1817,17 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the content parsers help', 'Open the help page for content parsers in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         self._edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        self._edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self._edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._name = wx.TextCtrl( self._edit_panel )
+        self._name = QW.QLineEdit( self._edit_panel )
         
         self._content_panel = ClientGUICommon.StaticBox( self._edit_panel, 'content type' )
         
@@ -1829,67 +1845,67 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for permitted_content_type in permitted_content_types:
             
-            self._content_type.Append( types_to_str[ permitted_content_type ], permitted_content_type )
+            self._content_type.addItem( types_to_str[ permitted_content_type], permitted_content_type )
             
         
-        self._content_type.Bind( wx.EVT_CHOICE, self.EventContentTypeChange )
+        self._content_type.currentIndexChanged.connect( self.EventContentTypeChange )
         
-        self._urls_panel = wx.Panel( self._content_panel )
+        self._urls_panel = QW.QWidget( self._content_panel )
         
         self._url_type = ClientGUICommon.BetterChoice( self._urls_panel )
         
-        self._url_type.Append( 'url to download/pursue (file/post url)', HC.URL_TYPE_DESIRED )
-        self._url_type.Append( 'url to associate (source url)', HC.URL_TYPE_SOURCE )
-        self._url_type.Append( 'next gallery page', HC.URL_TYPE_NEXT )
+        self._url_type.addItem( 'url to download/pursue (file/post url)', HC.URL_TYPE_DESIRED )
+        self._url_type.addItem( 'url to associate (source url)', HC.URL_TYPE_SOURCE )
+        self._url_type.addItem( 'next gallery page', HC.URL_TYPE_NEXT )
         
-        self._file_priority = wx.SpinCtrl( self._urls_panel, min = 0, max = 100 )
-        self._file_priority.SetValue( 50 )
+        self._file_priority = QP.MakeQSpinBox( self._urls_panel, min=0, max=100 )
+        self._file_priority.setValue( 50 )
         
-        self._mappings_panel = wx.Panel( self._content_panel )
+        self._mappings_panel = QW.QWidget( self._content_panel )
         
-        self._namespace = wx.TextCtrl( self._mappings_panel )
+        self._namespace = QW.QLineEdit( self._mappings_panel )
         
-        self._hash_panel = wx.Panel( self._content_panel )
+        self._hash_panel = QW.QWidget( self._content_panel )
         
         self._hash_type = ClientGUICommon.BetterChoice( self._hash_panel )
         
         for hash_type in ( 'md5', 'sha1', 'sha256', 'sha512' ):
             
-            self._hash_type.Append( hash_type, hash_type )
+            self._hash_type.addItem( hash_type, hash_type )
             
         
-        self._timestamp_panel = wx.Panel( self._content_panel )
+        self._timestamp_panel = QW.QWidget( self._content_panel )
         
         self._timestamp_type = ClientGUICommon.BetterChoice( self._timestamp_panel )
         
-        self._timestamp_type.Append( 'source time', HC.TIMESTAMP_TYPE_SOURCE )
+        self._timestamp_type.addItem( 'source time', HC.TIMESTAMP_TYPE_SOURCE )
         
-        self._title_panel = wx.Panel( self._content_panel )
+        self._title_panel = QW.QWidget( self._content_panel )
         
-        self._title_priority = wx.SpinCtrl( self._title_panel, min = 0, max = 100 )
-        self._title_priority.SetValue( 50 )
+        self._title_priority = QP.MakeQSpinBox( self._title_panel, min=0, max=100 )
+        self._title_priority.setValue( 50 )
         
-        self._veto_panel = wx.Panel( self._content_panel )
+        self._veto_panel = QW.QWidget( self._content_panel )
         
-        self._veto_if_matches_found = wx.CheckBox( self._veto_panel )
+        self._veto_if_matches_found = QW.QCheckBox( self._veto_panel )
         self._string_match = ClientGUIControls.EditStringMatchPanel( self._veto_panel )
         
-        self._temp_variable_panel = wx.Panel( self._content_panel )
+        self._temp_variable_panel = QW.QWidget( self._content_panel )
         
-        self._temp_variable_name = wx.TextCtrl( self._temp_variable_panel )
+        self._temp_variable_name = QW.QLineEdit( self._temp_variable_panel )
         
         self._sort_type = ClientGUICommon.BetterChoice( self._content_panel )
         
-        self._sort_type.Append( 'do not sort formula text results', ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE )
-        self._sort_type.Append( 'sort by human-friendly lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT )
-        self._sort_type.Append( 'sort by strict lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC )
+        self._sort_type.addItem( 'do not sort formula text results', ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE )
+        self._sort_type.addItem( 'sort by human-friendly lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_HUMAN_SORT )
+        self._sort_type.addItem( 'sort by strict lexicographic', ClientParsing.CONTENT_PARSER_SORT_TYPE_LEXICOGRAPHIC )
         
-        self._sort_type.Bind( wx.EVT_CHOICE, self.EventSortTypeChange )
+        self._sort_type.currentIndexChanged.connect( self.EventSortTypeChange )
         
         self._sort_asc = ClientGUICommon.BetterChoice( self._content_panel )
         
-        self._sort_asc.Append( 'sort ascending', True )
-        self._sort_asc.Append( 'sort descending', False )
+        self._sort_asc.addItem( 'sort ascending', True )
+        self._sort_asc.addItem( 'sort descending', False )
         
         ( name, content_type, formula, sort_type, sort_asc, additional_info ) = content_parser.ToTuple()
         
@@ -1899,13 +1915,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         self._content_type.SetValue( content_type )
         
@@ -1914,13 +1930,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             ( url_type, priority ) = additional_info
             
             self._url_type.SetValue( url_type )
-            self._file_priority.SetValue( priority )
+            self._file_priority.setValue( priority )
             
         elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
             namespace = additional_info
             
-            self._namespace.SetValue( namespace )
+            self._namespace.setText( namespace )
             
         elif content_type == HC.CONTENT_TYPE_HASH:
             
@@ -1938,13 +1954,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             priority = additional_info
             
-            self._title_priority.SetValue( priority )
+            self._title_priority.setValue( priority )
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
             ( veto_if_matches_found, string_match ) = additional_info
             
-            self._veto_if_matches_found.SetValue( veto_if_matches_found )
+            self._veto_if_matches_found.setChecked( veto_if_matches_found )
             self._string_match.SetValue( string_match )
             
         elif content_type == HC.CONTENT_TYPE_VARIABLE:
@@ -1966,7 +1982,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._urls_panel, rows )
         
-        self._urls_panel.SetSizer( gridbox )
+        self._urls_panel.setLayout( gridbox )
         
         #
         
@@ -1976,7 +1992,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._mappings_panel, rows )
         
-        self._mappings_panel.SetSizer( gridbox )
+        self._mappings_panel.setLayout( gridbox )
         
         #
         
@@ -1986,7 +2002,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._hash_panel, rows )
         
-        self._hash_panel.SetSizer( gridbox )
+        self._hash_panel.setLayout( gridbox )
         
         #
         
@@ -1996,7 +2012,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._timestamp_panel, rows )
         
-        self._timestamp_panel.SetSizer( gridbox )
+        self._timestamp_panel.setLayout( gridbox )
         
         #
         
@@ -2006,11 +2022,11 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._title_panel, rows )
         
-        self._title_panel.SetSizer( gridbox )
+        self._title_panel.setLayout( gridbox )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -2018,14 +2034,14 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._veto_panel, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._string_match, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._string_match, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._veto_panel.SetSizer( vbox )
+        self._veto_panel.setLayout( vbox )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -2033,9 +2049,9 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._temp_variable_panel, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self._temp_variable_panel.SetSizer( vbox )
+        self._temp_variable_panel.setLayout( vbox )
         
         #
         
@@ -2058,7 +2074,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -2076,65 +2092,62 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self.EventContentTypeChange( None )
         self.EventSortTypeChange( None )
         
     
-    def EventContentTypeChange( self, event ):
+    def EventContentTypeChange( self, index ):
         
         choice = self._content_type.GetValue()
         
-        self._urls_panel.Hide()
-        self._mappings_panel.Hide()
-        self._hash_panel.Hide()
-        self._timestamp_panel.Hide()
-        self._title_panel.Hide()
-        self._veto_panel.Hide()
-        self._temp_variable_panel.Hide()
+        self._urls_panel.setVisible( False )
+        self._mappings_panel.setVisible( False )
+        self._hash_panel.setVisible( False )
+        self._timestamp_panel.setVisible( False )
+        self._title_panel.setVisible( False )
+        self._veto_panel.setVisible( False )
+        self._temp_variable_panel.setVisible( False )
         
         if choice == HC.CONTENT_TYPE_URLS:
             
-            self._urls_panel.Show()
+            self._urls_panel.show()
             
         elif choice == HC.CONTENT_TYPE_MAPPINGS:
             
-            self._mappings_panel.Show()
+            self._mappings_panel.show()
             
         elif choice == HC.CONTENT_TYPE_HASH:
             
-            self._hash_panel.Show()
+            self._hash_panel.show()
             
         elif choice == HC.CONTENT_TYPE_TIMESTAMP:
             
-            self._timestamp_panel.Show()
+            self._timestamp_panel.show()
             
         elif choice == HC.CONTENT_TYPE_TITLE:
             
-            self._title_panel.Show()
+            self._title_panel.show()
             
         elif choice == HC.CONTENT_TYPE_VETO:
             
-            self._veto_panel.Show()
+            self._veto_panel.show()
             
         elif choice == HC.CONTENT_TYPE_VARIABLE:
             
-            self._temp_variable_panel.Show()
+            self._temp_variable_panel.show()
             
-        
-        self._content_panel.Layout()
-        self._edit_panel.Layout()
         
     
     def EventSortTypeChange( self, event ):
@@ -2143,11 +2156,11 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if choice == ClientParsing.CONTENT_PARSER_SORT_TYPE_NONE:
             
-            self._sort_asc.Disable()            
+            self._sort_asc.setEnabled( False )            
             
         else:
             
-            self._sort_asc.Enable()
+            self._sort_asc.setEnabled( True )
             
         
     
@@ -2158,7 +2171,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
         content_type = self._content_type.GetValue()
         
@@ -2170,13 +2183,13 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         if content_type == HC.CONTENT_TYPE_URLS:
             
             url_type = self._url_type.GetValue()
-            priority = self._file_priority.GetValue()
+            priority = self._file_priority.value()
             
             additional_info = ( url_type, priority )
             
         elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
-            namespace = self._namespace.GetValue()
+            namespace = self._namespace.text()
             
             additional_info = namespace
             
@@ -2194,20 +2207,20 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif content_type == HC.CONTENT_TYPE_TITLE:
             
-            priority = self._title_priority.GetValue()
+            priority = self._title_priority.value()
             
             additional_info = priority
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
-            veto_if_matches_found = self._veto_if_matches_found.GetValue()
+            veto_if_matches_found = self._veto_if_matches_found.isChecked()
             string_match = self._string_match.GetValue()
             
             additional_info = ( veto_if_matches_found, string_match )
             
         elif content_type == HC.CONTENT_TYPE_VARIABLE:
             
-            temp_variable_name = self._temp_variable_name.GetValue()
+            temp_variable_name = self._temp_variable_name.text()
             
             additional_info = temp_variable_name
             
@@ -2270,7 +2283,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_content_parser = panel.GetValue()
                 
@@ -2318,7 +2331,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_content_parser = panel.GetValue()
                     
@@ -2357,16 +2370,16 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         self._content_parsers.Sort()
         
     
-class EditNodes( wx.Panel ):
+class EditNodes( QW.QWidget ):
     
     def __init__( self, parent, nodes, referral_url_callable, example_data_callable ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
-        self._nodes = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 200, [ ( 'name', 120 ), ( 'node type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._nodes = ClientGUIListCtrl.BetterListCtrl( self, 'nodes', 20, 20, [ ( 'name', 16 ), ( 'node type', 11 ), ( 'produces', -1 ) ], self._ConvertNodeToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         
@@ -2387,30 +2400,25 @@ class EditNodes( wx.Panel ):
         
         #
         
-        for node in nodes:
-            
-            ( display_tuple, sort_tuple ) = self._ConvertNodeToTuples( node )
-            
-            self._nodes.Append( display_tuple, sort_tuple, node )
-            
+        self._nodes.AddDatas( nodes )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._add_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._duplicate_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._duplicate_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_VCENTER )
         
-        vbox.Add( self._nodes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._nodes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
     
     def _ConvertNodeToTuples( self, node ):
@@ -2424,7 +2432,7 @@ class EditNodes( wx.Panel ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for node in self._nodes.GetObjects( only_selected = True ):
+        for node in self._nodes.GetData( only_selected = True ):
             
             to_export.append( node )
             
@@ -2458,13 +2466,11 @@ class EditNodes( wx.Panel ):
                 
                 node = obj
                 
-                ( display_tuple, sort_tuple ) = self._ConvertNodeToTuples( node )
-                
-                self._nodes.Append( display_tuple, sort_tuple, node )
+                self._nodes.AddDatas( [ node ] )
                 
             else:
                 
-                wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                QW.QMessageBox.warning( self, 'Warning', 'That was not a script--it was a: '+type(obj).__name__ )
                 
             
         
@@ -2509,13 +2515,11 @@ class EditNodes( wx.Panel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_node = panel.GetValue()
                 
-                ( display_tuple, sort_tuple ) = self._ConvertNodeToTuples( new_node )
-                
-                self._nodes.Append( display_tuple, sort_tuple, new_node )
+                self._nodes.AddDatas( [ new_node ] )
                 
             
         
@@ -2538,31 +2542,27 @@ class EditNodes( wx.Panel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
-            self._nodes.RemoveAllSelected()
+            self._nodes.DeleteSelected()
             
         
     
     def Duplicate( self ):
         
-        nodes_to_dupe = self._nodes.GetObjects( only_selected = True )
+        nodes_to_dupe = self._nodes.GetData( only_selected = True )
         
         for node in nodes_to_dupe:
             
             dupe_node = node.Duplicate()
             
-            ( display_tuple, sort_tuple ) = self._ConvertNodeToTuples( dupe_node )
-            
-            self._nodes.Append( display_tuple, sort_tuple, dupe_node )
+            self._nodes.AddDatas( [ dupe_node ] )
             
         
     
     def Edit( self ):
         
-        for i in self._nodes.GetAllSelected():
-            
-            node = self._nodes.GetObject( i )
+        for node in self._nodes.GetData( only_selected = True ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit node', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
@@ -2580,13 +2580,11 @@ class EditNodes( wx.Panel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_node = panel.GetValue()
                     
-                    ( display_tuple, sort_tuple ) = self._ConvertNodeToTuples( edited_node )
-                    
-                    self._nodes.UpdateRow( i, display_tuple, sort_tuple, edited_node )
+                    self._nodes.ReplaceData( node, edited_node )
                     
                 
                 
@@ -2595,7 +2593,7 @@ class EditNodes( wx.Panel ):
     
     def GetValue( self ):
         
-        return self._nodes.GetObjects()
+        return self._nodes.GetData()
         
     
     def Paste( self ):
@@ -2606,7 +2604,7 @@ class EditNodes( wx.Panel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -2619,7 +2617,7 @@ class EditNodes( wx.Panel ):
             
         except:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
         
     
@@ -2643,17 +2641,17 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._my_example_url = None
         
-        notebook = wx.Notebook( self )
+        notebook = QW.QTabWidget( self )
         
         ( name, formula, children ) = node.ToTuple()
         
         #
         
-        edit_panel = wx.Panel( notebook )
+        edit_panel = QW.QWidget( notebook )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._name = wx.TextCtrl( edit_panel )
+        self._name = QW.QLineEdit( edit_panel )
         
         get_example_parsing_context = lambda: {}
         
@@ -2665,32 +2663,32 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        test_panel = wx.Panel( notebook )
+        test_panel = QW.QWidget( notebook )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        self._example_data = QW.QPlainTextEdit( test_panel )
         
-        self._example_data.SetMinSize( ( -1, 200 ) )
+        self._example_data.setMinimumHeight( 200 )
         
-        self._example_data.SetValue( example_data )
+        self._example_data.setPlainText( example_data )
         
-        self._test_parse = wx.Button( test_panel, label = 'test parse' )
-        self._test_parse.Bind( wx.EVT_BUTTON, self.EventTestParse )
+        self._test_parse = QW.QPushButton( 'test parse', test_panel )
+        self._test_parse.clicked.connect( self.EventTestParse )
         
-        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        self._results = QW.QPlainTextEdit( test_panel )
         
-        self._results.SetMinSize( ( -1, 200 ) )
+        self._results.setMinimumHeight( 200 )
         
-        self._test_fetch_result = wx.Button( test_panel, label = 'try fetching the first result' )
-        self._test_fetch_result.Bind( wx.EVT_BUTTON, self.EventTestFetchResult )
-        self._test_fetch_result.Disable()
+        self._test_fetch_result = QW.QPushButton( 'try fetching the first result', test_panel )
+        self._test_fetch_result.clicked.connect( self.EventTestFetchResult )
+        self._test_fetch_result.setEnabled( False )
         
-        self._my_example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        self._my_example_data = QW.QPlainTextEdit( test_panel )
         
         #
         
-        info_panel = wx.Panel( notebook )
+        info_panel = QW.QWidget( notebook )
         
         message = '''This node looks for one or more urls in the data it is given, requests each in turn, and gives the results to its children for further parsing.
 
@@ -2704,7 +2702,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         #
         
@@ -2712,7 +2710,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -2720,47 +2718,48 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        edit_panel.SetSizer( vbox )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._test_fetch_result, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._my_example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        test_panel.SetSizer( vbox )
+        edit_panel.setLayout( vbox )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._test_fetch_result, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._my_example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        info_panel.SetSizer( vbox )
+        test_panel.setLayout( vbox )
         
         #
         
-        notebook.AddPage( edit_panel, 'edit', select = True )
-        notebook.AddPage( test_panel, 'test', select = False )
-        notebook.AddPage( info_panel, 'info', select = False )
+        vbox = QP.VBoxLayout()
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        QP.AddToLayout( vbox, info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        info_panel.setLayout( vbox )
         
-        self.SetSizer( vbox )
+        #
+        
+        notebook.addTab( edit_panel, 'edit' )
+        notebook.setCurrentWidget( edit_panel )
+        notebook.addTab( test_panel, 'test' )
+        notebook.addTab( info_panel, 'info' )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
         
         
     
-    def EventTestFetchResult( self, event ):
+    def EventTestFetchResult( self ):
         
         # this should be published to a job key panel or something so user can see it and cancel if needed
         
@@ -2792,11 +2791,11 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         self._example_data.SetValue( example_text )
         
     
-    def EventTestParse( self, event ):
+    def EventTestParse( self ):
         
-        def wx_code( parsed_urls ):
+        def qt_code( parsed_urls ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -2804,7 +2803,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             if len( parsed_urls ) > 0:
                 
                 self._my_example_url = parsed_urls[0]
-                self._test_fetch_result.Enable()
+                self._test_fetch_result.setEnabled( True )
                 
             
             result_lines = [ '*** ' + HydrusData.ToHumanInt( len( parsed_urls ) ) + ' RESULTS BEGIN ***' ]
@@ -2815,7 +2814,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
             results_text = os.linesep.join( result_lines )
             
-            self._results.SetValue( results_text )
+            self._results.setPlainText( results_text )
             
         
         def do_it( node, data, referral_url ):
@@ -2828,7 +2827,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 
                 parsed_urls = node.ParseURLs( job_key, data, referral_url )
                 
-                wx.CallAfter( wx_code, parsed_urls )
+                QP.CallAfter( qt_code, parsed_urls )
                 
             except Exception as e:
                 
@@ -2836,12 +2835,12 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 
                 message = 'Could not parse!'
                 
-                wx.CallAfter( wx.MessageBox, message )
+                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', message )
                 
             
         
         node = self.GetValue()
-        data = self._example_data.GetValue()
+        data = self._example_data.toPlainText()
         referral_url = self._referral_url
         
         HG.client_controller.CallToThread( do_it, node, data, referral_url )
@@ -2849,7 +2848,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
     def GetExampleData( self ):
         
-        return self._example_data.GetValue()
+        return self._example_data.toPlainText()
         
     
     def GetExampleURL( self ):
@@ -2866,12 +2865,12 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
     def GetTestContext( self ):
         
-        return ( {}, self._example_data.GetValue() )
+        return ( {}, self._example_data.toPlainText() )
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
         formula = self._formula.GetValue()
         
@@ -2906,23 +2905,23 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'normal', 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
         
-        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.help, menu_items )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        edit_notebook = wx.Notebook( edit_panel )
+        edit_notebook = QW.QTabWidget( edit_panel )
         
         #
         
-        main_panel = wx.Panel( edit_notebook )
+        main_panel = QW.QWidget( edit_notebook )
         
-        main_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( main_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._name = wx.TextCtrl( main_panel )
+        self._name = QW.QLineEdit( main_panel )
         
         #
         
@@ -2940,7 +2939,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        formula_panel = wx.Panel( edit_notebook )
+        formula_panel = QW.QWidget( edit_notebook )
         
         formula_test_callable = lambda: test_context
         
@@ -2948,9 +2947,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        sub_page_parsers_notebook_panel = wx.Panel( edit_notebook )
+        sub_page_parsers_notebook_panel = QW.QWidget( edit_notebook )
         
-        sub_page_parsers_notebook_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( sub_page_parsers_notebook_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         #
         
@@ -2969,9 +2968,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         
-        content_parsers_panel = wx.Panel( edit_notebook )
+        content_parsers_panel = QW.QWidget( edit_notebook )
         
-        content_parsers_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( content_parsers_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         #
         
@@ -2983,12 +2982,12 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         test_url_fetch_panel = ClientGUICommon.StaticBox( test_panel, 'fetch test data from url' )
         
-        self._test_url = wx.TextCtrl( test_url_fetch_panel )
-        self._test_referral_url = wx.TextCtrl( test_url_fetch_panel )
+        self._test_url = QW.QLineEdit( test_url_fetch_panel )
+        self._test_referral_url = QW.QLineEdit( test_url_fetch_panel )
         self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
         self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_url_fetch_panel )
         
@@ -3011,10 +3010,10 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( example_urls ) > 0:
             
-            self._test_url.SetValue( example_urls[0] )
+            self._test_url.setText( example_urls[0] )
             
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         self._sub_page_parsers.AddDatas( sub_page_parsers )
         
@@ -3035,7 +3034,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -3043,35 +3042,35 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( main_panel, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( conversion_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( example_urls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, conversion_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, example_urls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        main_panel.SetSizer( vbox )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        formula_panel.SetSizer( vbox )
+        main_panel.setLayout( vbox )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( sub_page_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        sub_page_parsers_notebook_panel.SetSizer( vbox )
+        formula_panel.setLayout( vbox )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._content_parsers, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, sub_page_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        content_parsers_panel.SetSizer( vbox )
+        sub_page_parsers_notebook_panel.setLayout( vbox )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._content_parsers, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        content_parsers_panel.setLayout( vbox )
         
         #
         
@@ -3091,40 +3090,41 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if formula is not None:
             
-            test_url_fetch_panel.Hide()
+            test_url_fetch_panel.hide()
             
         
         #
         
         if formula is None:
             
-            formula_panel.Hide()
+            formula_panel.setVisible( False )
             
         else:
             
-            example_urls_panel.Hide()
-            edit_notebook.AddPage( formula_panel, 'separation formula', select = False )
+            example_urls_panel.hide()
+            edit_notebook.addTab( formula_panel, 'separation formula' )
             
         
-        edit_notebook.AddPage( main_panel, 'main', select = True )
-        edit_notebook.AddPage( sub_page_parsers_notebook_panel, 'subsidiary page parsers', select = False )
-        edit_notebook.AddPage( content_parsers_panel, 'content parsers', select = False )
+        edit_notebook.addTab( main_panel, 'main' )
+        edit_notebook.setCurrentWidget( main_panel )
+        edit_notebook.addTab( sub_page_parsers_notebook_panel, 'subsidiary page parsers' )
+        edit_notebook.addTab( content_parsers_panel, 'content parsers' )
         
         edit_panel.Add( edit_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _AddExampleURL( self ):
@@ -3145,7 +3145,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 new_page_parser = panel.GetValue()
                 
@@ -3188,7 +3188,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, message, default = example_url ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 return dlg.GetValue()
                 
@@ -3213,7 +3213,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     self._sub_page_parsers.DeleteDatas( ( sub_page_parser, ) )
                     
@@ -3239,9 +3239,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def wait_and_do_it( network_job ):
             
-            def wx_tidy_up( example_data ):
+            def qt_tidy_up( example_data ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -3274,11 +3274,11 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 HydrusData.ShowException( e )
                 
             
-            wx.CallAfter( wx_tidy_up, example_data )
+            QP.CallAfter( qt_tidy_up, example_data )
             
         
-        url = self._test_url.GetValue()
-        referral_url = self._test_referral_url.GetValue()
+        url = self._test_url.text()
+        referral_url = self._test_referral_url.text()
         
         if referral_url == '':
             
@@ -3308,7 +3308,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
+        name = self._name.text()
         
         parser_key = self._original_parser.GetParserKey()
         
@@ -3355,11 +3355,11 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _Add( self ):
@@ -3372,7 +3372,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_parser = panel.GetValue()
                 
@@ -3426,7 +3426,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_parser = panel.GetValue()
                     
@@ -3468,37 +3468,37 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        notebook = wx.Notebook( self )
+        notebook = QW.QTabWidget( self )
         
         #
         
-        edit_panel = wx.Panel( notebook )
+        edit_panel = QW.QWidget( notebook )
         
-        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
-        self._name = wx.TextCtrl( edit_panel )
+        self._name = QW.QLineEdit( edit_panel )
         
         query_panel = ClientGUICommon.StaticBox( edit_panel, 'query' )
         
-        self._url = wx.TextCtrl( query_panel )
+        self._url = QW.QLineEdit( query_panel )
         
-        self._url.SetValue( url )
+        self._url.setText( url )
         
         self._query_type = ClientGUICommon.BetterChoice( query_panel )
         
-        self._query_type.Append( 'GET', HC.GET )
-        self._query_type.Append( 'POST', HC.POST )
+        self._query_type.addItem( 'GET', HC.GET )
+        self._query_type.addItem( 'POST', HC.POST )
         
         self._file_identifier_type = ClientGUICommon.BetterChoice( query_panel )
         
         for t in [ ClientParsing.FILE_IDENTIFIER_TYPE_FILE, ClientParsing.FILE_IDENTIFIER_TYPE_MD5, ClientParsing.FILE_IDENTIFIER_TYPE_SHA1, ClientParsing.FILE_IDENTIFIER_TYPE_SHA256, ClientParsing.FILE_IDENTIFIER_TYPE_SHA512, ClientParsing.FILE_IDENTIFIER_TYPE_USER_INPUT ]:
             
-            self._file_identifier_type.Append( ClientParsing.file_identifier_string_lookup[ t ], t )
+            self._file_identifier_type.addItem( ClientParsing.file_identifier_string_lookup[ t], t )
             
         
         self._file_identifier_string_converter = ClientGUIControls.StringConverterButton( query_panel, file_identifier_string_converter )
         
-        self._file_identifier_arg_name = wx.TextCtrl( query_panel )
+        self._file_identifier_arg_name = QW.QLineEdit( query_panel )
         
         static_args_panel = ClientGUICommon.StaticBox( query_panel, 'static arguments' )
         
@@ -3510,33 +3510,33 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        test_panel = wx.Panel( notebook )
+        test_panel = QW.QWidget( notebook )
         
-        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._test_script_management = ScriptManagementControl( test_panel )
         
-        self._test_arg = wx.TextCtrl( test_panel )
+        self._test_arg = QW.QLineEdit( test_panel )
         
-        self._test_arg.SetValue( 'enter example file path, hex hash, or raw user input here' )
+        self._test_arg.setText( 'enter example file path, hex hash, or raw user input here' )
         
-        self._fetch_data = wx.Button( test_panel, label = 'fetch response' )
-        self._fetch_data.Bind( wx.EVT_BUTTON, self.EventFetchData )
+        self._fetch_data = QW.QPushButton( 'fetch response', test_panel )
+        self._fetch_data.clicked.connect( self.EventFetchData )
         
-        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        self._example_data = QW.QPlainTextEdit( test_panel )
         
-        self._example_data.SetMinSize( ( -1, 200 ) )
+        self._example_data.setMinimumHeight( 200 )
         
-        self._test_parsing = wx.Button( test_panel, label = 'test parse (note if you have \'link\' nodes, they will make their requests)' )
-        self._test_parsing.Bind( wx.EVT_BUTTON, self.EventTestParse )
+        self._test_parsing = QW.QPushButton( 'test parse (note if you have \'link\' nodes, they will make their requests)', test_panel )
+        self._test_parsing.clicked.connect( self.EventTestParse )
         
-        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        self._results = QW.QPlainTextEdit( test_panel )
         
-        self._results.SetMinSize( ( -1, 200 ) )
+        self._results.setMinimumHeight( 200 )
         
         #
         
-        info_panel = wx.Panel( notebook )
+        info_panel = QW.QWidget( notebook )
         
         message = '''This script looks up tags for a single file.
 
@@ -3552,13 +3552,13 @@ And pass that html to a number of 'parsing children' that will each look through
         
         #
         
-        self._name.SetValue( name )
+        self._name.setText( name )
         
         self._query_type.SetValue( query_type )
         self._file_identifier_type.SetValue( file_identifier_type )
-        self._file_identifier_arg_name.SetValue( file_identifier_arg_name )
+        self._file_identifier_arg_name.setText( file_identifier_arg_name )
         
-        self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        self._results.setPlainText( 'Successfully parsed results will be printed here.' )
         
         #
         
@@ -3576,16 +3576,16 @@ And pass that html to a number of 'parsing children' that will each look through
         
         query_message = 'This query will be executed first.'
         
-        query_panel.Add( wx.StaticText( query_panel, label = query_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        query_panel.Add( QW.QLabel( query_message, query_panel ), CC.FLAGS_EXPAND_PERPENDICULAR )
         query_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         query_panel.Add( static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         children_message = 'The data returned by the query will be passed to each of these children for content parsing.'
         
-        children_panel.Add( wx.StaticText( children_panel, label = children_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        children_panel.Add( QW.QLabel( children_message, children_panel ), CC.FLAGS_EXPAND_PERPENDICULAR )
         children_panel.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         rows = []
         
@@ -3593,51 +3593,52 @@ And pass that html to a number of 'parsing children' that will each look through
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        edit_panel.SetSizer( vbox )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._test_script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._fetch_data, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._test_parsing, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        test_panel.SetSizer( vbox )
+        edit_panel.setLayout( vbox )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._test_script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._fetch_data, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._test_parsing, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        info_panel.SetSizer( vbox )
+        test_panel.setLayout( vbox )
         
         #
         
-        notebook.AddPage( edit_panel, 'edit', select = True )
-        notebook.AddPage( test_panel, 'test', select = False )
-        notebook.AddPage( info_panel, 'info', select = False )
+        vbox = QP.VBoxLayout()
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        QP.AddToLayout( vbox, info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        info_panel.setLayout( vbox )
         
-        self.SetSizer( vbox )
+        #
+        
+        notebook.addTab( edit_panel, 'edit' )
+        notebook.setCurrentWidget( edit_panel )
+        notebook.addTab( test_panel, 'test' )
+        notebook.addTab( info_panel, 'info' )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
         
     
-    def EventFetchData( self, event ):
+    def EventFetchData( self ):
         
         script = self.GetValue()
         
-        test_arg = self._test_arg.GetValue()
+        test_arg = self._test_arg.text()
         
         file_identifier_type = self._file_identifier_type.GetValue()
         
@@ -3645,7 +3646,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             if not os.path.exists( test_arg ):
                 
-                wx.MessageBox( 'That file does not exist!' )
+                QW.QMessageBox.critical( self, 'Error', 'That file does not exist!' )
                 
                 return
                 
@@ -3673,11 +3674,11 @@ And pass that html to a number of 'parsing children' that will each look through
             
             try:
                 
-                self._example_data.SetValue( parsing_text )
+                self._example_data.setPlainText( parsing_text )
                 
             except UnicodeDecodeError:
                 
-                self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ToHumanBytes( len( parsing_text ) ) + ', did not appear to be displayable text.' )
+                self._example_data.setPlainText( 'The fetched data, which had length ' + HydrusData.ToHumanBytes( len( parsing_text ) ) + ', did not appear to be displayable text.' )
                 
             
         except Exception as e:
@@ -3688,7 +3689,7 @@ And pass that html to a number of 'parsing children' that will each look through
             message += os.linesep * 2
             message += str( e )
             
-            wx.MessageBox( message )
+            QW.QMessageBox.critical( self, 'Error', message )
             
         finally:
             
@@ -3696,11 +3697,11 @@ And pass that html to a number of 'parsing children' that will each look through
             
         
     
-    def EventTestParse( self, event ):
+    def EventTestParse( self ):
         
-        def wx_code( results ):
+        def qt_code( results ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -3713,7 +3714,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             results_text = os.linesep.join( result_lines )
             
-            self._results.SetValue( results_text )
+            self._results.setPlainText( results_text )
             
         
         def do_it( script, job_key, data ):
@@ -3722,7 +3723,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 
                 results = script.Parse( job_key, data )
                 
-                wx.CallAfter( wx_code, results )
+                QP.CallAfter( qt_code, results )
                 
             except Exception as e:
                 
@@ -3730,7 +3731,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 
                 message = 'Could not parse!'
                 
-                wx.CallAfter( wx.MessageBox, message )
+                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', message )
                 
             finally:
                 
@@ -3746,29 +3747,29 @@ And pass that html to a number of 'parsing children' that will each look through
         
         self._test_script_management.SetJobKey( job_key )
         
-        data = self._example_data.GetValue()
+        data = self._example_data.toPlainText()
         
         HG.client_controller.CallToThread( do_it, script, job_key, data )
         
     
     def GetExampleData( self ):
         
-        return self._example_data.GetValue()
+        return self._example_data.toPlainText()
         
     
     def GetExampleURL( self ):
         
-        return self._url.GetValue()
+        return self._url.text()
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
-        url = self._url.GetValue()
+        name = self._name.text()
+        url = self._url.text()
         query_type = self._query_type.GetValue()
         file_identifier_type = self._file_identifier_type.GetValue()
         file_identifier_string_converter = self._file_identifier_string_converter.GetValue()
-        file_identifier_arg_name = self._file_identifier_arg_name.GetValue()
+        file_identifier_arg_name = self._file_identifier_arg_name.text()
         static_args = self._static_args.GetValue()
         children = self._children.GetValue()
         
@@ -3787,7 +3788,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._scripts = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 200, [ ( 'name', 140 ), ( 'query type', 80 ), ( 'script type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._scripts = ClientGUIListCtrl.BetterListCtrl( self, 'parsing_scripts', 20, 20, [ ( 'name', 20 ), ( 'query type', 11 ), ( 'script type', 11 ), ( 'produces', -1 ) ], self._ConvertScriptToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         
@@ -3826,28 +3827,26 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for script in scripts:
             
-            ( display_tuple, sort_tuple ) = self._ConvertScriptToTuples( script )
-            
-            self._scripts.Append( display_tuple, sort_tuple, script )
+            self._scripts.AddDatas( ( script, ) )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._add_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._export_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._import_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._duplicate_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._export_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._import_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._duplicate_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_VCENTER )
         
-        vbox.Add( self._scripts, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._scripts, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox, CC.FLAGS_BUTTON_SIZER )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _ConvertScriptToTuples( self, script ):
@@ -3861,7 +3860,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for script in self._scripts.GetObjects( only_selected = True ):
+        for script in self._scripts.GetData( only_selected = True ):
             
             to_export.append( script )
             
@@ -3897,13 +3896,11 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._scripts.SetNonDupeName( script )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertScriptToTuples( script )
-                
-                self._scripts.Append( display_tuple, sort_tuple, script )
+                self._scripts.AddDatas( ( script, ) )
                 
             else:
                 
-                wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                QW.QMessageBox.warning( self, 'Warning', 'That was not a script--it was a: '+type(obj).__name__ )
                 
             
         
@@ -3936,22 +3933,20 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dlg_edit.SetPanel( panel )
             
-            if dlg_edit.ShowModal() == wx.ID_OK:
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
                 new_script = panel.GetValue()
                 
                 self._scripts.SetNonDupeName( new_script )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertScriptToTuples( new_script )
-                
-                self._scripts.Append( display_tuple, sort_tuple, new_script )
+                self._scripts.AddDatas( ( new_script, ) )
                 
             
         
     
     def CommitChanges( self ):
         
-        scripts = self._scripts.GetObjects()
+        scripts = self._scripts.GetData()
         
         HG.client_controller.Write( 'serialisables_overwrite', self.SCRIPT_TYPES, scripts )
         
@@ -3962,34 +3957,30 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
-            self._scripts.RemoveAllSelected()
+            self._scripts.DeleteSelected()
             
         
     
     def Duplicate( self ):
         
-        scripts_to_dupe = self._scripts.GetObjects( only_selected = True )
+        scripts_to_dupe = self._scripts.GetData( only_selected = True )
         
         for script in scripts_to_dupe:
             
             dupe_script = script.Duplicate()
             
             self._scripts.SetNonDupeName( dupe_script )
-            
-            ( display_tuple, sort_tuple ) = self._ConvertScriptToTuples( dupe_script )
-            
-            self._scripts.Append( display_tuple, sort_tuple, dupe_script )
+                       
+            self._scripts.AddDatas( ( dupe_script, ) )
             
         
     
     def Edit( self ):
         
-        for i in self._scripts.GetAllSelected():
-            
-            script = self._scripts.GetObject( i )
-            
+        for script in self._scripts.GetData( only_selected = True ):
+
             if isinstance( script, ClientParsing.ParseRootFileLookup ):
                 
                 panel_class = EditParsingScriptFileLookupPanel
@@ -4005,7 +3996,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     edited_script = panel.GetValue()
                     
@@ -4014,9 +4005,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         self._scripts.SetNonDupeName( edited_script )
                         
                     
-                    ( display_tuple, sort_tuple ) = self._ConvertScriptToTuples( edited_script )
-                    
-                    self._scripts.UpdateRow( i, display_tuple, sort_tuple, edited_script )
+                    self._scripts.ReplaceData( script, edited_script )
                     
                 
                 
@@ -4047,7 +4036,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                dlg.ShowModal()
+                dlg.exec()
                 
             
         
@@ -4060,7 +4049,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -4073,15 +4062,15 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         except Exception as e:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
         
     
     def ImportFromPng( self ):
         
-        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -4091,7 +4080,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( str( e ) )
+                    QW.QMessageBox.critical( self, 'Error', str(e) )
                     
                     return
                     
@@ -4104,17 +4093,17 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except:
                     
-                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                    QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the png!' )
                     
                 
             
         
     
-class ScriptManagementControl( wx.Panel ):
+class ScriptManagementControl( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._job_key = None
         
@@ -4127,29 +4116,29 @@ class ScriptManagementControl( wx.Panel ):
         self._status = ClientGUICommon.BetterStaticText( main_panel )
         self._gauge = ClientGUICommon.Gauge( main_panel )
         
-        self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalBMPs.link, self.LinkButton )
-        self._link_button.SetToolTip( 'urls found by the script' )
+        self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalPixmaps.link, self.LinkButton )
+        self._link_button.setToolTip( 'urls found by the script' )
         
-        self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalBMPs.stop, self.CancelButton )
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.GlobalPixmaps.stop, self.CancelButton )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._link_button, CC.FLAGS_VCENTER )
-        hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._link_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_VCENTER )
         
         main_panel.Add( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
         main_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( main_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, main_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         #
         
@@ -4158,12 +4147,12 @@ class ScriptManagementControl( wx.Panel ):
     
     def _Reset( self ):
         
-        self._status.SetLabelText( '' )
+        self._status.setText( '' )
         self._gauge.SetRange( 1 )
         self._gauge.SetValue( 0 )
         
-        self._link_button.Disable()
-        self._cancel_button.Disable()
+        self._link_button.setEnabled( False )
+        self._cancel_button.setEnabled( False )
         
     
     def _Update( self ):
@@ -4183,7 +4172,7 @@ class ScriptManagementControl( wx.Panel ):
                 status = ''
                 
             
-            self._status.SetLabelText( status )
+            self._status.setText( status )
             
             if self._job_key.HasVariable( 'script_gauge' ):
                 
@@ -4201,31 +4190,31 @@ class ScriptManagementControl( wx.Panel ):
             
             if len( urls ) == 0:
                 
-                if self._link_button.IsEnabled():
+                if self._link_button.isEnabled():
                     
-                    self._link_button.Disable()
+                    self._link_button.setEnabled( False )
                     
                 
             else:
                 
-                if not self._link_button.IsEnabled():
+                if not self._link_button.isEnabled():
                     
-                    self._link_button.Enable()
+                    self._link_button.setEnabled( True )
                     
                 
             
             if self._job_key.IsDone():
                 
-                if self._cancel_button.IsEnabled():
+                if self._cancel_button.isEnabled():
                     
-                    self._cancel_button.Disable()
+                    self._cancel_button.setEnabled( False )
                     
                 
             else:
                 
-                if not self._cancel_button.IsEnabled():
+                if not self._cancel_button.isEnabled():
                     
-                    self._cancel_button.Enable()
+                    self._cancel_button.setEnabled( True )
                     
                 
             
@@ -4267,11 +4256,10 @@ class ScriptManagementControl( wx.Panel ):
             urls = self._job_key.GetURLs()
             
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         for url in urls:
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
+            ClientGUIMenus.AppendMenuItem( menu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
             
         
         HG.client_controller.PopupMenu( self, menu )
@@ -4288,51 +4276,54 @@ class ScriptManagementControl( wx.Panel ):
         HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
-class TestPanel( wx.Panel ):
+class TestPanel( QW.QWidget ):
     
     def __init__( self, parent, object_callable, test_context = None ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         if test_context is None:
             
             test_context = ( {}, '' )
             
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
         self._object_callable = object_callable
         
         self._example_parsing_context = ClientGUIControls.StringToStringDictButton( self, 'edit example parsing context' )
         
-        self._data_preview_notebook = wx.Notebook( self )
+        self._data_preview_notebook = QW.QTabWidget( self )
         
-        raw_data_panel = wx.Panel( self._data_preview_notebook )
+        raw_data_panel = QW.QWidget( self._data_preview_notebook )
         
         self._example_data_raw_description = ClientGUICommon.BetterStaticText( raw_data_panel )
         
-        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalBMPs.copy, self._Copy )
-        self._copy_button.SetToolTip( 'Copy the current example data to the clipboard.' )
+        self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalPixmaps.copy, self._Copy )
+        self._copy_button.setToolTip( 'Copy the current example data to the clipboard.' )
         
-        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalBMPs.link, self._FetchFromURL )
-        self._fetch_button.SetToolTip( 'Fetch data from a URL.' )
+        self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalPixmaps.link, self._FetchFromURL )
+        self._fetch_button.setToolTip( 'Fetch data from a URL.' )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalBMPs.paste, self._Paste )
-        self._paste_button.SetToolTip( 'Paste the current clipboard data into here.' )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.GlobalPixmaps.paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste the current clipboard data into here.' )
         
-        self._example_data_raw_preview = ClientGUICommon.SaneMultilineTextCtrl( raw_data_panel, style = wx.TE_READONLY )
+        self._example_data_raw_preview = QW.QPlainTextEdit( raw_data_panel )
+        self._example_data_raw_preview.setReadOnly( True )
         
-        size = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
         
-        self._example_data_raw_preview.SetInitialSize( size )
+        self._example_data_raw_preview.setMinimumWidth( width )
+        self._example_data_raw_preview.setMinimumHeight( height )
         
         self._test_parse = ClientGUICommon.BetterButton( self, 'test parse', self.TestParse )
         
-        self._results = ClientGUICommon.SaneMultilineTextCtrl( self )
+        self._results = QW.QPlainTextEdit( self )
         
-        size = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 80, 12 ) )
+        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._results, ( 80, 12 ) )
         
-        self._results.SetInitialSize( size )
+        self._results.setMinimumWidth( width )
+        self._results.setMinimumHeight( height )
         
         #
         
@@ -4342,38 +4333,39 @@ class TestPanel( wx.Panel ):
         
         self._example_data_raw = ''
         
-        self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        self._results.setPlainText( 'Successfully parsed results will be printed here.' )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._example_data_raw_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
-        hbox.Add( self._fetch_button, CC.FLAGS_VCENTER )
-        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._example_data_raw_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._fetch_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._example_data_raw_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data_raw_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        raw_data_panel.SetSizer( vbox )
+        raw_data_panel.setLayout( vbox )
         
-        self._data_preview_notebook.AddPage( raw_data_panel, 'raw data', select = True )
+        self._data_preview_notebook.addTab( raw_data_panel, 'raw data' )
+        self._data_preview_notebook.setCurrentWidget( raw_data_panel )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._example_parsing_context, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._data_preview_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._example_parsing_context, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._data_preview_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
-        wx.CallAfter( self._SetExampleData, example_data )
+        QP.CallAfter( self._SetExampleData, example_data )
         
     
     def _Copy( self ):
@@ -4383,9 +4375,9 @@ class TestPanel( wx.Panel ):
     
     def _FetchFromURL( self ):
         
-        def wx_code( example_data ):
+        def qt_code( example_data ):
             
-            if not self:
+            if not self or not QP.isValid( self ):
                 
                 return
                 
@@ -4424,14 +4416,14 @@ class TestPanel( wx.Panel ):
                 HydrusData.ShowException( e )
                 
             
-            wx.CallAfter( wx_code, example_data )
+            QP.CallAfter( qt_code, example_data )
             
         
         message = 'Enter URL to fetch data for.'
         
-        with ClientGUIDialogs.DialogTextEntry( self, message, default = 'enter url', allow_blank = False) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, message, placeholder = 'enter url', allow_blank = False) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 url = dlg.GetValue()
                 
@@ -4448,7 +4440,7 @@ class TestPanel( wx.Panel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -4487,18 +4479,18 @@ class TestPanel( wx.Panel ):
                 preview = example_data
                 
             
-            self._test_parse.Enable()
+            self._test_parse.setEnabled( True )
             
         else:
             
             description = 'no example data set yet'
             preview = ''
             
-            self._test_parse.Disable()
+            self._test_parse.setEnabled( False )
             
         
-        self._example_data_raw_description.SetLabelText( description )
-        self._example_data_raw_preview.SetValue( preview )
+        self._example_data_raw_description.setText( description )
+        self._example_data_raw_preview.setPlainText( preview )
         
     
     def GetExampleParsingContext( self ):
@@ -4533,7 +4525,7 @@ class TestPanel( wx.Panel ):
             
             results_text = obj.ParsePretty( example_parsing_context, example_data )
             
-            self._results.SetValue( results_text )
+            self._results.setPlainText( results_text )
             
         except Exception as e:
             
@@ -4545,7 +4537,7 @@ class TestPanel( wx.Panel ):
             
             message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
             
-            self._results.SetValue( message )
+            self._results.setPlainText( message )
             
         
     
@@ -4557,15 +4549,16 @@ class TestPanelPageParser( TestPanel ):
         
         TestPanel.__init__( self, parent, object_callable, test_context = test_context )
         
-        post_conversion_panel = wx.Panel( self._data_preview_notebook )
+        post_conversion_panel = QW.QWidget( self._data_preview_notebook )
         
         self._example_data_post_conversion_description = ClientGUICommon.BetterStaticText( post_conversion_panel )
         
-        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalBMPs.copy, self._CopyPostConversion )
-        self._copy_button_post_conversion.SetToolTip( 'Copy the current post conversion data to the clipboard.' )
+        self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalPixmaps.copy, self._CopyPostConversion )
+        self._copy_button_post_conversion.setToolTip( 'Copy the current post conversion data to the clipboard.' )
         
-        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalBMPs.refresh, self._RefreshDataPreviews )
-        self._example_data_post_conversion_preview = ClientGUICommon.SaneMultilineTextCtrl( post_conversion_panel, style = wx.TE_READONLY )
+        self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.GlobalPixmaps.refresh, self._RefreshDataPreviews )
+        self._example_data_post_conversion_preview = QW.QPlainTextEdit( post_conversion_panel )
+        self._example_data_post_conversion_preview.setReadOnly( True )
         
         #
         
@@ -4573,22 +4566,22 @@ class TestPanelPageParser( TestPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._example_data_post_conversion_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._copy_button_post_conversion, CC.FLAGS_VCENTER )
-        hbox.Add( self._refresh_post_conversion_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._example_data_post_conversion_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button_post_conversion, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._refresh_post_conversion_button, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._example_data_post_conversion_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data_post_conversion_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        post_conversion_panel.SetSizer( vbox )
+        post_conversion_panel.setLayout( vbox )
         
         #
         
-        self._data_preview_notebook.AddPage( post_conversion_panel, 'post pre-parsing conversion', select = False )
+        self._data_preview_notebook.addTab( post_conversion_panel, 'post pre-parsing conversion' )
         
     
     def _CopyPostConversion( self ):
@@ -4661,14 +4654,14 @@ class TestPanelPageParser( TestPanel ):
             
             preview = 'No changes made.'
             
-            description = self._example_data_raw_description.GetLabelText()
+            description = self._example_data_raw_description.text()
             
         
-        self._example_data_post_conversion_description.SetLabelText( description )
+        self._example_data_post_conversion_description.setText( description )
         
         self._example_data_post_conversion = post_conversion_example_data
         
-        self._example_data_post_conversion_preview.SetValue( preview )
+        self._example_data_post_conversion_preview.setPlainText( preview )
         
     
     def GetTestContext( self ):
@@ -4686,15 +4679,16 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         self._formula_callable = formula_callable
         
-        post_separation_panel = wx.Panel( self._data_preview_notebook )
+        post_separation_panel = QW.QWidget( self._data_preview_notebook )
         
         self._example_data_post_separation_description = ClientGUICommon.BetterStaticText( post_separation_panel )
         
-        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalBMPs.copy, self._CopyPostSeparation )
-        self._copy_button_post_separation.SetToolTip( 'Copy the current post separation data to the clipboard.' )
+        self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalPixmaps.copy, self._CopyPostSeparation )
+        self._copy_button_post_separation.setToolTip( 'Copy the current post separation data to the clipboard.' )
         
-        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalBMPs.refresh, self._RefreshDataPreviews )
-        self._example_data_post_separation_preview = ClientGUICommon.SaneMultilineTextCtrl( post_separation_panel, style = wx.TE_READONLY )
+        self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.GlobalPixmaps.refresh, self._RefreshDataPreviews )
+        self._example_data_post_separation_preview = QW.QPlainTextEdit( post_separation_panel )
+        self._example_data_post_separation_preview.setReadOnly( True )
         
         #
         
@@ -4702,22 +4696,22 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._example_data_post_separation_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._copy_button_post_separation, CC.FLAGS_VCENTER )
-        hbox.Add( self._refresh_post_separation_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._example_data_post_separation_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button_post_separation, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._refresh_post_separation_button, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._example_data_post_separation_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_data_post_separation_preview, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        post_separation_panel.SetSizer( vbox )
+        post_separation_panel.setLayout( vbox )
         
         #
         
-        self._data_preview_notebook.AddPage( post_separation_panel, 'post separation conversion', select = False )
+        self._data_preview_notebook.addTab( post_separation_panel, 'post separation conversion' )
         
     
     def _CopyPostSeparation( self ):
@@ -4776,11 +4770,11 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 
             
         
-        self._example_data_post_separation_description.SetLabelText( description )
+        self._example_data_post_separation_description.setText( description )
         
         self._example_data_post_separation = separation_example_data
         
-        self._example_data_post_separation_preview.SetValue( preview )
+        self._example_data_post_separation_preview.setPlainText( preview )
         
     
     def GetTestContext( self ):
@@ -4833,7 +4827,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
             
             end_pretty_text = separator.join( pretty_texts )
             
-            self._results.SetValue( end_pretty_text )
+            self._results.setPlainText( end_pretty_text )
             
         except Exception as e:
             
@@ -4845,7 +4839,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
             
             message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
             
-            self._results.SetValue( message )
+            self._results.setPlainText( message )
             
         
     

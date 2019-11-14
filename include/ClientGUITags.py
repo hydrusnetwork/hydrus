@@ -30,7 +30,11 @@ from . import HydrusTags
 from . import HydrusText
 import itertools
 import os
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -45,9 +49,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.help, self._ShowHelp )
         
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', QG.QColor( 0, 0, 255 ) )
         
         #
         
@@ -72,69 +76,71 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._prefer_blacklist:
             
-            self._notebook.AddPage( self._blacklist_panel, 'blacklist' )
-            self._notebook.AddPage( self._whitelist_panel, 'whitelist' )
+            self._notebook.addTab( self._blacklist_panel, 'blacklist' )
+            self._notebook.addTab( self._whitelist_panel, 'whitelist' )
             
         else:
             
-            self._notebook.AddPage( self._whitelist_panel, 'whitelist' )
-            self._notebook.AddPage( self._blacklist_panel, 'blacklist' )
+            self._notebook.addTab( self._whitelist_panel, 'whitelist' )
+            self._notebook.addTab( self._blacklist_panel, 'blacklist' )
             
         
-        self._notebook.AddPage( self._advanced_panel, 'advanced' )
+        self._notebook.addTab( self._advanced_panel, 'advanced' )
         
         #
         
-        self._redundant_st = ClientGUICommon.BetterStaticText( self, '', style = wx.ST_ELLIPSIZE_END )
+        self._redundant_st = ClientGUICommon.BetterStaticText( self, '', ellipsize_end = True )
         
-        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ', style = wx.ST_ELLIPSIZE_END )
+        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ', ellipsize_end = True )
         
-        self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT, style = wx.TEXT_ALIGNMENT_RIGHT )
+        self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT )
+        self._test_result_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
         
-        self._test_input = wx.TextCtrl( self )
+        self._test_input = QW.QPlainTextEdit( self )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_BUTTON_SIZER )
         
         if message is not None:
             
-            vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,message), CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._import_favourite, CC.FLAGS_SMALL_INDENT )
-        hbox.Add( self._export_favourite, CC.FLAGS_SMALL_INDENT )
-        hbox.Add( self._load_favourite, CC.FLAGS_SMALL_INDENT )
-        hbox.Add( self._save_favourite, CC.FLAGS_SMALL_INDENT )
-        hbox.Add( self._delete_favourite, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._import_favourite, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._export_favourite, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._load_favourite, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._save_favourite, CC.FLAGS_SMALL_INDENT )
+        QP.AddToLayout( hbox, self._delete_favourite, CC.FLAGS_SMALL_INDENT )
         
-        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        hbox = ClientGUICommon.BetterBoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._test_result_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._test_input, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._test_result_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._test_input, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         
-        vbox.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         #
         
-        self._advanced_panel.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
-        self._simple_whitelist_global_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleWhitelistGlobalCheck )
-        self._simple_whitelist_namespace_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleWhitelistNamespaceCheck )
-        self._simple_blacklist_global_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleBlacklistGlobalCheck )
-        self._simple_blacklist_namespace_checkboxes.Bind( wx.EVT_CHECKLISTBOX, self.EventSimpleBlacklistNamespaceCheck )
+        self._advanced_blacklist.listBoxChanged.connect( self._UpdateStatus )
+        self._advanced_whitelist.listBoxChanged.connect( self._UpdateStatus )
+        self._simple_whitelist_global_checkboxes.clicked.connect( self.EventSimpleWhitelistGlobalCheck )
+        self._simple_whitelist_namespace_checkboxes.clicked.connect( self.EventSimpleWhitelistNamespaceCheck )
+        self._simple_blacklist_global_checkboxes.clicked.connect( self.EventSimpleBlacklistGlobalCheck )
+        self._simple_blacklist_namespace_checkboxes.clicked.connect( self.EventSimpleBlacklistNamespaceCheck )
         
-        self._test_input.Bind( wx.EVT_TEXT, self.EventTestText )
+        self._test_input.textChanged.connect( self._UpdateTest )
         
         self.SetValue( tag_filter )
         
@@ -236,7 +242,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 self._advanced_blacklist.RemoveTags( selected_tag_slices )
                 
@@ -253,7 +259,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 self._advanced_whitelist.RemoveTags( selected_tag_slices )
                 
@@ -300,7 +306,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != wx.ID_YES:
+                if result != QW.QDialog.Accepted:
                     
                     return
                     
@@ -313,7 +319,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         if len( names_to_tag_filters ) == 0:
             
@@ -323,7 +329,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( name, tag_filter ) in names_to_tag_filters.items():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, name, 'delete {}'.format( name ), do_it, name )
+                ClientGUIMenus.AppendMenuItem( menu, name, 'delete {}'.format( name ), do_it, name )
                 
             
         
@@ -334,7 +340,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         if len( names_to_tag_filters ) == 0:
             
@@ -344,7 +350,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( name, tag_filter ) in names_to_tag_filters.items():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, name, 'load {}'.format( name ), HG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
+                ClientGUIMenus.AppendMenuItem( menu, name, 'load {}'.format( name ), HG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
                 
             
         
@@ -374,7 +380,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -385,14 +391,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
             return
             
         
         if not isinstance( obj, ClientTags.TagFilter ):
             
-            wx.MessageBox( 'That object was not a Tag Filter! It seemed to be a "{}".'.format( type( obj ) ) )
+            QW.QMessageBox.critical( self, 'Error', 'That object was not a Tag Filter! It seemed to be a "{}".'.format(type(obj)) )
             
             return
             
@@ -401,7 +407,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the favourite.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
                 
@@ -413,7 +419,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result != wx.ID_YES:
+                    if result != QW.QDialog.Accepted:
                         
                         return
                         
@@ -430,7 +436,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _InitAdvancedPanel( self ):
         
-        advanced_panel = wx.Panel( self._notebook )
+        advanced_panel = QW.QWidget( self._notebook )
         
         #
         
@@ -457,53 +463,53 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._advanced_blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox.Add( add_blacklist_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( delete_blacklist_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( blacklist_everything_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._advanced_blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, add_blacklist_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, delete_blacklist_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, blacklist_everything_button, CC.FLAGS_VCENTER )
         
         blacklist_panel.Add( self._advanced_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
         blacklist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = QP.HBoxLayout()
         
-        button_hbox.Add( self._advanced_whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox.Add( self._advanced_add_whitelist_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( delete_whitelist_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, self._advanced_whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._advanced_add_whitelist_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( button_hbox, delete_whitelist_button, CC.FLAGS_VCENTER )
         
         whitelist_panel.Add( self._advanced_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
         whitelist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        advanced_panel.SetSizer( hbox )
+        advanced_panel.setLayout( hbox )
         
         return advanced_panel
         
     
     def _InitBlacklistPanel( self ):
         
-        blacklist_panel = wx.Panel( self._notebook )
+        blacklist_panel = QW.QWidget( self._notebook )
         
         #
         
         self._simple_blacklist_error_st = ClientGUICommon.BetterStaticText( blacklist_panel )
         
-        self._simple_blacklist_global_checkboxes = ClientGUICommon.BetterCheckListBox( blacklist_panel )
+        self._simple_blacklist_global_checkboxes = QP.CheckListBox( blacklist_panel )
         
         self._simple_blacklist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_blacklist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckListBox( blacklist_panel )
+        self._simple_blacklist_namespace_checkboxes = QP.CheckListBox( blacklist_panel )
         
         for namespace in self._namespaces:
             
@@ -521,46 +527,46 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        left_vbox = wx.BoxSizer( wx.VERTICAL )
+        left_vbox = QP.VBoxLayout()
         
-        left_vbox.Add( self._simple_blacklist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        left_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        left_vbox.Add( self._simple_blacklist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._simple_blacklist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._simple_blacklist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        right_vbox = wx.BoxSizer( wx.VERTICAL )
+        right_vbox = QP.VBoxLayout()
         
-        right_vbox.Add( self._simple_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        right_vbox.Add( self._simple_blacklist_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( right_vbox, self._simple_blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( right_vbox, self._simple_blacklist_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        main_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        main_hbox = QP.HBoxLayout()
         
-        main_hbox.Add( left_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        main_hbox.Add( right_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._simple_blacklist_error_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._simple_blacklist_error_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        blacklist_panel.SetSizer( vbox )
+        blacklist_panel.setLayout( vbox )
         
         return blacklist_panel
         
     
     def _InitWhitelistPanel( self ):
         
-        whitelist_panel = wx.Panel( self._notebook )
+        whitelist_panel = QW.QWidget( self._notebook )
         
         #
         
         self._simple_whitelist_error_st = ClientGUICommon.BetterStaticText( whitelist_panel )
         
-        self._simple_whitelist_global_checkboxes = ClientGUICommon.BetterCheckListBox( whitelist_panel )
+        self._simple_whitelist_global_checkboxes = QP.CheckListBox( whitelist_panel )
         
         self._simple_whitelist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_whitelist_global_checkboxes.Append( 'namespaced tags', ':' )
         
-        self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckListBox( whitelist_panel )
+        self._simple_whitelist_namespace_checkboxes = QP.CheckListBox( whitelist_panel )
         
         for namespace in self._namespaces:
             
@@ -578,28 +584,28 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        left_vbox = wx.BoxSizer( wx.VERTICAL )
+        left_vbox = QP.VBoxLayout()
         
-        left_vbox.Add( self._simple_whitelist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        left_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        left_vbox.Add( self._simple_whitelist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._simple_whitelist_global_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, (20,20), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( left_vbox, self._simple_whitelist_namespace_checkboxes, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        right_vbox = wx.BoxSizer( wx.VERTICAL )
+        right_vbox = QP.VBoxLayout()
         
-        right_vbox.Add( self._simple_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
-        right_vbox.Add( self._simple_whitelist_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( right_vbox, self._simple_whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( right_vbox, self._simple_whitelist_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        main_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        main_hbox = QP.HBoxLayout()
         
-        main_hbox.Add( left_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        main_hbox.Add( right_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._simple_whitelist_error_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._simple_whitelist_error_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        whitelist_panel.SetSizer( vbox )
+        whitelist_panel.setLayout( vbox )
         
         return whitelist_panel
         
@@ -608,7 +614,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         if len( names_to_tag_filters ) == 0:
             
@@ -618,7 +624,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( name, tag_filter ) in names_to_tag_filters.items():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, name, 'load {}'.format( name ), self.SetValue, tag_filter )
+                ClientGUIMenus.AppendMenuItem( menu, name, 'load {}'.format( name ), self.SetValue, tag_filter )
                 
             
         
@@ -629,7 +635,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the favourite.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
                 
@@ -642,7 +648,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result != wx.ID_YES:
+                    if result != QW.QDialog.Accepted:
                         
                         return
                         
@@ -671,14 +677,14 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         help += os.linesep
         help += '"" (i.e. an empty string) - all unnamespaced tags'
         
-        wx.MessageBox( help )
+        QW.QMessageBox.information( self, 'Information', help )
         
     
     def _ShowRedundantError( self, text ):
         
-        self._redundant_st.SetLabelText( text )
+        self._redundant_st.setText( text )
         
-        HG.client_controller.CallLaterWXSafe( self._redundant_st, 2, self._redundant_st.SetLabelText, '' )
+        HG.client_controller.CallLaterQtSafe( self._redundant_st, 2, self._redundant_st.setText, '' )
         
     
     def _SimpleAddBlacklistMultiple( self, tag_slices ):
@@ -751,11 +757,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if whitelist_possible:
             
-            self._simple_whitelist_error_st.SetLabelText( '' )
+            self._simple_whitelist_error_st.setText( '' )
             
-            self._simple_whitelist.Enable()
-            self._simple_whitelist_global_checkboxes.Enable()
-            self._simple_whitelist_input.Enable()
+            self._simple_whitelist.setEnabled( True )
+            self._simple_whitelist_global_checkboxes.setEnabled( True )
+            self._simple_whitelist_input.setEnabled( True )
             
             whitelist_tag_slices = set( whitelist_tag_slices )
             
@@ -768,46 +774,46 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 whitelist_tag_slices.add( ':' )
                 
-                self._simple_whitelist_namespace_checkboxes.Disable()
+                self._simple_whitelist_namespace_checkboxes.setEnabled( False )
                 
             else:
                 
-                self._simple_whitelist_namespace_checkboxes.Enable()
+                self._simple_whitelist_namespace_checkboxes.setEnabled( True )
                 
             
             self._simple_whitelist.SetTags( whitelist_tag_slices )
             
-            for index in range( self._simple_whitelist_global_checkboxes.GetCount() ):
+            for index in range( self._simple_whitelist_global_checkboxes.count() ):
                 
-                check = self._simple_whitelist_global_checkboxes.GetClientData( index ) in whitelist_tag_slices
+                check = QP.GetClientData( self._simple_whitelist_global_checkboxes, index ) in whitelist_tag_slices
                 
                 self._simple_whitelist_global_checkboxes.Check( index, check )
                 
             
-            for index in range( self._simple_whitelist_namespace_checkboxes.GetCount() ):
+            for index in range( self._simple_whitelist_namespace_checkboxes.count() ):
                 
-                check = self._simple_whitelist_namespace_checkboxes.GetClientData( index ) in whitelist_tag_slices
+                check = QP.GetClientData( self._simple_whitelist_namespace_checkboxes, index ) in whitelist_tag_slices
                 
                 self._simple_whitelist_namespace_checkboxes.Check( index, check )
                 
             
         else:
             
-            self._simple_whitelist_error_st.SetLabelText( 'The filter is currently more complicated than a simple whitelist, so cannot be shown here.' )
+            self._simple_whitelist_error_st.setText( 'The filter is currently more complicated than a simple whitelist, so cannot be shown here.' )
             
-            self._simple_whitelist.Disable()
-            self._simple_whitelist_global_checkboxes.Disable()
-            self._simple_whitelist_namespace_checkboxes.Disable()
-            self._simple_whitelist_input.Disable()
+            self._simple_whitelist.setEnabled( False )
+            self._simple_whitelist_global_checkboxes.setEnabled( False )
+            self._simple_whitelist_namespace_checkboxes.setEnabled( False )
+            self._simple_whitelist_input.setEnabled( False )
             
             self._simple_whitelist.SetTags( '' )
             
-            for index in range( self._simple_whitelist_global_checkboxes.GetCount() ):
+            for index in range( self._simple_whitelist_global_checkboxes.count() ):
                 
                 self._simple_whitelist_global_checkboxes.Check( index, False )
                 
             
-            for index in range( self._simple_whitelist_namespace_checkboxes.GetCount() ):
+            for index in range( self._simple_whitelist_namespace_checkboxes.count() ):
                 
                 self._simple_whitelist_namespace_checkboxes.Check( index, False )
                 
@@ -820,54 +826,54 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if blacklist_possible:
             
-            self._simple_blacklist_error_st.SetLabelText( '' )
+            self._simple_blacklist_error_st.setText( '' )
             
-            self._simple_blacklist.Enable()
-            self._simple_blacklist_global_checkboxes.Enable()
-            self._simple_blacklist_input.Enable()
+            self._simple_blacklist.setEnabled( True )
+            self._simple_blacklist_global_checkboxes.setEnabled( True )
+            self._simple_blacklist_input.setEnabled( True )
             
             if self._CurrentlyBlocked( ':' ):
                 
-                self._simple_blacklist_namespace_checkboxes.Disable()
+                self._simple_blacklist_namespace_checkboxes.setEnabled( False )
                 
             else:
                 
-                self._simple_blacklist_namespace_checkboxes.Enable()
+                self._simple_blacklist_namespace_checkboxes.setEnabled( True )
                 
             
             self._simple_blacklist.SetTags( blacklist_tag_slices )
             
-            for index in range( self._simple_blacklist_global_checkboxes.GetCount() ):
+            for index in range( self._simple_blacklist_global_checkboxes.count() ):
                 
-                check = self._simple_blacklist_global_checkboxes.GetClientData( index ) in blacklist_tag_slices
+                check = QP.GetClientData( self._simple_blacklist_global_checkboxes, index ) in blacklist_tag_slices
                 
                 self._simple_blacklist_global_checkboxes.Check( index, check )
                 
             
-            for index in range( self._simple_blacklist_namespace_checkboxes.GetCount() ):
+            for index in range( self._simple_blacklist_namespace_checkboxes.count() ):
                 
-                check = self._simple_blacklist_namespace_checkboxes.GetClientData( index ) in blacklist_tag_slices
+                check = QP.GetClientData( self._simple_blacklist_namespace_checkboxes, index ) in blacklist_tag_slices
                 
                 self._simple_blacklist_namespace_checkboxes.Check( index, check )
                 
             
         else:
             
-            self._simple_blacklist_error_st.SetLabelText( 'The filter is currently more complicated than a simple blacklist, so cannot be shown here.' )
+            self._simple_blacklist_error_st.setText( 'The filter is currently more complicated than a simple blacklist, so cannot be shown here.' )
             
-            self._simple_blacklist.Disable()
-            self._simple_blacklist_global_checkboxes.Disable()
-            self._simple_blacklist_namespace_checkboxes.Disable()
-            self._simple_blacklist_input.Disable()
+            self._simple_blacklist.setEnabled( False )
+            self._simple_blacklist_global_checkboxes.setEnabled( False )
+            self._simple_blacklist_namespace_checkboxes.setEnabled( False )
+            self._simple_blacklist_input.setEnabled( False )
             
             self._simple_blacklist.SetTags( '' )
             
-            for index in range( self._simple_blacklist_global_checkboxes.GetCount() ):
+            for index in range( self._simple_blacklist_global_checkboxes.count() ):
                 
                 self._simple_blacklist_global_checkboxes.Check( index, False )
                 
             
-            for index in range( self._simple_blacklist_namespace_checkboxes.GetCount() ):
+            for index in range( self._simple_blacklist_namespace_checkboxes.count() ):
                 
                 self._simple_blacklist_namespace_checkboxes.Check( index, False )
                 
@@ -880,13 +886,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( blacklist_tag_slices ) == 0:
             
-            self._advanced_whitelist_input.Disable()
-            self._advanced_add_whitelist_button.Disable()
+            self._advanced_whitelist_input.setEnabled( False )
+            self._advanced_add_whitelist_button.setEnabled( False )
             
         else:
             
-            self._advanced_whitelist_input.Enable()
-            self._advanced_add_whitelist_button.Enable()
+            self._advanced_whitelist_input.setEnabled( True )
+            self._advanced_add_whitelist_button.setEnabled( True )
             
         
         #
@@ -895,20 +901,20 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_tag_filter = tag_filter.ToPermittedString()
         
-        self._current_filter_st.SetLabelText( 'currently keeping: ' + pretty_tag_filter )
+        self._current_filter_st.setText( 'currently keeping: '+pretty_tag_filter )
         
         self._UpdateTest()
         
     
     def _UpdateTest( self ):
         
-        test_input = self._test_input.GetValue()
+        test_input = self._test_input.toPlainText()
         
         if test_input == '':
             
             text = self.TEST_RESULT_DEFAULT
             
-            colour = ( 0, 0, 0 )
+            colour = QP.GetSystemColour( QG.QPalette.WindowText )
             
         else:
             
@@ -928,58 +934,53 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._test_result_st.SetForegroundColour( colour )
-        self._test_result_st.SetLabel( text )
+        QP.SetForegroundColour( self._test_result_st, colour )
+        self._test_result_st.setText( text )
         
     
-    def EventListBoxChanged( self, event ):
+    def EventSimpleBlacklistNamespaceCheck( self, index ):
+
+        index = index.row()
         
-        self._UpdateStatus()
-        
-    
-    def EventSimpleBlacklistNamespaceCheck( self, event ):
-        
-        index = event.GetInt()
-        
-        if index != wx.NOT_FOUND:
+        if index != -1:
             
-            tag_slice = self._simple_blacklist_namespace_checkboxes.GetClientData( index )
+            tag_slice = QP.GetClientData( self._simple_blacklist_namespace_checkboxes, index )
             
             self._AdvancedAddBlacklist( tag_slice )
             
         
     
-    def EventSimpleBlacklistGlobalCheck( self, event ):
+    def EventSimpleBlacklistGlobalCheck( self, index ):
         
-        index = event.GetInt()
+        index = index.row()
         
-        if index != wx.NOT_FOUND:
-            
-            tag_slice = self._simple_blacklist_global_checkboxes.GetClientData( index )
+        if index != -1:
+               
+            tag_slice = QP.GetClientData( self._simple_blacklist_global_checkboxes, index )
             
             self._AdvancedAddBlacklist( tag_slice )
             
         
     
-    def EventSimpleWhitelistNamespaceCheck( self, event ):
+    def EventSimpleWhitelistNamespaceCheck( self, index ):
+
+        index = index.row()
         
-        index = event.GetInt()
-        
-        if index != wx.NOT_FOUND:
+        if index != -1:
             
-            tag_slice = self._simple_whitelist_namespace_checkboxes.GetClientData( index )
+            tag_slice = QP.GetClientData( self._simple_whitelist_namespace_checkboxes, index )
             
             self._AdvancedAddWhitelist( tag_slice )
             
         
     
-    def EventSimpleWhitelistGlobalCheck( self, event ):
+    def EventSimpleWhitelistGlobalCheck( self, index ):
+
+        index = index.row()
         
-        index = event.GetInt()
-        
-        if index != wx.NOT_FOUND:
+        if index != -1:
             
-            tag_slice = self._simple_whitelist_global_checkboxes.GetClientData( index )
+            tag_slice = QP.GetClientData( self._simple_whitelist_global_checkboxes, index )
             
             if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetClientData():
                 
@@ -990,11 +991,6 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._AdvancedAddWhitelist( tag_slice )
                 
             
-        
-    
-    def EventTestText( self, event ):
-        
-        self._UpdateTest()
         
     
     def GetValue( self ):
@@ -1088,25 +1084,25 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             name = service.GetName()
             
             page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
+            page._add_tag_box.selectUp.connect( self.EventSelectUp )
+            page._add_tag_box.selectDown.connect( self.EventSelectDown )
+            page._add_tag_box.showPrevious.connect( self.EventShowPrevious )
+            page._add_tag_box.showNext.connect( self.EventShowNext )
+            page.okSignal.connect( self.okSignal )
             
             select = service_key == default_tag_repository_key
             
-            self._tag_repositories.AddPage( page, name, select = select )
+            self._tag_repositories.addTab( page, name )
+            if select: self._tag_repositories.setCurrentIndex( self._tag_repositories.count() - 1 )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
-        
-        self.Bind( ClientGUIACDropdown.EVT_SELECT_UP, self.EventSelectUp )
-        self.Bind( ClientGUIACDropdown.EVT_SELECT_DOWN, self.EventSelectDown )
-        
-        self.Bind( ClientGUIACDropdown.EVT_SHOW_PREVIOUS, self.EventShowPrevious )
-        self.Bind( ClientGUIACDropdown.EVT_SHOW_NEXT, self.EventShowNext )
+        self.widget().setLayout( vbox )
         
         if self._canvas_key is not None:
             
@@ -1115,7 +1111,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
         
-        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+        self._tag_repositories.currentChanged.connect( self.EventServiceChanged )
         
         self._SetSearchFocus()
         
@@ -1144,7 +1140,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_repositories.GetCurrentPage()
+        page = self._tag_repositories.currentWidget()
         
         if page is not None:
             
@@ -1178,7 +1174,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 return False
                 
@@ -1207,21 +1203,21 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def EventSelectDown( self, event ):
+    def EventSelectDown( self ):
         
         self._tag_repositories.SelectRight()
         
         self._SetSearchFocus()
         
     
-    def EventSelectUp( self, event ):
+    def EventSelectUp( self ):
         
         self._tag_repositories.SelectLeft()
         
         self._SetSearchFocus()
         
     
-    def EventShowNext( self, event ):
+    def EventShowNext( self ):
         
         if self._canvas_key is not None:
             
@@ -1229,7 +1225,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def EventShowPrevious( self, event ):
+    def EventShowPrevious( self ):
         
         if self._canvas_key is not None:
             
@@ -1237,26 +1233,23 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def EventServiceChanged( self, event ):
+    def EventServiceChanged( self, index ):
         
-        if not self: # actually did get a runtime error here, on some Linux WM dialog shutdown
+        if not self or not QP.isValid( self ): # actually did get a runtime error here, on some Linux WM dialog shutdown
             
             return
             
         
-        if event.GetEventObject() != self._tag_repositories:
+        if self.sender() != self._tag_repositories:
             
             return
             
         
-        page = self._tag_repositories.GetCurrentPage()
+        page = self._tag_repositories.currentWidget()
         
         if page is not None:
             
-            wx.CallAfter( page.SetTagBoxFocus )
-            
-        
-        event.Skip()
+            QP.CallAfter( page.SetTagBoxFocus )
         
     
     def ProcessApplicationCommand( self, command ):
@@ -1311,11 +1304,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         return command_processed
         
     
-    class _Panel( wx.Panel ):
+    class _Panel( QW.QWidget ):
+        
+        okSignal = QC.Signal()
         
         def __init__( self, parent, file_service_key, tag_service_key, media, immediate_commit, canvas_key = None ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._file_service_key = file_service_key
             self._tag_service_key = tag_service_key
@@ -1359,14 +1354,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             menu_items.append( ( 'normal', 'Hard-replace all applicable tags with their siblings and add missing parents. (All service siblings and parents)', 'Fix siblings and parents.', call ) )
             
-            self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.family, menu_items )
-            self._do_siblings_and_parents.SetToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )
+            self._do_siblings_and_parents = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.family, menu_items )
+            self._do_siblings_and_parents.setToolTip( 'Hard-replace all applicable tags with their siblings and add missing parents.' )
             
-            self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.copy, self._Copy )
-            self._copy_button.SetToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
+            self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.copy, self._Copy )
+            self._copy_button.setToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
             
-            self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.paste, self._Paste )
-            self._paste_button.SetToolTip( 'Paste newline-separated tags from the clipboard into here.' )
+            self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.paste, self._Paste )
+            self._paste_button.setToolTip( 'Paste newline-separated tags from the clipboard into here.' )
             
             self._show_deleted = False
             
@@ -1403,7 +1398,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 menu_items.append( ( 'normal', 'modify users who added the selected tags', 'Modify the users who added the selected tags.', self._ModifyMappers ) )
                 
             
-            self._cog_button = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalBMPs.cog, menu_items )
+            self._cog_button = ClientGUICommon.MenuBitmapButton( self._tags_box_sorter, CC.GlobalPixmaps.cog, menu_items )
             
             #
             
@@ -1417,33 +1412,33 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._media, self.AddTags, canvas_key = self._canvas_key )
             
-            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            button_hbox = QP.HBoxLayout()
             
-            button_hbox.Add( self._remove_tags, CC.FLAGS_VCENTER )
-            button_hbox.Add( self._do_siblings_and_parents, CC.FLAGS_VCENTER )
-            button_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
-            button_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
-            button_hbox.Add( self._cog_button, CC.FLAGS_SIZER_CENTER )
+            QP.AddToLayout( button_hbox, self._remove_tags, CC.FLAGS_VCENTER )
+            QP.AddToLayout( button_hbox, self._do_siblings_and_parents, CC.FLAGS_VCENTER )
+            QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_VCENTER )
+            QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_SIZER_CENTER )
             
             self._tags_box_sorter.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
             
-            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._add_tag_box, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
+            QP.AddToLayout( vbox, self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._add_tag_box )
             
             #
             
-            hbox = ClientGUICommon.BetterBoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( self._suggested_tags, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE )
-            hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._suggested_tags, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE )
+            QP.AddToLayout( hbox, vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
             self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
             
-            self.SetSizer( hbox )
+            self.setLayout( hbox )
             
             if self._immediate_commit:
                 
@@ -1649,7 +1644,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
+                        if dlg.exec() == QW.QDialog.Accepted:
                             
                             reason = dlg.GetValue()
                             
@@ -1658,11 +1653,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             return
                             
                         
-                    
-                    # if this above sub-dialog occurs, the 'default focus' reverts to the main gui when the manage tags frame closes, wew lad
-                    
-                    ClientGUIFunctions.GetTLP( self ).GetParent().SetFocus()
-                    self.SetFocus()
                     
                 else:
                     
@@ -1797,148 +1787,141 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _DoSiblingsAndParents( self, service_key ):
             
-            try:
+            tag_siblings_manager = HG.client_controller.tag_siblings_manager
+            
+            tag_parents_manager = HG.client_controller.tag_parents_manager
+            
+            removee_tags_to_hashes = collections.defaultdict( list )
+            addee_tags_to_hashes = collections.defaultdict( list )
+            
+            for m in self._media:
                 
-                tag_siblings_manager = HG.client_controller.tag_siblings_manager
+                hash = m.GetHash()
                 
-                tag_parents_manager = HG.client_controller.tag_parents_manager
+                tags = m.GetTagsManager().GetCurrentAndPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
                 
-                removee_tags_to_hashes = collections.defaultdict( list )
-                addee_tags_to_hashes = collections.defaultdict( list )
+                sibling_correct_tags = tag_siblings_manager.CollapseTags( service_key, tags, service_strict = True )
                 
-                for m in self._media:
+                sibling_and_parent_correct_tags = tag_parents_manager.ExpandTags( service_key, sibling_correct_tags, service_strict = True )
+                
+                removee_tags = tags.difference( sibling_and_parent_correct_tags )
+                addee_tags = sibling_and_parent_correct_tags.difference( tags )
+                
+                for tag in removee_tags:
                     
-                    hash = m.GetHash()
+                    removee_tags_to_hashes[ tag ].append( hash )
                     
-                    tags = m.GetTagsManager().GetCurrentAndPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                
+                for tag in addee_tags:
                     
-                    sibling_correct_tags = tag_siblings_manager.CollapseTags( service_key, tags, service_strict = True )
+                    addee_tags_to_hashes[ tag ].append( hash )
                     
-                    sibling_and_parent_correct_tags = tag_parents_manager.ExpandTags( service_key, sibling_correct_tags, service_strict = True )
+                
+            
+            if len( removee_tags_to_hashes ) == 0 and len( addee_tags_to_hashes ) == 0:
+                
+                QW.QMessageBox.information( self, 'Information', 'No replacements seem to be needed.' )
+                
+                return
+                
+            
+            summary_message = 'The following changes will be made:'
+            
+            if len( removee_tags_to_hashes ) > 0:
+                
+                removee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in removee_tags_to_hashes.items() }
+                
+                removee_tags = list( removee_tags_to_counts.keys() )
+                
+                ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, removee_tags, removee_tags_to_counts )
+                
+                removee_tag_statements = [ '{} ({})'.format( tag, removee_tags_to_counts[ tag ] ) for tag in removee_tags ]
+                
+                if len( removee_tag_statements ) > 10:
                     
-                    removee_tags = tags.difference( sibling_and_parent_correct_tags )
-                    addee_tags = sibling_and_parent_correct_tags.difference( tags )
+                    removee_tag_statements = removee_tag_statements[:10]
                     
-                    for tag in removee_tags:
+                    removee_tag_statements.append( 'and more' )
+                    
+                
+                summary_message += os.linesep * 2
+                summary_message += 'REMOVE: ' + ', '.join( removee_tag_statements )
+                
+            
+            if len( addee_tags_to_hashes ) > 0:
+                
+                addee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in addee_tags_to_hashes.items() }
+                
+                addee_tags = list( addee_tags_to_counts.keys() )
+                
+                ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, addee_tags, addee_tags_to_counts )
+                
+                addee_tag_statements = [ '{} ({})'.format( tag, addee_tags_to_counts[ tag ] ) for tag in addee_tags ]
+                
+                if len( addee_tag_statements ) > 10:
+                    
+                    addee_tag_statements = addee_tag_statements[:10]
+                    
+                    addee_tag_statements.append( 'and more' )
+                    
+                
+                summary_message += os.linesep * 2
+                summary_message += 'ADD: ' + ', '.join( addee_tag_statements )
+                
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, summary_message, yes_label = 'do it', no_label = 'forget it' )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return
+                
+            
+            # this no longer does pend/petition for repos, making it local-only
+            # therefore, clients' unusual siblings no longer affect the tag repo
+            
+            addee_action = HC.CONTENT_UPDATE_ADD
+            removee_action = HC.CONTENT_UPDATE_DELETE
+            reason = None
+            
+            content_updates = []
+            
+            for ( tag, hashes ) in removee_tags_to_hashes.items():
+                
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, removee_action, ( tag, hashes ), reason = reason ) )
+                
+            
+            for ( tag, hashes ) in addee_tags_to_hashes.items():
+                
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, addee_action, ( tag, hashes ), reason = reason ) )
+                
+            
+            if not self._immediate_commit:
+                
+                hashes_to_tag_managers = { m.GetHash() : m.GetTagsManager() for m in self._media }
+                
+                for content_update in content_updates:
+                    
+                    hashes = content_update.GetHashes()
+                    
+                    for hash in hashes:
                         
-                        removee_tags_to_hashes[ tag ].append( hash )
-                        
-                    
-                    for tag in addee_tags:
-                        
-                        addee_tags_to_hashes[ tag ].append( hash )
-                        
-                    
-                
-                if len( removee_tags_to_hashes ) == 0 and len( addee_tags_to_hashes ) == 0:
-                    
-                    wx.MessageBox( 'No replacements seem to be needed.' )
-                    
-                    return
-                    
-                
-                summary_message = 'The following changes will be made:'
-                
-                if len( removee_tags_to_hashes ) > 0:
-                    
-                    removee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in removee_tags_to_hashes.items() }
-                    
-                    removee_tags = list( removee_tags_to_counts.keys() )
-                    
-                    ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, removee_tags, removee_tags_to_counts )
-                    
-                    removee_tag_statements = [ '{} ({})'.format( tag, removee_tags_to_counts[ tag ] ) for tag in removee_tags ]
-                    
-                    if len( removee_tag_statements ) > 10:
-                        
-                        removee_tag_statements = removee_tag_statements[:10]
-                        
-                        removee_tag_statements.append( 'and more' )
-                        
-                    
-                    summary_message += os.linesep * 2
-                    summary_message += 'REMOVE: ' + ', '.join( removee_tag_statements )
-                    
-                
-                if len( addee_tags_to_hashes ) > 0:
-                    
-                    addee_tags_to_counts = { tag : len( hashes ) for ( tag, hashes ) in addee_tags_to_hashes.items() }
-                    
-                    addee_tags = list( addee_tags_to_counts.keys() )
-                    
-                    ClientTags.SortTags( CC.SORT_BY_INCIDENCE_DESC, addee_tags, addee_tags_to_counts )
-                    
-                    addee_tag_statements = [ '{} ({})'.format( tag, addee_tags_to_counts[ tag ] ) for tag in addee_tags ]
-                    
-                    if len( addee_tag_statements ) > 10:
-                        
-                        addee_tag_statements = addee_tag_statements[:10]
-                        
-                        addee_tag_statements.append( 'and more' )
-                        
-                    
-                    summary_message += os.linesep * 2
-                    summary_message += 'ADD: ' + ', '.join( addee_tag_statements )
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, summary_message, yes_label = 'do it', no_label = 'forget it' )
-                
-                if result != wx.ID_YES:
-                    
-                    return
-                    
-                
-                # this no longer does pend/petition for repos, making it local-only
-                # therefore, clients' unusual siblings no longer affect the tag repo
-                
-                addee_action = HC.CONTENT_UPDATE_ADD
-                removee_action = HC.CONTENT_UPDATE_DELETE
-                reason = None
-                
-                content_updates = []
-                
-                for ( tag, hashes ) in removee_tags_to_hashes.items():
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, removee_action, ( tag, hashes ), reason = reason ) )
-                    
-                
-                for ( tag, hashes ) in addee_tags_to_hashes.items():
-                    
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, addee_action, ( tag, hashes ), reason = reason ) )
-                    
-                
-                if not self._immediate_commit:
-                    
-                    hashes_to_tag_managers = { m.GetHash() : m.GetTagsManager() for m in self._media }
-                    
-                    for content_update in content_updates:
-                        
-                        hashes = content_update.GetHashes()
-                        
-                        for hash in hashes:
+                        if hash in hashes_to_tag_managers:
                             
-                            if hash in hashes_to_tag_managers:
-                                
-                                hashes_to_tag_managers[ hash ].ProcessContentUpdate( self._tag_service_key, content_update )
-                                
+                            hashes_to_tag_managers[ hash ].ProcessContentUpdate( self._tag_service_key, content_update )
                             
                         
                     
-                    self._groups_of_content_updates.append( content_updates )
-                    
-                else:
-                    
-                    service_keys_to_content_updates = { self._tag_service_key : content_updates }
-                    
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                    
                 
-                self._tags_box.SetTagsByMedia( self._media, force_reload = True )
+                self._groups_of_content_updates.append( content_updates )
                 
-            finally:
+            else:
                 
-                self._add_tag_box.SetFocus()
+                service_keys_to_content_updates = { self._tag_service_key : content_updates }
                 
+                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
+            
+            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
         def _FlipShowDeleted( self ):
@@ -1950,7 +1933,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ModifyMappers( self ):
             
-            wx.MessageBox( 'this does not work yet!' )
+            QW.QMessageBox.critical( self, 'Error', 'this does not work yet!' )
             
             return
             
@@ -1971,7 +1954,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_accounts ) as dlg:
                     
-                    dlg.ShowModal()
+                    dlg.exec()
                     
                 
             
@@ -1984,7 +1967,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.warning( self, 'Warning', str(e) )
                 
                 return
                 
@@ -1999,7 +1982,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                QW.QMessageBox.warning( self, 'Warning', 'I could not understand what was in the clipboard' )
                 
             
         
@@ -2074,11 +2057,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def OK( self ):
             
-            # nice to have this happen immediately so the 'advanced content update' stuff can occur in a neat event order afterwards
-            self.GetEventHandler().ProcessEvent( ClientGUITopLevelWindows.OKEvent( -1 ) )
-            
-            # old call:
-            # wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+            self.okSignal.emit()
             
         
         def ProcessApplicationCommand( self, command ):
@@ -2151,7 +2130,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
                     
-                    if result != wx.ID_YES:
+                    if result != QW.QDialog.Accepted:
                         
                         return
                         
@@ -2175,7 +2154,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def SetTagBoxFocus( self ):
             
-            self._add_tag_box.SetFocus()
+            self._add_tag_box.setFocus( QC.Qt.OtherFocusReason )
             
         
 
@@ -2204,21 +2183,22 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             select = service_key == default_tag_repository_key
             
-            self._tag_repositories.AddPage( page, name, select = select )
+            self._tag_repositories.addTab( page, name )
+            if select: self._tag_repositories.setCurrentWidget( page )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_repositories.GetCurrentPage()
+        page = self._tag_repositories.currentWidget()
         
         if page is not None:
             
@@ -2228,13 +2208,13 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        if self._tag_repositories.GetCurrentPage().HasUncommittedPair():
+        if self._tag_repositories.currentWidget().HasUncommittedPair():
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
                 
@@ -2257,12 +2237,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         
-    
-    class _Panel( wx.Panel ):
+    class _Panel( QW.QWidget ):
         
         def __init__( self, parent, service_key, tags = None ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._service_key = service_key
             
@@ -2275,7 +2254,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._original_statuses_to_pairs = collections.defaultdict( set )
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
-            self._show_all = wx.CheckBox( self )
+            self._show_all = QW.QCheckBox( self )
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
@@ -2308,20 +2287,20 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
-            self._children.SetInitialSize( ( -1, preview_height ) )
-            self._parents.SetInitialSize( ( -1, preview_height ) )
+            QP.SetInitialSize( self._children, (-1,preview_height) )
+            QP.SetInitialSize( self._parents, (-1,preview_height) )
             
             expand_parents = True
             
             self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
-            self._child_input.Disable()
+            self._child_input.setEnabled( False )
             
             self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
-            self._parent_input.Disable()
+            self._parent_input.setEnabled( False )
             
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
-            self._add.Disable()
+            self._add = QW.QPushButton( 'add', self )
+            self._add.clicked.connect( self.EventAddButton )
+            self._add.setEnabled( False )
             
             #
             
@@ -2330,35 +2309,35 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' + os.linesep + '.' )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
-            tags_box = wx.BoxSizer( wx.HORIZONTAL )
+            tags_box = QP.HBoxLayout()
             
-            tags_box.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
-            tags_box.Add( self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( tags_box, self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( tags_box, self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            input_box = wx.BoxSizer( wx.HORIZONTAL )
+            input_box = QP.HBoxLayout()
             
-            input_box.Add( self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            input_box.Add( self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( input_box, self._child_input )
+            QP.AddToLayout( input_box, self._parent_input )
             
-            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
-            vbox.Add( tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._add, CC.FLAGS_LONE_BUTTON )
+            QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, input_box )
             
-            self.SetSizer( vbox )
+            self.setLayout( vbox )
             
             #
             
-            self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            self._tag_parents.itemSelectionChanged.connect( self._SetButtonStatus )
             
-            self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
-            self._show_all.Bind( wx.EVT_CHECKBOX, self.EventShowAll )
+            self._children.listBoxChanged.connect( self._UpdateListCtrlData )
+            self._parents.listBoxChanged.connect( self._UpdateListCtrlData )
+            self._show_all.clicked.connect( self._UpdateListCtrlData )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
@@ -2433,7 +2412,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
-                            if dlg.ShowModal() == wx.ID_OK:
+                            if dlg.exec() == QW.QDialog.Accepted:
                                 
                                 reason = dlg.GetValue()
                                 
@@ -2485,7 +2464,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' )
                         
-                        if result == wx.ID_YES:
+                        if result == QW.QDialog.Accepted:
                             
                             if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
                                 
@@ -2497,7 +2476,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                 
                                 with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                     
-                                    if dlg.ShowModal() == wx.ID_OK:
+                                    if dlg.exec() == QW.QDialog.Accepted:
                                         
                                         reason = dlg.GetValue()
                                         
@@ -2550,7 +2529,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
                     
-                    if result == wx.ID_YES:
+                    if result == QW.QDialog.Accepted:
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
                         
@@ -2580,7 +2559,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
                     
-                    if result == wx.ID_YES:
+                    if result == QW.QDialog.Accepted:
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
                         
@@ -2636,7 +2615,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if ClientCaches.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
                     
-                    wx.MessageBox( 'Adding ' + potential_child + '->' + potential_parent + ' would create a loop!' )
+                    QW.QMessageBox.critical( self, 'Error', 'Adding '+potential_child+'->'+potential_parent+' would create a loop!' )
                     
                     return False
                     
@@ -2704,9 +2683,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', style = wx.FD_SAVE ) as dlg:
+            with QP.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     path = dlg.GetPath()
                     
@@ -2741,7 +2720,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.critical( self, 'Error', str(e) )
                 
                 return
                 
@@ -2755,9 +2734,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ImportFromTXT( self, add_only = False ):
             
-            with wx.FileDialog( self, 'Select the file to import.', style = wx.FD_OPEN ) as dlg:
+            with QP.FileDialog( self, 'Select the file to import.', acceptMode = QW.QFileDialog.AcceptOpen ) as dlg:
                 
-                if dlg.ShowModal() != wx.ID_OK:
+                if dlg.exec() != QW.QDialog.Accepted:
                     
                     return
                     
@@ -2795,11 +2774,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0:
                 
-                self._add.Disable()
+                self._add.setEnabled( False )
                 
             else:
                 
-                self._add.Enable()
+                self._add.setEnabled( True )
                 
             
         
@@ -2814,7 +2793,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             all_pairs = set()
             
-            show_all = self._show_all.GetValue()
+            show_all = self._show_all.isChecked()
             
             for ( status, pairs ) in list(self._current_statuses_to_pairs.items()):
                 
@@ -2883,7 +2862,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def EventAddButton( self, event ):
+        def EventAddButton( self ):
             
             children = self._children.GetTags()
             parents = self._parents.GetTags()
@@ -2898,23 +2877,6 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._UpdateListCtrlData()
             
             self._SetButtonStatus()
-            
-        
-        def EventItemSelected( self, event ):
-            
-            self._SetButtonStatus()
-            
-            event.Skip()
-            
-        
-        def EventListBoxChanged( self, event ):
-            
-            self._UpdateListCtrlData()
-            
-        
-        def EventShowAll( self, event ):
-            
-            self._UpdateListCtrlData()
             
         
         def GetContentUpdates( self ):
@@ -2959,15 +2921,15 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def SetTagBoxFocus( self ):
             
-            if len( self._children.GetTags() ) == 0: self._child_input.SetFocus()
-            else: self._parent_input.SetFocus()
+            if len( self._children.GetTags() ) == 0: self._child_input.setFocus( QC.Qt.OtherFocusReason )
+            else: self._parent_input.setFocus( QC.Qt.OtherFocusReason )
             
         
         def THREADInitialise( self, tags, service_key ):
             
-            def wx_code( original_statuses_to_pairs, current_statuses_to_pairs ):
+            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -2975,11 +2937,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
-                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ToHumanInt( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
+                self._status_st.setText( 'Files with a tag on the left will also be given the tag on the right.'+os.linesep+'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
+                self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
-                self._child_input.Enable()
-                self._parent_input.Enable()
+                self._child_input.setEnabled( True )
+                self._parent_input.setEnabled( True )
                 
                 if tags is None:
                     
@@ -2997,7 +2959,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in list(original_statuses_to_pairs.items()) } )
             
-            wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
+            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs )
             
         
     
@@ -3026,21 +2988,22 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             select = service_key == default_tag_repository_key
             
-            self._tag_repositories.AddPage( page, name, select = select )
+            self._tag_repositories.addTab( page, name )
+            if select: self._tag_repositories.setCurrentIndex( self._tag_repositories.indexOf( page ) )
             
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
     
     def _SetSearchFocus( self ):
         
-        page = self._tag_repositories.GetCurrentPage()
+        page = self._tag_repositories.currentWidget()
         
         if page is not None:
             
@@ -3050,13 +3013,13 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        if self._tag_repositories.GetCurrentPage().HasUncommittedPair():
+        if self._tag_repositories.currentWidget().HasUncommittedPair():
             
             message = 'Are you sure you want to OK? You have an uncommitted pair.'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result != wx.ID_YES:
+            if result != QW.QDialog.Accepted:
                 
                 raise HydrusExceptions.VetoException( 'Cancelled OK due to uncommitted pair.' )
                 
@@ -3082,19 +3045,19 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventServiceChanged( self, event ):
         
-        page = self._tag_repositories.GetCurrentPage()
+        page = self._tag_repositories.currentWidget()
         
         if page is not None:
             
-            wx.CallAfter( page.SetTagBoxFocus )
+            QP.CallAfter( page.SetTagBoxFocus )
             
         
     
-    class _Panel( wx.Panel ):
+    class _Panel( QW.QWidget ):
         
         def __init__( self, parent, service_key, tags = None ):
             
-            wx.Panel.__init__( self, parent )
+            QW.QWidget.__init__( self, parent )
             
             self._service_key = service_key
             
@@ -3109,7 +3072,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._current_new = None
             
-            self._show_all = wx.CheckBox( self )
+            self._show_all = QW.QCheckBox( self )
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
@@ -3142,60 +3105,59 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
             
-            self._old_siblings.SetInitialSize( ( -1, preview_height ) )
+            QP.SetInitialSize( self._old_siblings, (-1,preview_height) )
             
             expand_parents = False
             
             self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, show_paste_button = True )
-            self._old_input.Disable()
+            self._old_input.setEnabled( False )
             
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
-            self._new_input.Disable()
+            self._new_input.setEnabled( False )
             
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
-            self._add.Disable()
+            self._add = QW.QPushButton( 'add', self )
+            self._add.clicked.connect( self.EventAddButton )
+            self._add.setEnabled( False )
             
             #
             
             self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
-            new_sibling_box = wx.BoxSizer( wx.VERTICAL )
+            new_sibling_box = QP.VBoxLayout()
             
-            new_sibling_box.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-            new_sibling_box.Add( self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
-            new_sibling_box.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( new_sibling_box, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( new_sibling_box, self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( new_sibling_box, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            text_box = wx.BoxSizer( wx.HORIZONTAL )
+            text_box = QP.HBoxLayout()
             
-            text_box.Add( self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
-            text_box.Add( new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( text_box, self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( text_box, new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
-            input_box = wx.BoxSizer( wx.HORIZONTAL )
+            input_box = QP.HBoxLayout()
             
-            input_box.Add( self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            input_box.Add( self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( input_box, self._old_input )
+            QP.AddToLayout( input_box, self._new_input )
             
-            vbox = ClientGUICommon.BetterBoxSizer( wx.VERTICAL )
+            vbox = QP.VBoxLayout()
             
-            vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
-            vbox.Add( text_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._add, CC.FLAGS_LONE_BUTTON )
+            QP.AddToLayout( vbox, text_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, input_box )
             
-            self.SetSizer( vbox )
+            self.setLayout( vbox )
             
             #
             
-            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            self._tag_siblings.itemSelectionChanged.connect( self._SetButtonStatus )
             
-            self._show_all.Bind( wx.EVT_CHECKBOX, self.EventShowAll )
-            self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
+            self._show_all.clicked.connect( self._UpdateListCtrlData )
+            self._old_siblings.listBoxChanged.connect( self._UpdateListCtrlData )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
@@ -3274,7 +3236,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
-                            if dlg.ShowModal() == wx.ID_OK:
+                            if dlg.exec() == QW.QDialog.Accepted:
                                 
                                 reason = dlg.GetValue()
                                 
@@ -3331,7 +3293,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                             with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                                 
-                                if dlg.ShowModal() == wx.ID_OK:
+                                if dlg.exec() == QW.QDialog.Accepted:
                                     
                                     reason = dlg.GetValue()
                                     
@@ -3379,7 +3341,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
                     
-                    if result == wx.ID_YES:
+                    if result == QW.QDialog.Accepted:
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
                         
@@ -3407,7 +3369,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
                     
-                    if result == wx.ID_YES:
+                    if result == QW.QDialog.Accepted:
                         
                         self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
                         
@@ -3460,7 +3422,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if potential_old in current_olds:
                 
-                wx.MessageBox( 'There already is a relationship set for the tag ' + potential_old + '.' )
+                QW.QMessageBox.critical( self, 'Error', 'There already is a relationship set for the tag '+potential_old+'.' )
                 
                 return False
                 
@@ -3481,7 +3443,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if next_new == potential_old:
                         
-                        wx.MessageBox( 'Adding ' + potential_old + '->' + potential_new + ' would create a loop!' )
+                        QW.QMessageBox.critical( self, 'Error', 'Adding '+potential_old+'->'+potential_new+' would create a loop!' )
                         
                         return False
                         
@@ -3492,7 +3454,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         message += os.linesep * 2
                         message += ', '.join( seen_tags )
                         
-                        wx.MessageBox( message )
+                        QW.QMessageBox.critical( self, 'Error', message )
                         
                         return False
                         
@@ -3579,9 +3541,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'siblings.txt', style = wx.FD_SAVE ) as dlg:
+            with QP.FileDialog( self, 'Set the export path.', defaultFile = 'siblings.txt', acceptMode = QW.QFileDialog.AcceptSave ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
                     path = dlg.GetPath()
                     
@@ -3616,7 +3578,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                wx.MessageBox( str( e ) )
+                QW.QMessageBox.critical( self, 'Error', str(e) )
                 
                 return
                 
@@ -3632,9 +3594,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ImportFromTXT( self, add_only = False ):
             
-            with wx.FileDialog( self, 'Select the file to import.', style = wx.FD_OPEN ) as dlg:
+            with QP.FileDialog( self, 'Select the file to import.', acceptMode = QW.QFileDialog.AcceptOpen ) as dlg:
                 
-                if dlg.ShowModal() != wx.ID_OK:
+                if dlg.exec() != QW.QDialog.Accepted:
                     
                     return
                     
@@ -3674,11 +3636,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._current_new is None or len( self._old_siblings.GetTags() ) == 0:
                 
-                self._add.Disable()
+                self._add.setEnabled( False )
                 
             else:
                 
-                self._add.Enable()
+                self._add.setEnabled( True )
                 
             
         
@@ -3697,7 +3659,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             all_pairs = set()
             
-            show_all = self._show_all.GetValue()
+            show_all = self._show_all.isChecked()
             
             for ( status, pairs ) in self._current_statuses_to_pairs.items():
                 
@@ -3752,7 +3714,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._SetButtonStatus()
             
         
-        def EventAddButton( self, event ):
+        def EventAddButton( self ):
             
             if self._current_new is not None and len( self._old_siblings.GetTags() ) > 0:
                 
@@ -3771,23 +3733,6 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._SetButtonStatus()
                 
-            
-        
-        def EventItemSelected( self, event ):
-            
-            self._SetButtonStatus()
-            
-            event.Skip()
-            
-        
-        def EventListBoxChanged( self, event ):
-            
-            self._UpdateListCtrlData()
-            
-        
-        def EventShowAll( self, event ):
-            
-            self._UpdateListCtrlData()
             
         
         def GetContentUpdates( self ):
@@ -3843,7 +3788,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( new_tags ) == 0:
                 
-                self._new_sibling.SetLabelText( '' )
+                self._new_sibling.setText( '' )
                 
                 self._current_new = None
                 
@@ -3853,7 +3798,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._old_siblings.RemoveTags( { new } )
                 
-                self._new_sibling.SetLabelText( new )
+                self._new_sibling.setText( new )
                 
                 self._current_new = new
                 
@@ -3867,19 +3812,19 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( self._old_siblings.GetTags() ) == 0:
                 
-                self._old_input.SetFocus()
+                self._old_input.setFocus( QC.Qt.OtherFocusReason )
                 
             else:
                 
-                self._new_input.SetFocus()
+                self._new_input.setFocus( QC.Qt.OtherFocusReason )
                 
             
         
         def THREADInitialise( self, tags, service_key ):
             
-            def wx_code( original_statuses_to_pairs, current_statuses_to_pairs ):
+            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs ):
                 
-                if not self:
+                if not self or not QP.isValid( self ):
                     
                     return
                     
@@ -3887,11 +3832,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.SetLabelText( 'Tags on the left will be replaced by those on the right.' )
-                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ToHumanInt( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
+                self._status_st.setText( 'Tags on the left will be replaced by those on the right.' )
+                self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
-                self._old_input.Enable()
-                self._new_input.Enable()
+                self._old_input.setEnabled( True )
+                self._new_input.setEnabled( True )
                 
                 if tags is None:
                     
@@ -3909,7 +3854,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
             
-            wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
+            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs )
             
         
     
@@ -3936,7 +3881,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 self._tag_filter = panel.GetValue()
                 
@@ -3956,9 +3901,18 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
             tt = self._tag_filter.ToPermittedString()
             
         
-        self.SetLabelText( tt[:96] )
+        if len( tt ) > 45:
+            
+            text = tt[:45] + '\u2026'
+            
+        else:
+            
+            text = tt
+            
         
-        self.SetToolTip( tt )
+        self.setText( text )
+        
+        self.setToolTip( tt )
         
     
     def GetValue( self ):
@@ -3983,12 +3937,12 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         
         if background_colour is None:
             
-            background_colour = wx.Colour( 223, 227, 230, 255 )
+            background_colour = QG.QColor( 223, 227, 230, 255 )
             
         
         if text_colour is None:
             
-            text_colour = wx.Colour( 1, 17, 26, 255 )
+            text_colour = QG.QColor( 1, 17, 26, 255 )
             
         
         if namespace_info is None:
@@ -4022,7 +3976,7 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        return ( list( self._background_colour.Get() ), list( self._text_colour.Get() ), self._namespace_info, self._separator, self._example_tags, self._show )
+        return ( list( self._background_colour.toTuple() ), list( self._text_colour.toTuple() ), self._namespace_info, self._separator, self._example_tags, self._show )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -4031,11 +3985,11 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         
         ( r, g, b, a ) = background_rgba
         
-        self._background_colour = wx.Colour( r, g, b, a )
+        self._background_colour = QG.QColor( r, g, b, a )
         
         ( r, g, b, a ) = text_rgba
         
-        self._text_colour = wx.Colour( r, g, b, a )
+        self._text_colour = QG.QColor( r, g, b, a )
         
         self._namespace_info = [ tuple( row ) for row in self._namespace_info ]
         

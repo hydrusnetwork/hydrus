@@ -16,22 +16,22 @@ from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusSerialisable
 import os
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
-class FullscreenHoverFrame( wx.Frame ):
+class FullscreenHoverFrame( QW.QFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        if HC.PLATFORM_WINDOWS:
-            
-            border_style = wx.BORDER_RAISED
-            
-        else:
-            
-            border_style = wx.BORDER_SIMPLE
-            
+        QW.QFrame.__init__( self, parent )
         
-        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | border_style )
+        self.setWindowFlags( QC.Qt.FramelessWindowHint | QC.Qt.Tool )
+        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
+        self.setLineWidth( 2 )
+        self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+        self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
         self._my_canvas = my_canvas
         self._canvas_key = canvas_key
@@ -41,8 +41,8 @@ class FullscreenHoverFrame( wx.Frame ):
         
         self._last_ideal_position = None
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
-        self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
+        QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
+        self.setCursor( QG.QCursor( QC.Qt.ArrowCursor ) )
         
         self._hide_until =  None
         
@@ -60,25 +60,23 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def _SizeAndPosition( self ):
         
-        if self.GetParent().IsShown():
+        if self.parentWidget().isVisible():
             
             ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
             
             if should_resize:
                 
-                self.Fit()
-                
-                self.SetSize( my_ideal_size )
+                self.resize( QP.TupleToQSize( my_ideal_size ) )
                 
             
-            changes_occurred = should_resize or self.GetPosition() != my_ideal_position
+            changes_occurred = should_resize or self.pos() != QP.TupleToQPoint( my_ideal_position )
             
             if HC.PLATFORM_OSX and changes_occurred and self._always_on_top:
                 
-                self.Raise()
+                self.raise_()
                 
             
-            self.SetPosition( my_ideal_position )
+            self.move( QP.TupleToQPoint( my_ideal_position ) )
             
         
     
@@ -92,9 +90,9 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def TIMERUIUpdate( self ):
         
-        current_focus_tlp = ClientGUIFunctions.GetFocusTLP()
+        current_focus_tlp = QW.QApplication.activeWindow()
         
-        focus_is_on_descendant = ClientGUIFunctions.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
+        focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlp, self._my_canvas.window(), through_tlws = True )
         focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
         
         focus_is_good = focus_is_on_descendant and focus_has_right_window_type
@@ -105,22 +103,22 @@ class FullscreenHoverFrame( wx.Frame ):
             
             self._SizeAndPosition()
             
-            self.Show()
+            self.show()
             
             if HC.PLATFORM_OSX:
                 
-                ( mouse_x, mouse_y ) = wx.GetMousePosition()
+                ( mouse_x, mouse_y ) = QG.QCursor.pos().toTuple()
                 
-                ( my_x, my_y ) = self.GetPosition()
+                ( my_x, my_y ) = self.mapToGlobal( self.pos() ).toTuple()
                 
-                ( my_width, my_height ) = self.GetSize()
+                ( my_width, my_height ) = self.size().toTuple()
                 
                 in_actual_x = my_x <= mouse_x and mouse_x <= my_x + my_width
                 in_actual_y = my_y <= mouse_y and mouse_y <= my_y + my_height
                 
                 if in_actual_x and in_actual_y and focus_is_good:
                     
-                    self.Raise()
+                    self.raise_()
                     
                 
             
@@ -139,23 +137,23 @@ class FullscreenHoverFrame( wx.Frame ):
                 
             
         
-        if self._current_media is None or not self._my_canvas.IsShown():
+        if self._current_media is None or not self._my_canvas.isVisible():
             
-            if self.IsShown():
+            if self.isVisible():
                 
                 if HG.hover_window_report_mode:
                     
                     HydrusData.ShowText( repr( self ) + ' - hiding because nothing to show or parent hidden.' )
                     
                 
-                self.Hide()
+                self.hide()
                 
             
         else:
             
-            ( mouse_x, mouse_y ) = wx.GetMousePosition()
+            ( mouse_x, mouse_y ) = QG.QCursor.pos().toTuple()
             
-            ( my_width, my_height ) = self.GetSize()
+            ( my_width, my_height ) = self.size().toTuple()
             
             ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
             
@@ -169,7 +167,7 @@ class FullscreenHoverFrame( wx.Frame ):
                 my_ideal_height = max( my_height, 50 )
                 
             
-            ( my_x, my_y ) = self.GetPosition()
+            ( my_x, my_y ) = self.pos().toTuple()
             
             in_ideal_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
             in_ideal_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
@@ -188,11 +186,11 @@ class FullscreenHoverFrame( wx.Frame ):
             
             dialog_open = False
             
-            tlps = wx.GetTopLevelWindows()
+            tlps = QW.QApplication.topLevelWidgets()
             
             for tlp in tlps:
                 
-                if isinstance( tlp, wx.Dialog ):
+                if isinstance( tlp, QW.QDialog ) and not isinstance( tlp, ClientGUICanvas.CanvasFrame ) and tlp.isModal():
                     
                     dialog_open = True
                     
@@ -200,11 +198,9 @@ class FullscreenHoverFrame( wx.Frame ):
             
             mime = self._current_media.GetMime()
             
-            mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self._my_canvas.MouseIsOverMedia()
-            
             mouse_is_near_animation_bar = self._my_canvas.MouseIsNearAnimationBar()
             
-            mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
+            mouse_is_over_something_important = mouse_is_near_animation_bar # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
             
             hide_focus_is_good = focus_is_good or current_focus_tlp is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
             
@@ -223,7 +219,6 @@ class FullscreenHoverFrame( wx.Frame ):
                 tuples.append( ( 'in position: ', in_position ) )
                 tuples.append( ( 'menu open: ', menu_open ) )
                 tuples.append( ( 'dialog open: ', dialog_open ) )
-                tuples.append( ( 'mouse over interactable media: ', mouse_is_over_interactable_media ) )
                 tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
                 tuples.append( ( 'focus is good: ', focus_is_good ) )
                 tuples.append( ( 'focus is on descendant: ', focus_is_on_descendant ) )
@@ -238,40 +233,40 @@ class FullscreenHoverFrame( wx.Frame ):
                 
                 self._SizeAndPosition()
                 
-                if not self.IsShown():
+                if not self.isVisible():
                     
                     if HG.hover_window_report_mode:
                         
                         HydrusData.ShowText( repr( self ) + ' - showing.' + get_logic_report_string() )
                         
                     
-                    self.Show()
+                    self.show()
                     
                     # in case focus jumps around from the show, let's test it and raise as needed
                     
-                    current_focus_tlp = ClientGUIFunctions.GetFocusTLP()
+                    current_focus_tlp = QW.QApplication.activeWindow()
                     
-                    focus_is_on_descendant = ClientGUIFunctions.IsWXAncestor( current_focus_tlp, self._my_canvas.GetTopLevelParent(), through_tlws = True )
+                    focus_is_on_descendant = ClientGUIFunctions.IsQtAncestor( current_focus_tlp, self._my_canvas.window(), through_tlws = True )
                     focus_has_right_window_type = isinstance( current_focus_tlp, ( ClientGUICanvas.CanvasFrame, FullscreenHoverFrame ) )
                     
                     focus_is_good = focus_is_on_descendant and focus_has_right_window_type
                     
                     if not focus_is_good:
                         
-                        self.Raise()
+                        self.raise_()
                         
                     
                 
             elif ready_to_hide:
                 
-                if self.IsShown():
+                if self.isVisible():
                     
                     if HG.hover_window_report_mode:
                         
                         HydrusData.ShowText( repr( self ) + ' - hiding.' + get_logic_report_string() )
                         
                     
-                    self.Hide()
+                    self.hide()
                     
                 
             
@@ -290,8 +285,8 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         self._comparison_media = None
         
-        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._trash_button.SetToolTip( 'send to trash' )
+        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._trash_button.setToolTip( 'send to trash' )
         
         menu_items = []
         
@@ -306,26 +301,26 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         menu_items.append( ( 'separator', None, None, None ) )
         menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
         
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalPixmaps.cog, menu_items )
         
-        close_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
-        close_button.SetToolTip( 'close filter' )
+        close_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close_button.setToolTip( 'close filter' )
         
-        self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
+        self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
         self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', 'duplicate_filter_back' )
         
-        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ), self._canvas_key )
+        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ), self._canvas_key )
         self._previous_button.SetToolTipWithShortcuts( 'previous', 'view_previous' )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
         self._next_button.SetToolTipWithShortcuts( 'next', 'view next' )
         
-        self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
+        self._skip_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
         self._skip_a_pair.SetToolTipWithShortcuts( 'show a different pair', 'duplicate_filter_skip' )
         
-        command_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        command_button_vbox = QP.VBoxLayout()
         
         dupe_boxes = []
         
@@ -358,10 +353,10 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
                 button_panel.Add( command_button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            command_button_vbox.Add( button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( command_button_vbox, button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        self._comparison_statements_vbox = wx.BoxSizer( wx.VERTICAL )
+        self._comparison_statements_vbox = QP.VBoxLayout()
         
         self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates' ]
         
@@ -369,57 +364,55 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
         
         for name in self._comparison_statement_names:
             
-            panel = wx.Panel( self )
+            panel = QW.QWidget( self )
             
             st = ClientGUICommon.BetterStaticText( panel, 'init' )
             
             self._comparison_statements_sts[ name ] = ( panel, st )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout()
             
-            hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.Add( st, CC.FLAGS_VCENTER )
-            hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( hbox, st, CC.FLAGS_VCENTER )
+            QP.AddToLayout( hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            panel.SetSizer( hbox )
+            panel.setLayout( hbox )
             
-            panel.Hide()
+            panel.setVisible( False )
             
-            self._comparison_statements_vbox.Add( panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            QP.AddToLayout( self._comparison_statements_vbox, panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
         
         #
         
-        top_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        top_button_hbox = QP.HBoxLayout()
         
-        top_button_hbox.Add( self._trash_button, CC.FLAGS_VCENTER )
-        top_button_hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
-        top_button_hbox.Add( close_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( top_button_hbox, self._trash_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( top_button_hbox, self._cog_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( top_button_hbox, close_button, CC.FLAGS_VCENTER )
         
-        navigation_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        navigation_button_hbox = QP.HBoxLayout()
         
-        navigation_button_hbox.Add( self._back_a_pair, CC.FLAGS_VCENTER )
-        navigation_button_hbox.Add( self._previous_button, CC.FLAGS_VCENTER )
-        navigation_button_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        navigation_button_hbox.Add( self._index_text, CC.FLAGS_VCENTER )
-        navigation_button_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        navigation_button_hbox.Add( self._next_button, CC.FLAGS_VCENTER )
-        navigation_button_hbox.Add( self._skip_a_pair, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, self._back_a_pair, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, self._previous_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( navigation_button_hbox, self._index_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, (20,20), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( navigation_button_hbox, self._next_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( navigation_button_hbox, self._skip_a_pair, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( navigation_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( top_button_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( command_button_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._comparison_statements_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, navigation_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, top_button_hbox, CC.FLAGS_BUTTON_SIZER )
+        QP.AddToLayout( vbox, command_button_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._comparison_statements_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
-        
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
     
     def _EditBackgroundSwitchIntensity( self ):
@@ -434,7 +427,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 new_value = panel.GetValue()
                 
@@ -455,7 +448,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 duplicate_action_options = panel.GetValue()
                 
@@ -466,25 +459,23 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
     
     def _GetIdealSizeAndPosition( self ):
         
-        parent = self.GetParent()
+        parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent.GetClientSize()
+        ( parent_width, parent_height ) = parent_window.size().toTuple()
         
-        ( my_width, my_height ) = self.GetSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         my_ideal_width = int( parent_width * 0.2 )
         
         should_resize = my_ideal_width != my_width
         
-        ideal_size = ( my_ideal_width, -1 )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( int( parent_width * 0.8 ), int( parent_height * 0.3 ) ) )
+        ideal_size = ( my_ideal_width, my_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) ) )
         
-        return ( should_resize, ideal_size, ideal_position )
+        return ( should_resize, ideal_size, ideal_position.toTuple() )
         
     
     def _ResetComparisonStatements( self ):
-        
-        fit_needed = False
         
         statements_and_scores = ClientMedia.GetDuplicateComparisonStatements( self._current_media, self._comparison_media )
         
@@ -496,14 +487,12 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
                 
                 ( statement, score ) = statements_and_scores[ name ]
                 
-                if not panel.IsShown():
+                if not panel.isVisible():
                     
-                    fit_needed = True
-                    
-                    panel.Show()
+                    panel.show()
                     
                 
-                st.SetLabelText( statement )
+                st.setText( statement )
                 
                 if score > 0:
                     
@@ -518,33 +507,19 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
                     colour = ( 0, 0, 128 )
                     
                 
-                st.SetForegroundColour( colour )
+                QP.SetForegroundColour( st, colour )
                 
             else:
                 
-                if panel.IsShown():
+                if panel.isVisible():
                     
-                    fit_needed = True
-                    
-                    panel.Hide()
-                    
-                
-            
-        
-        if fit_needed:
-            
-            self.Fit()
-            
-        else:
-            
-            self.Layout()
+                    panel.hide()
             
         
     
-    def EventMouseWheel( self, event ):
+    def wheelEvent( self, event ):
         
-        event.ResumePropagation( 1 )
-        event.Skip()
+        QW.QApplication.sendEvent( self.parentWidget(), event )
         
     
     def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
@@ -564,7 +539,7 @@ class FullscreenHoverFrameRightDuplicates( FullscreenHoverFrame ):
             
             self._current_index_string = text
             
-            self._index_text.SetLabelText( self._current_index_string )
+            self._index_text.setText( self._current_index_string )
             
         
     
@@ -577,29 +552,28 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._current_zoom = 1.0
         self._current_index_string = ''
         
-        self._top_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        self._title_text = ClientGUICommon.BetterStaticText( self, 'title' )
-        self._info_text = ClientGUICommon.BetterStaticText( self, 'info' )
+        self._top_hbox = QP.HBoxLayout()
+        self._top_hbox.setContentsMargins( 0, 0, 0, 2 )
+        self._title_text = ClientGUICommon.BetterStaticText( self, 'title', ellipsize_end = True )
+        self._info_text = ClientGUICommon.BetterStaticText( self, 'info', ellipsize_end = True )
         
         self._PopulateLeftButtons()
-        self._top_hbox.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._top_hbox, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
         self._PopulateCenterButtons()
-        self._top_hbox.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._top_hbox, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
         self._PopulateRightButtons()
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._top_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._title_text, CC.FLAGS_CENTER )
-        vbox.Add( self._info_text, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._top_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._title_text, None, QC.Qt.AlignHCenter )
+        QP.AddToLayout( vbox, self._info_text, None, QC.Qt.AlignHCenter )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
-        
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
     
     def _Archive( self ):
@@ -618,20 +592,22 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
     def _GetIdealSizeAndPosition( self ):
         
-        parent = self.GetParent()
+        parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent.GetClientSize()
+        ( parent_width, parent_height ) = parent_window.size().toTuple()
         
-        ( my_width, my_height ) = self.GetSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         my_ideal_width = int( parent_width * 0.6 )
         
-        should_resize = my_ideal_width != my_width
+        my_ideal_height = self.sizeHint().height()
         
-        ideal_size = ( my_ideal_width, -1 )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( int( parent_width * 0.2 ), 0 ) )
+        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        return ( should_resize, ideal_size, ideal_position )
+        ideal_size = ( my_ideal_width, my_ideal_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width * 0.2 ), 0 ) )
+        
+        return ( should_resize, ideal_size, ideal_position.toTuple() )
         
     
     def _ManageShortcuts( self ):
@@ -642,87 +618,95 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
     
     def _PopulateCenterButtons( self ):
         
-        self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.archive, self._Archive )
+        self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.archive, self._Archive )
         
-        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._trash_button.SetToolTip( 'send to trash' )
+        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._trash_button.setToolTip( 'send to trash' )
         
-        self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.trash_delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._delete_button.SetToolTip( 'delete completely' )
+        self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.trash_delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._delete_button.setToolTip( 'delete completely' )
         
-        self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.undelete, HG.client_controller.pub, 'canvas_undelete', self._canvas_key )
-        self._undelete_button.SetToolTip( 'undelete' )
+        self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.undelete, HG.client_controller.pub, 'canvas_undelete', self._canvas_key )
+        self._undelete_button.setToolTip( 'undelete' )
         
-        self._top_hbox.Add( self._archive_button, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( self._trash_button, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( self._undelete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._archive_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._trash_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._delete_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._undelete_button, CC.FLAGS_VCENTER )
         
     
     def _PopulateLeftButtons( self ):
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        self._top_hbox.Add( self._index_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_VCENTER )
         
     
     def _PopulateRightButtons( self ):
         
         self._zoom_text = ClientGUICommon.BetterStaticText( self, 'zoom' )
         
-        zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_in, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ), self._canvas_key )
+        zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.zoom_in, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ), self._canvas_key )
         zoom_in.SetToolTipWithShortcuts( 'zoom in', 'zoom_in' )
         
-        zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_out, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ), self._canvas_key )
+        zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.zoom_out, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ), self._canvas_key )
         zoom_out.SetToolTipWithShortcuts( 'zoom out', 'zoom_out' )
         
-        zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ), self._canvas_key )
+        zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.zoom_switch, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ), self._canvas_key )
         zoom_switch.SetToolTipWithShortcuts( 'zoom switch', 'switch_between_100_percent_and_canvas_zoom' )
         
-        shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.keyboard, self._ShowShortcutMenu )
-        shortcuts.SetToolTip( 'shortcuts' )
+        shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.keyboard, self._ShowShortcutMenu )
+        shortcuts.setToolTip( 'shortcuts' )
         
-        fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
-        fullscreen_switch.SetToolTip( 'fullscreen switch' )
+        fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
+        fullscreen_switch.setToolTip( 'fullscreen switch' )
         
-        open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.open_externally, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ), self._canvas_key )
+        if HC.PLATFORM_OSX:
+            
+            fullscreen_switch.hide()
+            
+        
+        open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.open_externally, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ), self._canvas_key )
         open_externally.SetToolTipWithShortcuts( 'open externally', 'open_file_in_external_program' )
         
-        drag_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.drag )
-        drag_button.SetToolTip( 'drag from here to export file' )
-        drag_button.Bind( wx.EVT_LEFT_DOWN, self.EventDragButton )
+        drag_button = QW.QPushButton( self )
+        drag_button.setIcon( QG.QIcon( CC.GlobalPixmaps.drag ) )
+        drag_button.setIconSize( CC.GlobalPixmaps.drag.size() )
+        drag_button.setToolTip( 'drag from here to export file' )
+        drag_button.pressed.connect( self.EventDragButton )
         
-        close = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
-        close.SetToolTip( 'close' )
+        close = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close.setToolTip( 'close' )
         
-        self._top_hbox.Add( self._zoom_text, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( zoom_in, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( zoom_out, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( zoom_switch, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( shortcuts, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( fullscreen_switch, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( open_externally, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( drag_button, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( close, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._zoom_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, zoom_in, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, zoom_out, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, drag_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, close, CC.FLAGS_VCENTER )
         
     
     def _ResetArchiveButton( self ):
         
         if self._current_media.HasInbox():
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
-            self._archive_button.SetToolTip( 'archive' )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalPixmaps.archive )
+            self._archive_button.setToolTip( 'archive' )
             
         else:
             
-            ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.to_inbox )
-            self._archive_button.SetToolTip( 'return to inbox' )
+            ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalPixmaps.to_inbox )
+            
+            self._archive_button.setToolTip( 'return to inbox' )
             
         
     
@@ -736,18 +720,16 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             if CC.LOCAL_FILE_SERVICE_KEY in current_locations:
                 
-                self._trash_button.Show()
-                self._delete_button.Hide()
-                self._undelete_button.Hide()
+                self._trash_button.show()
+                self._delete_button.hide()
+                self._undelete_button.hide()
                 
             elif CC.TRASH_SERVICE_KEY in current_locations:
                 
-                self._trash_button.Hide()
-                self._delete_button.Show()
-                self._undelete_button.Show()
+                self._trash_button.hide()
+                self._delete_button.show()
+                self._undelete_button.show()
                 
-            
-            self.Fit()
             
             self._SizeAndPosition()
             
@@ -757,28 +739,35 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         if self._current_media is None:
             
-            self._title_text.Hide()
-            self._info_text.Hide()
+            self._title_text.hide()
+            self._info_text.hide()
             
         else:
+            
+            my_width = self.size().width()
+            
+            my_wrap_width = my_width - 20
+            
+            self._title_text.SetWrapWidth( my_wrap_width )
+            self._info_text.SetWrapWidth( my_wrap_width )
             
             label = self._current_media.GetTitleString()
             
             if len( label ) > 0:
                 
-                self._title_text.SetLabelText( label )
+                self._title_text.setText( label )
                 
-                self._title_text.Show()
+                self._title_text.show()
                 
-            else: self._title_text.Hide()
+            else: self._title_text.hide()
             
             lines = self._current_media.GetPrettyInfoLines()
             
             label = ' | '.join( lines )
             
-            self._info_text.SetLabelText( label )
+            self._info_text.setText( label )
             
-            self._info_text.Show()
+            self._info_text.show()
             
         
     
@@ -808,29 +797,29 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         custom_shortcuts_names = [ name for name in all_shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
         
-        menu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts )
+        menu = QW.QMenu()
+
+        ClientGUIMenus.AppendMenuItem( menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts )
         
         if len( custom_shortcuts_names ) > 0:
             
             my_canvas_active_custom_shortcuts = self._my_canvas.GetActiveCustomShortcutNames()
             default_media_viewer_custom_shortcuts = HG.client_controller.new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
             
-            current_menu = wx.Menu()
+            current_menu = QW.QMenu( menu )
             
             for name in custom_shortcuts_names:
                 
-                ClientGUIMenus.AppendMenuCheckItem( self, current_menu, name, 'turn this shortcut set on/off', name in my_canvas_active_custom_shortcuts, self._my_canvas.FlipActiveCustomShortcutName, name )
+                ClientGUIMenus.AppendMenuCheckItem( current_menu, name, 'turn this shortcut set on/off', name in my_canvas_active_custom_shortcuts, self._my_canvas.FlipActiveCustomShortcutName, name )
                 
             
             ClientGUIMenus.AppendMenu( menu, current_menu, 'set current shortcuts' )
             
-            defaults_menu = wx.Menu()
+            defaults_menu = QW.QMenu( menu )
             
             for name in custom_shortcuts_names:
                 
-                ClientGUIMenus.AppendMenuCheckItem( self, defaults_menu, name, 'turn this shortcut set on/off by default', name in default_media_viewer_custom_shortcuts, self._FlipActiveDefaultCustomShortcut, name )
+                ClientGUIMenus.AppendMenuCheckItem( defaults_menu, name, 'turn this shortcut set on/off by default', name in default_media_viewer_custom_shortcuts, self._FlipActiveDefaultCustomShortcut, name )
                 
             
             ClientGUIMenus.AppendMenu( menu, defaults_menu, 'set default shortcuts' )
@@ -839,33 +828,38 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         HG.client_controller.PopupMenu( self, menu )
         
     
-    def EventDragButton( self, event ):
+    def EventDragButton( self ):
         
         if self._current_media is None:
             
-            event.Skip()
-            
-            return
+            return True # was: event.ignore()
             
         
         page_key = None
         
         media = [ self._current_media ]
         
-        alt_down = event.AltDown()
+        alt_down = QW.QApplication.keyboardModifiers() & QC.Qt.AltModifier
         
         result = ClientDragDrop.DoFileExportDragDrop( self, page_key, media, alt_down )
         
-        if result not in ( wx.DragError, wx.DragNone ):
+        if result != QC.Qt.IgnoreAction:
             
             HG.client_controller.pub( 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_media' ), self._canvas_key )
             
         
     
-    def EventMouseWheel( self, event ):
+    def resizeEvent( self, event ):
         
-        event.ResumePropagation( 1 )
-        event.Skip()
+        # reset wrap width
+        self._ResetText()
+        
+        event.ignore()
+        
+    
+    def wheelEvent( self, event ):
+        
+        QW.QApplication.sendEvent( self.parentWidget(), event )
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -901,9 +895,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             label = ClientData.ConvertZoomToPercentage( self._current_zoom )
             
-            self._zoom_text.SetLabelText( label )
-            
-            self._top_hbox.Layout()
+            self._zoom_text.setText( label )
             
         
     
@@ -925,9 +917,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             self._current_index_string = text
             
-            self._index_text.SetLabelText( self._current_index_string )
-            
-            self._top_hbox.Layout()
+            self._index_text.setText( self._current_index_string )
             
         
     
@@ -940,74 +930,74 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
     
     def _PopulateLeftButtons( self ):
         
-        self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ), self._canvas_key )
+        self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ), self._canvas_key )
         self._back_button.SetToolTipWithShortcuts( 'back', 'archive_delete_filter_back' )
         
-        self._top_hbox.Add( self._back_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._back_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTop._PopulateLeftButtons( self )
         
-        self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ), self._canvas_key )
+        self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ), self._canvas_key )
         self._skip_button.SetToolTipWithShortcuts( 'skip', 'archive_delete_filter_skip' )
         
-        self._top_hbox.Add( self._skip_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._skip_button, CC.FLAGS_VCENTER )
         
     
     def _ResetArchiveButton( self ):
         
-        ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
-        self._archive_button.SetToolTip( 'archive' )
+        ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.GlobalPixmaps.archive )
+        self._archive_button.setToolTip( 'archive' )
         
     
 class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
     
     def _PopulateLeftButtons( self ):
         
-        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ), self._canvas_key )
+        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ), self._canvas_key )
         self._previous_button.SetToolTipWithShortcuts( 'previous', 'view_previous' )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.next_bmp, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
         self._next_button.SetToolTipWithShortcuts( 'next', 'view_next' )
         
-        self._top_hbox.Add( self._previous_button, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( self._index_text, CC.FLAGS_VCENTER )
-        self._top_hbox.Add( self._next_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._previous_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._next_button, CC.FLAGS_VCENTER )
         
     
 class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable ):
     
     def _PopulateLeftButtons( self ):
         
-        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
+        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
         self._first_button.SetToolTipWithShortcuts( 'go back a pair', 'duplicate_filter_back' )
         
-        self._top_hbox.Add( self._first_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTopNavigable._PopulateLeftButtons( self )
         
-        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
+        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'show a different pair', 'duplicate_filter_skip' )
         
-        self._top_hbox.Add( self._last_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_VCENTER )
         
     
 class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):
     
     def _PopulateLeftButtons( self ):
         
-        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ), self._canvas_key )
+        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ), self._canvas_key )
         self._first_button.SetToolTipWithShortcuts( 'first', 'view_first' )
         
-        self._top_hbox.Add( self._first_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTopNavigable._PopulateLeftButtons( self )
         
-        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ), self._canvas_key )
+        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ), self._canvas_key )
         self._last_button.SetToolTipWithShortcuts( 'last', 'view_last' )
         
-        self._top_hbox.Add( self._last_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_VCENTER )
         
     
 class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
@@ -1016,39 +1006,39 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        self._icon_panel = wx.Panel( self )
+        self._icon_panel = QW.QWidget( self )
         
-        self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.trash )
-        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalBMPs.inbox )
+        self._trash_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalPixmaps.trash )
+        self._inbox_icon = ClientGUICommon.BufferedWindowIcon( self._icon_panel, CC.GlobalPixmaps.inbox )
         
-        icon_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        icon_hbox = QP.HBoxLayout( spacing = 0 )
         
-        icon_hbox.Add( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        icon_hbox.Add( self._trash_icon, CC.FLAGS_VCENTER )
-        icon_hbox.Add( self._inbox_icon, CC.FLAGS_VCENTER )
+        QP.AddToLayout( icon_hbox, (16,16), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_VCENTER )
+        QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_VCENTER )
         
-        self._icon_panel.SetSizer( icon_hbox )
+        self._icon_panel.setLayout( icon_hbox )
         
         # repo strings
         
-        self._file_repos = wx.StaticText( self, label = '', style = wx.ALIGN_RIGHT )
+        self._file_repos = QP.MakeQLabelWithAlignment( '', self, QC.Qt.AlignRight | QC.Qt.AlignVCenter )
         
         # urls
         
         self._last_seen_urls = []
-        self._urls_vbox = wx.BoxSizer( wx.VERTICAL )
+        self._urls_vbox = QP.VBoxLayout()
         
         # likes
         
-        like_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        like_hbox = QP.HBoxLayout( spacing = 0 )
         
         like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
         
         if len( like_services ) > 0:
             
-            like_hbox.Add( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( like_hbox, ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
         for service in like_services:
@@ -1057,12 +1047,12 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             control = ClientGUICommon.RatingLikeCanvas( self, service_key, canvas_key )
             
-            like_hbox.Add( control, CC.FLAGS_NONE )
+            QP.AddToLayout( like_hbox, control, CC.FLAGS_NONE )
             
         
         # each numerical one in turn
         
-        vbox.Add( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
@@ -1072,43 +1062,44 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             control = ClientGUICommon.RatingNumericalCanvas( self, service_key, canvas_key )
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = QP.HBoxLayout( spacing = 0 )
             
-            hbox.Add( ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            hbox.Add( control, CC.FLAGS_NONE )
+            QP.AddToLayout( hbox, ( 16, 16 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( hbox, control, CC.FLAGS_NONE )
             
-            vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        vbox.Add( self._icon_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._file_repos, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._urls_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._icon_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._file_repos, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._urls_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        vbox.addStretch( 1 )
+        self.setLayout( vbox )
         
         self._ResetData()
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        
     
     def _GetIdealSizeAndPosition( self ):
         
-        parent = self.GetParent()
+        parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent.GetClientSize()
+        ( parent_width, parent_height ) = parent_window.size().toTuple()
         
-        ( my_width, my_height ) = self.GetSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         my_ideal_width = int( parent_width * 0.2 )
         
-        should_resize = my_ideal_width != my_width
+        my_ideal_height = self.sizeHint().height()
         
-        ideal_size = ( my_ideal_width, -1 )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( int( parent_width * 0.8 ), 0 ) )
+        should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
-        return ( should_resize, ideal_size, ideal_position )
+        ideal_size = ( my_ideal_width, my_ideal_height )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( int( parent_width - my_ideal_width ), 0 ) )
+        
+        return ( should_resize, ideal_size, ideal_position.toTuple() )
         
     
     def _ResetData( self ):
@@ -1120,44 +1111,44 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             if has_inbox or has_trash:
                 
-                self._icon_panel.Show()
+                self._icon_panel.show()
                 
                 if has_inbox:
                     
-                    self._inbox_icon.Show()
+                    self._inbox_icon.show()
                     
                 else:
                     
-                    self._inbox_icon.Hide()
+                    self._inbox_icon.hide()
                     
                 
                 if has_trash:
                     
-                    self._trash_icon.Show()
+                    self._trash_icon.show()
                     
                 else:
                     
-                    self._trash_icon.Hide()
+                    self._trash_icon.hide()
                     
                 
             else:
                 
-                self._icon_panel.Hide()
+                self._icon_panel.setVisible( False )
                 
             
             remote_strings = self._current_media.GetLocationsManager().GetRemoteLocationStrings()
             
             if len( remote_strings ) == 0:
                 
-                self._file_repos.Hide()
+                self._file_repos.hide()
                 
             else:
                 
                 remote_string = os.linesep.join( remote_strings )
                 
-                self._file_repos.SetLabelText( remote_string )
+                self._file_repos.setText( remote_string )
                 
-                self._file_repos.Show()
+                self._file_repos.show()
                 
             
             # urls
@@ -1168,7 +1159,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
                 
                 self._last_seen_urls = list( urls )
                 
-                self._urls_vbox.Clear( delete_windows = True )
+                QP.ClearLayout( self._urls_vbox, delete_widgets=True )
                 
                 url_tuples = HG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
                 
@@ -1176,20 +1167,16 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
                     
                     link = ClientGUICommon.BetterHyperLink( self, display_string, url )
                     
-                    self._urls_vbox.Add( link, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-            
-            self.Fit()
+                    QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self.layout().addStretch( 1 )
             
         
         self._SizeAndPosition()
         
     
-    def EventMouseWheel( self, event ):
+    def wheelEvent( self, event ):
         
-        event.ResumePropagation( 1 )
-        event.Skip()
+        QW.QApplication.sendEvent(self.parentWidget(), event)
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -1235,24 +1222,24 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         FullscreenHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
         self._tags = ClientGUIListBoxes.ListBoxTagsSelectionHoverFrame( self, self._canvas_key )
         
-        vbox.Add( self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     
     def _GetIdealSizeAndPosition( self ):
         
-        parent = self.GetParent()
+        parent_window = self.parentWidget().window()
         
-        ( parent_width, parent_height ) = parent.GetClientSize()
+        ( parent_width, parent_height ) = parent_window.size().toTuple()
         
-        ( my_width, my_height ) = self.GetSize()
+        ( my_width, my_height ) = self.size().toTuple()
         
         my_ideal_width = int( parent_width * 0.2 )
         
@@ -1261,9 +1248,9 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = ClientGUIFunctions.ClientToScreen( parent, ( 0, 0 ) )
+        ideal_position = ClientGUIFunctions.ClientToScreen( parent_window, ( 0, 0 ) )
         
-        return ( should_resize, ideal_size, ideal_position )
+        return ( should_resize, ideal_size, ideal_position.toTuple() )
         
     
     def _ResetTags( self ):

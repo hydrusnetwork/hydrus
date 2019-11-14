@@ -32,7 +32,7 @@ class DirectoryMissingException( HydrusException ): pass
 class SerialisationException( HydrusException ): pass
 class NameException( HydrusException ): pass
 class ShutdownException( HydrusException ): pass
-class WXDeadWindowException( HydrusException ): pass
+class QtDeadWindowException(HydrusException): pass
 
 class VetoException( HydrusException ): pass
 class CancelledException( VetoException ): pass

@@ -19,7 +19,11 @@ from . import HydrusGlobals as HG
 from . import HydrusPaths
 from . import HydrusText
 import os
-import wx
+from . import QtPorting as QP
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -46,18 +50,18 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.SetSizer( vbox )
+        self.widget().setLayout( vbox )
         
         self._list_ctrl.AddMenuCallable( self._GetListCtrlMenu )
         
         self._controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
-        wx.CallAfter( self._UpdateText )
+        QP.CallAfter( self._UpdateText )
         
     
     def _ConvertFileSeedToListCtrlTuples( self, file_seed ):
@@ -154,7 +158,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
-            if result == wx.ID_YES:
+            if result == QW.QDialog.Accepted:
                 
                 self._file_seed_cache.RemoveFileSeeds( file_seeds_to_delete )
                 
@@ -170,29 +174,28 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             raise HydrusExceptions.DataMissing()
             
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         can_show_files_in_new_page = True in ( file_seed.HasHash() for file_seed in selected_file_seeds )
         
         if can_show_files_in_new_page:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
+            ClientGUIMenus.AppendMenuItem( menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
             
             ClientGUIMenus.AppendSeparator( menu )
-            
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
+
+        ClientGUIMenus.AppendMenuItem( menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
+        ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
         
         ClientGUIMenus.AppendSeparator( menu )
+
+        ClientGUIMenus.AppendMenuItem( menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
         
-        ClientGUIMenus.AppendMenuItem( self, menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
-        ClientGUIMenus.AppendMenuItem( self, menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
+        ClientGUIMenus.AppendSeparator( menu )
+
+        ClientGUIMenus.AppendMenuItem( menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
         
         return menu
         
@@ -209,7 +212,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result != wx.ID_YES:
+                if result != QW.QDialog.Accepted:
                     
                     return
                     
@@ -233,7 +236,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( str( e ) )
+                    QW.QMessageBox.critical( self, 'Error', str(e) )
                     
                 
             
@@ -253,7 +256,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result == wx.ID_YES:
+                if result == QW.QDialog.DialogCode.Accepted:
                     
                     deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
                     
@@ -341,9 +344,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( status, simple_status, ( total_processed, total ) ) = self._file_seed_cache.GetStatus()
         
-        self._text.SetLabelText( status )
-        
-        self.Layout()
+        self._text.setText( status )
         
     
     def GetValue( self ):
@@ -364,15 +365,16 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def __init__( self, parent, controller, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalBMPs.listctrl, self._ShowFileSeedCacheFrame )
+        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalPixmaps.listctrl, self._ShowFileSeedCacheFrame )
         
         self._controller = controller
         self._file_seed_cache_get_callable = file_seed_cache_get_callable
         self._file_seed_cache_set_callable = file_seed_cache_set_callable
         
-        self.SetToolTip( 'open detailed file import status--right-click for quick actions, if applicable' )
+        self.setToolTip( 'open detailed file import status--right-click for quick actions, if applicable' )
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_RIGHT_DOWN( self.EventShowMenu )
         
     
     def _ClearFileSeeds( self, statuses_to_remove ):
@@ -381,7 +383,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             file_seed_cache = self._file_seed_cache_get_callable()
             
@@ -415,7 +417,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -428,7 +430,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         except:
             
-            wx.MessageBox( 'Could not import!' )
+            QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
             
             raise
             
@@ -436,9 +438,9 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def _ImportFromPng( self ):
         
-        with wx.FileDialog( self, 'select the png with the sources', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with QP.FileDialog( self, 'select the png with the sources', wildcard = 'PNG (*.png)' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
                 
@@ -452,7 +454,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                     
                 except:
                     
-                    wx.MessageBox( 'Could not import!' )
+                    QW.QMessageBox.critical( self, 'Error', 'Could not import!' )
                     
                     raise
                     
@@ -488,7 +490,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             dlg.SetPanel( panel )
             
-            dlg.ShowModal()
+            dlg.exec()
             
         
     
@@ -505,7 +507,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.DialogCode.Accepted:
             
             file_seed_cache = self._file_seed_cache_get_callable()
             
@@ -519,7 +521,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
-        if result == wx.ID_YES:
+        if result == QW.QDialog.Accepted:
             
             file_seed_cache = self._file_seed_cache_get_callable()
             
@@ -531,9 +533,9 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
-        tlp = ClientGUIFunctions.GetTLP( self )
+        tlp = self.window()
         
-        if isinstance( tlp, wx.Dialog ):
+        if isinstance( tlp, QP.Dialog ):
             
             if self._file_seed_cache_set_callable is None: # throw up a dialog that edits the file_seed cache in place
                 
@@ -543,7 +545,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                     
                     dlg.SetPanel( panel )
                     
-                    dlg.ShowModal()
+                    dlg.exec()
                     
                 
             else: # throw up a dialog that edits the file_seed cache but can be cancelled
@@ -556,7 +558,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                     
                     dlg.SetPanel( panel )
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    if dlg.exec() == QW.QDialog.Accepted:
                         
                         self._file_seed_cache_set_callable( dupe_file_seed_cache )
                         
@@ -578,7 +580,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def EventShowMenu( self, event ):
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         file_seed_cache = self._file_seed_cache_get_callable()
         
@@ -590,13 +592,11 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
         
         if num_errors > 0:
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
             
         
         if num_vetoed > 0:
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
+            ClientGUIMenus.AppendMenuItem( menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -604,59 +604,61 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         if num_successful > 0:
             
             num_deletees = num_successful
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+
+            ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT) )
             
         
         if num_deleted_and_vetoed > 0:
             
             num_deletees = num_deleted_and_vetoed
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out deleted and ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, CC.STATUS_VETOED ) )
+
+            ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out deleted and ignored files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_DELETED, CC.STATUS_VETOED) )
             
         
         if num_errors + num_skipped > 0:
             
             num_deletees = num_errors + num_skipped
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
+
+            ClientGUIMenus.AppendMenuItem( menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, (CC.STATUS_ERROR, CC.STATUS_SKIPPED) )
             
         
         ClientGUIMenus.AppendSeparator( menu )
         
         if len( file_seed_cache ) > 0:
             
-            submenu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPng )
+            submenu = QW.QMenu( menu )
+
+            ClientGUIMenus.AppendMenuItem( submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
+            ClientGUIMenus.AppendMenuItem( submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPng )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
             
         
-        submenu = wx.Menu()
-        
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
-        ClientGUIMenus.AppendMenuItem( self, submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPng )
+        submenu = QW.QMenu( menu )
+
+        ClientGUIMenus.AppendMenuItem( submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
+        ClientGUIMenus.AppendMenuItem( submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPng )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
         
         HG.client_controller.PopupMenu( self, menu )
         
     
-class FileSeedCacheStatusControl( wx.Panel ):
+class FileSeedCacheStatusControl( QW.QFrame ):
     
     def __init__( self, parent, controller, page_key = None ):
         
-        wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
+        QW.QFrame.__init__( self, parent )
+        
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
         self._controller = controller
         self._page_key = page_key
         
         self._file_seed_cache = None
         
-        self._import_summary_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
-        self._progress_st = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
+        self._import_summary_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
+        self._progress_st = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
         
         self._file_seed_cache_button = FileSeedCacheButton( self, self._controller, self._GetFileSeedCache )
         
@@ -668,18 +670,18 @@ class FileSeedCacheStatusControl( wx.Panel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._progress_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._file_seed_cache_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( hbox, self._progress_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        QP.AddToLayout( hbox, self._file_seed_cache_button, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( self._import_summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._progress_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._import_summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._progress_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         #
         
@@ -695,44 +697,44 @@ class FileSeedCacheStatusControl( wx.Panel ):
         
         if self._file_seed_cache is None:
             
-            self._import_summary_st.SetLabelText( '' )
-            self._progress_st.SetLabelText( '' )
+            self._import_summary_st.setText( '' )
+            self._progress_st.setText( '' )
             self._progress_gauge.SetRange( 1 )
             self._progress_gauge.SetValue( 0 )
             
-            if self._file_seed_cache_button.IsEnabled():
+            if self._file_seed_cache_button.isEnabled():
                 
-                self._file_seed_cache_button.Disable()
+                self._file_seed_cache_button.setEnabled( False )
                 
             
         else:
             
             ( import_summary, simple_status, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
             
-            self._import_summary_st.SetLabelText( import_summary )
+            self._import_summary_st.setText( import_summary )
             
             if num_to_do == 0:
                 
-                self._progress_st.SetLabelText( '' )
+                self._progress_st.setText( '' )
                 
             else:
                 
-                self._progress_st.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                self._progress_st.setText( HydrusData.ConvertValueRangeToPrettyString(num_done,num_to_do) )
                 
             
             self._progress_gauge.SetRange( num_to_do )
             self._progress_gauge.SetValue( num_done )
             
-            if not self._file_seed_cache_button.IsEnabled():
+            if not self._file_seed_cache_button.isEnabled():
                 
-                self._file_seed_cache_button.Enable()
+                self._file_seed_cache_button.setEnabled( True )
                 
             
         
     
     def SetFileSeedCache( self, file_seed_cache ):
         
-        if not self:
+        if not self or not QP.isValid( self ):
             
             return
             

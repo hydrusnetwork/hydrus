@@ -11,7 +11,10 @@ from . import HydrusVideoHandling
 import os
 import threading
 import time
-import wx
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 LZ4_OK = False
 
@@ -79,17 +82,33 @@ class ImageRenderer( object ):
     
     def __init__( self, media ):
         
-        self._media = media
         self._numpy_image = None
         
-        self._hash = self._media.GetHash()
-        self._mime = self._media.GetMime()
+        self._hash = media.GetHash()
+        self._mime = media.GetMime()
+        
+        self._num_frames = media.GetNumFrames()
+        self._resolution = media.GetResolution()
         
         client_files_manager = HG.client_controller.client_files_manager
         
         self._path = client_files_manager.GetFilePath( self._hash, self._mime )
         
         HG.client_controller.CallToThread( self._Initialise )
+        
+    
+    def _GetNumPyImage( self, target_resolution = None ):
+        
+        if target_resolution is None:
+            
+            numpy_image = self._numpy_image
+            
+        else:
+            
+            numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._mime, self._numpy_image, target_resolution.toTuple() )
+            
+        
+        return numpy_image
         
     
     def _Initialise( self ):
@@ -113,37 +132,36 @@ class ImageRenderer( object ):
             
         
     
-    def GetHash( self ): return self._media.GetHash()
+    def GetHash( self ): return self._hash
     
-    def GetNumFrames( self ): return self._media.GetNumFrames()
+    def GetNumFrames( self ): return self._num_frames
     
-    def GetResolution( self ): return self._media.GetResolution()
+    def GetResolution( self ): return self._resolution
     
-    def GetWXBitmap( self, target_resolution = None ):
+    def GetQtImage( self, target_resolution = None ):
         
         # add region param to this to allow clipping before resize
         
-        if target_resolution is None:
-            
-            wx_numpy_image = self._numpy_image
-            
-        else:
-            
-            wx_numpy_image = ClientImageHandling.ResizeNumPyImageForMediaViewer( self._media.GetMime(), self._numpy_image, target_resolution )
-            
+        numpy_image = self._GetNumPyImage( target_resolution = target_resolution )
         
-        ( wx_height, wx_width, wx_depth ) = wx_numpy_image.shape
+        ( height, width, depth ) = numpy_image.shape
         
-        wx_data = wx_numpy_image.data
+        data = numpy_image.data
         
-        if wx_depth == 3:
-            
-            return HG.client_controller.bitmap_manager.GetBitmapFromBuffer( wx_width, wx_height, 24, wx_data )
-            
-        else:
-            
-            return HG.client_controller.bitmap_manager.GetBitmapFromBuffer( wx_width, wx_height, 32, wx_data )
-            
+        return HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, depth * 8, data )
+        
+    
+    def GetQtPixmap( self, target_resolution = None ):
+        
+        # add region param to this to allow clipping before resize
+        
+        numpy_image = self._GetNumPyImage( target_resolution = target_resolution )
+        
+        ( height, width, depth ) = numpy_image.shape
+        
+        data = numpy_image.data
+        
+        return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
         
     
     def IsReady( self ):
@@ -383,17 +401,22 @@ class RasterContainerVideo( RasterContainer ):
                     
                     frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
                     
-                    try:
-                        
-                        numpy_image = self._renderer.read_frame()
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowException( e )
-                        
-                        return
-                        
-                    finally:
+                    renderer = self._renderer
+                    
+                
+                try:
+                    
+                    numpy_image = renderer.read_frame()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
+                finally:
+                    
+                    with self._lock:
                         
                         self._last_index_rendered = frame_index
                         
@@ -686,23 +709,16 @@ class HydrusBitmap( object ):
             
         
     
-    def _GetWXBitmapFormat( self ):
+    def _GetQtImageFormat( self ):
         
         if self._depth == 3:
             
-            return wx.BitmapBufferFormat_RGB
+            return QG.QImage.Format_RGB888
             
         elif self._depth == 4:
             
-            return wx.BitmapBufferFormat_RGBA
+            return QG.QImage.Format_RGBA8888
             
-        
-    
-    def CopyToWxBitmap( self, wx_bmp ):
-        
-        fmt = self._GetWXBitmapFormat()
-        
-        wx_bmp.CopyFromBuffer( self._GetData(), fmt )
         
     
     def GetDepth( self ):
@@ -710,31 +726,18 @@ class HydrusBitmap( object ):
         return self._depth
         
     
-    def GetWxBitmap( self ):
+    def GetQtImage( self ):
         
         ( width, height ) = self._size
         
-        return HG.client_controller.bitmap_manager.GetBitmapFromBuffer( width, height, self._depth * 8, self._GetData() )
+        return HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, self._depth * 8, self._GetData() )
         
     
-    def GetWxImage( self ):
+    def GetQtPixmap( self ):
         
         ( width, height ) = self._size
         
-        if self._depth == 3:
-            
-            return wx.ImageFromBuffer( width, height, self._GetData() )
-            
-        elif self._depth == 4:
-            
-            bitmap = HG.client_controller.bitmap_manager.GetBitmapFromBuffer( width, height, 32, self._GetData() )
-            
-            image = bitmap.ConvertToImage()
-            
-            HG.client_controller.bitmap_manager.ReleaseBitmap( bitmap )
-            
-            return image
-            
+        return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, self._depth * 8, self._GetData() )
         
     
     def GetEstimatedMemoryFootprint( self ):

@@ -19,17 +19,10 @@ from . import HydrusGlobals as HG
 from . import HydrusTags
 from . import HydrusText
 import itertools
-import wx
-import wx.lib.scrolledpanel
-
-ID_TIMER_DROPDOWN_HIDE = wx.NewId()
-ID_TIMER_AC_LAG = wx.NewId()
-
-( SelectUpEvent, EVT_SELECT_UP ) = wx.lib.newevent.NewCommandEvent()
-( SelectDownEvent, EVT_SELECT_DOWN ) = wx.lib.newevent.NewCommandEvent()
-
-( ShowPreviousEvent, EVT_SHOW_PREVIOUS ) = wx.lib.newevent.NewCommandEvent()
-( ShowNextEvent, EVT_SHOW_NEXT ) = wx.lib.newevent.NewCommandEvent()
+from qtpy import QtCore as QC
+from qtpy import QtWidgets as QW
+from qtpy import QtGui as QG
+from . import QtPorting as QP
 
 def AppendLoadingPredicate( predicates ):
     
@@ -142,7 +135,7 @@ def InsertStaticPredicatesForWrite( predicates, parsed_search_text, tag_service_
     
     return predicates
     
-def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_callable, file_search_context, synchronised, include_unusual_predicate_types, initial_matches_fetched, search_text_for_current_cache, cached_results, under_construction_or_predicate ):
+def ReadFetch( win, job_key, results_callable, parsed_search_text, qt_media_callable, file_search_context, synchronised, include_unusual_predicate_types, initial_matches_fetched, search_text_for_current_cache, cached_results, under_construction_or_predicate ):
     
     next_search_is_probably_fast = False
     
@@ -210,13 +203,13 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
             
             fetch_from_db = True
             
-            if synchronised and wx_media_callable is not None:
+            if synchronised and qt_media_callable is not None:
                 
                 try:
                     
-                    media = HG.client_controller.CallBlockingToWX( win, wx_media_callable )
+                    media = HG.client_controller.CallBlockingToQt( win, qt_media_callable )
                     
-                except HydrusExceptions.WXDeadWindowException:
+                except HydrusExceptions.QtDeadWindowException:
                     
                     return
                     
@@ -362,7 +355,7 @@ def ReadFetch( win, job_key, results_callable, parsed_search_text, wx_media_call
         return
         
     
-    HG.client_controller.CallLaterWXSafe( win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast )
+    HG.client_controller.CallLaterQtSafe(win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast)
     
 def PutAtTopOfMatches( matches, predicate ):
     
@@ -462,36 +455,34 @@ def WriteFetch( win, job_key, results_callable, parsed_search_text, file_service
     
     matches = InsertStaticPredicatesForWrite( matches, parsed_search_text, tag_service_key, expand_parents )
     
-    HG.client_controller.CallLaterWXSafe( win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast )
+    HG.client_controller.CallLaterQtSafe(win, 0.0, results_callable, job_key, search_text, search_text_for_current_cache, cached_results, matches, next_search_is_probably_fast)
     
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
-class AutoCompleteDropdown( wx.Panel ):
+class AutoCompleteDropdown( QW.QWidget ):
+    
+    selectUp = QC.Signal()
+    selectDown = QC.Signal()
+    showNext = QC.Signal()
+    showPrevious = QC.Signal()
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        QW.QWidget.__init__( self, parent )
         
         self._intercept_key_events = True
         
-        tlp = self.GetTopLevelParent()
-        
-        # There's a big bug in wx where FRAME_FLOAT_ON_PARENT Frames don't get passed their mouse events if their parent is a Dialog jej
-        # I think it is something to do with the initialisation order; if the frame is init'ed before the ShowModal call, but whatever.
-        
-        # This turned out to be ugly when I added the manage tags frame, so I've set it to if the tlp has a parent, which basically means "not the main gui"
-        
-        not_main_gui = tlp.GetParent() is not None
-        
-        if not_main_gui or HC.options[ 'always_embed_autocompletes' ] or not HC.PLATFORM_WINDOWS:
+        if self.window() == HG.client_controller.gui:
             
-            self._float_mode = False
+            use_float_mode = HG.client_controller.new_options.GetBoolean( 'autocomplete_float_main_gui' )
             
         else:
             
-            self._float_mode = True
+            use_float_mode = HG.client_controller.new_options.GetBoolean( 'autocomplete_float_frames' )
             
         
-        self._text_ctrl = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._float_mode = use_float_mode
+        
+        self._text_ctrl = QW.QLineEdit( self )
         
         self._UpdateBackgroundColour()
         
@@ -501,68 +492,71 @@ class AutoCompleteDropdown( wx.Panel ):
         self._last_move_event_started = 0.0
         self._last_move_event_occurred = 0.0
         
-        if self._float_mode:
-            
-            self._text_ctrl.Bind( wx.EVT_SET_FOCUS, self.EventSetFocus )
-            self._text_ctrl.Bind( wx.EVT_KILL_FOCUS, self.EventKillFocus )
-            
-        
-        self._text_ctrl.Bind( wx.EVT_TEXT, self.EventText )
-        self._text_ctrl.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        
-        self._text_ctrl.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._text_input_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        self._text_input_hbox.Add( self._text_ctrl, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        
-        vbox.Add( self._text_input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
-        #self._dropdown_window = wx.PopupTransientWindow( self, style = wx.BORDER_RAISED )
-        #self._dropdown_window = wx.Window( self, style = wx.BORDER_RAISED )
-        
-        #self._dropdown_window = wx.Panel( self )
+        self._text_ctrl_widget_event_filter = QP.WidgetEventFilter( self._text_ctrl )
         
         if self._float_mode:
             
-            self._dropdown_window = wx.Frame( self, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
+            self._text_ctrl_widget_event_filter.EVT_SET_FOCUS( self.EventSetFocus )
+            self._text_ctrl_widget_event_filter.EVT_KILL_FOCUS( self.EventKillFocus )
             
-            self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._text_ctrl.textChanged.connect( self.EventText )
+        self._text_ctrl_widget_event_filter.EVT_KEY_DOWN( self.keyPressFilter )
+        
+        self._text_ctrl_widget_event_filter.EVT_MOUSEWHEEL( self.EventMouseWheel )
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        self._text_input_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( self._text_input_hbox, self._text_ctrl, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        
+        QP.AddToLayout( vbox, self._text_input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        if self._float_mode:
             
-            self._dropdown_window.SetPosition( ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( 0, 0 ) ) )
+            self._dropdown_window = QW.QFrame( self )
             
-            self._dropdown_window.Bind( wx.EVT_CLOSE, self.EventCloseDropdown )
+            self._dropdown_window.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+            
+            self._dropdown_window.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
+            self._dropdown_window.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
+            self._dropdown_window.setLineWidth( 2 )
+            
+            QP.SetBackgroundColour( self._dropdown_window, QP.GetSystemColour( QG.QPalette.Button ) )
+            
+            self._dropdown_window.move( ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( 0, 0 ) ) )
+            
+            self._dropdown_window_widget_event_filter = QP.WidgetEventFilter( self._dropdown_window )
+            self._dropdown_window_widget_event_filter.EVT_CLOSE( self.EventCloseDropdown )
             
             self._dropdown_hidden = True
             
-            self._list_height_num_chars = 19
-            
         else:
             
-            self._dropdown_window = wx.Panel( self )
+            self._dropdown_window = QW.QFrame( self )
             
-            self._list_height_num_chars = 8
+            self._dropdown_window.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
             
         
-        self._dropdown_notebook = wx.Notebook( self._dropdown_window )
+        self._dropdown_notebook = QW.QTabWidget( self._dropdown_window )
         
         #
         
+        self._list_height_num_chars = 8
+        
         self._search_results_list = self._InitSearchResultsList()
         
-        self._dropdown_notebook.AddPage( self._search_results_list, 'results', True )
+        self._dropdown_notebook.setCurrentIndex( self._dropdown_notebook.addTab( self._search_results_list, 'results' ) )
         
         #
         
         if not self._float_mode:
             
-            vbox.Add( self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
             
         
-        self.SetSizer( vbox )
+        self.setLayout( vbox )
         
         self._current_list_raw_entry = ''
         self._next_search_is_probably_fast = False
@@ -579,22 +573,29 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._float_mode:
             
-            self.Bind( wx.EVT_MOVE, self.EventMove )
-            self.Bind( wx.EVT_SIZE, self.EventMove )
+            self._widget_event_filter = QP.WidgetEventFilter( self )
+            self._widget_event_filter.EVT_MOVE( self.EventMove )
+            self._widget_event_filter.EVT_SIZE( self.EventMove )
             
-            HG.client_controller.sub( self, '_ParentMovedOrResized', 'main_gui_move_event' )
+            HG.client_controller.sub( self, '_ParentMovedOrResized', 'top_level_window_move_event' )
             
             parent = self
+            
+            self._scroll_event_filters = []
             
             while True:
                 
                 try:
                     
-                    parent = parent.GetParent()
+                    parent = parent.parentWidget()
                     
-                    if isinstance( parent, wx.ScrolledWindow ):
+                    if isinstance( parent, QW.QScrollArea ):
                         
-                        parent.Bind( wx.EVT_SCROLLWIN, self.EventMove )
+                        scroll_event_filter = QP.WidgetEventFilter( parent )
+                        
+                        self._scroll_event_filters.append( scroll_event_filter )
+                        
+                        scroll_event_filter.EVT_SCROLLWIN( self.EventMove )
                         
                     
                 except:
@@ -642,7 +643,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._CancelCurrentResultsFetchJob()
         
-        self._text_ctrl.SetValue( '' )
+        self._text_ctrl.setText( '' )
         
         self._SetResultsToList( [] )
         
@@ -691,7 +692,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._float_mode:
             
-            self.GetTopLevelParent().SetFocus()
+            self.parentWidget().setFocus( QC.Qt.OtherFocusReason )
             
             return True
             
@@ -705,7 +706,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if not self._dropdown_hidden:
             
-            self._dropdown_window.Hide()
+            self._dropdown_window.hide()
             
             self._dropdown_hidden = True
             
@@ -741,7 +742,7 @@ class AutoCompleteDropdown( wx.Panel ):
                     
                     if self._move_hide_job is None:
                         
-                        self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.0, 0.25, self._DropdownHideShow )
+                        self._move_hide_job = HG.client_controller.CallRepeatingQtSafe( self._dropdown_window, 0.0, 0.25, self._DropdownHideShow )
                         
                     
                     self._move_hide_job.Delay( 0.25 )
@@ -764,7 +765,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._CancelScheduledListRefresh()
             
-            self._refresh_list_job = HG.client_controller.CallLaterWXSafe( self, delay, self._UpdateSearchResultsList )
+            self._refresh_list_job = HG.client_controller.CallLaterQtSafe(self, delay, self._UpdateSearchResultsList)
             
         
     
@@ -782,31 +783,9 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _ShouldShow( self ):
         
-        tlp_active = self.GetTopLevelParent().IsActive() or self._dropdown_window.IsActive()
+        tlp_active = self.window().isActiveWindow() or self._dropdown_window.isActiveWindow()
         
-        if HC.PLATFORM_LINUX:
-            
-            tlp = self.GetTopLevelParent()
-            
-            if isinstance( tlp, wx.Dialog ):
-                
-                visible = True
-                
-            else:
-                
-                # notebook on linux doesn't 'hide' things apparently, so isshownonscreen, which recursively tests parents' hide status, doesn't work!
-                
-                gui = HG.client_controller.GetGUI()
-                
-                current_page = gui.GetCurrentPage()
-                
-                visible = ClientGUIFunctions.IsWXAncestor( self, current_page )
-                
-            
-        else:
-            
-            visible = self._text_ctrl.IsShownOnScreen()
-            
+        visible = self._text_ctrl.isVisible()
         
         focus_remains_on_self_or_children = ClientGUIFunctions.WindowOrAnyTLPChildHasFocus( self )
         
@@ -820,15 +799,15 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _ShowDropdown( self ):
         
-        ( text_width, text_height ) = self._text_ctrl.GetSize()
+        ( text_width, text_height ) = self._text_ctrl.size().toTuple()
         
-        if self._text_ctrl.IsShown():
+        if self._text_ctrl.isVisible():
             
-            desired_dropdown_position = ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( -2, text_height - 2 ) )
+            desired_dropdown_position = ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( 0, text_height ) )
             
             if self._last_attempted_dropdown_position != desired_dropdown_position:
                 
-                self._dropdown_window.SetPosition( desired_dropdown_position )
+                self._dropdown_window.move( desired_dropdown_position )
                 
                 self._last_attempted_dropdown_position = desired_dropdown_position
                 
@@ -836,24 +815,16 @@ class AutoCompleteDropdown( wx.Panel ):
         
         #
         
-        show_and_fit_needed = False
-        
         if self._dropdown_hidden:
             
-            self._dropdown_window.Show()
+            self._dropdown_window.show()
             
             self._dropdown_hidden = False
             
         
         if text_width != self._last_attempted_dropdown_width:
             
-            show_and_fit_needed = True
-            
-            self._dropdown_window.Fit()
-            
-            self._dropdown_window.SetSize( ( text_width, -1 ) )
-            
-            self._dropdown_window.Layout()
+            self._dropdown_window.setFixedWidth( text_width )
             
             self._last_attempted_dropdown_width = text_width
             
@@ -878,9 +849,9 @@ class AutoCompleteDropdown( wx.Panel ):
             colour = ClientData.GetLighterDarkerColour( colour )
             
         
-        self._text_ctrl.SetBackgroundColour( colour )
+        QP.SetBackgroundColour( self._text_ctrl, colour )
         
-        self._text_ctrl.Refresh()
+        self._text_ctrl.update()
         
     
     def _UpdateSearchResultsList( self ):
@@ -909,19 +880,26 @@ class AutoCompleteDropdown( wx.Panel ):
         self._DropdownHideShow()
         
     
-    def EventCharHook( self, event ):
+    def keyPressFilter( self, event ):
         
         HG.client_controller.ResetIdleTimer()
         
         ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
-        if key in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
+        raw_control_modifier = QC.Qt.ControlModifier
+        
+        if HC.PLATFORM_OSX:
+            
+            raw_control_modifier = QC.Qt.MetaModifier # This way raw_control_modifier always means the Control key, even on Mac. See Qt docs.
+            
+        
+        if key in ( QC.Qt.Key_Insert, ):
             
             self._intercept_key_events = not self._intercept_key_events
             
             self._UpdateBackgroundColour()
             
-        elif key == wx.WXK_SPACE and event.RawControlDown(): # this is control, not command on os x, for which command+space does some os stuff
+        elif key == QC.Qt.Key_Space and event.modifiers() & raw_control_modifier:
             
             self._ScheduleListRefresh( 0.0 )
             
@@ -929,64 +907,60 @@ class AutoCompleteDropdown( wx.Panel ):
             
             send_input_to_current_list = False
             
-            current_results_list = self._dropdown_notebook.GetCurrentPage()
+            current_results_list = self._dropdown_notebook.currentWidget()
             
             current_list_is_empty = len( current_results_list ) == 0
             
-            input_is_empty = self._text_ctrl.GetValue() == ''
+            input_is_empty = self._text_ctrl.text() == ''
             
-            if key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
+            if key in ( ord( 'A' ), ord( 'a' ) ) and modifier == QC.Qt.ControlModifier:
                 
-                event.Skip()
+                return True # was: event.ignore()
                 
-            elif key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
+            elif key in ( QC.Qt.Key_Return, QC.Qt.Key_Enter ) and self._ShouldTakeResponsibilityForEnter():
                 
-                shift_down = modifier == wx.ACCEL_SHIFT
+                shift_down = modifier == QC.Qt.ShiftModifier
                 
                 self._TakeResponsibilityForEnter( shift_down )
                 
             elif input_is_empty: # maybe we should be sending a 'move' event to a different place
                 
-                if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and current_list_is_empty:
+                if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down ) and current_list_is_empty:
                     
-                    if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                    if key in ( QC.Qt.Key_Up, ):
                         
-                        new_event = SelectUpEvent( -1 )
+                        self.selectUp.emit()
                         
-                    elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    elif key in ( QC.Qt.Key_Down, ):
                         
-                        new_event = SelectDownEvent( -1 )
-                        
-                    
-                    wx.QueueEvent( self.GetEventHandler(), new_event )
-                    
-                elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and current_list_is_empty:
-                    
-                    if key in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
-                        
-                        new_event = ShowPreviousEvent( -1 )
-                        
-                    elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
-                        
-                        new_event = ShowNextEvent( -1 )
+                        self.selectDown.emit()
                         
                     
-                    wx.QueueEvent( self.GetEventHandler(), new_event )
+                elif key in ( QC.Qt.Key_PageDown, QC.Qt.Key_PageUp ) and current_list_is_empty:
                     
-                elif key in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT, wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ):
+                    if key in ( QC.Qt.Key_PageUp, ):
+                        
+                        self.showPrevious.emit()
+                        
+                    elif key in ( QC.Qt.Key_PageDown, ):
+                        
+                        self.showNext.emit()
+                        
                     
-                    if key in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT ):
+                elif key in ( QC.Qt.Key_Right, QC.Qt.Key_Left ):
+                    
+                    if key in ( QC.Qt.Key_Left, ):
                         
                         direction = -1
                         
-                    elif key in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ):
+                    elif key in ( QC.Qt.Key_Right, ):
                         
                         direction = 1
                         
                     
                     self.MoveNotebookPageFocus( direction = direction )
                     
-                elif key == wx.WXK_ESCAPE:
+                elif key == QC.Qt.Key_Escape:
                     
                     escape_caught = self._HandleEscape()
                     
@@ -1007,19 +981,20 @@ class AutoCompleteDropdown( wx.Panel ):
             
             if send_input_to_current_list:
                 
-                # Don't say QueueEvent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
-                current_results_list.EventCharHook( event ) # ultimately, this typically skips the event, letting the text ctrl take it
+                current_results_list.keyPressEvent( event ) # ultimately, this typically ignores the event, letting the text ctrl take it
+                
+                return not event.isAccepted()
                 
             
         else:
             
-            event.Skip()
+            return True # was: event.ignore()
             
         
     
     def EventCloseDropdown( self, event ):
         
-        HG.client_controller.GetGUI().Close()
+        HG.client_controller.gui.close()
         
     
     def EventKillFocus( self, event ):
@@ -1029,31 +1004,29 @@ class AutoCompleteDropdown( wx.Panel ):
             self._DropdownHideShow()
             
         
-        event.Skip()
+        return True # was: event.ignore()
         
     
     def EventMouseWheel( self, event ):
         
-        current_results_list = self._dropdown_notebook.GetCurrentPage()
+        current_results_list = self._dropdown_notebook.currentWidget()
         
-        if self._text_ctrl.GetValue() == '' and len( current_results_list ) == 0:
+        if self._text_ctrl.text() == '' and len( current_results_list ) == 0:
             
-            if event.GetWheelRotation() > 0:
+            if event.angleDelta().y() > 0:
                 
-                new_event = SelectUpEvent( -1 )
+                self.selectUp.emit()
                 
             else:
                 
-                new_event = SelectDownEvent( -1 )
+                self.selectDown.emit()
                 
-            
-            wx.QueueEvent( self.GetEventHandler(), new_event )
             
         else:
             
-            if event.CmdDown():
+            if event.modifiers() & QC.Qt.ControlModifier:
                 
-                if event.GetWheelRotation() > 0:
+                if event.angleDelta().y() > 0:
                     
                     current_results_list.MoveSelectionUp()
                     
@@ -1062,32 +1035,11 @@ class AutoCompleteDropdown( wx.Panel ):
                     current_results_list.MoveSelectionDown()
                     
                 
+                event.accept()
+                
             else:
                 
-                # for some reason, the scrolledwindow list doesn't process scroll events properly when in a popupwindow
-                # so let's just tell it to scroll manually
-                
-                ( start_x, start_y ) = current_results_list.GetViewStart()
-                
-                if event.GetWheelRotation() > 0:
-                    
-                    current_results_list.Scroll( -1, start_y - 3 )
-                    
-                else:
-                    
-                    current_results_list.Scroll( -1, start_y + 3 )
-                    
-                
-                if event.GetWheelRotation() > 0:
-                    
-                    command_type = wx.wxEVT_SCROLLWIN_LINEUP
-                    
-                else:
-                    
-                    command_type = wx.wxEVT_SCROLLWIN_LINEDOWN
-                    
-                
-                wx.QueueEvent( current_results_list.GetEventHandler(), wx.ScrollWinEvent( command_type ) )
+                return True # was: event.ignore()
                 
             
         
@@ -1096,7 +1048,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._ParentMovedOrResized()
         
-        event.Skip()
+        return True # was: event.ignore()
         
     
     def EventSetFocus( self, event ):
@@ -1106,12 +1058,12 @@ class AutoCompleteDropdown( wx.Panel ):
             self._DropdownHideShow()
             
         
-        event.Skip()
+        return True # was: event.ignore()
         
     
-    def EventText( self, event ):
+    def EventText( self, new_text ):
         
-        num_chars = len( self._text_ctrl.GetValue() )
+        num_chars = len( self._text_ctrl.text() )
         
         if num_chars == 0:
             
@@ -1124,7 +1076,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 self._ScheduleListRefresh( 0.0 )
                 
             
-            if self._dropdown_notebook.GetCurrentPage() != self._search_results_list:
+            if self._dropdown_notebook.currentWidget() != self._search_results_list:
                 
                 self.MoveNotebookPageFocus( index = 0 )
                 
@@ -1149,11 +1101,11 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif direction is not None:
             
-            current_index = self._dropdown_notebook.GetSelection()
+            current_index = self._dropdown_notebook.currentIndex()
             
-            if current_index is not None and current_index != wx.NOT_FOUND:
+            if current_index is not None and current_index != -1:
                 
-                number_of_pages = self._dropdown_notebook.GetPageCount()
+                number_of_pages = self._dropdown_notebook.count()
                 
                 new_index = ( current_index + direction ) % number_of_pages # does wraparound
                 
@@ -1161,9 +1113,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if new_index is not None:
             
-            self._dropdown_notebook.ChangeSelection( new_index )
+            self._dropdown_notebook.setCurrentIndex( new_index )
             
-            self._text_ctrl.SetFocus()
+            self._text_ctrl.setFocus( QC.Qt.OtherFocusReason )
             
         
     
@@ -1182,15 +1134,15 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
-    def SetFocus( self ):
+    def setFocus( self, focus_reason = QC.Qt.OtherFocusReason ):
         
         if HC.PLATFORM_OSX:
             
-            wx.CallAfter( self._text_ctrl.SetFocus )
+            QP.CallAfter( self._text_ctrl.setFocus, focus_reason )
             
         else:
             
-            self._text_ctrl.SetFocus()
+            self._text_ctrl.setFocus( focus_reason )
             
         
     
@@ -1210,16 +1162,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
         
         self._file_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, file_service.GetName(), self.FileButtonHit )
-        self._file_repo_button.SetMinSize( ( 20, -1 ) )
+        self._file_repo_button.setMinimumWidth( 20 )
         
         self._tag_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, tag_service.GetName(), self.TagButtonHit )
-        self._tag_repo_button.SetMinSize( ( 20, -1 ) )
+        self._tag_repo_button.setMinimumWidth( 20 )
         
         self._favourites_list = self._InitFavouritesList()
         
         self.RefreshFavouriteTags()
         
-        self._dropdown_notebook.AddPage( self._favourites_list, 'favourites', False )
+        self._dropdown_notebook.addTab( self._favourites_list, 'favourites' )
         
         #
         
@@ -1241,7 +1193,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         name = file_service.GetName()
         
-        self._file_repo_button.SetLabelText( name )
+        self._file_repo_button.setText( name )
         
         self._SetListDirty()
         
@@ -1261,7 +1213,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         name = tag_service.GetName()
         
-        self._tag_repo_button.SetLabelText( name )
+        self._tag_repo_button.setText( name )
         
         self._search_text_for_current_cache = None
         
@@ -1275,7 +1227,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _SetResultsToList( self, results ):
         
-        self._current_list_raw_entry = self._text_ctrl.GetValue()
+        self._current_list_raw_entry = self._text_ctrl.text()
         
         self._search_results_list.SetPredicates( results )
         
@@ -1303,11 +1255,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
             
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         for service in services:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeFileService, service.GetServiceKey() )
+            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeFileService, service.GetServiceKey() )
             
         
         HG.client_controller.PopupMenu( self._file_repo_button, menu )
@@ -1352,11 +1304,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         services.extend( services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         services.append( services_manager.GetService( CC.COMBINED_TAG_SERVICE_KEY ) )
         
-        menu = wx.Menu()
+        menu = QW.QMenu()
         
         for service in services:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Change the current tag domain to ' + service.GetName() + '.', self._ChangeTagService, service.GetServiceKey() )
+            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current tag domain to ' + service.GetName() + '.', self._ChangeTagService, service.GetServiceKey() )
             
         
         HG.client_controller.PopupMenu( self._tag_repo_button, menu )
@@ -1381,56 +1333,56 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._file_search_context = file_search_context
         
         self._include_current_tags = ClientGUICommon.OnOffButton( self._dropdown_window, self._page_key, 'notify_include_current', on_label = 'include current tags', off_label = 'exclude current tags', start_on = file_search_context.IncludeCurrentTags() )
-        self._include_current_tags.SetToolTip( 'select whether to include current tags in the search' )
+        self._include_current_tags.setToolTip( 'select whether to include current tags in the search' )
         self._include_pending_tags = ClientGUICommon.OnOffButton( self._dropdown_window, self._page_key, 'notify_include_pending', on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = file_search_context.IncludePendingTags() )
-        self._include_pending_tags.SetToolTip( 'select whether to include pending tags in the search' )
+        self._include_pending_tags.setToolTip( 'select whether to include pending tags in the search' )
         
         self._synchronised = ClientGUICommon.OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate', start_on = synchronised )
-        self._synchronised.SetToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
+        self._synchronised.setToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
         
         self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'OR', self._AdvancedORInput )
-        self._or_advanced.SetToolTip( 'Advanced OR Search input.' )
+        self._or_advanced.setToolTip( 'Advanced OR Search input.' )
         
         if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
-            self._or_advanced.Hide()
+            self._or_advanced.hide()
             
         
-        self._or_cancel = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.GlobalBMPs.delete, self._CancelORConstruction )
-        self._or_cancel.SetToolTip( 'Cancel OR Predicate construction.' )
-        self._or_cancel.Hide()
+        self._or_cancel = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.GlobalPixmaps.delete, self._CancelORConstruction )
+        self._or_cancel.setToolTip( 'Cancel OR Predicate construction.' )
+        self._or_cancel.hide()
         
-        self._or_rewind = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.GlobalBMPs.previous, self._RewindORConstruction )
-        self._or_rewind.SetToolTip( 'Rewind OR Predicate construction.' )
-        self._or_rewind.Hide()
+        self._or_rewind = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.GlobalPixmaps.previous, self._RewindORConstruction )
+        self._or_rewind.setToolTip( 'Rewind OR Predicate construction.' )
+        self._or_rewind.hide()
         
         self._include_unusual_predicate_types = include_unusual_predicate_types
         
-        button_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox_1 = QP.HBoxLayout()
         
-        button_hbox_1.Add( self._include_current_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox_1.Add( self._include_pending_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox_1, self._include_current_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox_1, self._include_pending_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        sync_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        sync_button_hbox = QP.HBoxLayout()
         
-        sync_button_hbox.Add( self._synchronised, CC.FLAGS_EXPAND_BOTH_WAYS )
-        sync_button_hbox.Add( self._or_advanced, CC.FLAGS_VCENTER )
-        sync_button_hbox.Add( self._or_cancel, CC.FLAGS_VCENTER )
-        sync_button_hbox.Add( self._or_rewind, CC.FLAGS_VCENTER )
+        QP.AddToLayout( sync_button_hbox, self._synchronised, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( sync_button_hbox, self._or_advanced, CC.FLAGS_VCENTER )
+        QP.AddToLayout( sync_button_hbox, self._or_cancel, CC.FLAGS_VCENTER )
+        QP.AddToLayout( sync_button_hbox, self._or_rewind, CC.FLAGS_VCENTER )
         
-        button_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox_2 = QP.HBoxLayout()
         
-        button_hbox_2.Add( self._file_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox_2.Add( self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox_2, self._file_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( button_hbox_2, self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        vbox.Add( button_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( sync_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( button_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, button_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, sync_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, button_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._dropdown_window.SetSizer( vbox )
+        self._dropdown_window.setLayout( vbox )
         
         HG.client_controller.sub( self, 'SetSynchronisedWait', 'synchronised_wait_switch' )
         
@@ -1448,7 +1400,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             dlg.SetPanel( panel )
             
-            if dlg.ShowModal() == wx.ID_OK:
+            if dlg.exec() == QW.QDialog.Accepted:
                 
                 predicates = panel.GetValue()
                 shift_down = False
@@ -1576,7 +1528,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _HandleEscape( self ):
         
-        if self._under_construction_or_predicate is not None and self._text_ctrl.GetValue() == '':
+        if self._under_construction_or_predicate is not None and self._text_ctrl.text() == '':
             
             self._CancelORConstruction()
             
@@ -1597,12 +1549,21 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitSearchResultsList( self ):
         
+        if self._float_mode:
+            
+            self._list_height_num_chars = 19
+            
+        else:
+            
+            self._list_height_num_chars = 8
+            
+        
         return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
     
     def _ParseSearchText( self ):
         
-        raw_entry = self._text_ctrl.GetValue()
+        raw_entry = self._text_ctrl.text()
         
         if raw_entry.startswith( '-' ):
             
@@ -1683,7 +1644,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AppendLoadingPredicate( stub_predicates )
         
-        HG.client_controller.CallLaterWXSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates )
+        HG.client_controller.CallLaterQtSafe(self, 0.2, self.SetStubPredicates, job_key, stub_predicates)
         
         HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._media_callable, self._file_search_context, self._synchronised.IsOn(), self._include_unusual_predicate_types, self._initial_matches_fetched, self._search_text_for_current_cache, self._cached_results, self._under_construction_or_predicate )
         
@@ -1692,7 +1653,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         ( raw_entry, inclusive, wildcard_text, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
-        looking_at_search_results = self._dropdown_notebook.GetCurrentPage() == self._search_results_list
+        looking_at_search_results = self._dropdown_notebook.currentWidget() == self._search_results_list
         
         something_to_broadcast = cache_text != ''
         
@@ -1712,22 +1673,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _UpdateORButtons( self ):
         
-        layout_needed = False
-        
         if self._under_construction_or_predicate is None:
             
-            if self._or_cancel.IsShown():
+            if self._or_cancel.isVisible():
                 
-                self._or_cancel.Hide()
-                
-                layout_needed = True
+                self._or_cancel.hide()
                 
             
-            if self._or_rewind.IsShown():
+            if self._or_rewind.isVisible():
                 
-                self._or_rewind.Hide()
-                
-                layout_needed = True
+                self._or_rewind.hide()
                 
             
         else:
@@ -1736,34 +1691,22 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             if len( or_preds ) > 1:
                 
-                if not self._or_rewind.IsShown():
+                if not self._or_rewind.isVisible():
                     
-                    self._or_rewind.Show()
-                    
-                    layout_needed = True
+                    self._or_rewind.show()
                     
                 
             else:
                 
-                if self._or_rewind.IsShown():
+                if self._or_rewind.isVisible():
                     
-                    self._or_rewind.Hide()
-                    
-                    layout_needed = True
+                    self._or_rewind.hide()
                     
                 
             
-            if not self._or_cancel.IsShown():
+            if not self._or_cancel.isVisible():
                 
-                self._or_cancel.Show()
-                
-                layout_needed = True
-                
-            
-        
-        if layout_needed:
-            
-            self._dropdown_window.Layout()
+                self._or_cancel.show()
             
         
     
@@ -1809,7 +1752,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._next_search_is_probably_fast = next_search_is_probably_fast
             
-            num_chars = len( self._text_ctrl.GetValue() )
+            num_chars = len( self._text_ctrl.text() )
             
             if num_chars == 0:
                 
@@ -1824,7 +1767,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if page_key == self._page_key:
             
-            self._synchronised.EventButton( None )
+            self._synchronised.EventButton()
             
         
     
@@ -1850,32 +1793,32 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
-        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
-        self._paste_button.SetToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' )
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.paste, self._Paste )
+        self._paste_button.setToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' )
         
         if not show_paste_button:
             
-            self._paste_button.Hide()
+            self._paste_button.hide()
             
         
-        self._text_input_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+        QP.AddToLayout( self._text_input_hbox, self._paste_button, CC.FLAGS_VCENTER )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        vbox = QP.VBoxLayout()
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = QP.HBoxLayout()
         
-        hbox.Add( self._file_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._file_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._dropdown_window.SetSizer( vbox )
+        self._dropdown_window.setLayout( vbox )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
         
-        tags = { predicate.GetValue() for predicate in predicates }
+        tags = {predicate.GetValue() for predicate in predicates}
         
         if len( tags ) > 0:
             
@@ -1920,12 +1863,14 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitSearchResultsList( self ):
         
+        self._list_height_num_chars = 8
+        
         return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
     
     def _ParseSearchText( self ):
         
-        raw_entry = self._text_ctrl.GetValue()
+        raw_entry = self._text_ctrl.text()
         
         tag = HydrusTags.CleanTag( raw_entry )
         
@@ -1968,7 +1913,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         except HydrusExceptions.DataMissing as e:
             
-            wx.MessageBox( str( e ) )
+            QW.QMessageBox.critical( self, 'Error', str(e) )
             
             return
             
@@ -1990,7 +1935,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         except:
             
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard' )
             
             raise
             
@@ -2001,7 +1946,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
-        looking_at_search_results = self._dropdown_notebook.GetCurrentPage() == self._search_results_list
+        looking_at_search_results = self._dropdown_notebook.currentWidget() == self._search_results_list
         
         sitting_on_empty = raw_entry == ''
         
@@ -2029,14 +1974,14 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         AppendLoadingPredicate( stub_predicates )
         
-        HG.client_controller.CallLaterWXSafe( self, 0.2, self.SetStubPredicates, job_key, stub_predicates )
+        HG.client_controller.CallLaterQtSafe(self, 0.2, self.SetStubPredicates, job_key, stub_predicates)
         
         HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetFetchedResults, parsed_search_text, self._file_service_key, self._tag_service_key, self._expand_parents, self._search_text_for_current_cache, self._cached_results )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):
         
-        if self._text_ctrl.GetValue() == '' and self._dropdown_notebook.GetCurrentPage() == self._search_results_list:
+        if self._text_ctrl.text() == '' and self._dropdown_notebook.currentWidget() == self._search_results_list:
             
             if self._null_entry_callable is not None:
                 
