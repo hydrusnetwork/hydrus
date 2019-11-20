@@ -2017,6 +2017,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_more_tags = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
             self._duplicate_comparison_score_older = QP.MakeQSpinBox( weights_panel, min=0, max=100 )
             
+            self._duplicate_filter_max_batch_size = QP.MakeQSpinBox( self, min = 10, max = 1024 )
+            
             #
             
             self._duplicate_comparison_score_higher_jpeg_quality.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' ) )
@@ -2027,6 +2029,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_much_higher_resolution.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_resolution' ) )
             self._duplicate_comparison_score_more_tags.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_more_tags' ) )
             self._duplicate_comparison_score_older.setValue( self._new_options.GetInteger( 'duplicate_comparison_score_older' ) )
+            
+            self._duplicate_filter_max_batch_size.setValue( self._new_options.GetInteger( 'duplicate_filter_max_batch_size' ) )
             
             #
             
@@ -2046,8 +2050,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             label = 'When processing potential duplicate pairs in the duplicate filter, the client tries to present the \'best\' file first. It judges the two files on a variety of potential differences, each with a score. The file with the greatest total score is presented first. Here you can tinker with these scores.'
             
             st = ClientGUICommon.BetterStaticText( weights_panel, label )
-            
-            st.SetWrapWidth( 640 )
+            st.setWordWrap( True )
             
             weights_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             weights_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2056,7 +2059,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, weights_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, weights_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Max size of duplicate filter pair batches:', self._duplicate_filter_max_batch_size ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.setLayout( vbox )
             
@@ -2071,6 +2082,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_resolution', self._duplicate_comparison_score_much_higher_resolution.value() )
             self._new_options.SetInteger( 'duplicate_comparison_score_more_tags', self._duplicate_comparison_score_more_tags.value() )
             self._new_options.SetInteger( 'duplicate_comparison_score_older', self._duplicate_comparison_score_older.value() )
+            
+            self._new_options.SetInteger( 'duplicate_filter_max_batch_size', self._duplicate_filter_max_batch_size.value() )
             
         
     
@@ -2191,8 +2204,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text = 'Setting a specific web browser path here--like \'C:\\program files\\firefox\\firefox.exe "%path%"\'--can help with the \'share->open->in web browser\' command, which is buggy working with OS defaults, particularly on Windows. It also fixes #anchors, which are dropped in some OSes using default means. Use the same %path% format for the \'open externally\' commands below.'
             
             st = ClientGUICommon.BetterStaticText( mime_panel, text )
-            
-            st.SetWrapWidth( 800 )
+            st.setWordWrap( True )
             
             mime_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3050,8 +3062,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += 'If the client believes the system is busy, it will generally not start jobs.'
             
             st = ClientGUICommon.BetterStaticText( self._jobs_panel, label = text )
-            
-            st.SetWrapWidth( 550 )
+            st.setWordWrap( True )
             
             self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3837,8 +3848,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             desc = 'These tags will appear in your tag autocomplete results area, under the \'favourites\' tab.'
             
             favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
-            
-            favourites_st.SetWrapWidth( 400 )
+            favourites_st.setWordWrap( True )
             
             expand_parents = False
             
@@ -5950,8 +5960,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         st = ClientGUICommon.BetterStaticText( self, text )
-        
-        st.SetWrapWidth( 640 )
+        st.setWordWrap( True )
         
         columns = [ ( 'missing location', -1 ), ( 'expected subdirectory', 23 ), ( 'correct location', 36 ), ( 'now ok?', 9 ) ]
         

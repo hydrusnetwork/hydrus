@@ -4,16 +4,6 @@ import os
 
 from . import HydrusConstants as HC
 
-# if local linux OS has newer font config, let's redirect with env var before we get qt in
-if HC.PLATFORM_LINUX and HC.RUNNING_FROM_FROZEN_BUILD:
-    
-    SYS_FONT_PATH = '/etc/fonts'
-    
-    if os.path.exists( SYS_FONT_PATH ):
-        
-        os.environ[ 'FONTCONFIG_PATH' ] = SYS_FONT_PATH
-        
-
 # If not explicitely set, prefer PySide2 instead of the qtpy default which is PyQt5
 # It is important that this runs on startup *before* anything is imported from qtpy.
 # Since test.py, client.py and client.pyw all import this module first before any other Qt related ones, this requirement is satisfied.
@@ -87,6 +77,26 @@ def MonkeyPatchMissingMethods():
         QC.QSize.toTuple = QSizeToTuple
         QC.QSizeF.toTuple = QSizeToTuple
         QG.QColor.toTuple = QColorToTuple
+        
+        def MonkeyPatchGetSaveFileName( original_function ):
+            
+            def new_function( *args, **kwargs ):
+                
+                if 'selectedFilter' in kwargs:
+                    
+                    kwargs[ 'initialFilter' ] = kwargs[ 'selectedFilter' ]
+                    del kwargs[ 'selectedFilter' ]
+                    
+                    return original_function( *args, **kwargs )
+                    
+                
+            
+            return new_function
+            
+        
+        QW.QFileDialog.getSaveFileName = MonkeyPatchGetSaveFileName( QW.QFileDialog.getSaveFileName )
+        
+
 
 class HBoxLayout( QW.QHBoxLayout ):
     
@@ -511,6 +521,11 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
+        if HC.PLATFORM_MACOS:
+            
+            return
+            
+        
         global_pos = self.mapToGlobal( e.pos() )
         pos_in_tab = self._tab_bar.mapFromGlobal( global_pos )
         
@@ -577,22 +592,10 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         tab_index = self._tab_bar.tabAt( event.pos() )
         
         if tab_index != -1:
-
+            
             shift_down = event.keyboardModifiers() & QC.Qt.ShiftModifier
-
-            follow_dropped_page = not shift_down
-
-            new_options = HG.client_controller.new_options
             
-            if new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ):
-                
-                follow_dropped_page = not follow_dropped_page
-                
-            
-            if follow_dropped_page:
-                
-                self.setCurrentIndex( tab_index )
-                
+            self.setCurrentIndex( tab_index )
             
         
         if event.mimeData().formats():
@@ -760,6 +763,21 @@ class TabWidgetWithDnD( QW.QTabWidget ):
                 
                 self.setCurrentIndex( self.indexOf( source_page ) )
                 
+            else:
+                
+                if source_page_index > 1:
+                    
+                    neighbour_page = source_notebook.widget( source_page_index - 1 )
+                    
+                    page_key = neighbour_page.GetPageKey()
+                    
+                else:
+                    
+                    page_key = source_notebook.GetPageKey()
+                    
+                
+                HG.client_controller.gui.ShowPage( page_key )
+                
             
         
         self.pageDragAndDropped.emit( source_page, source_tab_bar )
@@ -806,7 +824,7 @@ def SplitVertically( splitter, w1, w2, hpos ):
 def SplitHorizontally( splitter, w1, w2, vpos ):
     
     splitter.setOrientation( QC.Qt.Vertical )
-        
+    
     if w1.parentWidget() != splitter:
         
         splitter.addWiget( w1 )
@@ -1259,7 +1277,13 @@ def GetSystemColour( colour ):
     return QG.QPalette().color( colour )
 
 
-def Center( window ):
+def CenterOnWindow( parent, window ):
+    
+    parent_window = parent.window()
+    
+    window.move( parent_window.mapToGlobal( parent_window.rect().center() ) - window.rect().center() )
+
+def CenterOnScreen( window ):
     
     window.move( QW.QApplication.desktop().availableGeometry().center() - window.rect().center() )
 
@@ -1566,10 +1590,11 @@ class AboutBox( QW.QDialog ):
         QW.QDialog.__init__( self, parent )
         
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
         
-        layout = QW.QVBoxLayout()
+        layout = QW.QVBoxLayout( self )
         
         self.setWindowTitle( 'About ' + about_info.name )
         
@@ -1825,9 +1850,16 @@ class EllipsizedLabel( QW.QLabel ):
         
         self._ellipsize_end = ellipsize_end
         
+    
+    def minimumSizeHint( self ):
+        
         if self._ellipsize_end:
             
-            self.setWordWrap( True )
+            return self.sizeHint()
+            
+        else:
+            
+            return QW.QLabel.minimumSizeHint( self )
             
         
     
@@ -1836,36 +1868,27 @@ class EllipsizedLabel( QW.QLabel ):
         QW.QLabel.setText( self, text )
         
         self.update()
-    
+        
     
     def sizeHint( self ):
         
-        size_hint = QW.QLabel.sizeHint( self )
-        
-        if hasattr( self, '_wrap_width' ) and self._wrap_width is not None:
-
-            text_lines = self.text().split( '\n' )
+        if self._ellipsize_end:
             
-            for text_line in text_lines:
-                
-                line_width = self.fontMetrics().size( QC.Qt.TextSingleLine, text_line ).width()
-                
-                if line_width > self._wrap_width:
-
-                    size_hint.setWidth( self._wrap_width )
-                    
-                    break
+            num_lines = self.text().count( '\n' ) + 1
             
-                elif size_hint.width() < line_width:
+            line_width = self.fontMetrics().lineWidth()
+            line_height = self.fontMetrics().lineSpacing()
             
-                    size_hint.setWidth( line_width )
-                    
-                
+            size_hint = QC.QSize( 3 * line_width, num_lines * line_height )
+            
+        else:
+            
+            size_hint = QW.QLabel.sizeHint( self )
             
         
         return size_hint
         
-        
+    
     def paintEvent( self, event ):
 
         if not self._ellipsize_end:
@@ -1873,46 +1896,52 @@ class EllipsizedLabel( QW.QLabel ):
             QW.QLabel.paintEvent( self, event )
             
             return
-
+            
+        
         painter = QG.QPainter( self )
 
         fontMetrics = painter.fontMetrics()
 
         text_lines = self.text().split( '\n' )
-
-        if hasattr( self, '_wrap_width' ) and self._wrap_width is not None:
-
-            for text_line in text_lines:
-
-                if self.width() < self._wrap_width and fontMetrics.boundingRect( text_line ).width() > self.width():
-                    
-                    self.resize( self._wrap_width, self.height() )
-
-                    break
-                    
-                
-            
         
         line_spacing = fontMetrics.lineSpacing()
         
-        y = 0
+        current_y = 0
         
         done = False
         
+        my_width = self.width()
+        
         for text_line in text_lines:
             
+            elided_line = fontMetrics.elidedText( text_line, QC.Qt.ElideRight, my_width )
+            
+            x = 0
+            width = my_width
+            height = line_spacing
+            flags = self.alignment()
+            
+            painter.drawText( x, current_y, width, height, flags, elided_line )
+            
+            # old hacky line that doesn't support alignment flags
+            #painter.drawText( QC.QPoint( 0, current_y + fontMetrics.ascent() ), elided_line )
+            
+            current_y += line_spacing
+            
+            # old code that did multiline wrap width stuff
+            '''
             text_layout = QG.QTextLayout( text_line, painter.font() )
-        
+            
             text_layout.beginLayout()
-        
+            
             while True:
             
                 line = text_layout.createLine()
-
+                
                 if not line.isValid(): break
-        
+                
                 line.setLineWidth( self.width() )
-            
+                
                 next_line_y = y + line_spacing
             
                 if self.height() >= next_line_y + line_spacing:
@@ -1920,7 +1949,7 @@ class EllipsizedLabel( QW.QLabel ):
                     line.draw( painter, QC.QPoint( 0, y ) )
                 
                     y = next_line_y
-                
+                    
                 else:
 
                     last_line = text_line[ line.textStart(): ]
@@ -1930,12 +1959,15 @@ class EllipsizedLabel( QW.QLabel ):
                     painter.drawText( QC.QPoint( 0, y + fontMetrics.ascent() ), elided_last_line )
                     
                     done = True
-                                                
+                    
                     break
+                    
+                
 
             text_layout.endLayout()
             
             if done: break
+            '''
             
         
 
@@ -2270,9 +2302,9 @@ class WidgetEventFilter ( QC.QObject ):
         # Once somehow this got called with no _parent_widget set - which is probably fixed now but leaving the check just in case, wew
         # Might be worth debugging this later if it still occurs - the only way I found to reproduce it is to run the help > debug > initialize server command
         if not hasattr( self, '_parent_widget') or not isValid( self._parent_widget ): return False
-            
+        
         type = event.type()
-                
+        
         event_killed = False
         
         if type == QC.QEvent.KeyPress:
@@ -2498,6 +2530,7 @@ class CollectComboCtrl( QW.QComboBox ):
         for (sort_by_type, namespaces) in sort_by:
             
             text_and_data_tuples.update( namespaces )
+            
 
         text_and_data_tuples = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ] )
         
@@ -2517,8 +2550,11 @@ class CollectComboCtrl( QW.QComboBox ):
         
         self._cached_text = ''
         
-        CallAfter( self.SetCollectByValue, media_collect )
-
+        if media_collect.DoesACollect():
+            
+            CallAfter( self.SetCollectByValue, media_collect )
+            
+        
 
     def paintEvent( self, e ):
         

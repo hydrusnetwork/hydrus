@@ -54,7 +54,7 @@ try:
         
         db_dir = HC.DEFAULT_DB_DIR
         
-        if not HydrusPaths.DirectoryIsWritable( db_dir ) or HC.RUNNING_FROM_OSX_APP:
+        if not HydrusPaths.DirectoryIsWritable( db_dir ) or HC.RUNNING_FROM_MACOS_APP:
             
             db_dir = HC.USERPATH_DB_DIR
             
@@ -127,19 +127,38 @@ except Exception as e:
     import traceback
     import os
     
-    print( traceback.format_exc() )
+    error_trace = traceback.format_exc()
+    
+    print( error_trace )
     
     if 'db_dir' in locals() and os.path.exists( db_dir ):
         
-        dest_path = os.path.join( db_dir, 'crash.log' )
+        emergency_dir = db_dir
         
-        with open( dest_path, 'w', encoding = 'utf-8' ) as f:
+    else:
+        
+        emergency_dir = os.path.expanduser( '~' )
+        
+        possible_desktop = os.path.join( emergency_dir, 'Desktop' )
+        
+        if os.path.exists( possible_desktop ) and os.path.isdir( possible_desktop ):
             
-            f.write( traceback.format_exc() )
+            emergency_dir = possible_desktop
             
         
-        print( 'Critical boot error occurred! Details written to crash.log!' )
+    
+    dest_path = os.path.join( emergency_dir, 'hydrus_crash.log' )
+    
+    with open( dest_path, 'w', encoding = 'utf-8' ) as f:
         
+        f.write( error_trace )
+        
+    
+    print( 'Critical boot error occurred! Details written to hydrus_crash.log in either db dir or user dir!' )
+    
+    import sys
+    
+    sys.exit( 1 )
     
 controller = None
 

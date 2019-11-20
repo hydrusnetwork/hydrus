@@ -198,8 +198,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name )
         
-        self._controller.pub( 'splash_set_title_text', 'booting db\u2026' )
-        
     
     def _AddFilesInfo( self, rows, overwrite = False ):
         
@@ -3020,7 +3018,7 @@ class DB( HydrusDB.HydrusDB ):
             result = self._c.execute( 'SELECT DISTINCT smaller_media_id, larger_media_id, distance FROM ' + table_join + ' WHERE ' + predicate_string + ' LIMIT 2500;' ).fetchall()
             
         
-        MAX_BATCH_SIZE = 250
+        MAX_BATCH_SIZE = HG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
         
         batch_of_pairs_of_media_ids = []
         seen_media_ids = set()

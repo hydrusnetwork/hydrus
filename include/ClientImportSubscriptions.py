@@ -555,6 +555,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         def status_hook( text ):
                             
+                            text = text.splitlines()[0]
+                            
                             job_key.SetVariable( 'popup_text_2', x_out_of_y + text )
                             
                         
@@ -826,6 +828,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                     def status_hook( text ):
+                        
+                        text = text.splitlines()[0]
                         
                         job_key.SetVariable( 'popup_text_1', prefix + ': ' + text )
                         

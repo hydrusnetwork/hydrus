@@ -296,7 +296,7 @@ def GetDefaultLaunchPath():
         
         return 'windows is called directly'
         
-    elif HC.PLATFORM_OSX:
+    elif HC.PLATFORM_MACOS:
         
         return 'open "%path%"'
         
@@ -347,14 +347,18 @@ def GetTempDir( dir = None ):
     
 def SetEnvTempDir( path ):
     
-    if not os.path.exists( path ):
-        
-        raise Exception( 'The given temp directory, "{}", does not exist!'.format( path ) )
-        
-    
-    if not os.path.isdir( path ):
+    if os.path.exists( path ) and not os.path.isdir( path ):
         
         raise Exception( 'The given temp directory, "{}", does not seem to be a directory!'.format( path ) )
+        
+    
+    try:
+        
+        MakeSureDirectoryExists( path )
+        
+    except Exception as e:
+        
+        raise Exception( 'Could not create the temp dir: {}'.format( e ) )
         
     
     if not DirectoryIsWritable( path ):
@@ -443,7 +447,7 @@ def LaunchDirectory( path ):
             
         else:
             
-            if HC.PLATFORM_OSX:
+            if HC.PLATFORM_MACOS:
                 
                 cmd = [ 'open', path ]
                 
@@ -807,7 +811,7 @@ def OpenFileLocation( path ):
             
             cmd = [ 'explorer', '/select,', path ]
             
-        elif HC.PLATFORM_OSX:
+        elif HC.PLATFORM_MACOS:
             
             cmd = [ 'open', '-R', path ]
             
@@ -847,6 +851,17 @@ def PathsHaveSameSizeAndDate( path1, path2 ):
 def PathIsFree( path ):
     
     try:
+        
+        stat_result = os.stat( path )
+        
+        current_bits = stat_result.st_mode
+        
+        if not current_bits & stat.S_IWRITE:
+            
+            # read-only file, cannot do the rename check
+            
+            return True
+            
         
         os.rename( path, path ) # rename a path to itself
         

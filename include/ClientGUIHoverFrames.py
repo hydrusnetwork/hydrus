@@ -71,13 +71,20 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             changes_occurred = should_resize or self.pos() != QP.TupleToQPoint( my_ideal_position )
             
-            if HC.PLATFORM_OSX and changes_occurred and self._always_on_top:
+            if HC.PLATFORM_MACOS and changes_occurred and self._always_on_top:
                 
                 self.raise_()
                 
             
             self.move( QP.TupleToQPoint( my_ideal_position ) )
             
+        
+    
+    def keyPressEvent( self, event ):
+        
+        # sendEvent here does some shortcutoverride pain in the neck
+        
+        self._my_canvas.keyPressEvent( event )
         
     
     def SetDisplayMedia( self, canvas_key, media ):
@@ -105,7 +112,7 @@ class FullscreenHoverFrame( QW.QFrame ):
             
             self.show()
             
-            if HC.PLATFORM_OSX:
+            if HC.PLATFORM_MACOS:
                 
                 ( mouse_x, mouse_y ) = QG.QCursor.pos().toTuple()
                 
@@ -554,8 +561,12 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         self._top_hbox = QP.HBoxLayout()
         self._top_hbox.setContentsMargins( 0, 0, 0, 2 )
+        
         self._title_text = ClientGUICommon.BetterStaticText( self, 'title', ellipsize_end = True )
         self._info_text = ClientGUICommon.BetterStaticText( self, 'info', ellipsize_end = True )
+        
+        self._title_text.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        self._info_text.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
         
         self._PopulateLeftButtons()
         QP.AddToLayout( self._top_hbox, (10,10), CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -566,8 +577,8 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._top_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._title_text, None, QC.Qt.AlignHCenter )
-        QP.AddToLayout( vbox, self._info_text, None, QC.Qt.AlignHCenter )
+        QP.AddToLayout( vbox, self._title_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._info_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.setLayout( vbox )
         
@@ -667,7 +678,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalPixmaps.fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( 'fullscreen switch' )
         
-        if HC.PLATFORM_OSX:
+        if HC.PLATFORM_MACOS:
             
             fullscreen_switch.hide()
             
@@ -743,13 +754,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             self._info_text.hide()
             
         else:
-            
-            my_width = self.size().width()
-            
-            my_wrap_width = my_width - 20
-            
-            self._title_text.SetWrapWidth( my_wrap_width )
-            self._info_text.SetWrapWidth( my_wrap_width )
             
             label = self._current_media.GetTitleString()
             

@@ -587,14 +587,7 @@ def GetNowFloat():
     
 def GetNowPrecise():
     
-    if HC.PLATFORM_WINDOWS:
-        
-        return time.clock()
-        
-    else:
-        
-        return time.time()
-        
+    return time.perf_counter()
     
 def GetSiblingProcessPorts( db_path, instance ):
     
@@ -679,7 +672,7 @@ def GetSubprocessEnv():
             changes_made = True
             
         
-        if ( HC.PLATFORM_LINUX or HC.PLATFORM_OSX ) and 'PATH' in env:
+        if ( HC.PLATFORM_LINUX or HC.PLATFORM_MACOS ) and 'PATH' in env:
             
             # fix for pyinstaller, which drops this stuff for some reason and hence breaks ffmpeg
             

@@ -156,6 +156,11 @@ def MouseIsOnMyDisplay( window ):
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
+    if tlw.isMinimized():
+        
+        return
+        
+    
     new_options = HG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
@@ -246,19 +251,22 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
         
     elif default_position == 'center':
         
-        QP.CallAfter( QP.Center, tlw )
+        if parent is not None:
+            
+            QP.CenterOnWindow( parent, tlw )
+            
         
     
     # Comment from before the Qt port: if these aren't callafter, the size and pos calls don't stick if a restore event happens
     
     if maximised:
         
-        QP.CallAfter( tlw.showMaximized )
+        tlw.showMaximized()
         
     
-    if fullscreen and not HC.PLATFORM_OSX:
+    if fullscreen and not HC.PLATFORM_MACOS:
         
-        QP.CallAfter( tlw.showFullScreen )
+        tlw.showFullScreen()
         
     
 def SlideOffScreenTLWUpAndLeft( tlw ):
@@ -824,7 +832,8 @@ class FrameThatResizes( Frame ):
     
     def EventSizeAndPositionChanged( self, event ):
         
-        if not self.isMinimized(): SaveTLWSizeAndPosition( self, self._frame_key )
+        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
+        HG.client_controller.CallLaterQtSafe( self, 0.1, SaveTLWSizeAndPosition, self, self._frame_key )
         
         return True # was: event.ignore()
         
@@ -844,7 +853,8 @@ class MainFrameThatResizes( MainFrame ):
 
     def EventSizeAndPositionChanged( self, event ):
         
-        if not self.isMinimized(): SaveTLWSizeAndPosition( self, self._frame_key )
+        # maximise sends a pre-maximise size event that poisons last_size if this is immediate
+        HG.client_controller.CallLaterQtSafe( self, 0.1, SaveTLWSizeAndPosition, self, self._frame_key )
 
         return True # was: event.ignore()
         

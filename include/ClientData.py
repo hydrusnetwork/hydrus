@@ -654,7 +654,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
         return connection_string
         
     
-    def HasAccessKey( self ): return self._access_key is not None and self._access_key is not ''
+    def HasAccessKey( self ): return self._access_key is not None and self._access_key != ''
     
     def SetAccessKey( self, access_key ): self._access_key = access_key
     

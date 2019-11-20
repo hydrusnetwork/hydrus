@@ -18,7 +18,7 @@ def GetClientDefaultOptions():
     options[ 'play_dumper_noises' ] = True
     options[ 'export_path' ] = None
     options[ 'hpos' ] = 400
-    options[ 'vpos' ] = 700
+    options[ 'vpos' ] = -240
     options[ 'thumbnail_cache_size' ] = 25 * 1048576
     options[ 'preview_cache_size' ] = 15 * 1048576
     options[ 'fullscreen_cache_size' ] = 150 * 1048576

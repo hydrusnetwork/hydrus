@@ -523,8 +523,6 @@ class AutoCompleteDropdown( QW.QWidget ):
             self._dropdown_window.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
             self._dropdown_window.setLineWidth( 2 )
             
-            QP.SetBackgroundColour( self._dropdown_window, QP.GetSystemColour( QG.QPalette.Button ) )
-            
             self._dropdown_window.move( ClientGUIFunctions.ClientToScreen( self._text_ctrl, ( 0, 0 ) ) )
             
             self._dropdown_window_widget_event_filter = QP.WidgetEventFilter( self._dropdown_window )
@@ -888,7 +886,7 @@ class AutoCompleteDropdown( QW.QWidget ):
         
         raw_control_modifier = QC.Qt.ControlModifier
         
-        if HC.PLATFORM_OSX:
+        if HC.PLATFORM_MACOS:
             
             raw_control_modifier = QC.Qt.MetaModifier # This way raw_control_modifier always means the Control key, even on Mac. See Qt docs.
             
@@ -1136,7 +1134,7 @@ class AutoCompleteDropdown( QW.QWidget ):
     
     def setFocus( self, focus_reason = QC.Qt.OtherFocusReason ):
         
-        if HC.PLATFORM_OSX:
+        if HC.PLATFORM_MACOS:
             
             QP.CallAfter( self._text_ctrl.setFocus, focus_reason )
             

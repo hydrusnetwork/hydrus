@@ -14,7 +14,7 @@ if HC.PLATFORM_LINUX:
     
     upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_linux' )
     
-elif HC.PLATFORM_OSX:
+elif HC.PLATFORM_MACOS:
     
     upnpc_path = os.path.join( HC.BIN_DIR, 'upnpc_osx' )
     

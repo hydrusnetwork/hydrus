@@ -284,8 +284,7 @@ synchronise - try to export the files to the directory, overwriting if the files
 If you select synchronise, be careful!'''
         
         st = ClientGUICommon.BetterStaticText( self._type_box, label = text )
-        
-        st.SetWrapWidth( 440 )
+        st.setWordWrap( True )
         
         self._type_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._type_box.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )

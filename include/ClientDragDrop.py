@@ -1,4 +1,5 @@
 from . import ClientGUIFunctions
+from . import HydrusConstants as HC
 from . import HydrusGlobals as HG
 from . import HydrusPaths
 import json
@@ -8,11 +9,32 @@ from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 from . import QtPorting as QP
 
+# we do this because some programs like discord will disallow exports with additional custom mimetypes (like 'application/hydrus-files')
+# as this is only ever an internal transfer, and as the python mimedata object is preserved through the dnd, we can just tack this info on with a subclass and python variables
+class QMimeDataHydrusFiles( QC.QMimeData ):
+    
+    def __init__( self ):
+        
+        QC.QMimeData.__init__( self )
+        
+        self._hydrus_files = None
+        
+    
+    def hydrusFiles( self ):
+        
+        return self._hydrus_files
+        
+    
+    def setHydrusFiles( self, page_key, hashes ):
+        
+        self._hydrus_files = ( page_key, hashes )
+        
+    
 def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     drop_source = QG.QDrag( window )
     
-    data_object = QC.QMimeData()
+    data_object = QMimeDataHydrusFiles()
     
     #
     
@@ -91,6 +113,13 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     hashes = [ m.GetHash() for m in media ]
     
+    if not HC.PLATFORM_MACOS:
+        
+        data_object.setHydrusFiles( page_key, hashes )
+        
+    
+    # old way of doing this that makes some external programs (discord) reject it
+    '''
     if page_key is None:
         
         encoded_page_key = None
@@ -107,7 +136,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     data_bytes = bytes( data_str, 'utf-8' )
     
     data_object.setData( 'application/hydrus-media', data_bytes )
-    
+    '''
     #
     
     drop_source.setMimeData( data_object )
@@ -155,9 +184,27 @@ class FileDropTarget( QC.QObject ):
     def OnData( self, mime_data, result ):
         
         if mime_data.formats():
-
-            if mime_data.formats().count( 'application/hydrus-media' ) and self._media_callable is not None:
-
+            
+            if isinstance( mime_data, QMimeDataHydrusFiles ) and self._media_callable is not None:
+                
+                result = mime_data.hydrusFiles()
+                
+                if result is not None:
+                    
+                    ( page_key, hashes ) = result
+                    
+                    if page_key is not None:
+                        
+                        QP.CallAfter( self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
+                        
+                    
+                
+                result = QC.Qt.MoveAction
+                
+                # old way of doing it that messed up discord et al
+                '''
+            elif mime_data.formats().count( 'application/hydrus-media' ) and self._media_callable is not None:
+                
                 mview = mime_data.data( 'application/hydrus-media' )
 
                 data_bytes = mview.data()
@@ -175,7 +222,7 @@ class FileDropTarget( QC.QObject ):
                     
 
                 result = QC.Qt.MoveAction
-                
+                '''
             elif mime_data.hasUrls() and self._filenames_callable is not None:
                 
                 paths = []
@@ -229,10 +276,10 @@ class FileDropTarget( QC.QObject ):
         
         screen_position = ClientGUIFunctions.ClientToScreen( self._parent, ( x, y ) )
         
-        drop_tlp = QW.QApplication.topLevelAt( screen_position )
-        my_tlp = self._parent.window()
+        drop_tlw = QW.QApplication.topLevelAt( screen_position )
+        my_tlw = self._parent.window()
         
-        if drop_tlp == my_tlp:
+        if drop_tlw == my_tlw:
             
             return True
             

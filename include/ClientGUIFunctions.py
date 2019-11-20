@@ -379,47 +379,34 @@ def SetBitmapButtonBitmap( button, bitmap ):
     
     button.last_bitmap = bitmap
     
-def TLPHasFocus( window ):
+def TLPIsActive( window ):
     
-    return window.window().hasFocus()
+    return window.window() == QW.QApplication.activeWindow()
     
 def WindowOrAnyTLPChildHasFocus( window ):
     
-    if window == QW.QApplication.activeWindow(): return True
+    active_window = QW.QApplication.activeWindow()
     
-    focus = QW.QApplication.focusWidget()
-    
-    while focus is not None:
+    if window == active_window:
         
-        if focus == window:
+        return True
+        
+    
+    widget = QW.QApplication.focusWidget()
+    
+    if widget is None:
+        
+        widget = active_window
+        
+    
+    while widget is not None:
+        
+        if widget == window:
             
             return True
             
         
-        focus = focus.parentWidget()
-        
-    
-    return False
-    
-def WindowOrSameTLPChildHasFocus( window ):
-    
-    if window == QW.QApplication.activeWindow(): return True
-    
-    focus = QW.QApplication.focusWidget()
-    
-    while focus is not None:
-        
-        if focus == window:
-            
-            return True
-            
-        
-        if focus == focus.window():
-            
-            return False
-            
-        
-        focus = focus.parentWidget()
+        widget = widget.parentWidget()
         
     
     return False

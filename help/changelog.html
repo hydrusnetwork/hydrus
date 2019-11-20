@@ -8,6 +8,57 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 374</h3></li>
+				<ul>
+					<li>qt environment/build:</li>
+					<li>macOS build is useable! tab drag and drop position calculation doesn't work yet, so intra-client file DnDs and tab rearrange DnDs are disabled for now. borderless fullscreen is also disabled, feedback on this vs maximise would be appreciated</li>
+					<li>fixed a critical bug in the macOS release that was resulting in 100% CPU repaint loop for the canvas viewer when media was loaded (wew). this may have affected certain other platforms in some situations</li>
+					<li>the linux build has a variety of common library files removed, letting your OS rely on higher compatibility system defaults. this _should_ clean up font and other issues for users running on very new/old system libraries. if you cannot run 374, please let me know your distro and version and any error messages</li>
+					<li>the special linux running from source document is updated, including info about Arch and PyQt5</li>
+					<li>fixed a windows build issue that meant some animated gifs were not able to load and render correctly</li>
+					<li>fixed a precise time fetching issue for users running from source with python 3.8</li>
+					<li>high dpi scaling should have improved support. please report on bad layout issues and other artifacts</li>
+					<li>fixed creating a serialised object png when using PyQt5</li>
+					<li>fixed file save dialogs with filetype filters when using PyQt5</li>
+					<li>fixed an important menubar related memory leak</li>
+					<li>_seem_ to have fixed an important media viewer memory leak</li>
+					<li>.</li>
+					<li>qt ui fixes:</li>
+					<li>fixed pages not collecting and sorting on creation if they do not have to, which restores the 'preserve flat unsorted order' behaviour of session loads and file drag and drop page tab creations</li>
+					<li>fixed the cursor not unhiding on move in the media viewer when over an animation or static image</li>
+					<li>fixed the issue where a new thumbnail panel would double-up with the old one for half a second if a menu caused the panel swap</li>
+					<li>reworked the elided (text that cuts off...) label code to more reliably work on single lines, which fits our purposes. the network job control (esppecially on subscription popups) and top hover window should now show their long statuses without changing their parent panel's layout</li>
+					<li>updated a variety of old text-wrap-width wx-hacks texts to instead auto-fill available space</li>
+					<li>the various downloaders should now be careful about handling large status texts. if a multiline error or html page slips in to a status somewhere, your download pages' lists should no longer go nuts with very tall spam-filled status cells</li>
+					<li>hydrus->discord drag and drop should be fixed if the BUGFIX is on!</li>
+					<li>fixed page tab drag and drop to do live drag selection with 'do not follow' behaviour (this is switched by holding down shift during drag), and, in this case, got it to return to the original page's neighbour/parent once the drop is complete</li>
+					<li>fixed 'center' dialogs positioning on the center of their parent windows, rather than the center of the primary screen</li>
+					<li>fixed the hover windows not passing shortcuts up to the media viewer when not consumed</li>
+					<li>fixed some misc 'can I consume a shortcut' focus/active checking code</li>
+					<li>fixed the various hide/parents/siblings tag menu items for tags with counts</li>
+					<li>fixed the main gui and other non-dialog windows remembering their pre-maximise/fullscreen sizes if set to remember size and previously closing while maximised/fullscreened</li>
+					<li>menubar menus should now show description text in the main gui statusbar on mouseover of their items</li>
+					<li>fixed a bad menu initialisation in the canvas preview panel</li>
+					<li>fixed a little page splitter bork and improved size of preview window on initial boot</li>
+					<li>fixed the edit notes dialog when launched from the media viewer</li>
+					<li>fixed a couple of text edit issues in edit url class panel</li>
+					<li>fixed page up/down scroll for taglists</li>
+					<li>fixed page down scroll for thumbnail grid, and fixed page up/down distance</li>
+					<li>fixed thumbnails not scrolling into view if they are keyboard-selected slightly off screen but within the scroll option percentage threshold</li>
+					<li>misc layout and style cleanup</li>
+					<li>misc refactoring</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>you can now set the maximum size of duplicate filter pair batches (default 250) under options->duplicates</li>
+					<li>when an ipfs service fails to pin a file and returns no hash or the empty multihash, this is now recognised, info dumped to log, a simple popup message sent, and the job continued. this is just a patch--better error handling here will come later</li>
+					<li>if the client or server are launched with a custom temp_dir that does not exist, it will now attempt to create it (previously errored out)</li>
+					<li>fixed a clean exit after certain client boot fail error handling, and repeated cleaner exit for the server</li>
+					<li>added some new memory profiling actions to the help->debug menu</li>
+					<li>parallel subscriptions should now initialise with less of an aggresive CPU spike</li>
+					<li>if the client or server crash before the application can be launched, the crash log is now called hydrus_crash.log. if the db dir is not yet established, it will now try to find and put it in your desktop and, failing that, then your user dir</li>
+					<li>the client no longer prints 'booting db' twice</li>
+					<li>a variety of misc code cleanup and fixes</li>
+				</ul>
 				<li><h3>version 373</h3></li>
 				<ul>
 					<li>qt:</li>

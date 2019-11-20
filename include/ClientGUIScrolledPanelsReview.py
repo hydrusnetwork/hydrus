@@ -1101,10 +1101,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         message += 'You may need to restart your client to see their effect.' 
         
         st = ClientGUICommon.BetterStaticText( self, message )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( st, 96 )
-        
-        st.SetWrapWidth( width )
+        st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._migration_panel, CC.FLAGS_EXPAND_BOTH_WAYS )

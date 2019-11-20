@@ -28,15 +28,15 @@ else:
         
 
 PLATFORM_WINDOWS = False
-PLATFORM_OSX  = False
+PLATFORM_MACOS  = False
 PLATFORM_LINUX = False
 
 if sys.platform == 'win32': PLATFORM_WINDOWS = True
-elif sys.platform == 'darwin': PLATFORM_OSX = True
+elif sys.platform == 'darwin': PLATFORM_MACOS = True
 elif sys.platform == 'linux': PLATFORM_LINUX = True
 
 RUNNING_FROM_SOURCE = sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
-RUNNING_FROM_OSX_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
+RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
 
 BIN_DIR = os.path.join( BASE_DIR, 'bin' )
 HELP_DIR = os.path.join( BASE_DIR, 'help' )
@@ -45,7 +45,7 @@ STATIC_DIR = os.path.join( BASE_DIR, 'static' )
 
 DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
 
-if PLATFORM_OSX:
+if PLATFORM_MACOS:
     
     USERPATH_DB_DIR = os.path.join( os.path.expanduser( '~' ), 'Library', 'Hydrus' )
     
@@ -67,7 +67,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 373
+SOFTWARE_VERSION = 374
 CLIENT_API_VERSION = 11
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

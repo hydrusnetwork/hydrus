@@ -1,4 +1,5 @@
 import collections
+from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 import os
@@ -21,8 +22,14 @@ def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **k
     
     menu_item = QW.QAction( menu )
     
+    if HC.PLATFORM_MACOS:
+        
+        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
+        
+    
     menu_item.setText( label )
     
+    menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
     menu_item.setWhatsThis( description )
     
@@ -39,9 +46,15 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     label = SanitiseLabel( label )
     
     menu_item = QW.QAction( menu )
-
+    
+    if HC.PLATFORM_MACOS:
+        
+        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
+        
+    
     menu_item.setText( label )
     
+    menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
     menu_item.setWhatsThis( description )
     
@@ -59,9 +72,15 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
     label = SanitiseLabel( label )
     
     menu_item = QW.QAction( menu )
-
+    
+    if HC.PLATFORM_MACOS:
+        
+        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
+        
+    
     menu_item.setText( label )
     
+    menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
     menu_item.setWhatsThis( description )
 
@@ -77,10 +96,17 @@ def AppendMenuLabel( menu, label, description = '' ):
         
         description = ''
         
+    
     menu_item = QW.QAction( menu )
 
+    if HC.PLATFORM_MACOS:
+        
+        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
+        
+    
     menu_item.setText( label )
     
+    menu_item.setStatusTip( description )
     menu_item.setToolTip( description )
     menu_item.setWhatsThis( description )
 

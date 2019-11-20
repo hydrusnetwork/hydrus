@@ -402,7 +402,8 @@ class Page( QW.QSplitter ):
         file_service_key = self._management_controller.GetKey( 'file_service' )
         
         self._preview_panel = QW.QFrame( self._search_preview_split )
-        self._preview_panel.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
+        self._preview_panel.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
+        self._preview_panel.setLineWidth( 2 )
         
         self._preview_canvas = ClientGUICanvas.CanvasPanel( self._preview_panel, self._page_key )
         
@@ -428,7 +429,7 @@ class Page( QW.QSplitter ):
         self._search_preview_split.widget( 1 ).setMinimumHeight( 180 )
         self._search_preview_split.setStretchFactor( 0, 1 )
         self._search_preview_split.setStretchFactor( 1, 0 )
-
+        
         self._search_preview_split._handle_event_filter = QP.WidgetEventFilter( self._search_preview_split.handle( 1 ) )
         self._search_preview_split._handle_event_filter.EVT_LEFT_DCLICK( self.EventPreviewUnsplit )
         
@@ -453,13 +454,6 @@ class Page( QW.QSplitter ):
         # if a new media page comes in while its menu is open, we can enter program instability.
         # so let's just put it off.
         
-        if self._controller.MenuIsOpen():
-            
-            self._controller.CallLaterQtSafe( self, 0.5, self._SwapMediaPanel, new_panel )
-            
-            return
-            
-        
         previous_sizes = self.sizes()
         
         self._preview_canvas.SetMedia( None )
@@ -479,15 +473,31 @@ class Page( QW.QSplitter ):
         
         self._media_panel.setParent( None )
         
+        old_panel = self._media_panel
+        
         self.addWidget( new_panel )
         
         self.setSizes( previous_sizes )
         
-        self._media_panel.deleteLater()
+        self.setStretchFactor( 1, 1 )
         
         self._media_panel = new_panel
         
         self._controller.pub( 'refresh_page_name', self._page_key )
+        
+        def clean_up_old_panel():
+            
+            if self._controller.MenuIsOpen():
+                
+                self._controller.CallLaterQtSafe( self, 0.5, clean_up_old_panel )
+                
+                return
+                
+            
+            old_panel.deleteLater()
+            
+        
+        clean_up_old_panel()
         
     
     def CheckAbleToClose( self ):
@@ -699,7 +709,7 @@ class Page( QW.QSplitter ):
     def SetupSplits( self ):
 
         QP.SplitVertically( self, self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
-
+        
         QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
         

@@ -7,6 +7,14 @@ Why use distro packages instead of pip?
 The following lists should work for any recent release of the named distros and derivatives. However, for some modules, some distros might ship versions
 that are too old. These should be installed through pip until the distro adds/updates the package.
 
+IMPORTANT PySide2 + Python 3.8 compatibility notice
+===================================================
+This especially applies to Arch and other rolling release distro users.
+Slower distros most likely won't upgrade right away to Python 3.8 and thus won't have this problem.
+If you are using Python 3.8 or newer, you need at least Qt version 5.14 and the corresponding PySide2 version.
+Otherwise you will get a `TypeError: 'Shiboken.ObjectType' object is not iterable` error on startup. To temporarily work around this by using PyQt5,
+install PyQt5 instead of PySide2, then either remove PySide2 or set the QT_API environment variable to PyQt5.
+
 Arch Linux, Manjaro
 ===================
 Install from the AUR: https://aur.archlinux.org/packages/hydrus/
@@ -17,19 +25,25 @@ Note that you can use PyQt5 instead of PySide2 (however PySide2 is recommended).
 Ubuntu, Debian, Linux Mint
 ==========================
 
+Note: if you are using an older release, the python3-pyside2.* packages listed below might not be available. If that is the case,
+install PySide2 with:
+pip3 install --user pyside2
+
 Required:
 python3-chardet python3-html5lib python3-bs4 python3-lxml
 python3-nose python3-numpy python3-opencv python3-six python3-pil
 python3-psutil python3-openssl python3-yaml python3-requests
 python3-send2trash python3-service-identity python3-twisted
-ffmpeg python3-pyside2.qtwidgets python3-pyside2.qtcore python3-pyside2.qtgui
+ffmpeg python3-pyside2.qtwidgets python3-pyside2.qtcore python3-pyside2.qtgui python3-pyside2.qtcharts
 You also need python3-qtpy, but the version shipped by these distros (as of this writing) is too old. At least version 1.8 is required. Until the distros catch up, it is recommended that you install
-this module with pip instead of the package manager.
-You might need to install the shiboken2 module from pip since it looks like it is not currently packaged.
+this module with pip instead of the package manager, like this:
+pip3 install --user qtpy
+You might need to install the shiboken2 module from pip since it looks like it is not currently packaged:
+pip3 install --user shiboken2
 Instead of PySide2 (the python3-pyside2.* packages above and shiboken2), you can also use PyQt5 (python3-pyqt5, python3-sip), though PySide2 is recommended.
 
 Optional:
-python3-lz4 python3-pysocks python3-matplotlib python3-mock python3-httmock
+python3-lz4 python3-pysocks python3-mock python3-httmock
 
 pylzma doesn't seem to be packaged, but it is not essential.
 
@@ -51,7 +65,7 @@ python3-shiboken2
 Instead of PySide2 (python3-pyside2, python3-shiboken2) you can also use PyQt5 (python3-sip, python3-qt5).
 
 The optional stuff:
-python3-lz4 python3-pysocks python3-matplotlib python3-matplotlib-qt5 python3-httmock
+python3-lz4 python3-pysocks python3-httmock qt5-qtcharts
 
 mock and pylzma doesn't seem to be packaged, and ffmpeg isn't in the base Fedora repo (due to licensing/patents scare?),
 but can be installed from the rpmfusion repo (https://rpmfusion.org/). From these, only ffmpeg is necessary for normal users.
@@ -73,7 +87,7 @@ You might need to install the shiboken2 module from pip since it looks like it i
 Instead of PySide2 (python3-pyside2 and the shiboken2 module) you can also use PyQt5 (python3-sip, python3-qt5).
 
 Optional:
-python3-lz4 python3-pylzma python3-PySocks python3-matplotlib python3-matplotlib-qt5
-python3-mock python3-httmock
+python3-lz4 python3-pylzma python3-PySocks
+python3-mock python3-httmock libqt5-qtcharts
 
 Package search: https://software.opensuse.org/search

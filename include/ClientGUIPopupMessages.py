@@ -70,13 +70,13 @@ class PopupMessage( PopupWindow ):
             QP.SetMinClientSize( self, ( wrap_width, -1 ) )
             
         
-        self._title.SetWrapWidth( wrap_width )
+        self._title.setWordWrap( True )
         self._title_ev = QP.WidgetEventFilter( self._title )
         self._title_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._title.hide()
         
-        self._text_1 = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
-        self._text_1.SetWrapWidth( wrap_width )
+        self._text_1 = ClientGUICommon.BetterStaticText( self )
+        self._text_1.setWordWrap( True )
         self._text_1_ev = QP.WidgetEventFilter( self._text_1 )
         self._text_1_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._text_1.hide()
@@ -86,8 +86,8 @@ class PopupMessage( PopupWindow ):
         self._gauge_1_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._gauge_1.hide()
         
-        self._text_2 = ClientGUICommon.BetterStaticText( self, ellipsize_end = True )
-        self._text_2.SetWrapWidth( wrap_width )
+        self._text_2 = ClientGUICommon.BetterStaticText( self )
+        self._text_2.setWordWrap( True )
         self._text_2_ev = QP.WidgetEventFilter( self._text_2 )
         self._text_2_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._text_2.hide()
@@ -98,7 +98,6 @@ class PopupMessage( PopupWindow ):
         self._gauge_2.hide()
         
         self._text_yes_no = ClientGUICommon.BetterStaticText( self )
-        self._text_yes_no.SetWrapWidth( wrap_width )
         self._text_yes_no_ev = QP.WidgetEventFilter( self._text_yes_no )
         self._text_yes_no_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._text_yes_no.hide()
@@ -128,9 +127,9 @@ class PopupMessage( PopupWindow ):
         self._show_tb_button.hide()
         
         self._tb_text = ClientGUICommon.BetterStaticText( self )
-        self._tb_text.SetWrapWidth( wrap_width )
         self._tb_text_ev = QP.WidgetEventFilter( self._tb_text )
         self._tb_text_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._tb_text.setWordWrap( True )
         self._tb_text.hide()
         
         self._copy_tb_button = ClientGUICommon.BetterButton( self, 'copy traceback information', self.CopyTB )
@@ -277,10 +276,6 @@ class PopupMessage( PopupWindow ):
             
             self._show_tb_button.setText( 'hide traceback' )
             
-            popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
-            
-            wrap_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._title, popup_message_character_width )
-            
             self._tb_text.show()
             
         
@@ -310,10 +305,6 @@ class PopupMessage( PopupWindow ):
         
     
     def UpdateMessage( self ):
-        
-        popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
-        
-        wrap_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._title, popup_message_character_width )
         
         paused = self._job_key.IsPaused()
         

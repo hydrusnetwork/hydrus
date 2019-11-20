@@ -2769,6 +2769,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
         self._num_rows_per_canvas_page = 1
+        self._num_rows_per_actual_page = 1
         
         MediaPanel.__init__( self, parent, page_key, file_service_key, media_results )
         
@@ -3252,9 +3253,10 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        num_rows = ( client_height // thumbnail_span_height ) // 2 # roughly half a client_height's worth of thumbs
+        num_rows = ( client_height // thumbnail_span_height )
         
-        self._num_rows_per_canvas_page = max( 1, num_rows )
+        self._num_rows_per_actual_page = max( 1, num_rows )
+        self._num_rows_per_canvas_page = max( 1, num_rows // 2 )
         
         self._num_columns = max( 1, client_width // thumbnail_span_width )
         
@@ -3352,8 +3354,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             elif y > visible_rect_y + visible_rect_height - ( thumbnail_span_height * percent_visible ):
                 
-                self.ensureVisible( 0, y )
-                
+                self.ensureVisible( 0, y + thumbnail_span_height )
                 
             
         
@@ -3477,7 +3478,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._Select( 'none' )
             
-        elif event.key() in ( QC.Qt.Key_PageUp, QC.Qt.Key_PageUp ):
+        elif event.key() in ( QC.Qt.Key_PageUp, QC.Qt.Key_PageDown ):
             
             if event.key() == QC.Qt.Key_PageUp:
                 
@@ -3490,7 +3491,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             shift = event.modifiers() & QC.Qt.ShiftModifier
             
-            self._MoveFocusedThumbnail( self._num_rows_per_canvas_page * direction, 0, shift )
+            self._MoveFocusedThumbnail( self._num_rows_per_actual_page * direction, 0, shift )
             
         else:
             
@@ -3678,7 +3679,7 @@ class MediaPanelThumbnails( MediaPanel ):
         media_has_inbox = num_inbox > 0
         media_has_archive = num_archive > 0
         
-        menu = QW.QMenu()
+        menu = QW.QMenu( self.window() )
         
         if self._focused_media is not None:
             
@@ -4659,7 +4660,7 @@ class MediaPanelThumbnails( MediaPanel ):
         QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, 'all' ),
         QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_Space, ctrl_space_callback, self )
         
-        if HC.PLATFORM_OSX:
+        if HC.PLATFORM_MACOS:
             
             QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Back, self._Delete )
             QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Back, self._Undelete )

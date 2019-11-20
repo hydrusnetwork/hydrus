@@ -53,6 +53,7 @@ from . import HydrusText
 from . import HydrusVideoHandling
 import os
 import PIL
+import random
 import re
 import sqlite3
 import ssl
@@ -177,7 +178,16 @@ def THREADUploadPending( service_key ):
                         hash = media_result.GetHash()
                         mime = media_result.GetMime()
                         
-                        service.PinFile( hash, mime )
+                        try:
+                            
+                            service.PinFile( hash, mime )
+                            
+                        except HydrusExceptions.DataMissing:
+                            
+                            HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hexh() ) )
+                            
+                            continue
+                            
                         
                     else:
                         
@@ -276,6 +286,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._last_total_page_weight = None
         
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
+        
+        self._garbage_snapshot = collections.Counter()
         
         self._last_clipboard_watched_text = ''
         self._clipboard_watcher_destination_page_watcher = None
@@ -1053,6 +1065,26 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._controller.CallToThread( do_it, self._controller )
         
     
+    def _DebugLongTextPopup( self ):
+        
+        words = [ 'test', 'a', 'longish', 'statictext', 'm8' ]
+        
+        text = random.choice( words )
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', text )
+        
+        self._controller.pub( 'message', job_key )
+        
+        for i in range( 2, 64 ):
+            
+            text += ' {}'.format( random.choice( words ) )
+            
+            self._controller.CallLater( i * 0.2, job_key.SetVariable, 'popup_text_1', text )
+            
+        
+    
     def _DebugMakeParentlessTextCtrl( self ):
         
         with QP.Dialog( None, title = 'parentless debug dialog' ) as dlg:
@@ -1122,6 +1154,48 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
+    def _DebugShowGarbageDifferences( self ):
+        
+        count = collections.Counter()
+        
+        for o in gc.get_objects():
+            
+            count[ type( o ) ] += 1
+            
+        
+        count.subtract( self._garbage_snapshot )
+        
+        text = 'Garbage differences start here:'
+        
+        to_print = list( count.items() )
+        
+        to_print.sort( key = lambda pair: -pair[1] )
+        
+        for ( t, count ) in to_print:
+            
+            if count == 0:
+                
+                continue
+                
+            
+            text += os.linesep + '{}: {}'.format( t, HydrusData.ToHumanInt( count ) )
+            
+        
+        HydrusData.ShowText( text )
+        
+    
+    def _DebugTakeGarbageSnapshot( self ):
+        
+        count = collections.Counter()
+        
+        for o in gc.get_objects():
+            
+            count[ type( o ) ] += 1
+            
+        
+        self._garbage_snapshot = count
+        
+    
     def _DebugPrintGarbage( self ):
         
         HydrusData.ShowText( 'Printing garbage to log' )
@@ -1166,10 +1240,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         for o in gc.get_objects():
             
-            if 'FullscreenHover' in str( type( o ) ):
-                
-                objects_to_inspect.add( o )
-                
+            # add objects to inspect here
             
             count[ type( o ) ] += 1
             
@@ -1367,6 +1438,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 return index
                 
+            
+        
         return -1
         
     
@@ -1394,9 +1467,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            i_and_e_submenu = QW.QMenu( self )
+            i_and_e_submenu = QW.QMenu( menu )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( i_and_e_submenu )
             
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', HC.options['pause_import_folders_sync'], self._PauseSync, 'import_folders' )
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', HC.options['pause_export_folders_sync'], self._PauseSync, 'export_folders' )
@@ -1409,7 +1482,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             if len( import_folder_names ) > 0:
                 
-                submenu = QW.QMenu( self )
+                submenu = QW.QMenu( i_and_e_submenu )
                 
                 if len( import_folder_names ) > 1:
                     
@@ -1429,7 +1502,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             if len( export_folder_names ) > 0:
                 
-                submenu = QW.QMenu( self )
+                submenu = QW.QMenu( i_and_e_submenu )
                 
                 if len( export_folder_names ) > 1:
                     
@@ -1456,7 +1529,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            open = QW.QMenu( self )
+            open = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( open, 'installation directory', 'Open the installation directory for this client.', self._OpenInstallFolder )
             ClientGUIMenus.AppendMenuItem( open, 'database directory', 'Open the database directory for this instance of the client.', self._OpenDBFolder )
@@ -1509,7 +1582,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     ClientGUIMenus.AppendSeparator( menu )
                     
-                    undo_pages = QW.QMenu( self )
+                    undo_pages = QW.QMenu( menu )
                     
                     ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self.DeleteAllClosedPages )
                     
@@ -1527,6 +1600,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     args.reverse() # so that recently closed are at the top
                     
                     for ( index, name ) in args:
+                        
                         ClientGUIMenus.AppendMenuItem( undo_pages, name, 'Restore this page.', self._UnclosePage, index )
                         
                     
@@ -1556,7 +1630,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
             
-            splitter_menu = QW.QMenu( self )
+            splitter_menu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
             
@@ -1578,11 +1652,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             gui_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
-            sessions = QW.QMenu( self )
+            sessions = QW.QMenu( menu )
             
             if len( gui_session_names ) > 0:
                 
-                load = QW.QMenu( self )
+                load = QW.QMenu( sessions )
                 
                 for name in gui_session_names:
                     
@@ -1591,9 +1665,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenu( sessions, load, 'clear and load' )
                 
-                append = QW.QMenu( self )
+                append = QW.QMenu( sessions )
                 
                 for name in gui_session_names:
+                    
                     ClientGUIMenus.AppendMenuItem( append, name, 'Append this session to whatever pages are already open.', self._notebook.AppendGUISession, name )
                     
                 
@@ -1603,7 +1678,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 if len( gui_session_names_to_backup_timestamps ) > 0:
                     
-                    append_backup = QW.QMenu( self )
+                    append_backup = QW.QMenu( sessions )
                     
                     rows = list( gui_session_names_to_backup_timestamps.items() )
                     
@@ -1611,7 +1686,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     for ( name, timestamps ) in rows:
                         
-                        submenu = QW.QMenu( self )
+                        submenu = QW.QMenu( append_backup )
                         
                         for timestamp in timestamps:
                             ClientGUIMenus.AppendMenuItem( submenu, HydrusData.ConvertTimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
@@ -1624,7 +1699,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                 
             
-            save = QW.QMenu( self )
+            save = QW.QMenu( sessions )
             
             for name in gui_session_names:
                 
@@ -1640,7 +1715,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             if len( set( gui_session_names ).difference( ClientGUIPages.RESERVED_SESSION_NAMES ) ) > 0:
                 
-                delete = QW.QMenu( self )
+                delete = QW.QMenu( sessions )
                 
                 for name in gui_session_names:
                     
@@ -1662,7 +1737,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            search_menu = QW.QMenu( self )
+            search_menu = QW.QMenu( menu )
             
             services = self._controller.services_manager.GetServices()
             
@@ -1687,7 +1762,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             if len( petition_resolvable_repositories ) > 0:
                 
-                petition_menu = QW.QMenu( self )
+                petition_menu = QW.QMenu( menu )
                 
                 for service in petition_resolvable_repositories:
                     ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook=True )
@@ -1698,7 +1773,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            download_menu = QW.QMenu( self )
+            download_menu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
             ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
@@ -1713,7 +1788,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             if has_ipfs:
                 
-                download_popup_menu = QW.QMenu( self )
+                download_popup_menu = QW.QMenu( menu )
                 
                 ClientGUIMenus.AppendMenuItem( download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
                 
@@ -1722,7 +1797,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            special_menu = QW.QMenu( self )
+            special_menu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page_of_pages' ) )
             ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_duplicate_filter_page' ) )
@@ -1733,7 +1808,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            special_command_menu = QW.QMenu( self )
+            special_command_menu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( special_command_menu, 'clear all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', HG.client_controller.pub, 'clear_multiwatcher_highlights' )
             
@@ -1777,9 +1852,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
-            file_maintenance_menu = QW.QMenu( self )
+            file_maintenance_menu = QW.QMenu( submenu )
             
             ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'review scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
             ClientGUIMenus.AppendSeparator( file_maintenance_menu )
@@ -1806,18 +1881,19 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
             
             if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
                 ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
                 
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
             ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
@@ -1826,7 +1902,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
             ClientGUIMenus.AppendMenuItem( submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
@@ -1887,7 +1963,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                         menu = QW.QMenu( self )
                         
                     
-                    submenu = QW.QMenu( self )
+                    submenu = QW.QMenu( menu )
                     
                     ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload ' + name + '\'s pending content.', self._UploadPending, service_key )
                     ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear ' + name + '\'s pending content.', self._DeletePending, service_key )
@@ -1919,7 +1995,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             menu = QW.QMenu( self )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
             
@@ -1936,7 +2012,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
             ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
@@ -1951,7 +2027,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             if not ClientParsing.HTML5LIB_IS_OK:
                 
@@ -1973,7 +2049,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( submenu )
             
-            clipboard_menu = QW.QMenu( self )
+            clipboard_menu = QW.QMenu( submenu )
             
             ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'watcher urls', 'Automatically import watcher URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_watcher_urls' )
             ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'other recognised urls', 'Automatically import recognised URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_other_recognised_urls' )
@@ -1993,7 +2069,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
             
-            debug_menu = QW.QMenu( self )
+            debug_menu = QW.QMenu( submenu )
             
             ClientGUIMenus.AppendMenuItem( debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
             
@@ -2003,7 +2079,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             #
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
             ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
@@ -2034,7 +2110,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             tag_services = self._controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
             file_services = self._controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) )
             
-            submenu = QW.QMenu( self )
+            submenu = QW.QMenu( menu )
             
             ClientGUIMenus.AppendMenuCheckItem( submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PauseSync, 'repo' )
             
@@ -2055,11 +2131,11 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             if len( admin_repositories ) > 0 or len( server_admins ) > 0:
                 
-                admin_menu = QW.QMenu( self )
+                admin_menu = QW.QMenu( menu )
                 
                 for service in admin_repositories:
                     
-                    submenu = QW.QMenu( self )
+                    submenu = QW.QMenu( admin_menu )
                     
                     service_key = service.GetServiceKey()
                     
@@ -2093,7 +2169,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 for service in server_admins:
                     
-                    submenu = QW.QMenu( self )
+                    submenu = QW.QMenu( admin_menu )
                     
                     service_key = service.GetServiceKey()
                     
@@ -2164,7 +2240,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
             
-            links = QW.QMenu( self )
+            links = QW.QMenu( menu )
             
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalPixmaps.file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalPixmaps.eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8ch.net/hydrus/index.html' )
@@ -2200,9 +2276,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            debug = QW.QMenu( self )
+            debug = QW.QMenu( menu )
             
-            debug_modes = QW.QMenu( self )
+            debug_modes = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
@@ -2211,7 +2287,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
             
-            profile_modes = QW.QMenu( self )
+            profile_modes = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
@@ -2220,7 +2296,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, profile_modes, 'profile modes' )
             
-            report_modes = QW.QMenu( self )
+            report_modes = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
@@ -2239,9 +2315,10 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
             
-            gui_actions = QW.QMenu( self )
+            gui_actions = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
             ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
@@ -2252,7 +2329,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
             
-            data_actions = QW.QMenu( self )
+            data_actions = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuItem( data_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
             ClientGUIMenus.AppendMenuItem( data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
@@ -2260,6 +2337,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
             ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
             ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
             ClientGUIMenus.AppendMenuItem( data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( data_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
@@ -2268,7 +2347,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
             
-            network_actions = QW.QMenu( self )
+            network_actions = QW.QMenu( debug )
             
             ClientGUIMenus.AppendMenuItem( network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
             
@@ -2305,9 +2384,9 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             menu.menuAction().setProperty( 'hydrus_menubar_name', name )
             
-            if HC.PLATFORM_OSX:
+            if HC.PLATFORM_MACOS:
                 
-                menu.setTitle( label ) # causes bugs in os x if this is not here
+                menu.setTitle( label ) # causes bugs in macOS if this is not here
                 
             
         
@@ -4281,11 +4360,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         dialog_open = False
         
-        tlps = QW.QApplication.topLevelWidgets()
+        tlws = QW.QApplication.topLevelWidgets()
         
-        for tlp in tlps:
+        for tlw in tlws:
             
-            if isinstance( tlp, QP.Dialog ) and tlp.isModal():
+            if isinstance( tlw, QP.Dialog ) and tlw.isModal():
                 
                 dialog_open = True
                 
@@ -4558,9 +4637,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusData.PrintException( e )
             
         
-        for tlp in QW.QApplication.topLevelWidgets():
+        for tlw in QW.QApplication.topLevelWidgets():
             
-            tlp.hide()
+            tlw.hide()
             
         
         if HG.emergency_exit:
@@ -4879,9 +4958,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
-        tlp = self.window()
+        tlw = self.window()
         
-        if tlp.isMinimized() and not self._notebook.HasMediaPageName( page_name ):
+        if tlw.isMinimized() and not self._notebook.HasMediaPageName( page_name ):
             
             self._controller.CallLaterQtSafe(self, 10.0, self.PresentImportedFilesToPage, hashes, page_name)
             
@@ -5031,9 +5110,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             name = self._dirty_menus.pop()
             
-            ( menu_or_none, label ) = self._GenerateMenuInfo( name )
-            
             old_menu_index = self._FindMenuBarIndex( name )
+            
+            ( menu_or_none, label ) = self._GenerateMenuInfo( name )
             
             if old_menu_index == -1:
                 
@@ -5064,11 +5143,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     if len( self._menubar.actions() ) > insert_index:
                     
                         action_before = self._menubar.actions()[ insert_index ]
-
+                        
                     else:
                         
                         action_before = None
+                        
+                    
                     menu.setParent( self )
+                    
                     self._menubar.insertMenu( action_before, menu )
                     
                 
@@ -5078,9 +5160,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     self._menubar.actions()[ old_menu_index ].setText( label )
                     
+                    if menu_or_none is not None:
+                        
+                        ClientGUIMenus.DestroyMenu( self, menu_or_none )
+                        
+                    
                 else:
                     
-                    old_menu = self._menubar.actions()[ old_menu_index ]
+                    old_action = self._menubar.actions()[ old_menu_index ]
+                    
+                    old_menu = old_action.menu()
                     
                     if menu_or_none is not None:
                         
@@ -5089,17 +5178,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         menu.setTitle( label )
                         
                         menu.setParent( self )
-                        self._menubar.insertMenu( old_menu, menu )
                         
-                        self._menubar.removeAction( old_menu )
+                        self._menubar.insertMenu( old_action, menu )
+                        
+                        self._menubar.removeAction( old_action )
                         
                     else:
                         
-                        self._menubar.removeAction( old_menu )
+                        self._menubar.removeAction( old_action )
                         
                     
                     ClientGUIMenus.DestroyMenu( self, old_menu )
-                    
                 
             
         
@@ -5388,9 +5477,9 @@ class FrameSplashPanel( QW.QWidget ):
         
         ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
         
-        painter.setBackground( QG.QBrush( QP.GetSystemColour( QG.QPalette.Window ) ) )
+        painter.setBackground( QG.QBrush( QP.GetSystemColour( QG.QPalette.Base ) ) )
         
-        # painter.eraseRect( painter.viewport() )
+        painter.eraseRect( painter.viewport() )
         
         #
         
@@ -5398,8 +5487,6 @@ class FrameSplashPanel( QW.QWidget ):
         y = 15
         
         painter.drawPixmap( x, y, self._hydrus_pixmap )
-        
-        painter.setPen( QG.QPen( QC.Qt.black ) )
         
         painter.setFont( QW.QApplication.font() )
         
@@ -5592,8 +5679,6 @@ class FrameSplash( QW.QWidget ):
         
         self.setWindowIcon( QG.QIcon( self._controller.frame_icon_pixmap ) )
         
-        QP.SetBackgroundColour( self, QC.Qt.white )
-        
         self._my_panel = FrameSplashPanel( self, self._controller )
         
         self._vbox = QP.VBoxLayout()
@@ -5602,7 +5687,7 @@ class FrameSplash( QW.QWidget ):
         
         self.setLayout( self._vbox )
         
-        QP.Center( self )
+        QP.CenterOnScreen( self )
         
         self.show()
         

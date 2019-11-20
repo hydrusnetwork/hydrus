@@ -413,7 +413,7 @@ class BetterStaticText( QP.EllipsizedLabel ):
             self.setText( label )
             
         
-        
+    
     def setText( self, text ):
         
         # this doesn't need mnemonic escape _unless_ a buddy is set, wew lad
@@ -424,27 +424,10 @@ class BetterStaticText( QP.EllipsizedLabel ):
             
             QP.EllipsizedLabel.setText( self, text )
             
-            if self._wrap_width is not None:
-                
-                self.setWordWrap( True )
-                self.setMaximumWidth( self._wrap_width )
-                
-            
             if self._tooltip_label:
                 
                 self.setToolTip( text )
                 
-            
-        
-    
-    def SetWrapWidth( self, wrap_width ):
-        
-        self._wrap_width = wrap_width
-        
-        if self._wrap_width is not None:
-            
-            self.setWordWrap( True )
-            self.setMaximumWidth( wrap_width )
             
         
     
@@ -463,7 +446,7 @@ class BetterHyperLink( BetterStaticText ):
         self.setOpenExternalLinks( True )
         
         self.setText( '<a href="{}">{}</a>'.format( url, label ) )
-    
+        
 
 class BufferedWindow( QW.QWidget ):
     
@@ -569,6 +552,7 @@ class CheckboxCollect( QW.QWidget ):
         self._collect_unmatched.currentIndexChanged.connect( self.CollectValuesChanged )
         self._collect_comboctrl.itemChanged.connect( self.CollectValuesChanged )
         
+    
     def GetValue( self ):
         
         return self._media_collect
@@ -592,8 +576,6 @@ class CheckboxCollect( QW.QWidget ):
             
             HG.client_controller.pub( 'collect_media', page_key, self._media_collect )
             
-        
-    
         
     
 class CheckboxManager( object ):
@@ -735,9 +717,6 @@ class ChoiceSort( QW.QWidget ):
         
         self.setLayout( hbox )
         
-        self._sort_type_choice.currentIndexChanged.connect( self.EventSortTypeChoice )
-        self._sort_asc_choice.currentIndexChanged.connect( self.EventSortAscChoice )
-        
         HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
         HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
         
@@ -756,6 +735,9 @@ class ChoiceSort( QW.QWidget ):
                 self.SetSort( default_sort )
                 
             
+        
+        self._sort_type_choice.currentIndexChanged.connect( self.EventSortTypeChoice )
+        self._sort_asc_choice.currentIndexChanged.connect( self.EventSortAscChoice )
         
     
     def _BroadcastSort( self ):

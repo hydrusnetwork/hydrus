@@ -617,6 +617,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
+                text = text.splitlines()[0]
+                
                 self._watcher_status = text
                 
             
@@ -624,6 +626,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         def title_hook( text ):
             
             with self._lock:
+                
+                text = text.splitlines()[0]
                 
                 self._subject = text
                 
@@ -923,6 +927,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         def status_hook( text ):
             
             with self._lock:
+                
+                text = text.splitlines()[0]
                 
                 self._file_status = text
                 

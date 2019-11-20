@@ -10,7 +10,7 @@ if HC.PLATFORM_LINUX:
     
     SWFRENDER_PATH = os.path.join( HC.BIN_DIR, 'swfrender_linux' )
     
-elif HC.PLATFORM_OSX:
+elif HC.PLATFORM_MACOS:
     
     SWFRENDER_PATH = os.path.join( HC.BIN_DIR, 'swfrender_osx' )
     

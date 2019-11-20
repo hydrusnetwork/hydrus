@@ -238,6 +238,8 @@ class Animation( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
+        self.setMouseTracking( True )
+        
         self._media = None
         
         self._drag_happened = False
@@ -651,7 +653,8 @@ class AnimationBar( QW.QWidget ):
         self._it_was_playing = False
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
-        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )        
+        self._widget_event_filter.EVT_MOUSE_EVENTS( self.EventMouse )    
+        
     
     def _DrawBlank( self, painter ):
         
@@ -920,11 +923,6 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         HG.client_controller.gui.RegisterCanvasFrameReference( self )
         
-        def l():
-            
-            HydrusData.ShowText( QP.isValid( self ) )
-            
-        
         self.destroyed.connect( HG.client_controller.gui.MaintainCanvasFrameReferences )
         
     
@@ -943,7 +941,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             
         else:
             
-            if HC.PLATFORM_OSX:
+            if HC.PLATFORM_MACOS:
                 
                 return
                 
@@ -984,6 +982,11 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         return command_processed
+        
+    
+    def minimumSizeHint( self ):
+        
+        return QC.QSize( 240, 180 )
         
     
     def SetCanvas( self, canvas_window ):
@@ -1403,11 +1406,11 @@ class Canvas( QW.QWidget ):
                 dlg.SetPanel( panel )
                 
                 QP.CallAfter( control.setFocus, QC.Qt.OtherFocusReason )
-                QP.CallAfter( control.SetInsertionPointEnd )
+                QP.CallAfter( control.moveCursor, QG.QTextCursor.End )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    notes = control.plainText()
+                    notes = control.toPlainText()
                     
                     hash = media.GetHash()
                     
@@ -1717,7 +1720,7 @@ class Canvas( QW.QWidget ):
         
         if self._media_window_pos == self._media_container.pos():
             
-            if HC.PLATFORM_OSX:
+            if HC.PLATFORM_MACOS:
                 
                 self._media_container.update()
                 
@@ -1909,6 +1912,18 @@ class Canvas( QW.QWidget ):
                 
                 self._ResetMediaWindowCenterPosition()
                 
+            
+        
+    
+    def event( self, event ):
+        
+        if event.type() == QC.QEvent.LayoutRequest:
+            
+            return True
+            
+        else:
+            
+            return QW.QWidget.event( self, event )
             
         
     
@@ -2402,7 +2417,7 @@ class CanvasPanel( Canvas ):
 
             ClientGUIMenus.AppendMenuItem( copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
-            copy_hash_menu = QW.QMenu( copy_hash_menu )
+            copy_hash_menu = QW.QMenu( copy_menu )
 
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 (hydrus default)', 'Open this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Open this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
@@ -2740,7 +2755,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self._timer_cursor_hide_job = None
         
-        self._widget_event_filter.EVT_MOTION( self.EventDrag )
+        self._widget_event_filter.EVT_MOTION( self.EventMouseMove )
         
         HG.client_controller.sub( self, 'Close', 'canvas_close' )
         HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
@@ -2782,7 +2797,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         return True # was: event.ignore()
         
     
-    def EventDrag( self, event ):
+    def EventMouseMove( self, event ):
         
         CC.CAN_HIDE_MOUSE = True
         
@@ -3579,7 +3594,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 elif event.buttons() != QC.Qt.NoButton and event.type() == QC.QEvent.MouseMove:
                     
-                    self.EventDrag( event )
+                    self.EventMouseMove( event )
                     
                 else:
                     
@@ -4252,7 +4267,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
 
                 elif event.buttons() != QC.Qt.NoButton and event.type() == QC.QEvent.MouseMove:
 
-                    self.EventDrag( event )
+                    self.EventMouseMove( event )
 
                 else:
 
@@ -4877,6 +4892,10 @@ class MediaContainer( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
+        # If I do not set this, macOS goes 100% CPU endless repaint events!
+        # My guess is it is due to the borked layout
+        self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
+        
         self._media = None
         self._show_action = None
         
@@ -4885,6 +4904,8 @@ class MediaContainer( QW.QWidget ):
         self._embed_button = EmbedButton( self )
         self._embed_button_widget_event_filter = QP.WidgetEventFilter( self._embed_button )
         self._embed_button_widget_event_filter.EVT_LEFT_DOWN( self.EventEmbedButton )
+        
+        self.setMouseTracking( True )
         
         self._animation_window = Animation( self )
         self._animation_bar = AnimationBar( self )
@@ -5395,6 +5416,8 @@ class StaticImage( QW.QWidget ):
     def __init__( self, parent ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self.setMouseTracking( True )
         
         self._media = None
         

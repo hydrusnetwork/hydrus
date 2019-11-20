@@ -113,7 +113,14 @@ def CreateTopImage( width, title, payload_description, text ):
     
     data_bytearray = top_qt_image.bits()
     
-    data_bytes = bytes( data_bytearray )
+    if QP.qtpy.PYSIDE2:
+        
+        data_bytes = bytes( data_bytearray )
+        
+    elif QP.qtpy.PYQT5:
+        
+        data_bytes = data_bytearray.asstring( top_height * width * 3 )
+        
     
     top_image_rgb = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( top_height, width, 3 ) )
     

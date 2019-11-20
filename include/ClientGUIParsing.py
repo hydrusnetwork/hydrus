@@ -2698,8 +2698,6 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         info_st = ClientGUICommon.BetterStaticText( info_panel, label = message )
         
-        info_st.SetWrapWidth( 400 )
-        
         #
         
         self._name.setText( name )
@@ -3548,7 +3546,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         info_st = ClientGUICommon.BetterStaticText( info_panel, label = message )
         
-        info_st.SetWrapWidth( 400 )
+        info_st.setWordWrap( True )
         
         #
         

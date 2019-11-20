@@ -1481,9 +1481,9 @@ class ListBox( QW.QScrollArea ):
         
         visible_rect = QP.ScrollAreaVisibleRect( self )
         
-        visible_rect_y = visible_rect.y()
+        visible_rect_height = visible_rect.height()
         
-        self._num_rows_per_page = visible_rect_y // self._text_y
+        self._num_rows_per_page = visible_rect_height // self._text_y
         
         self._SetVirtualSize()
         
@@ -1579,6 +1579,25 @@ class ListBoxTags( ListBox ):
     def _GetNamespaceFromTerm( self, term ):
         
         raise NotImplementedError()
+        
+    
+    def _GetTagFromTerm( self, term ):
+        
+        if isinstance( term, ClientSearch.Predicate ):
+            
+            if term.GetType() == HC.PREDICATE_TYPE_TAG:
+                
+                return term.GetValue()
+                
+            else:
+                
+                return None
+                
+            
+        else:
+            
+            return term
+            
         
     
     def _GetTextsAndColours( self, term ):
@@ -1721,7 +1740,9 @@ class ListBoxTags( ListBox ):
     
     def _ProcessMenuTagEvent( self, command ):
         
-        tags = [ self._GetTextFromTerm( term ) for term in self._selected_terms ]
+        tags = [ self._GetTagFromTerm( term ) for term in self._selected_terms ]
+        
+        tags = [ tag for tag in tags if tag is not None ]
         
         if command in ( 'hide', 'hide_namespace' ):
             

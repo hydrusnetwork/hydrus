@@ -64,7 +64,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
-        self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
+        self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_MACOS
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
         
         self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = False
@@ -222,6 +222,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'watcher_page_wait_period' ] = 5
         
         self._dictionary[ 'integers' ][ 'popup_message_character_width' ] = 56
+        
+        self._dictionary[ 'integers' ][ 'duplicate_filter_max_batch_size' ] = 250
         
         self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
         

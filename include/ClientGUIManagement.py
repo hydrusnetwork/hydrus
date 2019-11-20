@@ -678,7 +678,8 @@ class ManagementPanel( QW.QScrollArea ):
         self.setFrameShape( QW.QFrame.NoFrame )
         self.setWidget( QW.QWidget() )
         self.setWidgetResizable( True )
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
+        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
+        self.setLineWidth( 2 )
         #self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarAlwaysOff )
         self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarAsNeeded )
         
@@ -3526,7 +3527,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._reason_text = QW.QTextEdit( self._petition_panel )
         self._reason_text.setReadOnly( True )
         self._reason_text.setMinimumHeight( 80 )
-        self._reason_text.setTextColor( QC.Qt.black )
         
         check_all = ClientGUICommon.BetterButton( self._petition_panel, 'check all', self._CheckAll )
         flip_selected = ClientGUICommon.BetterButton( self._petition_panel, 'flip selected', self._FlipSelected )

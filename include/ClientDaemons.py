@@ -320,6 +320,12 @@ def DAEMONSynchroniseSubscriptions( controller ):
             
             subs_jobs.append( ( thread, job ) )
             
+            # while we initialise the queue, don't hammer the cpu
+            if len( subs_jobs ) < max_simultaneous_subscriptions:
+                
+                time.sleep( 1.0 )
+                
+            
         
         wait_for_all_finished( subs_jobs )
         

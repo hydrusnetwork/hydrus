@@ -1207,6 +1207,12 @@ class Controller( HydrusController.HydrusController ):
     def Run( self ):
         
         QP.MonkeyPatchMissingMethods()
+        
+        if hasattr( QC.Qt, 'AA_EnableHighDpiScaling' ):
+            
+            QW.QApplication.setAttribute( QC.Qt.AA_EnableHighDpiScaling, True )
+            
+        
         self.app = App( sys.argv )
         
         HydrusData.Print( 'booting controller\u2026' )

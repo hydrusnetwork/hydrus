@@ -37,7 +37,7 @@ def ConvertKeyEventToShortcut( event ):
             modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
             
         
-        if HC.PLATFORM_OSX:
+        if HC.PLATFORM_MACOS:
             
             ctrl = QC.Qt.MetaModifier
             
@@ -163,14 +163,14 @@ def IShouldCatchShortcutEvent( evt_handler, event = None, child_tlp_classes_who_
     do_focus_test = True
     
     if event is not None and isinstance( event, QG.QWheelEvent ):
-            
+        
         do_focus_test = False
-            
+        
         
     
     if do_focus_test:
         
-        if not ClientGUIFunctions.WindowOrSameTLPChildHasFocus( evt_handler ):
+        if not ClientGUIFunctions.TLPIsActive( evt_handler ):
             
             if child_tlp_classes_who_can_pass_up is not None:
                 

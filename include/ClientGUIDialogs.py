@@ -132,7 +132,7 @@ class Dialog( QP.Dialog ):
         
         if parent is not None and position == 'center':
             
-            QP.CallAfter( QP.Center, self )
+            QP.CallAfter( QP.CenterOnWindow, parent, self )
             
         
         HG.client_controller.ResetIdleTimer()
@@ -1207,7 +1207,7 @@ class DialogTextEntry( Dialog ):
         QP.AddToLayout( hbox, self._cancel, CC.FLAGS_SMALL_INDENT )
         
         st_message = ClientGUICommon.BetterStaticText( self, message )
-        st_message.SetWrapWidth( 480 )
+        st_message.setWordWrap( True )
         
         vbox = QP.VBoxLayout()
         
@@ -1317,8 +1317,7 @@ class DialogYesYesNo( Dialog ):
         vbox = QP.VBoxLayout()
         
         text = ClientGUICommon.BetterStaticText( self, message )
-        
-        text.SetWrapWidth( 480 )
+        text.setWordWrap( True )
         
         QP.AddToLayout( vbox, text, CC.FLAGS_BIG_INDENT )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )

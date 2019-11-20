@@ -94,8 +94,7 @@ class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
         vbox = QP.VBoxLayout()
         
         text = ClientGUICommon.BetterStaticText( self, message )
-        
-        text.SetWrapWidth( 480 )
+        text.setWordWrap( True )
         
         QP.AddToLayout( vbox, text )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_BUTTON_SIZER )

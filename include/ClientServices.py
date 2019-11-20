@@ -2444,7 +2444,16 @@ class ServiceIPFS( ServiceRemote ):
                 
                 if len( result ) == 0:
                     
-                    multihash = self.PinFile( hash, mime )
+                    try:
+                        
+                        multihash = self.PinFile( hash, mime )
+                        
+                    except HydrusExceptions.DataMissing:
+                        
+                        HydrusData.ShowText( 'File {} could not be pinned!'.format( hash.hexh() ) )
+                        
+                        continue
+                        
                     
                 else:
                     
@@ -2620,7 +2629,29 @@ class ServiceIPFS( ServiceRemote ):
         
         j = json.loads( parsing_text )
         
+        if 'Hash' not in j:
+            
+            message = 'IPFS was unable to pin--returned no hash!'
+            
+            HydrusData.Print( message )
+            HydrusData.Print( parsing_text )
+            
+            raise HydrusExceptions.DataMissing( message )
+            
+        
         multihash = j[ 'Hash' ]
+        
+        EMPTY_IPFS_HASH = 'bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku'
+        
+        if multihash == EMPTY_IPFS_HASH:
+            
+            message = 'IPFS was unable to pin--returned empty multihash!'
+            
+            HydrusData.Print( message )
+            HydrusData.Print( parsing_text )
+            
+            raise HydrusExceptions.DataMissing( message )
+            
         
         ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
         

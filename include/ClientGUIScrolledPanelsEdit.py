@@ -200,14 +200,11 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         summary = 'Enter a complicated tag search here as text, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and this should turn it into hydrus-compatible search predicates.'
         summary += os.linesep * 2
         summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor.'
-        summary += os.linesep
+        summary += os.linesep * 2
         summary += 'Parentheses work the usual way. \ can be used to escape characters (e.g. to search for tags including parentheses)'
         
         st = ClientGUICommon.BetterStaticText( self, summary )
-        
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( st, 96 )
-        
-        st.SetWrapWidth( width )
+        st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -328,8 +325,7 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
         if summary != '':
             
             st = ClientGUICommon.BetterStaticText( self, summary )
-            
-            st.SetWrapWidth( 250 )
+            st.setWordWrap( True )
             
             QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -5340,8 +5336,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         intro = 'Please note this new system is under construction. It is neither completely functional nor as efficient as intended.'
         
         st = ClientGUICommon.BetterStaticText( self, intro )
-        
-        st.SetWrapWidth( min_width - 50 )
+        st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -6639,7 +6634,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         if dlg_default.exec() == QW.QDialog.Accepted:
                             
-                            default = dlg_default.value()
+                            default = dlg_default.GetValue()
                             
                             if default == '':
                                 
@@ -6699,7 +6694,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     if dlg_default.exec() == QW.QDialog.Accepted:
                         
-                        new_default = dlg_default.value()
+                        new_default = dlg_default.GetValue()
                         
                         if new_default == '':
                             
