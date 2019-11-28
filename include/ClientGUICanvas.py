@@ -926,11 +926,11 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         self.destroyed.connect( HG.client_controller.gui.MaintainCanvasFrameReferences )
         
     
-    def Close( self ):
+    def close( self ):
         
         self._canvas_window.CleanBeforeDestroy()
         
-        self.close()
+        ClientGUITopLevelWindows.FrameThatResizes.close( self )
         
     
     def FullscreenSwitch( self ):
@@ -997,7 +997,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         vbox = QP.VBoxLayout( margin = 0 )
         
-        QP.AddToLayout( vbox, self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._canvas_window )
         
         self.setLayout( vbox )
         
@@ -1023,6 +1023,8 @@ class Canvas( QW.QWidget ):
     def __init__( self, parent ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self.setSizePolicy( QW.QSizePolicy.Expanding, QW.QSizePolicy.Expanding )
         
         self._file_service_key = CC.LOCAL_FILE_SERVICE_KEY
         
@@ -1471,7 +1473,11 @@ class Canvas( QW.QWidget ):
                 
                 if isinstance( panel, ClientGUITags.ManageTagsPanel ):
                     
-                    panel.setFocus( QC.Qt.OtherFocusReason )
+                    child.activateWindow()
+                    
+                    command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_search_focus' )
+                    
+                    panel.ProcessApplicationCommand( command )
                     
                     return
                     
@@ -1752,6 +1758,9 @@ class Canvas( QW.QWidget ):
         self._current_zoom = new_zoom
         
         HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+        
+        # due to the foolish 'giganto window' system for large zooms, some auto-update stuff doesn't work right if the convas rect is contained by the media rect, so do a refresh here
+        self._DrawCurrentMedia()
         
         self.update()
         
@@ -2270,6 +2279,11 @@ class Canvas( QW.QWidget ):
             
         
     
+    def minimumSizeHint( self ):
+        
+        return QC.QSize( 120, 120 )
+        
+    
     def ZoomIn( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
@@ -2757,7 +2771,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self._widget_event_filter.EVT_MOTION( self.EventMouseMove )
         
-        HG.client_controller.sub( self, 'Close', 'canvas_close' )
+        HG.client_controller.sub( self, 'CloseFromHover', 'canvas_close' )
         HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
         
     
@@ -2773,7 +2787,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         raise NotImplementedError()
         
     
-    def Close( self, canvas_key ):
+    def CloseFromHover( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
             

@@ -13,7 +13,7 @@ if not 'QT_API' in os.environ:
 
         import PySide2
 
-        os.environ[ 'QT_API' ] = 'pyside2'
+        os.putenv( 'QT_API', 'pyside2' )
         
     except ImportError:
 
@@ -875,7 +875,7 @@ class GridLayout( QW.QGridLayout ):
         
         self.setContentsMargins( val, val, val, val )
         
-        
+    
 def AddToLayout( layout, item, flag = None, alignment = None, sizePolicy = None ):
 
     if isinstance( layout, GridLayout ):
@@ -2059,12 +2059,12 @@ class PasswordEntryDialog( Dialog ):
         
         self.layout().addLayout( entry_layout )
         self.layout().addLayout( button_layout )
-
+        
 
     def GetValue( self ):
         
         return self._password.text()
-
+        
 
 class DirDialog( QW.QFileDialog ):
 

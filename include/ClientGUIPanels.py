@@ -1,6 +1,7 @@
 from . import ClientAPI
 from . import ClientConstants as CC
 from . import ClientGUIAPI
+from . import ClientGUIAsync
 from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsQuick
@@ -393,7 +394,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._name_and_type = ClientGUICommon.BetterStaticText( self )
             
@@ -442,7 +443,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._service_status = ClientGUICommon.BetterStaticText( self )
             
@@ -755,7 +756,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._file_info_st = ClientGUICommon.BetterStaticText( self )
             
@@ -828,7 +829,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._address = ClientGUICommon.BetterStaticText( self )
             self._functional = ClientGUICommon.BetterStaticText( self )
@@ -909,7 +910,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._title_and_expires_st = ClientGUICommon.BetterStaticText( self )
             self._status_st = ClientGUICommon.BetterStaticText( self )
@@ -1104,7 +1105,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._content_panel = QW.QWidget( self )
             
@@ -1497,7 +1498,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             interaction_panel = IPFSDaemonStatusAndInteractionPanel( self, self.GetService )
             
@@ -1725,7 +1726,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._share_key_info = {}
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._service_status = ClientGUICommon.BetterStaticText( self )
             
@@ -1983,7 +1984,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._rating_info_st = ClientGUICommon.BetterStaticText( self )
             
@@ -2073,7 +2074,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service = service
             
-            self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
+            self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
             
             self._tag_info_st = ClientGUICommon.BetterStaticText( self )
             

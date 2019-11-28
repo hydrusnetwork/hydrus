@@ -2947,7 +2947,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+        if len( thumbnails_to_render_later ) > 0:
+            
+            HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+            
         
     
     def _FadeThumbnails( self, thumbnails ):
@@ -3205,7 +3208,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     self._UpdateScrollBars() # would lead to infinite recursion if called from a resize event
                     
                 
+            
             return ( virtual_width, virtual_height )
+            
         
         return ( 0, 0 )
         
@@ -3419,13 +3424,16 @@ class MediaPanelThumbnails( MediaPanel ):
             
             thumbnails = MediaPanel.AddMediaResults( self, page_key, media_results )
             
-            self._RecalculateVirtualSize()
-            
-            HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
-            
-            if len( self._selected_media ) == 0:
+            if len( thumbnails ) > 0:
                 
-                self._PublishSelectionIncrement( thumbnails )
+                self._RecalculateVirtualSize()
+                
+                HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
+                
+                if len( self._selected_media ) == 0:
+                    
+                    self._PublishSelectionIncrement( thumbnails )
+                    
                 
             
         

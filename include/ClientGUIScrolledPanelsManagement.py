@@ -1709,11 +1709,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._verify_regular_https = QW.QCheckBox( general )
             
-            self._network_timeout = QP.MakeQSpinBox( general, min=3, max=300 )
+            self._network_timeout = QP.MakeQSpinBox( general, min = 3, max = 600 )
             self._network_timeout.setToolTip( 'If a network connection cannot be made in this duration or, if once started, it experiences uninterrupted inactivity for six times this duration, it will be abandoned.' )
             
-            self._max_network_jobs = QP.MakeQSpinBox( general, min=1, max=30 )
-            self._max_network_jobs_per_domain = QP.MakeQSpinBox( general, min=1, max=5 )
+            self._connection_error_wait_time = QP.MakeQSpinBox( general, min = 3, max = 1800 )
+            self._connection_error_wait_time.setToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' )
+            
+            self._serverside_bandwidth_wait_time = QP.MakeQSpinBox( general, min = 3, max = 1800 )
+            self._serverside_bandwidth_wait_time.setToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' )
+            
+            self._max_network_jobs = QP.MakeQSpinBox( general, min = 1, max = 30 )
+            self._max_network_jobs_per_domain = QP.MakeQSpinBox( general, min = 1, max = 5 )
             
             #
             
@@ -1732,6 +1738,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._https_proxy.SetValue( self._new_options.GetNoneableString( 'https_proxy' ) )
             
             self._network_timeout.setValue( self._new_options.GetInteger( 'network_timeout' ) )
+            self._connection_error_wait_time.setValue( self._new_options.GetInteger( 'connection_error_wait_time' ) )
+            self._serverside_bandwidth_wait_time.setValue( self._new_options.GetInteger( 'serverside_bandwidth_wait_time' ) )
             
             self._max_network_jobs.setValue( self._new_options.GetInteger( 'max_network_jobs' ) )
             self._max_network_jobs_per_domain.setValue( self._new_options.GetInteger( 'max_network_jobs_per_domain' ) )
@@ -1741,6 +1749,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
+            rows.append( ( 'connection error retry wait (seconds): ', self._connection_error_wait_time ) )
+            rows.append( ( 'serverside bandwidth retry wait (seconds): ', self._serverside_bandwidth_wait_time ) )
             rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
             rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
             rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
@@ -1792,8 +1802,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )
             
             self._new_options.SetInteger( 'network_timeout', self._network_timeout.value() )
+            self._new_options.SetInteger( 'connection_error_wait_time', self._connection_error_wait_time.value() )
+            self._new_options.SetInteger( 'serverside_bandwidth_wait_time', self._serverside_bandwidth_wait_time.value() )
             self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.value() )
             self._new_options.SetInteger( 'max_network_jobs_per_domain', self._max_network_jobs_per_domain.value() )
+            
         
     
     class _DownloadingPanel( QW.QWidget ):
@@ -5087,6 +5100,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._tag_panel = ClientGUICommon.StaticBox( self._content_panel, 'tag service actions' )
                 
                 self._tag_service_keys = QW.QComboBox( self._tag_panel )
+                
                 self._tag_value = QW.QLineEdit()
                 self._tag_value.setReadOnly( True )
                 
@@ -5190,7 +5204,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         QP.SetStringSelection( self._tag_service_keys, service_name )
                         
-                        self._tag_value.setValue( value )
+                        self._tag_value.setText( value )
                         
                         self._SetTag()
                         
@@ -5843,7 +5857,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if key in CC.DELETE_KEYS:
             
-            urls = [ QP.GetClientData( self._urls_listbox, selection ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
+            urls = [ QP.GetClientData( self._urls_listbox, selection.row() ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
             
             for url in urls:
                 

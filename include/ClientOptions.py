@@ -203,6 +203,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
         
         self._dictionary[ 'integers' ][ 'network_timeout' ] = 10
+        self._dictionary[ 'integers' ][ 'connection_error_wait_time' ] = 15
+        self._dictionary[ 'integers' ][ 'serverside_bandwidth_wait_time' ] = 60
         
         self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
         

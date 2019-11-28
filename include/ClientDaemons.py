@@ -102,8 +102,6 @@ def DAEMONMaintainTrash( controller ):
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            controller.WaitUntilModelFree()
-            
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
             service_info = controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
@@ -128,8 +126,6 @@ def DAEMONMaintainTrash( controller ):
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
-            
-            controller.WaitUntilModelFree()
             
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             

@@ -1169,14 +1169,22 @@ class NetworkJobControl( QW.QFrame ):
         if self._network_job is not None:
             
             if self._network_job.CurrentlyWaitingOnConnectionError():
+                
                 ClientGUIMenus.AppendMenuItem( menu, 'reattempt connection now', 'Stop waiting on a connection error and reattempt the job now.', self._network_job.OverrideConnectionErrorWait )
                 
             
+            if self._network_job.CurrentlyWaitingOnServersideBandwidth():
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'reattempt request now (server reports low bandwidth)', 'Stop waiting on a serverside bandwidth delay and reattempt the job now.', self._network_job.OverrideServersideBandwidthWait )
+                
+            
             if self._network_job.ObeysBandwidth():
+                
                 ClientGUIMenus.AppendMenuItem( menu, 'override bandwidth rules for this job', 'Tell the current job to ignore existing bandwidth rules and go ahead anyway.', self._network_job.OverrideBandwidth )
                 
             
             if not self._network_job.TokensOK():
+                
                 ClientGUIMenus.AppendMenuItem( menu, 'override gallery slot requirements for this job', 'Force-allow this download to proceed, ignoring the normal gallery wait times.', self._network_job.OverrideToken )
                 
             

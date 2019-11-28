@@ -870,7 +870,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # some
         
-        url = 'http://safebooru.org/index.php?page=post&s=view&id=2753608'
+        url = 'http://safebooru.org/index.php?s=view&page=post&id=2753608'
         normalised_url = 'https://safebooru.org/index.php?id=2753608&page=post&s=view'
         
         hash = os.urandom( 32 )
@@ -898,6 +898,9 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_answer[ 'normalised_url' ] = normalised_url
         expected_answer[ 'url_file_statuses' ] = json_url_file_statuses
+        
+        HydrusData.Print( d )
+        HydrusData.Print( expected_answer )
         
         self.assertEqual( d, expected_answer )
         

@@ -42,6 +42,7 @@ def GetSafePosition( position ):
     else:
         
         display_index = None
+        
     
     if display_index is None:
         
@@ -56,6 +57,8 @@ def GetSafeSize( tlw, min_size, gravity ):
     
     ( min_width, min_height ) = min_size
     
+    frame_padding = tlw.frameGeometry().size() - tlw.size()
+    
     parent = tlw.parentWidget()
     
     if parent is None:
@@ -65,7 +68,21 @@ def GetSafeSize( tlw, min_size, gravity ):
         
     else:
         
-        ( parent_window_width, parent_window_height ) = parent.window().size().toTuple()
+        parent_window = parent.window()
+        
+        # when we initialise, we might not have a frame yet because we haven't done show() yet
+        # so borrow parent's
+        if frame_padding.isEmpty():
+            
+            frame_padding = parent_window.frameGeometry().size() - parent_window.size()
+            
+        
+        parent_frame_size = parent_window.frameGeometry().size()
+        
+        parent_available_size = parent_frame_size - frame_padding
+        
+        parent_available_width = parent_available_size.width()
+        parent_available_height = parent_available_size.height()
         
         ( width_gravity, height_gravity ) = gravity
         
@@ -75,7 +92,7 @@ def GetSafeSize( tlw, min_size, gravity ):
             
         else:
             
-            max_width = parent_window_width - 2 * CHILD_POSITION_PADDING
+            max_width = parent_available_width - ( 2 * CHILD_POSITION_PADDING )
             
             width = int( width_gravity * max_width )
             
@@ -86,7 +103,7 @@ def GetSafeSize( tlw, min_size, gravity ):
             
         else:
             
-            max_height = parent_window_height - 2 * CHILD_POSITION_PADDING
+            max_height = parent_available_height - ( 2 * CHILD_POSITION_PADDING )
             
             height = int( height_gravity * max_height )
             
@@ -94,8 +111,10 @@ def GetSafeSize( tlw, min_size, gravity ):
     
     display_size = GetDisplaySize( tlw )
     
-    width = min( display_size.width(), width )
-    height = min( display_size.height(), height )
+    display_available_size = display_size - frame_padding
+    
+    width = min( display_available_size.width() - 2 * CHILD_POSITION_PADDING, width )
+    height = min( display_available_size.height() - 2 * CHILD_POSITION_PADDING, height )
     
     return ( width, height )
     
@@ -226,14 +245,14 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
             
             if isinstance( parent, QW.QWidget ):
                 
-                parent_tlp = parent.window()
+                parent_tlw = parent.window()
                 
             else:
                 
-                parent_tlp = parent
+                parent_tlw = parent
                 
             
-            ( parent_x, parent_y ) = parent_tlp.pos().toTuple()
+            ( parent_x, parent_y ) = parent_tlw.pos().toTuple()
             
             tlw.move( QP.TupleToQPoint( ( parent_x + CHILD_POSITION_PADDING, parent_y + CHILD_POSITION_PADDING ) ) )
             
@@ -271,17 +290,19 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
     
 def SlideOffScreenTLWUpAndLeft( tlw ):
     
-    ( tlw_width, tlw_height ) = tlw.size().toTuple()
-    ( tlw_x, tlw_y ) = tlw.pos().toTuple()
+    tlw_frame_rect = tlw.frameGeometry()
     
-    tlw_right = tlw_x + tlw_width
-    tlw_bottom = tlw_y + tlw_height
+    tlw_top_left = tlw_frame_rect.topLeft()
+    tlw_bottom_right = tlw_frame_rect.bottomRight()
+    
+    tlw_right = tlw_bottom_right.x()
+    tlw_bottom = tlw_bottom_right.y()
     
     display_size = GetDisplaySize( tlw )
     display_pos = GetDisplayPosition( tlw )
     
-    display_right = display_pos.x() + display_size.width()
-    display_bottom = display_pos.y() + display_size.height()
+    display_right = display_pos.x() + display_size.width() - CHILD_POSITION_PADDING
+    display_bottom = display_pos.y() + display_size.height() - CHILD_POSITION_PADDING
     
     move_x = tlw_right > display_right
     move_y = tlw_bottom > display_bottom
@@ -291,7 +312,11 @@ def SlideOffScreenTLWUpAndLeft( tlw ):
         delta_x = min( display_right - tlw_right, 0 )
         delta_y = min( display_bottom - tlw_bottom, 0 )
         
-        tlw.move( QP.TupleToQPoint( (tlw_x+delta_x,tlw_y+delta_y) ) )
+        delta_point = QC.QPoint( delta_x, delta_y )
+        
+        safe_pos = tlw_top_left + delta_point
+        
+        tlw.move( safe_pos )
         
     
 class NewDialog( QP.Dialog ):

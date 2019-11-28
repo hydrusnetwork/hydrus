@@ -849,15 +849,17 @@ class ListBox( QW.QScrollArea ):
         
         self._last_view_start = None
         
-        self._text_y = QW.QApplication.fontMetrics().height()
-        
         self._num_rows_per_page = 0
         
-        self.verticalScrollBar().setSingleStep( self._text_y )
+        self.setFont( QW.QApplication.font() )
+        
+        text_height = self.fontMetrics().height()
+        
+        self.verticalScrollBar().setSingleStep( text_height )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 16, height_num_chars ) )
         
-        QP.SetMinClientSize( self, (min_width,min_height) )
+        QP.SetMinClientSize( self, ( min_width, min_height ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
         
@@ -879,7 +881,9 @@ class ListBox( QW.QScrollArea ):
         
         size_hint = QW.QScrollArea.sizeHint( self )
         
-        size_hint.setHeight( 9 * self._text_y + self.height() - self.viewport().height()  )
+        text_height = self.fontMetrics().height()
+        
+        size_hint.setHeight( 9 * text_height + self.height() - self.viewport().height()  )
         
         return size_hint
         
@@ -961,7 +965,9 @@ class ListBox( QW.QScrollArea ):
         
         y = mouse_event.pos().y()
         
-        row_index = y // self._text_y
+        text_height = self.fontMetrics().height()
+        
+        row_index = y // text_height
         
         if row_index >= len( self._ordered_terms ):
             
@@ -1171,7 +1177,9 @@ class ListBox( QW.QScrollArea ):
         
         if self._last_hit_index is not None:
             
-            y = self._text_y * self._last_hit_index
+            text_height = self.fontMetrics().height()
+            
+            y = text_height * self._last_hit_index
             
             visible_rect = QP.ScrollAreaVisibleRect( self )
             
@@ -1183,9 +1191,9 @@ class ListBox( QW.QScrollArea ):
                 
                 self.ensureVisible( 0, y, 0, 0 )
                 
-            elif y > visible_rect_y + visible_rect_height - self._text_y:
+            elif y > visible_rect_y + visible_rect_height - text_height:
                 
-                self.ensureVisible( 0, y + self._text_y , 0, 0 )
+                self.ensureVisible( 0, y + text_height , 0, 0 )
                 
             
         
@@ -1208,6 +1216,8 @@ class ListBox( QW.QScrollArea ):
     
     def _Redraw( self, painter ):
         
+        text_height = self.fontMetrics().height()
+        
         visible_rect = QP.ScrollAreaVisibleRect( self )
         
         visible_rect_y = visible_rect.y()
@@ -1215,18 +1225,16 @@ class ListBox( QW.QScrollArea ):
         visible_rect_width = visible_rect.width()
         visible_rect_height = visible_rect.height()
         
-        first_visible_index = visible_rect_y // self._text_y
+        first_visible_index = visible_rect_y // text_height
         
-        last_visible_index = ( visible_rect_y + visible_rect_height ) // self._text_y
+        last_visible_index = ( visible_rect_y + visible_rect_height ) // text_height
         
-        if ( visible_rect_y + visible_rect_height ) % self._text_y != 0:
+        if ( visible_rect_y + visible_rect_height ) % text_height != 0:
             
             last_visible_index += 1
             
         
         last_visible_index = min( last_visible_index, len( self._ordered_terms ) - 1 )
-        
-        painter.setFont( QW.QApplication.font() )
         
         painter.setBackground( QG.QBrush( self._background_colour ) )
         
@@ -1261,14 +1269,14 @@ class ListBox( QW.QScrollArea ):
                         background_colour_x = x_start
                         
                     
-                    painter.drawRect( background_colour_x, current_index*self._text_y, visible_rect_width, self._text_y )
+                    painter.drawRect( background_colour_x, current_index * text_height, visible_rect_width, text_height )
                     
                     text_colour = self._background_colour
                     
                 
                 painter.setPen( QG.QPen( text_colour ) )
                 
-                ( x, y ) = ( x_start, current_index * self._text_y )
+                ( x, y ) = ( x_start, current_index * text_height )
                 
                 ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
                 
@@ -1334,7 +1342,9 @@ class ListBox( QW.QScrollArea ):
         
         ( my_x, my_y ) = self.widget().size().toTuple()
         
-        ideal_virtual_size = QC.QSize( my_x, self._text_y * len( self._ordered_terms ) )
+        text_height = self.fontMetrics().height()
+        
+        ideal_virtual_size = QC.QSize( my_x, text_height * len( self._ordered_terms ) )
         
         if ideal_virtual_size != self.widget().size():
             
@@ -1479,11 +1489,15 @@ class ListBox( QW.QScrollArea ):
     
     def resizeEvent( self, event ):
         
+        text_height = self.fontMetrics().height()
+        
         visible_rect = QP.ScrollAreaVisibleRect( self )
+        
+        self.verticalScrollBar().setSingleStep( text_height )
         
         visible_rect_height = visible_rect.height()
         
-        self._num_rows_per_page = visible_rect_height // self._text_y
+        self._num_rows_per_page = visible_rect_height // text_height
         
         self._SetVirtualSize()
         
@@ -1504,7 +1518,9 @@ class ListBox( QW.QScrollArea ):
     
     def GetIdealHeight( self ):
         
-        return self._text_y * len( self._ordered_terms ) + 20
+        text_height = self.fontMetrics().height()
+        
+        return text_height * len( self._ordered_terms ) + 20
         
     
     def HasValues( self ):

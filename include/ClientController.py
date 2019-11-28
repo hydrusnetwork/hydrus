@@ -215,7 +215,14 @@ class Controller( HydrusController.HydrusController ):
                 
                 if win is not None and not QP.isValid( win ):
                     
-                    raise HydrusExceptions.QtDeadWindowException('Parent Window was destroyed before Qt command was called!')
+                    if HG.view_shutdown:
+                        
+                        raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+                        
+                    else:
+                        
+                        raise HydrusExceptions.QtDeadWindowException('Parent Window was destroyed before Qt command was called!')
+                        
                     
                 
                 result = func( *args, **kwargs )
@@ -854,7 +861,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 while True:
                     
-                    with QP.PasswordEntryDialog( self._splash, 'Enter your password:', 'Enter password' ) as dlg:
+                    with ClientGUIDialogs.DialogTextEntry( self._splash, 'Enter your password.', allow_blank = True, password_entry = True ) as dlg:
                         
                         if dlg.exec() == QW.QDialog.Accepted:
                             
@@ -1208,11 +1215,6 @@ class Controller( HydrusController.HydrusController ):
         
         QP.MonkeyPatchMissingMethods()
         
-        if hasattr( QC.Qt, 'AA_EnableHighDpiScaling' ):
-            
-            QW.QApplication.setAttribute( QC.Qt.AA_EnableHighDpiScaling, True )
-            
-        
         self.app = App( sys.argv )
         
         HydrusData.Print( 'booting controller\u2026' )
@@ -1545,6 +1547,8 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.Print( e )
             
+            HydrusData.CleanRunningFile( self.db_dir, 'client' )
+            
             QP.CallAfter( QW.QApplication.exit, 0 )
             
         except Exception as e:
@@ -1682,21 +1686,7 @@ class Controller( HydrusController.HydrusController ):
     
     def WaitUntilThumbnailsFree( self ):
         
-        while True:
-            
-            if HG.view_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            elif not self._caches[ 'thumbnail' ].DoingWork():
-                
-                return
-                
-            else:
-                
-                time.sleep( 0.00001 )
-                
-            
+        self._caches[ 'thumbnail' ].WaitUntilFree()
         
     
     def Write( self, action, *args, **kwargs ):

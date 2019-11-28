@@ -136,6 +136,7 @@ class NetworkJob( object ):
         self._bandwidth_tracker = HydrusNetworking.BandwidthTracker()
         
         self._connection_error_wake_time = 0
+        self._serverside_bandwidth_wake_time = 0
         
         self._wake_time = 0
         
@@ -507,7 +508,9 @@ class NetworkJob( object ):
     
     def _WaitOnConnectionError( self, status_text ):
         
-        self._connection_error_wake_time = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * 10 )
+        connection_error_wait_time = HG.client_controller.new_options.GetInteger( 'connection_error_wait_time' )
+        
+        self._connection_error_wake_time = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * connection_error_wait_time )
         
         while not HydrusData.TimeHasPassed( self._connection_error_wake_time ) and not self._IsCancelled():
             
@@ -525,6 +528,26 @@ class NetworkJob( object ):
         while not self._OngoingBandwidthOK() and not self._IsCancelled():
             
             time.sleep( 0.1 )
+            
+        
+    
+    def _WaitOnServersideBandwidth( self, status_text ):
+        
+        # 429 or 509 response from server. basically means 'I'm under big load mate'
+        # a future version of this could def talk to domain manager and add a temp delay so other network jobs can be informed
+        
+        serverside_bandwidth_wait_time = HG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
+        
+        self._serverside_bandwidth_wake_time = HydrusData.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * serverside_bandwidth_wait_time )
+        
+        while not HydrusData.TimeHasPassed( self._serverside_bandwidth_wake_time ) and not self._IsCancelled():
+            
+            with self._lock:
+                
+                self._status_text = status_text + ' - retrying in {}'.format( HydrusData.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
+                
+            
+            time.sleep( 1 )
             
         
     
@@ -652,6 +675,14 @@ class NetworkJob( object ):
         with self._lock:
             
             return not HydrusData.TimeHasPassed( self._connection_error_wake_time )
+            
+        
+    
+    def CurrentlyWaitingOnServersideBandwidth( self ):
+        
+        with self._lock:
+            
+            return not HydrusData.TimeHasPassed( self._serverside_bandwidth_wake_time )
             
         
     
@@ -902,6 +933,14 @@ class NetworkJob( object ):
             
         
     
+    def OverrideServersideBandwidthWait( self ):
+        
+        with self._lock:
+            
+            self._serverside_bandwidth_wake_time = 0
+            
+        
+    
     def OverrideToken( self ):
         
         with self._lock:
@@ -1075,10 +1114,10 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.NetworkException( 'Ran out of bandwidth: ' + str( e ) )
+                        raise HydrusExceptions.NetworkException( 'Server reported very limited bandwidth: ' + str( e ) )
                         
                     
-                    self._WaitOnConnectionError( 'server reported limited bandwidth' )
+                    self._WaitOnServersideBandwidth( 'server reported limited bandwidth' )
                     
                 except HydrusExceptions.ShouldReattemptNetworkException as e:
                     

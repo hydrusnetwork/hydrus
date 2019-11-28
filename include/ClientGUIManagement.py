@@ -766,6 +766,14 @@ class ManagementPanel( QW.QScrollArea ):
         pass
         
     
+    def SetSort( self, page_key, media_sort ):
+        
+        if page_key == self._page_key:
+            
+            self._management_controller.SetVariable( 'media_sort', media_sort )
+            
+        
+    
     def Start( self ):
         
         pass

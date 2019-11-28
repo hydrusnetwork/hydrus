@@ -501,6 +501,7 @@ class AutoCompleteDropdown( QW.QWidget ):
             
         
         self._text_ctrl.textChanged.connect( self.EventText )
+        
         self._text_ctrl_widget_event_filter.EVT_KEY_DOWN( self.keyPressFilter )
         
         self._text_ctrl_widget_event_filter.EVT_MOUSEWHEEL( self.EventMouseWheel )

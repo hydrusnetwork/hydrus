@@ -370,7 +370,7 @@ def SetEnvTempDir( path ):
         
         if tmp_name in os.environ:
             
-            os.environ[ tmp_name ] = path
+            os.putenv( tmp_name, path )
             
         
     

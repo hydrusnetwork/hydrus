@@ -4144,20 +4144,52 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
             
             if len( already_existing_query_texts ) > 0:
                 
-                message = 'The queries:'
-                message += os.linesep * 2
-                message += os.linesep.join( already_existing_query_texts )
-                message += os.linesep * 2
-                message += 'Were already in the subscription, so they need not be added.'
+                if len( already_existing_query_texts ) > 50:
+                    
+                    message = '{} queries were already in the subscription, so they need not be added.'.format( HydrusData.ToHumanInt( len( already_existing_query_texts ) ) )
+                    
+                else:
+                    
+                    if len( already_existing_query_texts ) > 5:
+                        
+                        aeqt_separator = ', '
+                        
+                    else:
+                        
+                        aeqt_separator = os.linesep
+                        
+                    
+                    message = 'The queries:'
+                    message += os.linesep * 2
+                    message += aeqt_separator.join( already_existing_query_texts )
+                    message += os.linesep * 2
+                    message += 'Were already in the subscription, so they need not be added.'
+                    
                 
                 if len( new_query_texts ) > 0:
                     
-                    message += os.linesep * 2
-                    message += 'The queries:'
-                    message += os.linesep * 2
-                    message += os.linesep.join( new_query_texts )
-                    message += os.linesep * 2
-                    message += 'Were new and will be added.'
+                    if len( new_query_texts ) > 50:
+                        
+                        message = '{} queries were new and will be added.'.format( HydrusData.ToHumanInt( len( new_query_texts ) ) )
+                        
+                    else:
+                        
+                        if len( new_query_texts ) > 5:
+                            
+                            nqt_separator = ', '
+                            
+                        else:
+                            
+                            nqt_separator = os.linesep
+                            
+                        
+                        message += os.linesep * 2
+                        message += 'The queries:'
+                        message += os.linesep * 2
+                        message += nqt_separator.join( new_query_texts )
+                        message += os.linesep * 2
+                        message += 'Were new and will be added.'
+                        
                     
                 
                 QW.QMessageBox.information( self, 'Information', message )
@@ -6204,7 +6236,7 @@ class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
     
 class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, url_class ):
+    def __init__( self, parent, url_class: ClientNetworkingDomain.URLClass ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
 
@@ -6227,6 +6259,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preferred_scheme.addItem( 'https', 'https' )
         
         self._netloc = QW.QLineEdit( self )
+        
+        self._alphabetise_get_parameters = QW.QCheckBox( self )
+        
+        tt = 'Normally, to ensure the same URLs are merged, hydrus will alphabetise GET parameters as part of the normalisation process.'
+        tt += os.linesep * 2
+        tt += 'Almost all servers support GET params in any order. One or two do not. Uncheck this if you know there is a problem.'
+        
+        self._alphabetise_get_parameters.setToolTip( tt )
         
         self._match_subdomains = QW.QCheckBox( self )
         
@@ -6309,7 +6349,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._normalised_url.setToolTip( tt )
         
-        ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = url_class.ToTuple()
+        ( url_type, preferred_scheme, netloc, path_components, parameters, api_lookup_converter, send_referral_url, referral_url_converter, example_url ) = url_class.ToTuple()
         
         self._send_referral_url = ClientGUICommon.BetterChoice( self )
         
@@ -6355,6 +6395,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._netloc.setText( netloc )
         
+        ( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files ) = url_class.GetURLBooleans()
+        
+        self._alphabetise_get_parameters.setChecked( alphabetise_get_parameters )
         self._match_subdomains.setChecked( match_subdomains )
         self._keep_matched_subdomains.setChecked( keep_matched_subdomains )
         self._can_produce_multiple_files.setChecked( can_produce_multiple_files )
@@ -6410,6 +6453,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'url type: ', self._url_type ) )
         rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
         rows.append( ( 'network location: ', self._netloc ) )
+        rows.append( ( 'alphabetise GET parameters?: ', self._alphabetise_get_parameters ) )
         rows.append( ( 'match subdomains?: ', self._match_subdomains ) )
         rows.append( ( 'keep matched subdomains?: ', self._keep_matched_subdomains ) )
         rows.append( ( 'can produce multiple files: ', self._can_produce_multiple_files ) )
@@ -6445,6 +6489,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._preferred_scheme.currentIndexChanged.connect( self._UpdateControls )
         self._netloc.textChanged.connect( self._UpdateControls )
+        self._alphabetise_get_parameters.clicked.connect( self._UpdateControls )
         self._match_subdomains.clicked.connect( self._UpdateControls )
         self._keep_matched_subdomains.clicked.connect( self._UpdateControls )
         self._can_produce_multiple_files.clicked.connect( self._UpdateControls )
@@ -6736,10 +6781,6 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         url_type = self._url_type.GetValue()
         preferred_scheme = self._preferred_scheme.GetValue()
         netloc = self._netloc.text()
-        match_subdomains = self._match_subdomains.isChecked()
-        keep_matched_subdomains = self._keep_matched_subdomains.isChecked()
-        can_produce_multiple_files = self._can_produce_multiple_files.isChecked()
-        should_be_associated_with_files = self._should_be_associated_with_files.isChecked()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
@@ -6751,7 +6792,15 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_url = self._example_url.text()
         
-        url_class = ClientNetworkingDomain.URLClass( name, url_class_key = url_class_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        url_class = ClientNetworkingDomain.URLClass( name, url_class_key = url_class_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        match_subdomains = self._match_subdomains.isChecked()
+        keep_matched_subdomains = self._keep_matched_subdomains.isChecked()
+        alphabetise_get_parameters = self._alphabetise_get_parameters.isChecked()
+        can_produce_multiple_files = self._can_produce_multiple_files.isChecked()
+        should_be_associated_with_files = self._should_be_associated_with_files.isChecked()
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files )
         
         return url_class
         

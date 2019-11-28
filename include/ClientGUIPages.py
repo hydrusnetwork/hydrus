@@ -769,23 +769,9 @@ class Page( QW.QSplitter ):
     
     def SetSplitterPositions( self, hpos, vpos ):
         
-        if QP.SplitterVisibleCount( self._search_preview_split ) > 1:
-            
-            self._search_preview_split.widget( 0 ).resize( self._search_preview_split.widget( 0 ).width(), vpos )
-            
-        else:
-            
-            QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
-            
+        QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
         
-        if QP.SplitterVisibleCount( self ) > 1:
-            
-            self.widget( 0 ).resize( hpos, self.widget( 0 ).height() )
-            
-        else:
-            
-            QP.SplitVertically( self, self._search_preview_split, self._media_panel, hpos )
-            
+        QP.SplitVertically( self, self._search_preview_split, self._media_panel, hpos )
         
         if HC.options[ 'hide_preview' ]:
             
@@ -2446,7 +2432,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         insertion_index = min( insertion_index, self.count() )
         
         self.insertTab( insertion_index, page, page_name )
-        if select_page: self.setCurrentIndex( insertion_index )
+        
+        if select_page:
+            
+            self.setCurrentIndex( insertion_index )
+            
         
         self.LayoutPages()
         

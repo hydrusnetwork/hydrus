@@ -1156,7 +1156,7 @@ class DialogSelectImageboard( Dialog ):
 
 class DialogTextEntry( Dialog ):
     
-    def __init__( self, parent, message, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None ):
+    def __init__( self, parent, message, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False ):
         
         if suggestions is None:
             
@@ -1179,6 +1179,11 @@ class DialogTextEntry( Dialog ):
         self._text = QW.QLineEdit( self )
         self._text.textChanged.connect( self.EventText )
         self._text.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text, self.EnterText ) )
+        
+        if password_entry:
+            
+            self._text.setEchoMode( QW.QLineEdit.Password )
+            
         
         if self._max_chars is not None:
             

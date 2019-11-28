@@ -8,6 +8,46 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 375</h3></li>
+				<ul>
+					<li>qt:</li>
+					<li>disabled the failed legacy high dpi scaling mode experiment (which was scaling up thumbnails and media in an ugly way) and returned to font-size-based natural ui scaling as set by the OS. a couple of non-font things like bitmap buttons and various layout margins are too small on >100% UI scale, and the splash screen is borked again, but it looks clear again. I'll keep working on this</li>
+					<li>fixed the custom taglist at >100% UI scale, which was spacing its tags at the wrong text height. this should survive changing ui scale while the program is open and environments with multiple monitors at different ui scale</li>
+					<li>re-fixed a critical old media-viewer-close-on-video memory leak from wx code to qt code. this was also a cause for some child ffmpeg processes not being terminated</li>
+					<li>fixed the media viewer not redrawing correctly when the media size completely exceeds the canvas window size</li>
+					<li>fixed the loading of the shortcut edit panel when the shortcut set a tag</li>
+					<li>fixed some url class edit path component ui</li>
+					<li>fixed and cleaned up some 'safe window size/position' calculations that were missing out the total frame geometry, meaning some dialogs were not moving up and left enough to show entirely on screen, and dialogs with parent-dimension gravity were not calculating initial size accurately</li>
+					<li>fixed focusing on the already-open manage tags text input when you hit 'manage tags' on a canvas with a manage tags dialog already open</li>
+					<li>fixed the html formula rule edit ui actually rendering html tag labels, lmao</li>
+					<li>updated boot-password entry to use the normal hydrus text entry dialog, and fixed a hydrus password cancel not setting a 'clean' exit for the next boot</li>
+					<li>fixed page layout splitter sash positions not resetting nicely from the menu command</li>
+					<li>fixed keyboard delete in the manage urls dialog</li>
+					<li>popup message titles are now in bold</li>
+					<li>popup message titles should now multiline correctly and fill available width</li>
+					<li>the popup messages manager should now set its min/fixed width more sensibly</li>
+					<li>subscription popups now will be wider if space is available</li>
+					<li>wrote a new class to manage better asynchronous updates for future Qt ui presentation</li>
+					<li>the file, pages, and pending menubar menus, which all require a db hit to generate, now operate on this new update class. all three should update faster when able and more politely and smoothly wait when the db is busy</li>
+					<li>reduced some accidental blocking in an old ui-update routine that kicked in when it was running hard</li>
+					<li>if the media_viewer frame type is set not to remember its 'last size', it will now instantiate with a small min size</li>
+					<li>when pasting new queries into a sub, if there are more than 5 or 50 that are already in or new, they will be rendered in a more compact way in order to stop the notification dialog growing too tall</li>
+					<li>improved stability of page update, splash screen update, and perhaps pubsub update</li>
+					<li>.</li>
+					<li>new file maintenance jobs:</li>
+					<li>added a new 'check for missing files' file maintenance job, where if the file is missing and has urls, those urls will be queued up in a new url downloader for redownload. the file record is not removed, preserving archive/inbox and import time</li>
+					<li>added a new 'check for invalid files' file maintenance job that does the same deal as above with an additional expensive byte-for-byte content check if the file is not missing</li>
+					<li>added a new 'check for invalid files' file maintenance job that only cares about invalidity--if the file is present and invalid, it is moved out but the file record is not removed</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>network jobs that receive low-bandwidth error codes from the server now use a separate wait routine (previously, they piggybacked on the connection fail retry system). they have a separate cog-menu action to override these waits</li>
+					<li>the time delay multiple for connection errors and serverside bandwidth problems are now editable under options->connection. old default was 10 seconds base, now 15 and 60 seconds respectively</li>
+					<li>updated the danbooru login script</li>
+					<li>improved the precision of the thumbnail size estimate in database migration</li>
+					<li>the alphabetisation of a url class's GET paramaters on normalise is now optional. it is a new checkbox on the url class edit panel</li>
+					<li>when a default object fails to load from a png path, a simple error is now written to the log</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 374</h3></li>
 				<ul>
 					<li>qt environment/build:</li>

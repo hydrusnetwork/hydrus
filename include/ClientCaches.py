@@ -1808,6 +1808,8 @@ class ThumbnailCache( object ):
         self._waterfall_queue_quick = set()
         self._waterfall_queue = []
         
+        self._waterfall_queue_empty_event = threading.Event()
+        
         self._delayed_regeneration_queue_quick = set()
         self._delayed_regeneration_queue = []
         
@@ -2101,6 +2103,15 @@ class ThumbnailCache( object ):
         # we pop off the end, so reverse
         self._waterfall_queue.sort( key = sort_waterfall, reverse = True )
         
+        if len( self._waterfall_queue ) == 0:
+            
+            self._waterfall_queue_empty_event.set()
+            
+        else:
+            
+            self._waterfall_queue_empty_event.clear()
+            
+        
         def sort_regen( item ):
             
             media_result = item
@@ -2189,11 +2200,21 @@ class ThumbnailCache( object ):
             
         
     
-    def DoingWork( self ):
+    def WaitUntilFree( self ):
         
-        with self._lock:
+        while True:
             
-            return len( self._waterfall_queue ) > 0
+            if HG.view_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+                
+            
+            queue_is_empty = self._waterfall_queue_empty_event.wait( 1 )
+            
+            if queue_is_empty:
+                
+                return
+                
             
         
     
@@ -2323,6 +2344,11 @@ class ThumbnailCache( object ):
                         
                     
                     result = self._waterfall_queue.pop()
+                    
+                    if len( self._waterfall_queue ) == 0:
+                        
+                        self._waterfall_queue_empty_event.set()
+                        
                     
                     self._waterfall_queue_quick.discard( result )
                     

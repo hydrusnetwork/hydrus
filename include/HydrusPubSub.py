@@ -27,9 +27,11 @@ class HydrusPubSub( object ):
         self._topics_to_method_names = {}
         
     
-    def _GetCallables( self, topic ):
+    def _GetCallableTuples( self, topic ):
         
-        callables = []
+        # this now does the obj as well so we have a strong direct ref to it throughout procesing
+        
+        callable_tuples = []
         
         if topic in self._topics_to_objects:
             
@@ -52,7 +54,7 @@ class HydrusPubSub( object ):
                             
                             callable = getattr( obj, method_name )
                             
-                            callables.append( callable )
+                            callable_tuples.append( ( obj, callable ) )
                             
                         
                     
@@ -63,7 +65,7 @@ class HydrusPubSub( object ):
                 
             
         
-        return callables
+        return callable_tuples
         
     
     def DoingWork( self ):
@@ -84,7 +86,7 @@ class HydrusPubSub( object ):
         
         try:
             
-            callables = []
+            callable_tuples = []
             
             with self._lock:
                 
@@ -104,25 +106,25 @@ class HydrusPubSub( object ):
                     
                     # do all this _outside_ the lock, lol
                     
-                    callables = self._GetCallables( topic )
+                    callable_tuples = self._GetCallableTuples( topic )
                     
                     # don't want to report the showtext we just send here!
                     not_a_report = topic != 'message'
                     
                     if HG.pubsub_report_mode and not_a_report:
                         
-                        HydrusData.ShowText( ( topic, args, kwargs, callables ) )
+                        HydrusData.ShowText( ( topic, args, kwargs, callable_tuples ) )
                         
                     
                     if HG.pubsub_profile_mode and not_a_report:
                         
-                        summary = 'Profiling ' + HydrusData.ToHumanInt( len( callables ) ) + ' x ' + topic
+                        summary = 'Profiling ' + HydrusData.ToHumanInt( len( callable_tuples ) ) + ' x ' + topic
                         
                         HydrusData.ShowText( summary )
                         
                         per_summary = 'Profiling ' + topic
                         
-                        for callable in callables:
+                        for ( obj, callable ) in callable_tuples:
                             
                             try:
                                 
@@ -136,7 +138,7 @@ class HydrusPubSub( object ):
                         
                     else:
                         
-                        for callable in callables:
+                        for ( obj, callable ) in callable_tuples:
                             
                             try:
                                 
@@ -175,10 +177,10 @@ class HydrusPubSub( object ):
         
         with self._lock:
             
-            callables = self._GetCallables( topic )
+            callable_tuples = self._GetCallableTuples( topic )
             
         
-        for callable in callables:
+        for ( obj, callable ) in callable_tuples:
             
             callable( *args, **kwargs )
             

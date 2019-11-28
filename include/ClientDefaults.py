@@ -1,6 +1,7 @@
 from . import ClientConstants as CC
 from . import ClientData
 from . import HydrusConstants as HC
+from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusNetworking
 from . import HydrusSerialisable
@@ -469,9 +470,9 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
                     
                 
             
-        except:
+        except Exception as e:
             
-            pass
+            HydrusData.Print( 'Object at location "{}" failed to load: {}'.format( path, e ) )
             
         
     

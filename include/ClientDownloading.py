@@ -463,8 +463,6 @@ class QuickDownloadManager( object ):
                                     
                                     file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
                                     
-                                    self._controller.WaitUntilModelFree()
-                                    
                                     exclude_deleted = False # this is the important part here
                                     do_not_check_known_urls_before_importing = False
                                     do_not_check_hashes_before_importing = False

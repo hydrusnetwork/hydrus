@@ -5,6 +5,7 @@ from . import ClientData
 from . import ClientDownloading
 from . import ClientDragDrop
 from . import ClientExporting
+from . import ClientGUIAsync
 from . import ClientGUICommon
 from . import ClientGUIDialogs
 from . import ClientGUIDialogsManage
@@ -248,6 +249,85 @@ def THREADUploadPending( service_key ):
         HG.client_controller.pub( 'notify_new_pending' )
         
     
+class MenuUpdaterFile( ClientGUIAsync.AsyncQtUpdater ):
+    
+    def _getResult( self ):
+        
+        import_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+        export_folder_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+        
+        return ( import_folder_names, export_folder_names )
+        
+    
+    def _publishLoading( self ):
+        
+        self._win.DisableMenu( 'file' )
+        
+    
+    def _publishResult( self, result ):
+        
+        ( import_folder_names, export_folder_names ) = result
+        
+        ( menu, label ) = self._win.GenerateMenuInfoFile( import_folder_names, export_folder_names )
+        
+        self._win.ReplaceMenu( 'file', menu, label )
+        
+    
+class MenuUpdaterPages( ClientGUIAsync.AsyncQtUpdater ):
+    
+    def _getResult( self ):
+        
+        gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        
+        if len( gui_session_names ) > 0:
+            
+            gui_session_names_to_backup_timestamps = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            
+        else:
+            
+            gui_session_names_to_backup_timestamps = {}
+            
+        
+        return gui_session_names_to_backup_timestamps
+        
+    
+    def _publishLoading( self ):
+        
+        self._win.DisableMenu( 'pages' )
+        
+    
+    def _publishResult( self, result ):
+        
+        gui_session_names_to_backup_timestamps = result
+        
+        ( menu, label ) = self._win.GenerateMenuInfoPages( gui_session_names_to_backup_timestamps )
+        
+        self._win.ReplaceMenu( 'pages', menu, label )
+        
+    
+class MenuUpdaterPending( ClientGUIAsync.AsyncQtUpdater ):
+    
+    def _getResult( self ):
+        
+        nums_pending = HG.client_controller.Read( 'nums_pending' )
+        
+        return nums_pending
+        
+    
+    def _publishLoading( self ):
+        
+        self._win.DisableMenu( 'pending' )
+        
+    
+    def _publishResult( self, result ):
+        
+        nums_pending = result
+        
+        ( menu_or_none, label ) = self._win.GenerateMenuInfoPending( nums_pending )
+        
+        self._win.ReplaceMenu( 'pending', menu_or_none, label )
+        
+    
 class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
     
     def __init__( self, controller ):
@@ -273,7 +353,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._statusbar.setSizeGripEnabled( True )
         self.setStatusBar( self._statusbar )
         
-        self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
+        self._statusbar_thread_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         
         self._canvas_frames = [] # Keep references to canvas frames so they won't get garbage collected (canvas frames don't have a parent)
         
@@ -1077,11 +1157,34 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._controller.pub( 'message', job_key )
         
+        t = 0
+        
         for i in range( 2, 64 ):
             
             text += ' {}'.format( random.choice( words ) )
             
-            self._controller.CallLater( i * 0.2, job_key.SetVariable, 'popup_text_1', text )
+            t += 0.2
+            
+            self._controller.CallLater( t, job_key.SetVariable, 'popup_text_1', text )
+            
+        
+        words = [ 'test', 'a', 'longish', 'statictext', 'm8' ]
+        
+        text = random.choice( words )
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', 'test long title' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        for i in range( 2, 64 ):
+            
+            text += ' {}'.format( random.choice( words ) )
+            
+            t += 0.2
+            
+            self._controller.CallLater( t, job_key.SetVariable, 'popup_title', text )
             
         
     
@@ -1113,6 +1216,16 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         brother_classem_pinniped = '''++++What the fuck did you just fucking say about me, you worthless heretic? I'll have you know I graduated top of my aspirant tournament in the Heralds of Ultramar, and I've led an endless crusade of secret raids against the forces of The Great Enemy, and I have over 30 million confirmed purgings. I am trained in armored warfare and I'm the top brother in all the thousand Divine Chapters of the Adeptus Astartes. You are nothing to me but just another heretic. I will wipe you the fuck out with precision the likes of which has never been seen before in this universe, mark my fucking words. You think you can get away with saying that shit to me over the Warp? Think again, traitor. As we speak I am contacting my secret network of inquisitors across the galaxy and your malign powers are being traced right now so you better prepare for the holy storm, maggot. The storm that wipes out the pathetic little thing you call your soul. You're fucking dead, kid. I can warp anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bolter. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Departmento Munitorum and I will use it to its full extent to wipe your miserable ass off the face of the galaxy, you little shit. If only you could have known what holy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking impure tongue. But you couldn't, you didn't, and now you're paying the price, you Emperor-damned heretic.++++\n\n++++Better crippled in body than corrupt in mind++++\n\n++++The Emperor Protects++++'''
         
         HydrusData.ShowText( 'This is a very long message:  \n\n' + brother_classem_pinniped )
+        
+        #
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_title', 'This popup has a very long title -- it is a subscription that is running with a long "artist sub 123456" kind of name' )
+        
+        job_key.SetVariable( 'popup_text_1', 'test' )
+        
+        self._controller.pub( 'message', job_key )
         
         #
         
@@ -1362,21 +1475,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
         
     
-    def _DirtyMenu( self, name ):
-        
-        if name not in self._dirty_menus:
-            
-            menu_index = self._FindMenuBarIndex( name )
-            
-            if menu_index != -1:                
-                
-                self._menubar.actions()[ menu_index ].setEnabled( False )
-                
-            
-            self._dirty_menus.add( name )
-            
-        
-    
     def _EnableLoadTruncatedImages( self ):
         
         result = HydrusImageHandling.EnableLoadTruncatedImages()
@@ -1453,944 +1551,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGClipboardWatcher)
             
-        
-    
-    def _GenerateMenuInfo( self, name ):
-        
-        def file():
-            
-            menu = QW.QMenu( self )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'import files', 'Add new files to the database.', self._ImportFiles )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            #
-            
-            i_and_e_submenu = QW.QMenu( menu )
-            
-            submenu = QW.QMenu( i_and_e_submenu )
-            
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', HC.options['pause_import_folders_sync'], self._PauseSync, 'import_folders' )
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', HC.options['pause_export_folders_sync'], self._PauseSync, 'export_folders' )
-            
-            ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'pause' )
-            
-            ClientGUIMenus.AppendSeparator( i_and_e_submenu )
-            
-            import_folder_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
-            
-            if len( import_folder_names ) > 0:
-                
-                submenu = QW.QMenu( i_and_e_submenu )
-                
-                if len( import_folder_names ) > 1:
-                    
-                    ClientGUIMenus.AppendMenuItem( submenu, 'check all', 'Check all import folders.', self._CheckImportFolder )
-                    
-                    ClientGUIMenus.AppendSeparator( submenu )
-                    
-                
-                for name in import_folder_names:
-                    ClientGUIMenus.AppendMenuItem( submenu, name, 'Check this import folder now.', self._CheckImportFolder, name )
-                    
-                
-                ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check import folder now' )
-                
-            
-            export_folder_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
-            
-            if len( export_folder_names ) > 0:
-                
-                submenu = QW.QMenu( i_and_e_submenu )
-                
-                if len( export_folder_names ) > 1:
-                    
-                    ClientGUIMenus.AppendMenuItem( submenu, 'run all', 'Run all export folders.', self._RunExportFolder )
-                    
-                    ClientGUIMenus.AppendSeparator( submenu )
-                    
-                
-                for name in export_folder_names:
-                    ClientGUIMenus.AppendMenuItem( submenu, name, 'Check this export folder now.', self._RunExportFolder, name )
-                    
-                
-                ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check export folder now' )
-                
-            
-            ClientGUIMenus.AppendSeparator( i_and_e_submenu )
-            
-            ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
-            ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
-            
-            ClientGUIMenus.AppendMenu( menu, i_and_e_submenu, 'import and export folders' )
-            
-            #
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            open = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( open, 'installation directory', 'Open the installation directory for this client.', self._OpenInstallFolder )
-            ClientGUIMenus.AppendMenuItem( open, 'database directory', 'Open the database directory for this instance of the client.', self._OpenDBFolder )
-            ClientGUIMenus.AppendMenuItem( open, 'quick export directory', 'Open the export directory so you can easily access the files you have exported.', self._OpenExportFolder )
-            
-            ClientGUIMenus.AppendMenu( menu, open, 'open' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self._ManageOptions )
-            ClientGUIMenus.AppendMenuItem( menu, 'shortcuts', 'Edit the shortcuts your client responds to.', self._ManageShortcuts )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            we_borked_linux_pyinstaller = HC.PLATFORM_LINUX and not HC.RUNNING_FROM_SOURCE
-            
-            if not we_borked_linux_pyinstaller:
-                ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.Exit, restart=True )
-                
-            ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.Exit, force_shutdown_maintenance=True )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.Exit )
-            
-            return ( menu, '&file' )
-            
-        
-        def undo():
-            
-            have_closed_pages = len( self._closed_pages ) > 0
-            
-            undo_manager = self._controller.GetManager( 'undo' )
-            
-            ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
-            
-            have_undo_stuff = undo_string is not None or redo_string is not None
-            
-            if have_closed_pages or have_undo_stuff:
-                
-                menu = QW.QMenu( self )
-                
-                if undo_string is not None:
-                    ClientGUIMenus.AppendMenuItem( menu, undo_string, 'Undo last operation.', self._controller.pub, 'undo' )
-                    
-                
-                if redo_string is not None:
-                    ClientGUIMenus.AppendMenuItem( menu, redo_string, 'Redo last operation.', self._controller.pub, 'redo' )
-                    
-                
-                if have_closed_pages:
-                    
-                    ClientGUIMenus.AppendSeparator( menu )
-                    
-                    undo_pages = QW.QMenu( menu )
-                    
-                    ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self.DeleteAllClosedPages )
-                    
-                    undo_pages.addSeparator()
-                    
-                    args = []
-                    
-                    for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
-                        
-                        name = page.GetName()
-                        
-                        args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
-                        
-                    
-                    args.reverse() # so that recently closed are at the top
-                    
-                    for ( index, name ) in args:
-                        
-                        ClientGUIMenus.AppendMenuItem( undo_pages, name, 'Restore this page.', self._UnclosePage, index )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( menu, undo_pages, 'closed pages' )
-                    
-                
-            else:
-                
-                menu = None
-                
-            
-            return ( menu, '&undo' )
-            
-        
-        def pages():
-            
-            menu = QW.QMenu( self )
-            
-            ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self.GetTotalPageCounts()
-            
-            self._last_total_page_weight = total_active_weight + total_closed_weight
-            
-            ClientGUIMenus.AppendMenuLabel( menu, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ), 'You have this many pages open.' )
-            ClientGUIMenus.AppendMenuLabel( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( self._last_total_page_weight ) ), 'Your session is this heavy.' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
-            
-            splitter_menu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
-            
-            ClientGUIMenus.AppendSeparator( splitter_menu )
-            
-            ClientGUIMenus.AppendMenuCheckItem( splitter_menu, 'save current page\'s sash positions on client exit', 'Set whether sash position should be saved over on client exit.', self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ), self._new_options.FlipBoolean, 'saving_sash_positions_on_exit' )
-            
-            ClientGUIMenus.AppendSeparator( splitter_menu )
-            
-            ClientGUIMenus.AppendMenuItem( splitter_menu, 'save current page\'s sash positions now', 'Save the current page\'s sash positions.', self._SaveSplitterPositions )
-            
-            ClientGUIMenus.AppendSeparator( splitter_menu )
-            
-            ClientGUIMenus.AppendMenuItem( splitter_menu, 'restore all pages\' sash positions to saved value', 'Restore the current sash positions for all pages to the values that are saved.', self._RestoreSplitterPositions )
-            
-            ClientGUIMenus.AppendMenu( menu, splitter_menu, 'management and preview panels' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            gui_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-            
-            sessions = QW.QMenu( menu )
-            
-            if len( gui_session_names ) > 0:
-                
-                load = QW.QMenu( sessions )
-                
-                for name in gui_session_names:
-                    
-                    ClientGUIMenus.AppendMenuItem( load, name, 'Close all other pages and load this session.', self._notebook.LoadGUISession, name )
-                    
-                
-                ClientGUIMenus.AppendMenu( sessions, load, 'clear and load' )
-                
-                append = QW.QMenu( sessions )
-                
-                for name in gui_session_names:
-                    
-                    ClientGUIMenus.AppendMenuItem( append, name, 'Append this session to whatever pages are already open.', self._notebook.AppendGUISession, name )
-                    
-                
-                ClientGUIMenus.AppendMenu( sessions, append, 'append' )
-                
-                gui_session_names_to_backup_timestamps = self._controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-                
-                if len( gui_session_names_to_backup_timestamps ) > 0:
-                    
-                    append_backup = QW.QMenu( sessions )
-                    
-                    rows = list( gui_session_names_to_backup_timestamps.items() )
-                    
-                    rows.sort()
-                    
-                    for ( name, timestamps ) in rows:
-                        
-                        submenu = QW.QMenu( append_backup )
-                        
-                        for timestamp in timestamps:
-                            ClientGUIMenus.AppendMenuItem( submenu, HydrusData.ConvertTimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
-                            
-                        
-                        ClientGUIMenus.AppendMenu( append_backup, submenu, name )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( sessions, append_backup, 'append session backup' )
-                    
-                
-            
-            save = QW.QMenu( sessions )
-            
-            for name in gui_session_names:
-                
-                if name in ClientGUIPages.RESERVED_SESSION_NAMES:
-                    
-                    continue
-                    
-                ClientGUIMenus.AppendMenuItem( save, name, 'Save the existing open pages as a session.', self._notebook.SaveGUISession, name )
-                
-            ClientGUIMenus.AppendMenuItem( save, 'as new session', 'Save the existing open pages as a session.', self._notebook.SaveGUISession )
-            
-            ClientGUIMenus.AppendMenu( sessions, save, 'save' )
-            
-            if len( set( gui_session_names ).difference( ClientGUIPages.RESERVED_SESSION_NAMES ) ) > 0:
-                
-                delete = QW.QMenu( sessions )
-                
-                for name in gui_session_names:
-                    
-                    if name in ClientGUIPages.RESERVED_SESSION_NAMES:
-                        
-                        continue
-                        
-                    ClientGUIMenus.AppendMenuItem( delete, name, 'Delete this session.', self._DeleteGUISession, name )
-                    
-                
-                ClientGUIMenus.AppendMenu( sessions, delete, 'delete' )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, sessions, 'sessions' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
-            
-            #
-            
-            search_menu = QW.QMenu( menu )
-            
-            services = self._controller.services_manager.GetServices()
-            
-            petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
-            
-            repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
-            
-            file_repositories = [ service for service in repositories if service.GetServiceType() == HC.FILE_REPOSITORY ]
-            
-            petition_resolvable_repositories = [ repository for repository in repositories if True in ( repository.HasPermission( content_type, action ) for ( content_type, action ) in petition_permissions ) ]
-            
-            ClientGUIMenus.AppendMenuItem( search_menu, 'my files', 'Open a new search tab for your files.', self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook=True )
-            ClientGUIMenus.AppendMenuItem( search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY, on_deepest_notebook=True )
-            
-            for service in file_repositories:
-                ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook=True )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
-            
-            #
-            
-            if len( petition_resolvable_repositories ) > 0:
-                
-                petition_menu = QW.QMenu( menu )
-                
-                for service in petition_resolvable_repositories:
-                    ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook=True )
-                    
-                
-                ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
-                
-            
-            #
-            
-            download_menu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
-            ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
-            ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_gallery_downloader_page' ) )
-            ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page' ) )
-            
-            ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
-            
-            #
-            
-            has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
-            
-            if has_ipfs:
-                
-                download_popup_menu = QW.QMenu( menu )
-                
-                ClientGUIMenus.AppendMenuItem( download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
-                
-                ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
-                
-            
-            #
-            
-            special_menu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page_of_pages' ) )
-            ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_duplicate_filter_page' ) )
-            
-            ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
-            
-            #
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            special_command_menu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( special_command_menu, 'clear all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', HG.client_controller.pub, 'clear_multiwatcher_highlights' )
-            
-            ClientGUIMenus.AppendMenu( menu, special_command_menu, 'special commands' )
-            
-            #
-            
-            return ( menu, '&pages' )
-            
-        
-        def database():
-            
-            menu = QW.QMenu( self )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            if HG.client_controller.client_files_manager.AllLocationsAreDefault():
-                
-                backup_path = self._new_options.GetNoneableString( 'backup_path' )
-                
-                if backup_path is None:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'set up a database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
-                    
-                else:
-                    
-                    ClientGUIMenus.AppendMenuItem( menu, 'update database backup', 'Back the database up to an external location.', self._BackupDatabase )
-                    ClientGUIMenus.AppendMenuItem( menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
-                    
-                
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-            ClientGUIMenus.AppendMenuItem( menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            submenu = QW.QMenu( menu )
-            
-            file_maintenance_menu = QW.QMenu( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'review scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
-            ClientGUIMenus.AppendSeparator( file_maintenance_menu )
-            
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_idle' )
-            
-            current_value = check_manager.GetCurrentValue()
-            func = check_manager.Invert
-            
-            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
-            
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_active' )
-            
-            current_value = check_manager.GetCurrentValue()
-            func = check_manager.Invert
-            
-            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
-            
-            ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'file maintenance' )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
-            ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
-            
-            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
-            ClientGUIMenus.AppendMenuItem( submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
-            
-            return ( menu, '&database' )
-            
-        
-        def pending():
-            
-            nums_pending = self._controller.Read( 'nums_pending' )
-            
-            total_num_pending = 0
-            
-            menu = None
-            
-            can_do_a_menu = not HG.currently_uploading_pending
-            
-            for ( service_key, info ) in nums_pending.items():
-                
-                service = self._controller.services_manager.GetService( service_key )
-                
-                service_type = service.GetServiceType()
-                name = service.GetName()
-                
-                if service_type == HC.TAG_REPOSITORY:
-                    
-                    pending_phrase = 'tag data to upload'
-                    petitioned_phrase = 'tag data to petition'
-                    
-                elif service_type == HC.FILE_REPOSITORY:
-                    
-                    pending_phrase = 'files to upload'
-                    petitioned_phrase = 'files to petition'
-                    
-                elif service_type == HC.IPFS:
-                    
-                    pending_phrase = 'files to pin'
-                    petitioned_phrase = 'files to unpin'
-                    
-                
-                if service_type == HC.TAG_REPOSITORY:
-                    
-                    num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
-                    num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
-                    
-                elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
-                    
-                    num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_FILES ]
-                    num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
-                    
-                
-                if can_do_a_menu and num_pending + num_petitioned > 0:
-                    
-                    if menu is None:
-                        
-                        menu = QW.QMenu( self )
-                        
-                    
-                    submenu = QW.QMenu( menu )
-                    
-                    ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload ' + name + '\'s pending content.', self._UploadPending, service_key )
-                    ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear ' + name + '\'s pending content.', self._DeletePending, service_key )
-                    
-                    submessages = []
-                    
-                    if num_pending > 0:
-                        
-                        submessages.append( HydrusData.ToHumanInt( num_pending ) + ' ' + pending_phrase )
-                        
-                    
-                    if num_petitioned > 0:
-                        
-                        submessages.append( HydrusData.ToHumanInt( num_petitioned ) + ' ' + petitioned_phrase )
-                        
-                    
-                    message = name + ': ' + ', '.join( submessages )
-                    
-                    ClientGUIMenus.AppendMenu( menu, submenu, message )
-                    
-                
-                total_num_pending += num_pending + num_petitioned
-                
-            
-            return ( menu, '&pending (' + HydrusData.ToHumanInt( total_num_pending ) + ')' )
-            
-        
-        def network():
-            
-            menu = QW.QMenu( self )
-            
-            submenu = QW.QMenu( menu )
-            
-            pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
-            
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options['pause_subs_sync'], self._PauseSync, 'subs' )
-            ClientGUIMenus.AppendSeparator( submenu )
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            #
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
-            ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
-            ClientGUIMenus.AppendMenuItem( submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'data' )
-            
-            #
-            
-            submenu = QW.QMenu( menu )
-            
-            if not ClientParsing.HTML5LIB_IS_OK:
-                
-                message = 'The client was unable to import html5lib on boot. This is an important parsing library that performs better than the usual backup, lxml. Without it, some downloaders will not work well and you will miss tags and files.'
-                message += os.linesep * 2
-                message += 'You are likely running from source, so I recommend you close the client, run \'pip install html5lib\' (or whatever is appropriate for your environment) and try again. You can double-check what imported ok under help->about.'
-                
-                ClientGUIMenus.AppendMenuItem( submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', QW.QMessageBox.warning, self, 'Warning', message )
-                
-                ClientGUIMenus.AppendSeparator( submenu )
-                
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
-            
-            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.pub, 'notify_restart_subs_sync_daemon' )
-                
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            clipboard_menu = QW.QMenu( submenu )
-            
-            ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'watcher urls', 'Automatically import watcher URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_watcher_urls' )
-            ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'other recognised urls', 'Automatically import recognised URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_other_recognised_urls' )
-            
-            ClientGUIMenus.AppendMenu( submenu, clipboard_menu, 'watch clipboard for urls' )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
-            
-            debug_menu = QW.QMenu( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
-            
-            ClientGUIMenus.AppendMenu( submenu, debug_menu, 'DEBUG' )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
-            
-            #
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
-            ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
-            
-            ClientGUIMenus.AppendSeparator( submenu )
-            
-            ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
-            
-            #
-            
-            return ( menu, '&network' )
-            
-        
-        def services():
-            
-            menu = QW.QMenu( self )
-            
-            tag_services = self._controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
-            file_services = self._controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) )
-            
-            submenu = QW.QMenu( menu )
-            
-            ClientGUIMenus.AppendMenuCheckItem( submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PauseSync, 'repo' )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
-            ClientGUIMenus.AppendMenuItem( menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
-            
-            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE ) ]
-            
-            repositories = self._controller.services_manager.GetServices( HC.REPOSITORIES )
-            admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
-            
-            servers_admin = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
-            server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ) ]
-            
-            if len( admin_repositories ) > 0 or len( server_admins ) > 0:
-                
-                admin_menu = QW.QMenu( menu )
-                
-                for service in admin_repositories:
-                    
-                    submenu = QW.QMenu( admin_menu )
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
-                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
-                    
-                    if can_create_accounts:
-                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
-                        
-                    
-                    if can_overrule_accounts:
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
-                        
-                    
-                    if can_overrule_accounts and service.GetServiceType() == HC.FILE_REPOSITORY:
-                        ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
-                        
-                    
-                    if can_overrule_account_types:
-                        
-                        ClientGUIMenus.AppendSeparator( submenu )
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
-                    
-                
-                for service in server_admins:
-                    
-                    submenu = QW.QMenu( admin_menu )
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
-                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
-                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
-                    
-                    if can_create_accounts:
-                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
-                        
-                    
-                    if can_overrule_accounts:
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
-                        
-                    
-                    if can_overrule_account_types:
-                        
-                        ClientGUIMenus.AppendSeparator( submenu )
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
-                        
-                    
-                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
-                    
-                    if can_overrule_services:
-                        
-                        ClientGUIMenus.AppendSeparator( submenu )
-                        
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
-                        ClientGUIMenus.AppendSeparator( submenu )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'backup server', 'Command the server to temporarily pause and back up its database.', self._BackupServer, service_key )
-                        ClientGUIMenus.AppendSeparator( submenu )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'vacuum server', 'Command the server to temporarily pause and vacuum its database.', self._VacuumServer, service_key )
-                        ClientGUIMenus.AppendSeparator( submenu )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'server/db lock: on', 'Command the server to lock itself and disconnect its db.', self._LockServer, service_key, True )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'server/db lock: test', 'See if the server is currently busy.', self._TestServerBusy, service_key )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'server/db lock: off', 'Command the server to unlock itself and resume its db.', self._LockServer, service_key, False )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
-                    
-                
-                ClientGUIMenus.AppendMenu( menu, admin_menu, 'administrate services' )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'tag migration', 'Migrate tags from one place to another.', self._MigrateTags )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'manage tag display', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
-            ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
-            ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
-            
-            return ( menu, '&services' )
-            
-        
-        def help():
-            
-            menu = QW.QMenu( self )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
-            
-            links = QW.QMenu( menu )
-            
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalPixmaps.file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalPixmaps.eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8ch.net/hydrus/index.html' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalPixmaps.twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalPixmaps.tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalPixmaps.discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalPixmaps.patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
-            
-            ClientGUIMenus.AppendMenu( menu, links, 'links' )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'changelog.html' ) )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'add the public tag repository', 'This will add the public tag repository to your client.', self._AutoRepoSetup )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            currently_darkmode = self._new_options.GetString( 'current_colourset' ) == 'darkmode'
-            
-            ClientGUIMenus.AppendMenuCheckItem( menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self.FlipDarkmode )
-            
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
-            
-            current_value = check_manager.GetCurrentValue()
-            func = check_manager.Invert
-            
-            ClientGUIMenus.AppendMenuCheckItem( menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            debug = QW.QMenu( menu )
-            
-            debug_modes = QW.QMenu( debug )
-            
-            ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
-            ClientGUIMenus.AppendMenuItem( debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._controller.SimulateWakeFromSleepEvent )
-            
-            ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
-            
-            profile_modes = QW.QMenu( debug )
-            
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
-            
-            ClientGUIMenus.AppendMenu( debug, profile_modes, 'profile modes' )
-            
-            report_modes = QW.QMenu( debug )
-            
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the phash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subprocess report mode', 'Report whenever an external process is called.', HG.subprocess_report_mode, self._SwitchBoolean, 'subprocess_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
-            
-            ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
-            
-            gui_actions = QW.QMenu( debug )
-            
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
-            ClientGUIMenus.AppendMenuItem( gui_actions, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
-            
-            ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
-            
-            data_actions = QW.QMenu( debug )
-            
-            ClientGUIMenus.AppendMenuItem( data_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
-            ClientGUIMenus.AppendMenuItem( data_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
-            
-            ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
-            
-            network_actions = QW.QMenu( debug )
-            
-            ClientGUIMenus.AppendMenuItem( network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
-            
-            ClientGUIMenus.AppendMenu( debug, network_actions, 'network actions' )
-            
-            ClientGUIMenus.AppendMenuItem( debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
-            
-            ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', QW.QMessageBox.information, self, 'Information', CC.SHORTCUT_HELP )
-            ClientGUIMenus.AppendMenuItem( menu, 'about Qt', 'See information about the Qt framework.', QW.QMessageBox.aboutQt, self )
-            ClientGUIMenus.AppendMenuItem( menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )
-            
-            return ( menu, '&help' )
-            
-        
-        if name == 'file': result = file()
-        elif name == 'undo': result = undo()
-        elif name == 'pages': result = pages()
-        elif name == 'database': result = database()
-        elif name == 'network': result = network()
-        elif name == 'pending': result = pending()
-        elif name == 'services': result = services()
-        elif name == 'help': result = help()
-        
-        # hackery dackery doo
-        ( menu_or_none, label ) = result
-        
-        if menu_or_none is not None:
-            
-            menu = menu_or_none
-            
-            menu.menuAction().setProperty( 'hydrus_menubar_name', name )
-            
-            if HC.PLATFORM_MACOS:
-                
-                menu.setTitle( label ) # causes bugs in macOS if this is not here
-                
-            
-        
-        return ( menu_or_none, label )
         
     
     def _GenerateNewAccounts( self, service_key ):
@@ -2642,23 +1802,34 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         self._menubar.setNativeMenuBar( False )
         
-        self._menu_updater = ClientGUICommon.ThreadToGUIUpdater( self._menubar, self.RefreshMenu )
+        self._menu_updater = ClientGUIAsync.FastThreadToGUIUpdater( self._menubar, self.RefreshMenu )
         self._dirty_menus = set()
+        
+        self._menu_updater_file = MenuUpdaterFile( self )
+        self._menu_updater_pages = MenuUpdaterPages( self )
+        self._menu_updater_pending = MenuUpdaterPending( self )
         
         self.setMenuBar( self._menubar )
         
         for name in MENU_ORDER:
             
-            ( menu_or_none, label ) = self._GenerateMenuInfo( name )
-            
-            if menu_or_none is not None:
+            if name == 'file':
                 
-                menu = menu_or_none
+                self._menu_updater_file.update()
                 
-                menu.setTitle( label )
-                menu.setParent( self )
+            elif name == 'pages':
                 
-                self._menubar.addMenu( menu )
+                self._menu_updater_pages.update()
+                
+            elif name == 'pending':
+                
+                self._menu_updater_pending.update()
+                
+            else:
+                
+                ( menu_or_none, label ) = self.GenerateMenuInfo( name )
+                
+                self.ReplaceMenu( name, menu_or_none, label )
                 
             
         
@@ -3448,7 +2619,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             dlg.exec()
             
         
-        self._DirtyMenu( 'database' )
+        self.DirtyMenu( 'database' )
         
         self._menu_updater.Update()
         
@@ -4444,6 +3615,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._DestroyPages( deletee_pages )
         
     
+    def DirtyMenu( self, name ):
+        
+        if name not in self._dirty_menus:
+            
+            self.DisableMenu( name )
+            
+            self._dirty_menus.add( name )
+            
+        
+    
+    def DisableMenu( self, name ):
+        
+        menu_index = self._FindMenuBarIndex( name )
+        
+        if menu_index != -1:                
+            
+            self._menubar.actions()[ menu_index ].setEnabled( False )
+            
+        
+    
     def EventClose( self, event ):
         
         exit_allowed = self.Exit()
@@ -4514,7 +3705,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     continue
                     
                 
-                if window.window().isMinimized():
+                tlw = window.window()
+                
+                if not tlw or not QP.isValid( tlw ):
+                    
+                    self._animation_update_windows.discard( window )
+                    
+                    continue
+                    
+                
+                if tlw.isMinimized():
                     
                     continue
                     
@@ -4719,6 +3919,931 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return good_predicates
         
     
+    def GenerateMenuInfo( self, name ):
+        
+        def undo():
+            
+            have_closed_pages = len( self._closed_pages ) > 0
+            
+            undo_manager = self._controller.GetManager( 'undo' )
+            
+            ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
+            
+            have_undo_stuff = undo_string is not None or redo_string is not None
+            
+            if have_closed_pages or have_undo_stuff:
+                
+                menu = QW.QMenu( self )
+                
+                if undo_string is not None:
+                    ClientGUIMenus.AppendMenuItem( menu, undo_string, 'Undo last operation.', self._controller.pub, 'undo' )
+                    
+                
+                if redo_string is not None:
+                    ClientGUIMenus.AppendMenuItem( menu, redo_string, 'Redo last operation.', self._controller.pub, 'redo' )
+                    
+                
+                if have_closed_pages:
+                    
+                    ClientGUIMenus.AppendSeparator( menu )
+                    
+                    undo_pages = QW.QMenu( menu )
+                    
+                    ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self.DeleteAllClosedPages )
+                    
+                    undo_pages.addSeparator()
+                    
+                    args = []
+                    
+                    for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
+                        
+                        name = page.GetName()
+                        
+                        args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
+                        
+                    
+                    args.reverse() # so that recently closed are at the top
+                    
+                    for ( index, name ) in args:
+                        
+                        ClientGUIMenus.AppendMenuItem( undo_pages, name, 'Restore this page.', self._UnclosePage, index )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, undo_pages, 'closed pages' )
+                    
+                
+            else:
+                
+                menu = None
+                
+            
+            return ( menu, '&undo' )
+            
+        
+        def database():
+            
+            menu = QW.QMenu( self )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if HG.client_controller.client_files_manager.AllLocationsAreDefault():
+                
+                backup_path = self._new_options.GetNoneableString( 'backup_path' )
+                
+                if backup_path is None:
+                    
+                    ClientGUIMenus.AppendMenuItem( menu, 'set up a database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                    
+                else:
+                    
+                    ClientGUIMenus.AppendMenuItem( menu, 'update database backup', 'Back the database up to an external location.', self._BackupDatabase )
+                    ClientGUIMenus.AppendMenuItem( menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                    
+                
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+            ClientGUIMenus.AppendMenuItem( menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            submenu = QW.QMenu( menu )
+            
+            file_maintenance_menu = QW.QMenu( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'review scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
+            ClientGUIMenus.AppendSeparator( file_maintenance_menu )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_idle' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_active' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
+            
+            ClientGUIMenus.AppendMenu( submenu, file_maintenance_menu, 'file maintenance' )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
+            ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+            
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+            ClientGUIMenus.AppendMenuItem( submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'file viewing statistics' )
+            
+            return ( menu, '&database' )
+            
+        
+        def network():
+            
+            menu = QW.QMenu( self )
+            
+            submenu = QW.QMenu( menu )
+            
+            pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
+            
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options['pause_subs_sync'], self._PauseSync, 'subs' )
+            ClientGUIMenus.AppendSeparator( submenu )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file import queues', 'Pause all file import queues.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'gallery searches', 'Pause all gallery imports\' searching.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'watcher checkers', 'Pause all watchers\' checking.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            #
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
+            ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
+            ClientGUIMenus.AppendMenuItem( submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'data' )
+            
+            #
+            
+            submenu = QW.QMenu( menu )
+            
+            if not ClientParsing.HTML5LIB_IS_OK:
+                
+                message = 'The client was unable to import html5lib on boot. This is an important parsing library that performs better than the usual backup, lxml. Without it, some downloaders will not work well and you will miss tags and files.'
+                message += os.linesep * 2
+                message += 'You are likely running from source, so I recommend you close the client, run \'pip install html5lib\' (or whatever is appropriate for your environment) and try again. You can double-check what imported ok under help->about.'
+                
+                ClientGUIMenus.AppendMenuItem( submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', QW.QMessageBox.warning, self, 'Warning', message )
+                
+                ClientGUIMenus.AppendSeparator( submenu )
+                
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+            
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.pub, 'notify_restart_subs_sync_daemon' )
+                
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            clipboard_menu = QW.QMenu( submenu )
+            
+            ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'watcher urls', 'Automatically import watcher URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_watcher_urls' )
+            ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'other recognised urls', 'Automatically import recognised URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_other_recognised_urls' )
+            
+            ClientGUIMenus.AppendMenu( submenu, clipboard_menu, 'watch clipboard for urls' )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+            
+            debug_menu = QW.QMenu( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+            
+            ClientGUIMenus.AppendMenu( submenu, debug_menu, 'DEBUG' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
+            
+            #
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
+            ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
+            
+            #
+            
+            return ( menu, '&network' )
+            
+        
+        def services():
+            
+            menu = QW.QMenu( self )
+            
+            tag_services = self._controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+            file_services = self._controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) )
+            
+            submenu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuCheckItem( submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options['pause_repo_sync'], self._PauseSync, 'repo' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
+            
+            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE ) ]
+            
+            repositories = self._controller.services_manager.GetServices( HC.REPOSITORIES )
+            admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
+            
+            servers_admin = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
+            server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ) ]
+            
+            if len( admin_repositories ) > 0 or len( server_admins ) > 0:
+                
+                admin_menu = QW.QMenu( menu )
+                
+                for service in admin_repositories:
+                    
+                    submenu = QW.QMenu( admin_menu )
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
+                    
+                    if can_create_accounts:
+                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                        
+                    
+                    if can_overrule_accounts:
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
+                        
+                    
+                    if can_overrule_accounts and service.GetServiceType() == HC.FILE_REPOSITORY:
+                        ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
+                        
+                    
+                    if can_overrule_account_types:
+                        
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
+                    
+                
+                for service in server_admins:
+                    
+                    submenu = QW.QMenu( admin_menu )
+                    
+                    service_key = service.GetServiceKey()
+                    
+                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
+                    
+                    if can_create_accounts:
+                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                        
+                    
+                    if can_overrule_accounts:
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
+                        
+                    
+                    if can_overrule_account_types:
+                        
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                        
+                    
+                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+                    
+                    if can_overrule_services:
+                        
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        
+                        ClientGUIMenus.AppendMenuItem( submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'backup server', 'Command the server to temporarily pause and back up its database.', self._BackupServer, service_key )
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'vacuum server', 'Command the server to temporarily pause and vacuum its database.', self._VacuumServer, service_key )
+                        ClientGUIMenus.AppendSeparator( submenu )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'server/db lock: on', 'Command the server to lock itself and disconnect its db.', self._LockServer, service_key, True )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'server/db lock: test', 'See if the server is currently busy.', self._TestServerBusy, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'server/db lock: off', 'Command the server to unlock itself and resume its db.', self._LockServer, service_key, False )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, admin_menu, 'administrate services' )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'tag migration', 'Migrate tags from one place to another.', self._MigrateTags )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'manage tag display', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
+            ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
+            
+            return ( menu, '&services' )
+            
+        
+        def help():
+            
+            menu = QW.QMenu( self )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
+            
+            links = QW.QMenu( menu )
+            
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalPixmaps.file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalPixmaps.eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8ch.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalPixmaps.twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalPixmaps.tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalPixmaps.discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalPixmaps.patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
+            
+            ClientGUIMenus.AppendMenu( menu, links, 'links' )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'changelog.html' ) )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'add the public tag repository', 'This will add the public tag repository to your client.', self._AutoRepoSetup )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            currently_darkmode = self._new_options.GetString( 'current_colourset' ) == 'darkmode'
+            
+            ClientGUIMenus.AppendMenuCheckItem( menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self.FlipDarkmode )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            debug = QW.QMenu( menu )
+            
+            debug_modes = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
+            ClientGUIMenus.AppendMenuItem( debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._controller.SimulateWakeFromSleepEvent )
+            
+            ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
+            
+            profile_modes = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
+            
+            ClientGUIMenus.AppendMenu( debug, profile_modes, 'profile modes' )
+            
+            report_modes = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the phash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subprocess report mode', 'Report whenever an external process is called.', HG.subprocess_report_mode, self._SwitchBoolean, 'subprocess_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
+            
+            ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
+            
+            gui_actions = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
+            ClientGUIMenus.AppendMenuItem( gui_actions, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
+            
+            ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
+            
+            data_actions = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuItem( data_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'show garbage snapshot changes', 'Show object count differences from the last snapshot.', self._DebugShowGarbageDifferences )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
+            
+            ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
+            
+            network_actions = QW.QMenu( debug )
+            
+            ClientGUIMenus.AppendMenuItem( network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
+            
+            ClientGUIMenus.AppendMenu( debug, network_actions, 'network actions' )
+            
+            ClientGUIMenus.AppendMenuItem( debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
+            
+            ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', QW.QMessageBox.information, self, 'Information', CC.SHORTCUT_HELP )
+            ClientGUIMenus.AppendMenuItem( menu, 'about Qt', 'See information about the Qt framework.', QW.QMessageBox.aboutQt, self )
+            ClientGUIMenus.AppendMenuItem( menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )
+            
+            return ( menu, '&help' )
+            
+        
+        if name == 'undo': result = undo()
+        elif name == 'database': result = database()
+        elif name == 'network': result = network()
+        elif name == 'services': result = services()
+        elif name == 'help': result = help()
+        
+        # hackery dackery doo
+        ( menu_or_none, label ) = result
+        
+        return ( menu_or_none, label )
+        
+    
+    def GenerateMenuInfoFile( self, import_folder_names, export_folder_names ):
+        
+        menu = QW.QMenu( self )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'import files', 'Add new files to the database.', self._ImportFiles )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        #
+        
+        i_and_e_submenu = QW.QMenu( menu )
+        
+        submenu = QW.QMenu( i_and_e_submenu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'import folders', 'Pause the client\'s import folders.', HC.options['pause_import_folders_sync'], self._PauseSync, 'import_folders' )
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'export folders', 'Pause the client\'s export folders.', HC.options['pause_export_folders_sync'], self._PauseSync, 'export_folders' )
+        
+        ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'pause' )
+        
+        ClientGUIMenus.AppendSeparator( i_and_e_submenu )
+        
+        if len( import_folder_names ) > 0:
+            
+            submenu = QW.QMenu( i_and_e_submenu )
+            
+            if len( import_folder_names ) > 1:
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'check all', 'Check all import folders.', self._CheckImportFolder )
+                
+                ClientGUIMenus.AppendSeparator( submenu )
+                
+            
+            for name in import_folder_names:
+                
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Check this import folder now.', self._CheckImportFolder, name )
+                
+            
+            ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check import folder now' )
+            
+        
+        if len( export_folder_names ) > 0:
+            
+            submenu = QW.QMenu( i_and_e_submenu )
+            
+            if len( export_folder_names ) > 1:
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'run all', 'Run all export folders.', self._RunExportFolder )
+                
+                ClientGUIMenus.AppendSeparator( submenu )
+                
+            
+            for name in export_folder_names:
+                ClientGUIMenus.AppendMenuItem( submenu, name, 'Check this export folder now.', self._RunExportFolder, name )
+                
+            
+            ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check export folder now' )
+            
+        
+        ClientGUIMenus.AppendSeparator( i_and_e_submenu )
+        
+        ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
+        ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
+        
+        ClientGUIMenus.AppendMenu( menu, i_and_e_submenu, 'import and export folders' )
+        
+        #
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        open = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( open, 'installation directory', 'Open the installation directory for this client.', self._OpenInstallFolder )
+        ClientGUIMenus.AppendMenuItem( open, 'database directory', 'Open the database directory for this instance of the client.', self._OpenDBFolder )
+        ClientGUIMenus.AppendMenuItem( open, 'quick export directory', 'Open the export directory so you can easily access the files you have exported.', self._OpenExportFolder )
+        
+        ClientGUIMenus.AppendMenu( menu, open, 'open' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self._ManageOptions )
+        ClientGUIMenus.AppendMenuItem( menu, 'shortcuts', 'Edit the shortcuts your client responds to.', self._ManageShortcuts )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        we_borked_linux_pyinstaller = HC.PLATFORM_LINUX and not HC.RUNNING_FROM_SOURCE
+        
+        if not we_borked_linux_pyinstaller:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.Exit, restart=True )
+            
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.Exit, force_shutdown_maintenance=True )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.Exit )
+        
+        return ( menu, '&file' )
+        
+    
+    def GenerateMenuInfoPages( self, gui_session_names_to_backup_timestamps ):
+        
+        menu = QW.QMenu( self )
+        
+        ( total_active_page_count, total_closed_page_count, total_active_weight, total_closed_weight ) = self.GetTotalPageCounts()
+        
+        self._last_total_page_weight = total_active_weight + total_closed_weight
+        
+        ClientGUIMenus.AppendMenuLabel( menu, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ), 'You have this many pages open.' )
+        ClientGUIMenus.AppendMenuLabel( menu, 'total session weight: {}'.format( HydrusData.ToHumanInt( self._last_total_page_weight ) ), 'Your session is this heavy.' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
+        
+        splitter_menu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
+        
+        ClientGUIMenus.AppendSeparator( splitter_menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( splitter_menu, 'save current page\'s sash positions on client exit', 'Set whether sash position should be saved over on client exit.', self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ), self._new_options.FlipBoolean, 'saving_sash_positions_on_exit' )
+        
+        ClientGUIMenus.AppendSeparator( splitter_menu )
+        
+        ClientGUIMenus.AppendMenuItem( splitter_menu, 'save current page\'s sash positions now', 'Save the current page\'s sash positions.', self._SaveSplitterPositions )
+        
+        ClientGUIMenus.AppendSeparator( splitter_menu )
+        
+        ClientGUIMenus.AppendMenuItem( splitter_menu, 'restore all pages\' sash positions to saved value', 'Restore the current sash positions for all pages to the values that are saved.', self._RestoreSplitterPositions )
+        
+        ClientGUIMenus.AppendMenu( menu, splitter_menu, 'management and preview panels' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        sessions = QW.QMenu( menu )
+        
+        gui_session_names = list( gui_session_names_to_backup_timestamps.keys() )
+        
+        gui_session_names.sort()
+        
+        if len( gui_session_names ) > 0:
+            
+            load = QW.QMenu( sessions )
+            
+            for name in gui_session_names:
+                
+                ClientGUIMenus.AppendMenuItem( load, name, 'Close all other pages and load this session.', self._notebook.LoadGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenu( sessions, load, 'clear and load' )
+            
+            append = QW.QMenu( sessions )
+            
+            for name in gui_session_names:
+                
+                ClientGUIMenus.AppendMenuItem( append, name, 'Append this session to whatever pages are already open.', self._notebook.AppendGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenu( sessions, append, 'append' )
+            
+            if len( gui_session_names_to_backup_timestamps ) > 0:
+                
+                append_backup = QW.QMenu( sessions )
+                
+                rows = list( gui_session_names_to_backup_timestamps.items() )
+                
+                rows.sort()
+                
+                for ( name, timestamps ) in rows:
+                    
+                    submenu = QW.QMenu( append_backup )
+                    
+                    for timestamp in timestamps:
+                        ClientGUIMenus.AppendMenuItem( submenu, HydrusData.ConvertTimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( append_backup, submenu, name )
+                    
+                
+                ClientGUIMenus.AppendMenu( sessions, append_backup, 'append session backup' )
+                
+            
+        
+        save = QW.QMenu( sessions )
+        
+        for name in gui_session_names:
+            
+            if name in ClientGUIPages.RESERVED_SESSION_NAMES:
+                
+                continue
+                
+            
+            ClientGUIMenus.AppendMenuItem( save, name, 'Save the existing open pages as a session.', self._notebook.SaveGUISession, name )
+            
+        
+        ClientGUIMenus.AppendMenuItem( save, 'as new session', 'Save the existing open pages as a session.', self._notebook.SaveGUISession )
+        
+        ClientGUIMenus.AppendMenu( sessions, save, 'save' )
+        
+        if len( set( gui_session_names ).difference( ClientGUIPages.RESERVED_SESSION_NAMES ) ) > 0:
+            
+            delete = QW.QMenu( sessions )
+            
+            for name in gui_session_names:
+                
+                if name in ClientGUIPages.RESERVED_SESSION_NAMES:
+                    
+                    continue
+                    
+                
+                ClientGUIMenus.AppendMenuItem( delete, name, 'Delete this session.', self._DeleteGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenu( sessions, delete, 'delete' )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, sessions, 'sessions' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
+        
+        #
+        
+        search_menu = QW.QMenu( menu )
+        
+        services = self._controller.services_manager.GetServices()
+        
+        petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
+        
+        repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
+        
+        file_repositories = [ service for service in repositories if service.GetServiceType() == HC.FILE_REPOSITORY ]
+        
+        petition_resolvable_repositories = [ repository for repository in repositories if True in ( repository.HasPermission( content_type, action ) for ( content_type, action ) in petition_permissions ) ]
+        
+        ClientGUIMenus.AppendMenuItem( search_menu, 'my files', 'Open a new search tab for your files.', self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook=True )
+        ClientGUIMenus.AppendMenuItem( search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY, on_deepest_notebook=True )
+        
+        for service in file_repositories:
+            
+            ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook=True )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
+        
+        #
+        
+        if len( petition_resolvable_repositories ) > 0:
+            
+            petition_menu = QW.QMenu( menu )
+            
+            for service in petition_resolvable_repositories:
+                
+                ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook=True )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
+            
+        
+        #
+        
+        download_menu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_gallery_downloader_page' ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page' ) )
+        
+        ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
+        
+        #
+        
+        has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
+        
+        if has_ipfs:
+            
+            download_popup_menu = QW.QMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
+            
+            ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
+            
+        
+        #
+        
+        special_menu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page_of_pages' ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_duplicate_filter_page' ) )
+        
+        ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
+        
+        #
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        special_command_menu = QW.QMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( special_command_menu, 'clear all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', HG.client_controller.pub, 'clear_multiwatcher_highlights' )
+        
+        ClientGUIMenus.AppendMenu( menu, special_command_menu, 'special commands' )
+        
+        #
+        
+        return ( menu, '&pages' )
+        
+    
+    def GenerateMenuInfoPending( self, nums_pending ):
+        
+        total_num_pending = 0
+        
+        menu = None
+        
+        can_do_a_menu = not HG.currently_uploading_pending
+        
+        for ( service_key, info ) in nums_pending.items():
+            
+            service = self._controller.services_manager.GetService( service_key )
+            
+            service_type = service.GetServiceType()
+            name = service.GetName()
+            
+            if service_type == HC.TAG_REPOSITORY:
+                
+                pending_phrase = 'tag data to upload'
+                petitioned_phrase = 'tag data to petition'
+                
+            elif service_type == HC.FILE_REPOSITORY:
+                
+                pending_phrase = 'files to upload'
+                petitioned_phrase = 'files to petition'
+                
+            elif service_type == HC.IPFS:
+                
+                pending_phrase = 'files to pin'
+                petitioned_phrase = 'files to unpin'
+                
+            
+            if service_type == HC.TAG_REPOSITORY:
+                
+                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
+                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
+                
+            elif service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
+                
+                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_FILES ]
+                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
+                
+            
+            if can_do_a_menu and num_pending + num_petitioned > 0:
+                
+                if menu is None:
+                    
+                    menu = QW.QMenu( self )
+                    
+                
+                submenu = QW.QMenu( menu )
+                
+                ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload ' + name + '\'s pending content.', self._UploadPending, service_key )
+                ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear ' + name + '\'s pending content.', self._DeletePending, service_key )
+                
+                submessages = []
+                
+                if num_pending > 0:
+                    
+                    submessages.append( HydrusData.ToHumanInt( num_pending ) + ' ' + pending_phrase )
+                    
+                
+                if num_petitioned > 0:
+                    
+                    submessages.append( HydrusData.ToHumanInt( num_petitioned ) + ' ' + petitioned_phrase )
+                    
+                
+                message = name + ': ' + ', '.join( submessages )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, message )
+                
+            
+            total_num_pending += num_pending + num_petitioned
+            
+        
+        return ( menu, '&pending ({})'.format( HydrusData.ToHumanInt( total_num_pending ) ) )
+        
+    
     def GetCurrentPage( self ):
         
         return self._notebook.GetCurrentMediaPage()
@@ -4814,6 +4939,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def ImportURL( self, url, destination_page_name ):
+        
+        try:
+            
+            self._ImportURL( url, destination_page_name = destination_page_name )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+        
+    
     def IsCurrentPage( self, page_key ):
         
         result = self._notebook.GetCurrentMediaPage()
@@ -4873,85 +5010,77 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._controller.ClosePageKeys( page.GetPageKeys() )
         
-        self._DirtyMenu( 'pages' )
-        
-        self._menu_updater.Update()
+        self._menu_updater_pages.update()
         
     
     def NotifyDeletedPage( self, page ):
         
         self._DestroyPages( ( page, ) )
         
-        self._DirtyMenu( 'pages' )
+        self._menu_updater_pages.update()
         
         self._menu_updater.Update()
         
     
     def NotifyNewExportFolders( self ):
         
-        self._DirtyMenu( 'file' )
+        self._menu_updater_file.update()
         
         self._menu_updater.Update()
         
     
     def NotifyNewImportFolders( self ):
         
-        self._DirtyMenu( 'file' )
-        
-        self._menu_updater.Update()
+        self._menu_updater_file.update()
         
     
     def NotifyNewOptions( self ):
         
-        self._DirtyMenu( 'database' )
-        self._DirtyMenu( 'services' )
-        self._DirtyMenu( 'help' )
+        self.DirtyMenu( 'database' )
+        self.DirtyMenu( 'services' )
+        self.DirtyMenu( 'help' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewPages( self ):
         
-        self._DirtyMenu( 'pages' )
-        
-        self._menu_updater.Update()
+        self._menu_updater_pages.update()
         
     
     def NotifyNewPending( self ):
         
-        self._DirtyMenu( 'pending' )
-        
-        self._menu_updater.Update()
+        self._menu_updater_pending.update()
         
     
     def NotifyNewPermissions( self ):
         
-        self._DirtyMenu( 'pages' )
-        self._DirtyMenu( 'services' )
-        self._DirtyMenu( 'network' )
+        self._menu_updater_pages.update()
+        
+        self.DirtyMenu( 'services' )
+        self.DirtyMenu( 'network' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewServices( self ):
         
-        self._DirtyMenu( 'pages' )
-        self._DirtyMenu( 'services' )
-        self._DirtyMenu( 'network' )
+        self._menu_updater_pages.update()
+        
+        self.DirtyMenu( 'services' )
+        self.DirtyMenu( 'network' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewSessions( self ):
         
-        self._DirtyMenu( 'pages' )
-        
-        self._menu_updater.Update()
+        self._menu_updater_pages.update()
         
     
     def NotifyNewUndo( self ):
         
-        self._DirtyMenu( 'undo' )
+        self.DirtyMenu( 'undo' )
         
         self._menu_updater.Update()
         
@@ -5072,7 +5201,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._SwitchBoolean( 'force_idle_mode' )
                 
-                self._DirtyMenu( 'help' )
+                self.DirtyMenu( 'help' )
                 
                 self._menu_updater.Update()
                 
@@ -5110,91 +5239,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             name = self._dirty_menus.pop()
             
-            old_menu_index = self._FindMenuBarIndex( name )
-            
-            ( menu_or_none, label ) = self._GenerateMenuInfo( name )
-            
-            if old_menu_index == -1:
+            if name not in ( 'file', 'pages', 'pending' ):
                 
-                if menu_or_none is not None:
-                    
-                    menu = menu_or_none
-                    
-                    insert_index = 0
-                    
-                    # for every menu that may display, if it is displayed now, bump up insertion index up one
-                    for possible_name in MENU_ORDER:
-                        
-                        if possible_name == name:
-                            
-                            break
-                            
-                        
-                        possible_menu_index = self._FindMenuBarIndex( possible_name )
-                        
-                        if possible_menu_index != -1:
-                            
-                            insert_index += 1
-                            
-                        
-                    menu_action = menu.menuAction()
-                    menu_action.setText( label )
-                    
-                    if len( self._menubar.actions() ) > insert_index:
-                    
-                        action_before = self._menubar.actions()[ insert_index ]
-                        
-                    else:
-                        
-                        action_before = None
-                        
-                    
-                    menu.setParent( self )
-                    
-                    self._menubar.insertMenu( action_before, menu )
-                    
+                ( menu_or_none, label ) = self.GenerateMenuInfo( name )
                 
-            else:
-                
-                if name == 'pending' and HG.currently_uploading_pending:
-                    
-                    self._menubar.actions()[ old_menu_index ].setText( label )
-                    
-                    if menu_or_none is not None:
-                        
-                        ClientGUIMenus.DestroyMenu( self, menu_or_none )
-                        
-                    
-                else:
-                    
-                    old_action = self._menubar.actions()[ old_menu_index ]
-                    
-                    old_menu = old_action.menu()
-                    
-                    if menu_or_none is not None:
-                        
-                        menu = menu_or_none
-                        
-                        menu.setTitle( label )
-                        
-                        menu.setParent( self )
-                        
-                        self._menubar.insertMenu( old_action, menu )
-                        
-                        self._menubar.removeAction( old_action )
-                        
-                    else:
-                        
-                        self._menubar.removeAction( old_action )
-                        
-                    
-                    ClientGUIMenus.DestroyMenu( self, old_menu )
+                self.ReplaceMenu( name, menu_or_none, label )
                 
             
         
         if len( self._dirty_menus ) > 0:
             
-            self._controller.CallLaterQtSafe(self, 0.5, self.RefreshMenu)
+            self._controller.CallLaterQtSafe( self, 0.5, self.RefreshMenu )
             
         
     
@@ -5356,7 +5411,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 continue
                 
             
-            if window.window().isMinimized():
+            tlw = window.window()
+            
+            if not tlw or not QP.isValid( tlw ):
+                
+                self._ui_update_windows.discard( window )
+                
+                continue
+                
+            
+            if tlw.isMinimized():
                 
                 continue
                 
@@ -5387,6 +5451,91 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._ui_update_repeating_job.Cancel()
             
             self._ui_update_repeating_job = None
+            
+        
+    
+    def ReplaceMenu( self, name, menu_or_none, label ):
+        
+        if menu_or_none is not None:
+            
+            menu_or_none.menuAction().setProperty( 'hydrus_menubar_name', name )
+            
+            menu_or_none.setTitle( label )
+            
+        
+        old_menu_index = self._FindMenuBarIndex( name )
+        
+        if old_menu_index == -1:
+            
+            if menu_or_none is not None:
+                
+                menu = menu_or_none
+                
+                insert_index = 0
+                
+                # for every menu that may display, if it is displayed now, bump up insertion index up one
+                for possible_name in MENU_ORDER:
+                    
+                    if possible_name == name:
+                        
+                        break
+                        
+                    
+                    possible_menu_index = self._FindMenuBarIndex( possible_name )
+                    
+                    if possible_menu_index != -1:
+                        
+                        insert_index += 1
+                        
+                    
+                
+                if len( self._menubar.actions() ) > insert_index:
+                
+                    action_before = self._menubar.actions()[ insert_index ]
+                    
+                else:
+                    
+                    action_before = None
+                    
+                
+                menu.setParent( self )
+                
+                self._menubar.insertMenu( action_before, menu )
+                
+            
+        else:
+            
+            if name == 'pending' and HG.currently_uploading_pending:
+                
+                self._menubar.actions()[ old_menu_index ].setText( label )
+                
+                if menu_or_none is not None:
+                    
+                    ClientGUIMenus.DestroyMenu( self, menu_or_none )
+                    
+                
+            else:
+                
+                old_action = self._menubar.actions()[ old_menu_index ]
+                
+                old_menu = old_action.menu()
+                
+                if menu_or_none is not None:
+                    
+                    menu = menu_or_none
+                    
+                    menu.setParent( self )
+                    
+                    self._menubar.insertMenu( old_action, menu )
+                    
+                    self._menubar.removeAction( old_action )
+                    
+                else:
+                    
+                    self._menubar.removeAction( old_action )
+                    
+                
+                ClientGUIMenus.DestroyMenu( self, old_menu )
             
         
     
@@ -5526,7 +5675,7 @@ class FrameSplashPanel( QW.QWidget ):
     
     def EventDrag( self, event ):
         
-        if event.type() == QC.QEvent.MouseMove and (event.buttons() & QC.Qt.LeftButton) and self._drag_last_pos is not None:
+        if event.type() == QC.QEvent.MouseMove and ( event.buttons() & QC.Qt.LeftButton ) and self._drag_last_pos is not None:
             
             mouse_pos = QG.QCursor.pos()
             
@@ -5563,14 +5712,9 @@ class FrameSplashPanel( QW.QWidget ):
     
     def SetDirty( self ):
         
-        if not self or not QP.isValid( self ):
-            
-            return
-            
-        
         self.update()
         
-        
+    
 # We have this to be an off-Qt-thread-happy container for this info, as the framesplash has to deal with messages in the fuzzy time of shutdown
 # all of a sudden, pubsubs are processed in non Qt-thread time, so this handles that safely and lets the gui know if the Qt controller is still running
 class FrameSplashStatus( object ):
@@ -5578,9 +5722,10 @@ class FrameSplashStatus( object ):
     def __init__( self, controller, ui ):
         
         self._controller = controller
-        self._ui = ui
         
         self._lock = threading.Lock()
+        
+        self._updater = ClientGUIAsync.FastThreadToGUIUpdater( ui, ui.SetDirty )
         
         self._title_text = ''
         self._status_text = ''
@@ -5593,17 +5738,7 @@ class FrameSplashStatus( object ):
     
     def _NotifyUI( self ):
         
-        def qt_code():
-            
-            if not self._ui or not QP.isValid( self._ui ):
-                
-                return
-                
-            
-            self._ui.SetDirty()
-            
-        
-        QP.CallAfter( qt_code )
+        self._updater.Update()
         
     
     def GetTexts( self ):

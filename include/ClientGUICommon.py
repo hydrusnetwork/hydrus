@@ -397,6 +397,9 @@ class BetterStaticText( QP.EllipsizedLabel ):
 
         QP.EllipsizedLabel.__init__( self, parent, ellipsize_end = ellipsize_end )
         
+        # otherwise by default html in 'this is a <hr> parsing step' stuff renders fully lmaoooo
+        self.setTextFormat( QC.Qt.PlainText )
+        
         self._tooltip_label = tooltip_label
         
         if 'ellipsize_end' in kwargs and kwargs[ 'ellipsize_end' ]:
@@ -669,6 +672,8 @@ class CheckboxManagerOptions( CheckboxManager ):
     
 class ChoiceSort( QW.QWidget ):
     
+    sortChanged = QC.Signal( ClientMedia.MediaSort )
+    
     def __init__( self, parent, management_controller = None ):
         
         QW.QWidget.__init__( self, parent )
@@ -743,6 +748,8 @@ class ChoiceSort( QW.QWidget ):
     def _BroadcastSort( self ):
         
         media_sort = self._GetCurrentSort()
+        
+        self.sortChanged.emit( media_sort )
         
         if self._management_controller is not None:
             
@@ -2590,75 +2597,5 @@ class TextAndGauge( QW.QWidget ):
         
         self._gauge.SetRange( range )
         self._gauge.SetValue( value )
-        
-    
-class ThreadToGUIUpdater( object ):
-    
-    def __init__( self, win, func ):
-        
-        self._win = win
-        self._func = func
-        
-        self._lock = threading.Lock()
-        self._dirty_count = 0
-        
-        self._args = None
-        self._kwargs = None
-        
-        self._doing_it = False
-        
-    
-    def QtDoIt( self ):
-        
-        with self._lock:
-            
-            if not self._win or not QP.isValid( self._win ):
-                
-                self._win = None
-                
-                return
-                
-            
-            try:
-                
-                self._func( *self._args, **self._kwargs )
-                
-            except HydrusExceptions.ShutdownException:
-                
-                pass
-                
-            
-            self._dirty_count = 0
-            self._doing_it = False
-            
-        
-    
-    # the point here is that we can spam this a hundred times a second, updating the args and kwargs, and Qt will catch up to it when it can
-    # if Qt feels like running fast, it'll update at 60fps
-    # if not, we won't get bungled up with 10,000+ pubsub events in the event queue
-    def Update( self, *args, **kwargs ):
-        
-        with self._lock:
-            
-            self._args = args
-            self._kwargs = kwargs
-            
-            if not self._doing_it and not HG.view_shutdown:
-                
-                QP.CallAfter( self.QtDoIt )
-                
-                self._doing_it = True
-                
-            
-            self._dirty_count += 1
-            
-            take_a_break = self._dirty_count % 1000 == 0
-            
-        
-        # just in case we are choking the Qt thread, let's give it a break every now and then
-        if take_a_break:
-            
-            time.sleep( 0.25 )
-            
         
     

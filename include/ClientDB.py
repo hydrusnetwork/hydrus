@@ -13163,6 +13163,32 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 374:
+            
+            try:
+                
+                login_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                #
+                
+                login_manager.OverwriteDefaultLoginScripts( [ 'danbooru login' ] )
+                
+                #
+                
+                self._SetJSONDump( login_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some login scripts failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

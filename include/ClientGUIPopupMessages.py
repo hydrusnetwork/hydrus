@@ -53,21 +53,31 @@ class PopupMessage( PopupWindow ):
         
         PopupWindow.__init__( self, parent, manager )
         
+        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Fixed )
+        
         self._job_key = job_key
         
         vbox = QP.VBoxLayout()
         
         self._title = ClientGUICommon.BetterStaticText( self )
         self._title.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
-        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
+        
+        font = self._title.font()
+        font.setBold( True )
+        self._title.setFont( font )
         
         popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
         
-        wrap_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._title, popup_message_character_width )
+        popup_char_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._title, popup_message_character_width )
         
         if HG.client_controller.new_options.GetBoolean( 'popup_message_force_min_width' ):
             
-            QP.SetMinClientSize( self, ( wrap_width, -1 ) )
+            #QP.SetMinClientSize( self, ( wrap_width, -1 ) )
+            self.setFixedWidth( popup_char_width )
+            
+        else:
+            
+            self.setMaximumWidth( popup_char_width )
             
         
         self._title.setWordWrap( True )
@@ -84,6 +94,7 @@ class PopupMessage( PopupWindow ):
         self._gauge_1 = ClientGUICommon.Gauge( self )
         self._gauge_1_ev = QP.WidgetEventFilter( self._gauge_1 )
         self._gauge_1_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._gauge_1.setMinimumWidth( int( popup_char_width * 0.9 ) )
         self._gauge_1.hide()
         
         self._text_2 = ClientGUICommon.BetterStaticText( self )
@@ -95,6 +106,7 @@ class PopupMessage( PopupWindow ):
         self._gauge_2 = ClientGUICommon.Gauge( self )
         self._gauge_2_ev = QP.WidgetEventFilter( self._gauge_2 )
         self._gauge_2_ev.EVT_RIGHT_DOWN( self.EventDismiss )
+        self._gauge_2.setMinimumWidth( int( popup_char_width * 0.9 ) )
         self._gauge_2.hide()
         
         self._text_yes_no = ClientGUICommon.BetterStaticText( self )
@@ -157,12 +169,12 @@ class PopupMessage( PopupWindow ):
         QP.AddToLayout( yes_no_hbox, self._yes, CC.FLAGS_VCENTER )
         QP.AddToLayout( yes_no_hbox, self._no, CC.FLAGS_VCENTER )
         
-        QP.AddToLayout( vbox, self._title, alignment = QC.Qt.AlignHCenter )
-        QP.AddToLayout( vbox, self._text_1 )
-        QP.AddToLayout( vbox, self._gauge_1 )
-        QP.AddToLayout( vbox, self._text_2 )
-        QP.AddToLayout( vbox, self._gauge_2 )
-        QP.AddToLayout( vbox, self._text_yes_no )
+        QP.AddToLayout( vbox, self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._text_yes_no, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, yes_no_hbox )
         QP.AddToLayout( vbox, self._network_job_ctrl )
         QP.AddToLayout( vbox, self._copy_to_clipboard_button )
@@ -538,6 +550,7 @@ class PopupMessageManager( QW.QWidget ):
         self._message_panel = QW.QWidget( self )
         
         self._message_vbox = QP.VBoxLayout( margin = 0 )
+        
         vbox.setSizeConstraint( QW.QLayout.SetFixedSize )
         
         self._message_panel.setLayout( self._message_vbox )
@@ -570,7 +583,7 @@ class PopupMessageManager( QW.QWidget ):
         
         job_key.SetVariable( 'popup_text_1', 'initialising popup message manager\u2026' )
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe(self, 0.25, 0.5, self.REPEATINGUpdate)
+        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
         
         HG.client_controller.CallLaterQtSafe(self, 0.5, self.AddMessage, job_key)
         
@@ -1082,7 +1095,8 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         self._message_pubbed = False
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe(self, 0.25, 0.5, self.REPEATINGUpdate)
+        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
+        
 
     def CanCancel( self ):
 
