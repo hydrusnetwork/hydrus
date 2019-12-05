@@ -29,6 +29,7 @@ from . import ClientMedia
 from . import ClientRatings
 from . import ClientSerialisable
 from . import ClientServices
+from . import ClientGUIStyle
 from . import ClientGUITime
 import collections
 from . import HydrusConstants as HC
@@ -1176,7 +1177,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if self._allow_non_local_connections.isChecked():
                     
-                    self._upnp.setValue( None )
+                    self._upnp.SetValue( None )
                     
                     self._upnp.setEnabled( False )
                     
@@ -1524,6 +1525,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'duplicates', 'duplicates', self._DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'style', 'style', self._StylePanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag presentation', 'tag presentation', self._TagPresentationPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
@@ -3815,6 +3817,112 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'autocomplete_results_fetch_automatically', self._autocomplete_results_fetch_automatically.isChecked() )
             self._new_options.SetNoneableInteger( 'autocomplete_exact_match_threshold', self._autocomplete_exact_match_threshold.GetValue() )
+            
+        
+    
+    class _StylePanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            self._qt_style_name = ClientGUICommon.BetterChoice( self )
+            self._qt_stylesheet_name = ClientGUICommon.BetterChoice( self )
+            
+            self._qt_style_name.addItem( 'use default ("{}")'.format( ClientGUIStyle.ORIGINAL_STYLE ), None )
+            
+            try:
+                
+                for name in ClientGUIStyle.GetAvailableStyles():
+                    
+                    self._qt_style_name.addItem( name, name )
+                    
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                HydrusData.ShowException( e )
+                
+            
+            self._qt_stylesheet_name.addItem( 'use default', None )
+            
+            try:
+                
+                for name in ClientGUIStyle.GetAvailableStylesheets():
+                    
+                    self._qt_stylesheet_name.addItem( name, name )
+                    
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                HydrusData.ShowException( e )
+                
+            
+            #
+            
+            self._qt_style_name.SetValue( self._new_options.GetNoneableString( 'qt_style_name' ) )
+            self._qt_stylesheet_name.SetValue( self._new_options.GetNoneableString( 'qt_stylesheet_name' ) )
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            #
+            
+            text = 'This is experimental! Some custom colours in hydrus do not play well with QSS theming yet! All feedback on errors and any preferred systems is appreciated.'
+            text += os.linesep * 2
+            text += 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
+            
+            st = ClientGUICommon.BetterStaticText( self, label = text )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Qt style:', self._qt_style_name ) )
+            rows.append( ( 'Qt stylesheet:', self._qt_stylesheet_name ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.setLayout( vbox )
+            
+            self._qt_style_name.currentIndexChanged.connect( self.StyleChanged )
+            self._qt_stylesheet_name.currentIndexChanged.connect( self.StyleChanged )
+            
+        
+        def StyleChanged( self ):
+            
+            qt_style_name = self._qt_style_name.GetValue()
+            qt_stylesheet_name = self._qt_stylesheet_name.GetValue()
+            
+            if qt_style_name is None:
+                
+                ClientGUIStyle.SetStyle( ClientGUIStyle.ORIGINAL_STYLE )
+                
+            else:
+                
+                ClientGUIStyle.SetStyle( qt_style_name )
+                
+            
+            if qt_stylesheet_name is None:
+                
+                ClientGUIStyle.ClearStylesheet()
+                
+            else:
+                
+                ClientGUIStyle.SetStylesheet( qt_stylesheet_name )
+                
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetNoneableString( 'qt_style_name', self._qt_style_name.GetValue() )
+            self._new_options.SetNoneableString( 'qt_stylesheet_name', self._qt_stylesheet_name.GetValue() )
             
         
     

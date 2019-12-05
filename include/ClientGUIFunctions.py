@@ -355,9 +355,9 @@ def IsQtAncestor( child, ancestor, through_tlws = False ):
     
 def NotebookScreenToHitTest( notebook, screen_position ):
     
-    position = notebook.mapFromGlobal( screen_position )    
+    tab_pos = notebook.tabBar().mapFromGlobal( screen_position )    
     
-    return notebook.tabBar().tabAt( position )
+    return notebook.tabBar().tabAt( tab_pos )
     
 def SetBitmapButtonBitmap( button, bitmap ):
     

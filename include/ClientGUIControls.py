@@ -649,7 +649,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._transformation_type = ClientGUICommon.BetterChoice( self )
             
-            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
+            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
                 
                 self._transformation_type.addItem( ClientParsing.transformation_type_str_lookup[ t_type], t_type )
                 
@@ -660,7 +660,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_regex_pattern = QW.QLineEdit( self )
             self._data_regex_repl = QW.QLineEdit( self )
             self._data_date_link = ClientGUICommon.BetterHyperLink( self, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
-            self._data_timezone = ClientGUICommon.BetterChoice( self )
+            self._data_timezone_decode = ClientGUICommon.BetterChoice( self )
+            self._data_timezone_encode = ClientGUICommon.BetterChoice( self )
             self._data_timezone_offset = QP.MakeQSpinBox( self, min=-86400, max=86400 )
             
             for e in ( 'hex', 'base64' ):
@@ -668,9 +669,12 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._data_encoding.addItem( e, e )
                 
             
-            self._data_timezone.addItem( 'GMT', HC.TIMEZONE_GMT )
-            self._data_timezone.addItem( 'Local', HC.TIMEZONE_LOCAL )
-            self._data_timezone.addItem( 'Offset', HC.TIMEZONE_OFFSET )
+            self._data_timezone_decode.addItem( 'UTC', HC.TIMEZONE_GMT )
+            self._data_timezone_decode.addItem( 'Local', HC.TIMEZONE_LOCAL )
+            self._data_timezone_decode.addItem( 'Offset', HC.TIMEZONE_OFFSET )
+            
+            self._data_timezone_encode.addItem( 'UTC', HC.TIMEZONE_GMT )
+            self._data_timezone_encode.addItem( 'Local', HC.TIMEZONE_LOCAL )
             
             #
             
@@ -696,8 +700,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 ( phrase, timezone_type, timezone_offset ) = data
                 
                 self._data_text.setText( phrase )
-                self._data_timezone.SetValue( timezone_type )
+                self._data_timezone_decode.SetValue( timezone_type )
                 self._data_timezone_offset.setValue( timezone_offset )
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+                
+                ( phrase, timezone_type ) = data
+                
+                self._data_text.setText( phrase )
+                self._data_timezone_encode.SetValue( timezone_type )
                 
             elif data is not None:
                 
@@ -721,8 +732,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( 'regex pattern: ', self._data_regex_pattern ) )
             rows.append( ( 'regex replacement: ', self._data_regex_repl ) )
             rows.append( ( 'date info: ', self._data_date_link ) )
-            rows.append( ( 'date timezone: ', self._data_timezone ) )
+            rows.append( ( 'date decode timezone: ', self._data_timezone_decode ) )
             rows.append( ( 'timezone offset: ', self._data_timezone_offset ) )
+            rows.append( ( 'date encode timezone: ', self._data_timezone_encode ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -737,7 +749,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._transformation_type.currentIndexChanged.connect( self._UpdateDataControls )
             self._data_encoding.currentIndexChanged.connect( self._UpdateDataControls )
-            self._data_timezone.currentIndexChanged.connect( self._UpdateDataControls )
+            self._data_timezone_decode.currentIndexChanged.connect( self._UpdateDataControls )
+            self._data_timezone_encode.currentIndexChanged.connect( self._UpdateDataControls )
             
         
         def _UpdateDataControls( self ):
@@ -747,8 +760,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_encoding.setEnabled( False )
             self._data_regex_pattern.setEnabled( False )
             self._data_regex_repl.setEnabled( False )
-            self._data_timezone.setEnabled( False )
+            self._data_timezone_decode.setEnabled( False )
             self._data_timezone_offset.setEnabled( False )
+            self._data_timezone_encode.setEnabled( False )
             
             transformation_type = self._transformation_type.GetValue()
             
@@ -756,18 +770,22 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_encoding.setEnabled( True )
                 
-            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE ):
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_DATE_DECODE, ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE ):
                 
                 self._data_text.setEnabled( True )
                 
                 if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                     
-                    self._data_timezone.setEnabled( True )
+                    self._data_timezone_decode.setEnabled( True )
                     
-                    if self._data_timezone.GetValue() == HC.TIMEZONE_OFFSET:
+                    if self._data_timezone_decode.GetValue() == HC.TIMEZONE_OFFSET:
                         
                         self._data_timezone_offset.setEnabled( True )
                         
+                    
+                elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+                    
+                    self._data_timezone_encode.setEnabled( True )
                     
                 
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_INTEGER_ADDITION ):
@@ -816,10 +834,17 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
                 
                 phrase = self._data_text.text()
-                timezone_time = self._data_timezone.GetValue()
+                timezone_time = self._data_timezone_decode.GetValue()
                 timezone_offset = self._data_timezone_offset.value()
                 
                 data = ( phrase, timezone_time, timezone_offset )
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_ENCODE:
+                
+                phrase = self._data_text.text()
+                timezone_time = self._data_timezone_encode.GetValue()
+                
+                data = ( phrase, timezone_time )
                 
             else:
                 

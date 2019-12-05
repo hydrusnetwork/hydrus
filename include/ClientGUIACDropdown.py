@@ -518,9 +518,10 @@ class AutoCompleteDropdown( QW.QWidget ):
             
             self._dropdown_window = QW.QFrame( self )
             
+            self._dropdown_window.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
+            
             self._dropdown_window.setAttribute( QC.Qt.WA_ShowWithoutActivating )
             
-            self._dropdown_window.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
             self._dropdown_window.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
             self._dropdown_window.setLineWidth( 2 )
             
@@ -994,6 +995,8 @@ class AutoCompleteDropdown( QW.QWidget ):
     def EventCloseDropdown( self, event ):
         
         HG.client_controller.gui.close()
+        
+        return True
         
     
     def EventKillFocus( self, event ):

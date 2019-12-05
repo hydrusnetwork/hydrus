@@ -13189,6 +13189,38 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 375:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultGUGs( ( 'pixiv tag search', 'twitter username lookup' ) )
+                domain_manager.OverwriteDefaultURLClasses( ( 'pixiv search api', 'twitter tweets api - media only' ) )
+                domain_manager.OverwriteDefaultParsers( ( 'pixiv tag search api parser', 'twitter tweet parser (video from koto.reisen)', 'twitter media tweets api parser' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

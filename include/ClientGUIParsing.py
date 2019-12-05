@@ -636,7 +636,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestContext )
+            panel = EditFormulaPanel( dlg, existing_formula, self._test_panel.GetTestContextForChild )
             
             dlg.SetPanel( panel )
             
@@ -681,7 +681,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestContext )
+                panel = EditFormulaPanel( dlg, old_formula, self._test_panel.GetTestContextForChild )
                 
                 dlg.SetPanel( panel )
                 
@@ -1823,6 +1823,14 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        test_panel = ClientGUICommon.StaticBox( self, 'test' )
+        
+        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
+        
+        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        
+        #
+        
         self._edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
         QP.SetBackgroundColour( self._edit_panel, QP.GetSystemColour( QG.QPalette.Button ) )
@@ -1909,15 +1917,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( name, content_type, formula, sort_type, sort_asc, additional_info ) = content_parser.ToTuple()
         
-        self._formula = EditFormulaPanel( self._edit_panel, formula, self.GetTestContext )
-        
-        #
-        
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
-        self._test_panel = TestPanel( test_panel, self.GetValue, test_context = test_context )
+        self._formula = EditFormulaPanel( self._edit_panel, formula, self._test_panel.GetTestContextForChild )
         
         #
         
@@ -2162,11 +2162,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._sort_asc.setEnabled( True )
             
-        
-    
-    def GetTestContext( self ):
-        
-        return self._test_panel.GetTestContext()
         
     
     def GetValue( self ):
@@ -2965,19 +2960,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        
-        content_parsers_panel = QW.QWidget( edit_notebook )
-        
-        QP.SetBackgroundColour( content_parsers_panel, QP.GetSystemColour( QG.QPalette.Button ) )
-        
-        #
-        
-        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_VETO ]
-        
-        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self.GetTestContext, permitted_content_types )
-        
-        #
-        
         test_panel = ClientGUICommon.StaticBox( self, 'test' )
         
         QP.SetBackgroundColour( test_panel, QP.GetSystemColour( QG.QPalette.Button ) )
@@ -2997,6 +2979,18 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._test_panel = TestPanelPageParserSubsidiary( test_panel, self.GetValue, self._string_converter.GetValue, self.GetFormula, test_context = test_context )
             
+        
+        #
+        
+        content_parsers_panel = QW.QWidget( edit_notebook )
+        
+        QP.SetBackgroundColour( content_parsers_panel, QP.GetSystemColour( QG.QPalette.Button ) )
+        
+        #
+        
+        permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_VETO ]
+        
+        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestContextForChild, permitted_content_types )
         
         #
         
@@ -3139,7 +3133,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContext() )
+            panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContextForChild() )
             
             dlg.SetPanel( panel )
             
@@ -3207,7 +3201,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
                 
-                panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContext() )
+                panel = EditPageParserPanel( dlg, page_parser, formula = formula, test_context = self._test_panel.GetTestContextForChild() )
                 
                 dlg.SetPanel( panel )
                 
@@ -3292,11 +3286,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         HG.client_controller.network_engine.AddJob( network_job )
         
         HG.client_controller.CallToThread( wait_and_do_it, network_job )
-        
-    
-    def GetTestContext( self ):
-        
-        return self._test_panel.GetTestContext()
         
     
     def GetFormula( self ):
@@ -4503,6 +4492,11 @@ class TestPanel( QW.QWidget ):
         return ( example_parsing_context, self._example_data_raw )
         
     
+    def GetTestContextForChild( self ):
+        
+        return self.GetTestContext()
+        
+    
     def SetExampleData( self, example_data ):
         
         self._SetExampleData( example_data )
@@ -4662,7 +4656,7 @@ class TestPanelPageParser( TestPanel ):
         self._example_data_post_conversion_preview.setPlainText( preview )
         
     
-    def GetTestContext( self ):
+    def GetTestContextForChild( self ):
         
         example_parsing_context = self._example_parsing_context.GetValue()
         
@@ -4775,7 +4769,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         self._example_data_post_separation_preview.setPlainText( preview )
         
     
-    def GetTestContext( self ):
+    def GetTestContextForChild( self ):
         
         example_parsing_context = self._example_parsing_context.GetValue()
         
@@ -4801,15 +4795,15 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         try:
             
-            example_parsing_context = self._example_parsing_context.GetValue()
+            ( example_parsing_context, example_data ) = self.GetTestContext()
             
             if formula is None:
                 
-                posts = [ self._example_data_raw ]
+                posts = [ example_data ]
                 
             else:
                 
-                posts = formula.Parse( example_parsing_context, self._example_data_raw )
+                posts = formula.Parse( example_parsing_context, example_data )
                 
             
             pretty_texts = []

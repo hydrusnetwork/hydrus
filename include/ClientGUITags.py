@@ -16,6 +16,7 @@ from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
 from . import ClientGUITagSuggestions
+from . import ClientManagers
 from . import ClientMedia
 from . import ClientMigration
 from . import ClientTags
@@ -2287,8 +2288,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
-            QP.SetInitialSize( self._children, (-1,preview_height) )
-            QP.SetInitialSize( self._parents, (-1,preview_height) )
+            self._children.setMinimumHeight( preview_height )
+            self._parents.setMinimumHeight( preview_height )
             
             expand_parents = True
             
@@ -2611,9 +2612,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             if potential_parent in current_children:
                 
-                simple_children_to_parents = ClientCaches.BuildSimpleChildrenToParents( current_pairs )
+                simple_children_to_parents = ClientManagers.BuildSimpleChildrenToParents( current_pairs )
                 
-                if ClientCaches.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
+                if ClientManagers.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
                     
                     QW.QMessageBox.critical( self, 'Error', 'Adding '+potential_child+'->'+potential_parent+' would create a loop!' )
                     
@@ -3105,7 +3106,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
             
-            QP.SetInitialSize( self._old_siblings, (-1,preview_height) )
+            self._old_siblings.setMinimumHeight( preview_height )
             
             expand_parents = False
             

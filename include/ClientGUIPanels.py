@@ -834,7 +834,14 @@ class ReviewServicePanel( QW.QWidget ):
             self._address = ClientGUICommon.BetterStaticText( self )
             self._functional = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
+            
             self._bandwidth_panel = QW.QWidget( self )
+            
+            vbox = QP.VBoxLayout()
+            
+            self._bandwidth_panel.setLayout( vbox )
+            
+            self._rule_widgets = []
             
             #
             
@@ -871,13 +878,18 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._bandwidth_summary.setText( bandwidth_summary )
             
-            QP.DestroyChildren( self._bandwidth_panel )
+            vbox = self._bandwidth_panel.layout()
             
-            b_gauges = []
+            for rule_widget in self._rule_widgets:
+                
+                vbox.removeWidget( rule_widget )
+                
+                rule_widget.deleteLater()
+                
+            
+            self._rule_widgets = []
             
             bandwidth_rows = self._service.GetBandwidthStringsAndGaugeTuples()
-            
-            b_vbox = QP.VBoxLayout()
             
             for ( status, ( value, range ) ) in bandwidth_rows:
                 
@@ -885,10 +897,10 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 gauge.SetValue( status, value, range )
                 
-                QP.AddToLayout( b_vbox, gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._rule_widgets.append( gauge )
                 
-            
-            self._bandwidth_panel.setLayout( b_vbox )
+                QP.AddToLayout( vbox, gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
             
         
         def ServiceUpdated( self, service ):
@@ -916,7 +928,14 @@ class ReviewServicePanel( QW.QWidget ):
             self._status_st = ClientGUICommon.BetterStaticText( self )
             self._next_sync_st = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
+            
             self._bandwidth_panel = QW.QWidget( self )
+            
+            vbox = QP.VBoxLayout()
+            
+            self._bandwidth_panel.setLayout( vbox )
+            
+            self._rule_widgets = []
             
             self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
             self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account key', self._CopyAccountKey )
@@ -986,13 +1005,18 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._bandwidth_summary.setText( bandwidth_summary )
             
-            QP.DestroyChildren( self._bandwidth_panel )
+            vbox = self._bandwidth_panel.layout()
             
-            b_gauges = []
+            for rule_widget in self._rule_widgets:
+                
+                vbox.removeWidget( rule_widget )
+                
+                rule_widget.deleteLater()
+                
+            
+            self._rule_widgets = []
             
             bandwidth_rows = account.GetBandwidthStringsAndGaugeTuples()
-            
-            b_vbox = QP.VBoxLayout()
             
             for ( status, ( value, range ) ) in bandwidth_rows:
                 
@@ -1000,10 +1024,10 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 gauge.SetValue( status, value, range )
                 
-                QP.AddToLayout( b_vbox, gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._rule_widgets.append( gauge )
                 
-            
-            self._bandwidth_panel.setLayout( b_vbox )
+                QP.AddToLayout( vbox, gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
             
             #
             

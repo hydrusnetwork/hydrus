@@ -587,7 +587,7 @@ class GlobalPixmaps( object ):
         GlobalPixmaps.copy = QG.QPixmap( os.path.join(HC.STATIC_DIR,'copy.png') )
         GlobalPixmaps.paste = QG.QPixmap( os.path.join(HC.STATIC_DIR,'paste.png') )
         
-        GlobalPixmaps.eight_chan = QG.QPixmap( os.path.join(HC.STATIC_DIR,'8chan.png') )
+        GlobalPixmaps.eight_kun = QG.QPixmap( os.path.join(HC.STATIC_DIR,'8kun.png') )
         GlobalPixmaps.twitter = QG.QPixmap( os.path.join(HC.STATIC_DIR,'twitter.png') )
         GlobalPixmaps.tumblr = QG.QPixmap( os.path.join(HC.STATIC_DIR,'tumblr.png') )
         GlobalPixmaps.discord = QG.QPixmap( os.path.join(HC.STATIC_DIR,'discord.png') )

@@ -216,7 +216,7 @@ def SetInitialTLWSizeAndPosition( tlw, frame_key ):
         
     else:
         
-        ( min_width, min_height ) = QP.GetEffectiveMinSize( tlw )
+        ( min_width, min_height ) = tlw.sizeHint().toTuple()
         
         ( width, height ) = GetSafeSize( tlw, ( min_width, min_height ), default_gravity )
         
@@ -321,12 +321,16 @@ def SlideOffScreenTLWUpAndLeft( tlw ):
     
 class NewDialog( QP.Dialog ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent, title, do_not_activate = False ):
         
         QP.Dialog.__init__( self, parent )
-        self.setWindowTitle( title )
         
-        self._consumed_esc_to_cancel = False
+        if do_not_activate:
+            
+            self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+            
+        
+        self.setWindowTitle( title )
         
         self._last_move_pub = 0.0
         
@@ -377,20 +381,21 @@ class NewDialog( QP.Dialog ):
         
         if not self.isModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
             
-            return
+            return False
             
         
         if not self._ReadyToClose( value ):
             
-            return
+            return False
             
         
         if value == QW.QDialog.Rejected:
             
             if not self._CanCancel():
                 
-                return
+                return False
                 
+            
             self.SetCancelled( True )
             
         
@@ -398,7 +403,7 @@ class NewDialog( QP.Dialog ):
             
             if not self._CanOK():
                 
-                return
+                return False
                 
             
             self._SaveOKPosition()
@@ -439,6 +444,8 @@ class NewDialog( QP.Dialog ):
                 
             
         
+        return True
+        
     
     def CleanBeforeDestroy( self ):
         
@@ -450,13 +457,19 @@ class NewDialog( QP.Dialog ):
         self._TryEndModal( QW.QDialog.Accepted )
         
     
-    def EventClose( self, event ):
+    def closeEvent( self, event ):
         
         if not self or not QP.isValid( self ):
             
             return
             
-        self._TryEndModal( QW.QDialog.Rejected )
+        
+        was_ended = self._TryEndModal( QW.QDialog.Rejected )
+        
+        if not was_ended:
+            
+            event.ignore()
+            
         
     
     def EventDialogButtonApply( self ):
@@ -514,9 +527,7 @@ class NewDialog( QP.Dialog ):
         
         event_from_us = current_focus is not None and ClientGUIFunctions.IsQtAncestor( current_focus, self )
         
-        if event_from_us and key == QC.Qt.Key_Escape and not self._consumed_esc_to_cancel:
-            
-            self._consumed_esc_to_cancel = True
+        if event_from_us and key == QC.Qt.Key_Escape:
             
             self._TryEndModal( QW.QDialog.Rejected )
             
@@ -528,11 +539,11 @@ class NewDialog( QP.Dialog ):
     
 class DialogThatResizes( NewDialog ):
     
-    def __init__( self, parent, title, frame_key ):
+    def __init__( self, parent, title, frame_key, do_not_activate = False ):
         
         self._frame_key = frame_key
         
-        NewDialog.__init__( self, parent, title )
+        NewDialog.__init__( self, parent, title, do_not_activate = do_not_activate )
         
     
     def _SaveOKPosition( self ):
@@ -542,12 +553,12 @@ class DialogThatResizes( NewDialog ):
     
 class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
-    def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False, do_not_activate = False ):
         
         self._panel = None
         self._hide_buttons = hide_buttons
         
-        DialogThatResizes.__init__( self, parent, title, frame_key )
+        DialogThatResizes.__init__( self, parent, title, frame_key, do_not_activate = do_not_activate )
         
         self._InitialiseButtons()
         
@@ -676,8 +687,6 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
             self._apply.setVisible( False )
             self._cancel.setVisible( False )
             
-            self._widget_event_filter.EVT_CLOSE( self.EventClose ) # the close event no longer goes to the default button, since it is hidden, wew
-            
         
     
 class DialogEdit( DialogApplyCancel ):
@@ -768,6 +777,7 @@ class Frame( QW.QWidget ):
         
         self.setWindowFlags( QC.Qt.Window )
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        
         self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
         self._new_options = HG.client_controller.new_options
@@ -893,7 +903,7 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         FrameThatResizes.__init__( self, parent, title, frame_key )
         
         self._ok = QW.QPushButton( 'close', self )
-        self._ok.clicked.connect( self.EventClose )
+        self._ok.clicked.connect( self.close )
         
     
     def CleanBeforeDestroy( self ):
@@ -920,11 +930,6 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
             
         
     
-    def EventClose( self ):
-        
-        self.close()
-        
-    
     def GetPanel( self ):
         
         return self._panel
@@ -934,7 +939,10 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         
         self._panel = panel
         
-        if hasattr( self._panel, 'okSignal' ): self._panel.okSignal.connect( self.EventClose )
+        if hasattr( self._panel, 'okSignal' ):
+            
+            self._panel.okSignal.connect( self.close )
+            
         
         vbox = QP.VBoxLayout()
         

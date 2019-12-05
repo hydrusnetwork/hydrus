@@ -2795,6 +2795,7 @@ STRING_TRANSFORMATION_REVERSE = 8
 STRING_TRANSFORMATION_REGEX_SUB = 9
 STRING_TRANSFORMATION_DATE_DECODE = 10
 STRING_TRANSFORMATION_INTEGER_ADDITION = 11
+STRING_TRANSFORMATION_DATE_ENCODE = 12
 
 transformation_type_str_lookup = {}
 
@@ -2808,8 +2809,9 @@ transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING ]
 transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REGEX_SUB ] = 'regex substitution'
-transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_DECODE ] = 'date decode'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_DECODE ] = 'datestring to timestamp'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_INTEGER_ADDITION ] = 'integer addition'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_ENCODE ] = 'timestamp to datestring'
 
 class StringConverter( HydrusSerialisable.SerialisableBase ):
     
@@ -2985,6 +2987,34 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
                     
                     s = str( timestamp )
                     
+                elif transformation_type == STRING_TRANSFORMATION_DATE_ENCODE:
+                    
+                    ( phrase, timezone ) = data
+                    
+                    try:
+                        
+                        timestamp = int( s )
+                        
+                    except:
+                        
+                        raise Exception( '"{}" was not an integer!'.format( s ) )
+                        
+                    
+                    if timezone == HC.TIMEZONE_GMT:
+                        
+                        # user wants a UTC string, so we need UTC struct
+                        
+                        struct_time = time.gmtime( timestamp )
+                        
+                    elif timezone == HC.TIMEZONE_LOCAL:
+                        
+                        # user wants a local string, so we need localtime
+                        
+                        struct_time = time.localtime( timestamp )
+                        
+                    
+                    s = time.strftime( phrase, struct_time )
+                    
                 elif transformation_type == STRING_TRANSFORMATION_INTEGER_ADDITION:
                     
                     delta = data
@@ -3063,7 +3093,11 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
             
         elif transformation_type == STRING_TRANSFORMATION_DATE_DECODE:
             
-            return 'date decode: ' + repr( data )
+            return 'datestring to timestamp: ' + repr( data )
+            
+        elif transformation_type == STRING_TRANSFORMATION_DATE_ENCODE:
+            
+            return 'timestamp to datestring: ' + repr( data )
             
         elif transformation_type == STRING_TRANSFORMATION_INTEGER_ADDITION:
             

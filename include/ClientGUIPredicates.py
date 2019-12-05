@@ -14,6 +14,7 @@ from . import HydrusConstants as HC
 from . import HydrusData
 from . import HydrusGlobals as HG
 from . import HydrusText
+import os
 import re
 import string
 from qtpy import QtCore as QC
@@ -29,6 +30,7 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
         
         self._predicates = []
         
+        label = None
         editable_pred_panel_classes = []
         static_pred_buttons = []
         
@@ -77,6 +79,10 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             editable_pred_panel_classes.append( PanelPredicateSystemHash )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
+            
+            label = 'Please note that, for now, system:limit generally samples randomly from the full search results.'
+            label += os.linesep
+            label += 'It will not clip the n largest/longest/most tagged files given a particular file sort.'
             
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ) ) )
             static_pred_buttons.append( StaticSystemPredicateButton( self, ( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ), ) ) )
@@ -134,6 +140,13 @@ class InputFileSystemPredicate( ClientGUIScrolledPanels.EditPanel ):
             
         
         vbox = QP.VBoxLayout()
+        
+        if label is not None:
+            
+            st = ClientGUICommon.BetterStaticText( self, label = label )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
         
         for button in static_pred_buttons:
             

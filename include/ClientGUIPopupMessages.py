@@ -536,8 +536,10 @@ class PopupMessageManager( QW.QWidget ):
         QW.QWidget.__init__( self, parent )
         
         self.setWindowFlags( QC.Qt.Tool | QC.Qt.FramelessWindowHint )
-        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
+        
         self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
+        
+        self.setSizePolicy( QW.QSizePolicy.MinimumExpanding, QW.QSizePolicy.Preferred )
         
         QP.SetBackgroundColour( self, QP.GetSystemColour( QG.QPalette.Button ) )
         
@@ -711,25 +713,32 @@ class PopupMessageManager( QW.QWidget ):
         
         try:
             
-            parent = self.parentWidget()
+            gui_frame = self.parentWidget()
             
-            possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
+            possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( gui_frame )
             
             going_to_bug_out_at_hide_or_show = possibly_on_hidden_virtual_desktop
             
             current_focus_tlp = QW.QApplication.activeWindow()
             
-            main_gui_is_active = current_focus_tlp in ( self, parent )
+            main_gui_is_active = current_focus_tlp in ( self, gui_frame )
             
             on_top_frame_is_active = False
             
-            if not main_gui_is_active:
+            if not main_gui_is_active and current_focus_tlp is not None:
                 
-                c_f_tlp_is_child_frame_of_main_gui = current_focus_tlp is not None and current_focus_tlp.parentWidget() == parent
+                c_f_tlp_is_resizing_frame = isinstance( current_focus_tlp, ClientGUITopLevelWindows.FrameThatResizes )
                 
-                if c_f_tlp_is_child_frame_of_main_gui:
+                frame_parent = current_focus_tlp.parentWidget()
+                
+                if c_f_tlp_is_resizing_frame and frame_parent is not None:
                     
-                    on_top_frame_is_active = True
+                    c_f_tlp_is_child_frame_of_main_gui = frame_parent.window() == gui_frame
+                    
+                    if c_f_tlp_is_child_frame_of_main_gui:
+                        
+                        on_top_frame_is_active = True
+                        
                     
                 
             
@@ -739,16 +748,16 @@ class PopupMessageManager( QW.QWidget ):
             
             if there_is_stuff_to_display:
                 
-                ( parent_width, parent_height ) = parent.size().toTuple()
+                ( parent_width, parent_height ) = gui_frame.size().toTuple()
                 
                 ( my_width, my_height ) = self.size().toTuple()
                 
                 my_x = ( parent_width - my_width ) - 20
                 my_y = ( parent_height - my_height ) - 25
                 
-                if parent.isVisible():
+                if gui_frame.isVisible():
                     
-                    my_position = ClientGUIFunctions.ClientToScreen( parent, ( my_x, my_y ) )
+                    my_position = ClientGUIFunctions.ClientToScreen( gui_frame, ( my_x, my_y ) )
                     
                     if my_position != self.pos():
                         
@@ -758,7 +767,7 @@ class PopupMessageManager( QW.QWidget ):
                 
                 # Unhiding tends to raise the main gui tlp, which is annoying if a media viewer window has focus
                 # Qt port note: the on_top_frame_is_active part was uncommented originally, but it IS annoying since it leads to flickering (e.g. open the options window with this uncommented to see it in action)
-                show_is_not_annoying = main_gui_is_active or self._DisplayingError() # or on_top_frame_is_active
+                show_is_not_annoying = main_gui_is_active or self._DisplayingError() or on_top_frame_is_active
                 
                 ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
                 
@@ -783,7 +792,7 @@ class PopupMessageManager( QW.QWidget ):
             
             HydrusData.Print( traceback.format_exc() )
             
-            QW.QMessageBox.critical( HG.client_controller.gui, 'Error', text )
+            QW.QMessageBox.critical( gui_frame, 'Error', text )
             
             self._update_job.Cancel()
             

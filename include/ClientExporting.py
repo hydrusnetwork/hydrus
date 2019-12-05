@@ -84,6 +84,12 @@ def GenerateExportFilename( destination_directory, media, terms, append_number =
                 
                 filename += hash.hex()
                 
+            elif term == 'file_id':
+                
+                hash_id = media.GetHashId()
+                
+                filename += str( hash_id )
+                
             
         elif term_type == 'tag':
             

@@ -930,6 +930,7 @@ class ExportPatternButton( BetterButton ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
+        ClientGUIMenus.AppendMenuItem( menu, 'unique numerical file id - {file_id}', 'copy "{file_id}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{file_id}' )
         ClientGUIMenus.AppendMenuItem( menu, 'the file\'s hash - {hash}', 'copy "{hash}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{hash}' )
         ClientGUIMenus.AppendMenuItem( menu, 'all the file\'s tags - {tags}', 'copy "{tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{tags}' )
         ClientGUIMenus.AppendMenuItem( menu, 'all the file\'s non-namespaced tags - {nn tags}', 'copy "{nn tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{nn tags}' )

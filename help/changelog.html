@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 376</h3></li>
+				<ul>
+					<li>subscriptions:</li>
+					<li>wrote a new subscription manager to better look after subscription scheduling</li>
+					<li>rather than checking every four hours or after manage subs dialog close, subscriptions now record an indication of when they are next due for work, whether that is the estimated next check time or when bandwidth is free on remaining file downloads, and launch in a fifteen-minute window around that time. delays due to previous errors or user cancels are also taken into account. this reduces background cpu and i/o greatly for clients with large subs</li>
+					<li>if a sub is paused, or all its queries are paused, it will now never be reloaded after first load until a change via the manage subs dialog</li>
+					<li>furthermore, if a single sub takes a very long time to work, the whole sublist can re-cycle if they come up due for more work before it is finished</li>
+					<li>if a sub query is DEAD but still has outstanding files to download, it will no longer automatically pause</li>
+					<li>subs now clean up more tidily if they are running on a program exit</li>
+					<li>the subscription popup now shows check/file progress based on the number of queries that appear to have pending work. instead of 'query 300/450' with 420 that aren't due, you'll get 'query 12/30'. if a query becomes due during a round of checking, another round of checking will run</li>
+					<li>if a subscription fails to load from the db, the error is handled better and no more subs will run in that boot</li>
+					<li>improved subscription startup checking logic, tightening up various paused/dead/cansync tests</li>
+					<li>improved subscription interrupt checking logic, tightening checks on global network pause and various shutdown scenarios</li>
+					<li>cleaned up some more subscription code in prep for data storage breakup</li>
+					<li>.</li>
+					<li>qt:</li>
+					<li>added experimental Qt style settings to the new options->style page! all users should now be able to set Fusion style, and perhaps some alternate OS styles. advanced users are invited to play around with QSS stylesheets (although be warned that some of hydrus's custom colour system overrides QSS, so more work is needed here), which will be extended and made user-friendly in coming weeks</li>
+					<li>fixed tab position calculations for all tab/media drag and drops for tab bars that are centered or otherwise positioned far off top-left alignment</li>
+					<li>fixed tab drag and drop event object handling for macOS. tab and media DnD is now enabled for macOS</li>
+					<li>the popup toaster can now unhide if an on-top-of-parent non-modal frame (like review services) is focused (so hitting 'process now' should show you the work)</li>
+					<li>fixed a variety of old hacky wx close-window veto tests. the 'close client?' confirmation dialog will now reliably veto a close requent on 'no'/cancel, dialog close events that are vetoed (such as closing the manage tags dialog with pending tags) will now veto more than just the first time, and several bad media viewer archive/dupe filtering cancel and end-of-window events should now work more cleanly and correctly. users who had crashes at the end of filtering may find they are stable again</li>
+					<li>as a quick patch against some multiline notes and statuses, list controls now force single-line text in all cells</li>
+					<li>list controls now tooltip all cells</li>
+					<li>fixed the shutdown splash not updating after the daemons shut down (lmao)</li>
+					<li>'modal' message dialogs, which are created by blocking maintenance tasks such as vacuum, will no longer raise the program to the foreground on creation</li>
+					<li>should have fixed the taglist vertical positioning jank that could occur in the row after a tag with a tall emoji unicode character (and also sometimes kanji/hangul)</li>
+					<li>fixed a typo bug that was throwing an error for the upnp port widget in the local client server management panel when 'allow non local connections' was checked</li>
+					<li>improved stability of bandwidth review panel bandwidth rules refresh</li>
+					<li>improved stability of review services bandwidth rules refresh</li>
+					<li>improved some dialog cleanup code</li>
+					<li>reverted a bad environment-setting change put in last week that was causing some running-from-source users trouble</li>
+					<li>misc qt code cleanup</li>
+					<li>.</li>
+					<li>the rest:</li>
+					<li>updated the default pixiv tag search downloader to one submitted by a user. it now uses their api</li>
+					<li>updated the default twitter username lookup to a downloader submitted by a user. it fetches just the media tweet feed, making it more efficient. also added (but not linked by default) is a new tweet parser that can fetch most videos using a third-party site, advanced users may wish to play with this</li>
+					<li>added a &#123;file_id&#125; term for file export phrases that substitutes a unique and permanent numerical file identifier</li>
+					<li>fixed an issue where idle maintenance jobs could sometimes sneak in a few milliseconds of work during certain long shut down pauses, such as while waiting for a 'should I do shutdown work?' dialog to return. program shutdown should be snappier for many users as forced startup delays in these calls will no longer trigger</li>
+					<li>added a date 'encode' string transformation rule, which takes an integer timestamp and converts it to a pretty date string. the date rules are now renamed to the clearer 'datestring to timestamp' and vice versa</li>
+					<li>fixed page parser edit panel's 'test parse' when string transformations perform pre-parsing conversion. the handling and passing of test data for all the panels here is cleaned up throughout</li>
+					<li>system:limit predicate edit panel now has a small label describing its sampling behaviour</li>
+					<li>updated the various 8chan links in the client and help to 8kun, let me know if I missed any, and added Endchan bunker link to help menu</li>
+					<li>improved some misc status text handling across the program</li>
+					<li>refactored cache and manager code into different, simpler files</li>
+					<li>updated sqlite on windows build to 3.30.1</li>
+				</ul>
 				<li><h3>version 375</h3></li>
 				<ul>
 					<li>qt:</li>

@@ -102,6 +102,10 @@ class Dialog( QP.Dialog ):
 
         QP.Dialog.__init__( self, parent )
         
+        self.setWindowFlags( style )
+        
+        self.setWindowTitle( title )
+        
         if parent is not None and position == 'topleft':
             
             parent_tlp = self.parentWidget().window()                
@@ -114,9 +118,6 @@ class Dialog( QP.Dialog ):
             
             pos = None
             
-        
-        self.setWindowTitle( title )
-        self.setWindowFlags( style )
         
         if pos: self.move( pos )
         
@@ -193,9 +194,9 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         self._should_register = False
         
@@ -281,9 +282,9 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason )
         
@@ -437,11 +438,11 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        x = max( x, 350 )
+        size_hint.setWidth( max( size_hint.width(), 350 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
         
@@ -550,9 +551,9 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
         
@@ -640,11 +641,11 @@ class DialogInputTags( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        x = max( x, 300 )
+        size_hint.setWidth( max( size_hint.width(), 300 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( self._tag_box.setFocus, QC.Qt.OtherFocusReason)
         
@@ -736,9 +737,9 @@ class DialogInputUPnPMapping( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( self._ok.setFocus, QC.Qt.OtherFocusReason)
         
@@ -889,9 +890,9 @@ class DialogModifyAccounts( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( self._exit.setFocus, QC.Qt.OtherFocusReason)
         
@@ -1012,12 +1013,12 @@ class DialogSelectFromURLTree( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        x = max( x, 640 )
-        y = max( y, 640 )
+        size_hint.setWidth( max( size_hint.width(), 640 ) )
+        size_hint.setHeight( max( size_hint.height(), 640 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
     
     def _AddDirectory( self, root, children ):
@@ -1129,16 +1130,16 @@ class DialogSelectImageboard( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        if x < 320: x = 320
-        if y < 640: y = 640
+        size_hint.setWidth( max( size_hint.width(), 320 ) )
+        size_hint.setHeight( max( size_hint.height(), 640 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
     
     def EventActivate( self, item, column ):
-                
+        
         data_object = item.data( 0, QC.Qt.UserRole )
         
         if data_object is None: item.setExpanded( not item.isExpanded() )
@@ -1228,11 +1229,11 @@ class DialogTextEntry( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        x = max( x, 250 )
+        size_hint.setWidth( max( size_hint.width(), 250 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
     
     def _CheckText( self ):
@@ -1329,11 +1330,11 @@ class DialogYesYesNo( Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        x = max( x, 250 )
+        size_hint.setWidth( max( size_hint.width(), 250 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         QP.CallAfter( yes_buttons[0].setFocus, QC.Qt.OtherFocusReason )
         

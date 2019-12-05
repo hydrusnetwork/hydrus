@@ -113,10 +113,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     hashes = [ m.GetHash() for m in media ]
     
-    if not HC.PLATFORM_MACOS:
-        
-        data_object.setHydrusFiles( page_key, hashes )
-        
+    data_object.setHydrusFiles( page_key, hashes )
     
     # old way of doing this that makes some external programs (discord) reject it
     '''
@@ -168,7 +165,7 @@ class FileDropTarget( QC.QObject ):
         if event.type() == QC.QEvent.Drop:
             
             if self.OnDrop( event.pos().x(), event.pos().y() ):
-
+                
                 event.setDropAction( self.OnData( event.mimeData(), event.proposedAction() ) )
                 event.accept()
                 
@@ -183,90 +180,92 @@ class FileDropTarget( QC.QObject ):
     
     def OnData( self, mime_data, result ):
         
-        if mime_data.formats():
+        media_dnd = isinstance( mime_data, QMimeDataHydrusFiles )
+        urls_dnd = mime_data.hasUrls()
+        text_dnd = mime_data.hasText()
+        
+        if media_dnd and self._media_callable is not None:
             
-            if isinstance( mime_data, QMimeDataHydrusFiles ) and self._media_callable is not None:
+            result = mime_data.hydrusFiles()
+            
+            if result is not None:
                 
-                result = mime_data.hydrusFiles()
+                ( page_key, hashes ) = result
                 
-                if result is not None:
+                if page_key is not None:
                     
-                    ( page_key, hashes ) = result
-                    
-                    if page_key is not None:
-                        
-                        QP.CallAfter( self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
-                        
-                    
-                
-                result = QC.Qt.MoveAction
-                
-                # old way of doing it that messed up discord et al
-                '''
-            elif mime_data.formats().count( 'application/hydrus-media' ) and self._media_callable is not None:
-                
-                mview = mime_data.data( 'application/hydrus-media' )
-
-                data_bytes = mview.data()
-
-                data_str = str( data_bytes, 'utf-8' )
-
-                (encoded_page_key, encoded_hashes) = json.loads( data_str )
-
-                if encoded_page_key is not None:
-                    
-                    page_key = bytes.fromhex( encoded_page_key )
-                    hashes = [ bytes.fromhex( encoded_hash ) for encoded_hash in encoded_hashes ]
-
                     QP.CallAfter( self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
                     
+                
+            
+            result = QC.Qt.MoveAction
+            
+            # old way of doing it that messed up discord et al
+            '''
+        elif mime_data.formats().count( 'application/hydrus-media' ) and self._media_callable is not None:
+            
+            mview = mime_data.data( 'application/hydrus-media' )
 
-                result = QC.Qt.MoveAction
-                '''
-            elif mime_data.hasUrls() and self._filenames_callable is not None:
+            data_bytes = mview.data()
+
+            data_str = str( data_bytes, 'utf-8' )
+
+            (encoded_page_key, encoded_hashes) = json.loads( data_str )
+
+            if encoded_page_key is not None:
                 
-                paths = []
-                urls = []
+                page_key = bytes.fromhex( encoded_page_key )
+                hashes = [ bytes.fromhex( encoded_hash ) for encoded_hash in encoded_hashes ]
+
+                QP.CallAfter( self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
                 
-                for url in mime_data.urls():
+
+            result = QC.Qt.MoveAction
+            '''
+        elif urls_dnd and self._filenames_callable is not None:
+            
+            paths = []
+            urls = []
+            
+            for url in mime_data.urls():
+                
+                if url.isLocalFile():
                     
-                    if url.isLocalFile():
-                        
-                        paths.append( os.path.normpath( url.toLocalFile() ) )
-                        
-                    else:
-                        
-                        urls.append( url.url() )
-                        
+                    paths.append( os.path.normpath( url.toLocalFile() ) )
+                    
+                else:
+                    
+                    urls.append( url.url() )
                     
                 
-                if len( paths ) > 0:
+            
+            if len( paths ) > 0:
+                
+                QP.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
+                
+            
+            if len( urls ) > 0:
+                
+                for url in urls:
                     
-                    QP.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
+                    QP.CallAfter( self._url_callable, url ) # callafter to terminate dnd event now
                     
                 
-                if len( urls ) > 0:
-                    
-                    for url in urls:
-                        
-                        QP.CallAfter( self._url_callable, url ) # callafter to terminate dnd event now
-                        
-                    
-                
-                result = QC.Qt.IgnoreAction
-                
-            elif mime_data.hasText() and self._url_callable is not None:
-                
-                text = mime_data.text()
-                
-                QP.CallAfter( self._url_callable, text ) # callafter to terminate dnd event now
-                
-                result = QC.Qt.CopyAction
-                
-            else:                      
-                
-                result = QC.Qt.MoveAction
-                
+            
+            result = QC.Qt.IgnoreAction
+            
+        elif text_dnd and self._url_callable is not None:
+            
+            text = mime_data.text()
+            
+            QP.CallAfter( self._url_callable, text ) # callafter to terminate dnd event now
+            
+            result = QC.Qt.CopyAction
+            
+            
+        else:
+            
+            result = QC.Qt.IgnoreAction
             
         
         return result

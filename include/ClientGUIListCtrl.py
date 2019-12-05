@@ -22,7 +22,6 @@ def SafeNoneInt( value ):
 def SafeNoneStr( value ):
     
     return '' if value is None else value
-           
     
 class BetterListCtrl( QW.QTreeWidget ):
     
@@ -74,8 +73,10 @@ class BetterListCtrl( QW.QTreeWidget ):
                 
             
             self.headerItem().setText( i, name )
+            
             self.setColumnWidth( i, width )
             
+        
         # Technically this is the previous behavior, but the two commented lines might work better in some cases (?)
         self.header().setStretchLastSection( False )
         self.header().setSectionResizeMode( resize_column - 1 , QW.QHeaderView.Stretch )
@@ -110,8 +111,17 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         for i in range( len( display_tuple ) ):
             
-            append_item.setText( i, display_tuple[i] )
+            text = display_tuple[i]
             
+            if len( text ) > 0:
+                
+                text = text.splitlines()[0]
+                
+            
+            append_item.setText( i, text )
+            append_item.setToolTip( i, text )
+            
+        
         self.addTopLevelItem( append_item )
         
         index = self.topLevelItemCount() - 1 
@@ -241,11 +251,19 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         for ( column_index, value ) in enumerate( display_tuple ):
             
-            existing_value = self.topLevelItem( index ).text( column_index )
+            if len( value ) > 0:
+                
+                value = value.splitlines()[0]
+                
+            
+            tree_widget_item = self.topLevelItem( index )
+            
+            existing_value = tree_widget_item.text( column_index )
             
             if existing_value != value:
                 
-                self.topLevelItem( index ).setText( column_index, value )
+                tree_widget_item.setText( column_index, value )
+                tree_widget_item.setToolTip( column_index, value )
                 
             
         

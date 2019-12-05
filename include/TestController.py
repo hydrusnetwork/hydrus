@@ -15,6 +15,7 @@ from . import HydrusGlobals as HG
 from . import ClientAPI
 from . import ClientDefaults
 from . import ClientFiles
+from . import ClientManagers
 from . import ClientNetworking
 from . import ClientNetworkingBandwidth
 from . import ClientNetworkingDomain
@@ -252,7 +253,7 @@ class Controller( object ):
         
         self._managers = {}
         
-        self.services_manager = ClientCaches.ServicesManager( self )
+        self.services_manager = ClientManagers.ServicesManager( self )
         self.client_files_manager = ClientFiles.ClientFilesManager( self )
         
         self.parsing_cache = ClientCaches.ParsingCache()
@@ -270,12 +271,12 @@ class Controller( object ):
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
         self.tag_display_manager = ClientTags.TagDisplayManager()
-        self.tag_siblings_manager = ClientCaches.TagSiblingsManager( self )
-        self.tag_parents_manager = ClientCaches.TagParentsManager( self )
-        self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
+        self.tag_siblings_manager = ClientManagers.TagSiblingsManager( self )
+        self.tag_parents_manager = ClientManagers.TagParentsManager( self )
+        self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
-        self.bitmap_manager = ClientCaches.BitmapManager( self )
+        self.bitmap_manager = ClientManagers.BitmapManager( self )
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         self.client_api_manager = ClientAPI.APIManager()

@@ -1,5 +1,6 @@
 from . import ClientConstants as CC
 from . import ClientGUIManagement
+from . import ClientManagers
 from . import ClientNetworking
 from . import ClientCaches
 from . import ClientServices
@@ -38,7 +39,7 @@ class TestManagers( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'services', services )
         
-        services_manager = ClientCaches.ServicesManager( HG.client_controller )
+        services_manager = ClientManagers.ServicesManager( HG.client_controller )
         
         #
         
@@ -82,7 +83,7 @@ class TestManagers( unittest.TestCase ):
         command_1_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
         command_2_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
         
-        undo_manager = ClientCaches.UndoManager( HG.client_controller )
+        undo_manager = ClientManagers.UndoManager( HG.client_controller )
         
         #
         

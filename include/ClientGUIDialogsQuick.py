@@ -42,7 +42,9 @@ def GetFinishFilteringAnswer( win, label ):
         
         dlg.SetPanel( panel )
         
-        return ( dlg.exec(), dlg.WasCancelled() )
+        result = ( dlg.exec(), dlg.WasCancelled() )
+        
+        return result
         
     
 def GetInterstitialFilteringAnswer( win, label ):
@@ -53,7 +55,9 @@ def GetInterstitialFilteringAnswer( win, label ):
         
         dlg.SetPanel( panel )
         
-        return dlg.exec()
+        result = dlg.exec()
+        
+        return result
         
     
 def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):

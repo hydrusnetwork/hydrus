@@ -14,6 +14,9 @@ from . import ClientDownloading
 from . import ClientFiles
 from . import ClientGUIMenus
 from . import ClientGUIShortcuts
+from . import ClientGUIStyle
+from . import ClientImportSubscriptions
+from . import ClientManagers
 from . import ClientNetworking
 from . import ClientNetworkingBandwidth
 from . import ClientNetworkingDomain
@@ -79,7 +82,7 @@ class App( QW.QApplication ):
         # Since aboutToQuit gets called not only on external shutdown events (like user logging off), but even if we explicitely call QApplication.exit(),
         # this check will make sure that we only do an emergency exit if it's really necessary (i.e. QApplication.exit() wasn't called by us).
         if not QW.QApplication.instance().property( 'normal_exit' ):
-        
+            
             HG.emergency_exit = True
             
             if hasattr( HG.client_controller, 'gui' ):
@@ -193,6 +196,23 @@ class Controller( HydrusController.HydrusController ):
         
         self.SafeShowCriticalMessage( 'shutdown error', text )
         self.SafeShowCriticalMessage( 'shutdown error', traceback.format_exc() )
+        
+    
+    def _ShutdownSubscriptionsManager( self ):
+        
+        self.subscriptions_manager.Shutdown()
+        
+        started = HydrusData.GetNow()
+        
+        while not self.subscriptions_manager.IsShutdown():
+            
+            time.sleep( 0.1 )
+            
+            if HydrusData.TimeHasPassed( started + 30 ):
+                
+                break
+                
+            
         
     
     def AcquirePageKey( self ):
@@ -416,7 +436,7 @@ class Controller( HydrusController.HydrusController ):
         
         if HG.program_is_shutting_down:
             
-            return True
+            return False
             
         
         if HG.force_idle_mode:
@@ -483,7 +503,7 @@ class Controller( HydrusController.HydrusController ):
         
         if HG.program_is_shutting_down:
             
-            return True
+            return False
             
         
         if self._idle_started is not None and HydrusData.TimeHasPassed( self._idle_started + 3600 ):
@@ -609,6 +629,7 @@ class Controller( HydrusController.HydrusController ):
                 HG.emergency_exit = True
                 
                 self.Exit()
+                
             
         
     
@@ -699,7 +720,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', 'services' )
         
-        self.services_manager = ClientCaches.ServicesManager( self )
+        self.services_manager = ClientManagers.ServicesManager( self )
         
         self.pub( 'splash_set_status_subtext', 'options' )
         
@@ -809,7 +830,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         
-        self.file_viewing_stats_manager = ClientCaches.FileViewingStatsManager( self )
+        self.file_viewing_stats_manager = ClientManagers.FileViewingStatsManager( self )
         
         self.pub( 'splash_set_status_subtext', 'tag display' )
         
@@ -828,18 +849,19 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', 'tag siblings' )
         
-        self.tag_siblings_manager = ClientCaches.TagSiblingsManager( self )
+        self.tag_siblings_manager = ClientManagers.TagSiblingsManager( self )
         
         self.pub( 'splash_set_status_subtext', 'tag parents' )
         
-        self.tag_parents_manager = ClientCaches.TagParentsManager( self )
-        self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
+        self.tag_parents_manager = ClientManagers.TagParentsManager( self )
+        self._managers[ 'undo' ] = ClientManagers.UndoManager( self )
         
         def qt_code():
             
             self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )
             self._caches[ 'thumbnail' ] = ClientCaches.ThumbnailCache( self )
-            self.bitmap_manager = ClientCaches.BitmapManager( self )
+            
+            self.bitmap_manager = ClientManagers.BitmapManager( self )
             
             CC.GlobalPixmaps.STATICInitialise()
             
@@ -885,14 +907,46 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_title_text', 'booting gui\u2026' )
         
+        self.subscriptions_manager = ClientImportSubscriptions.SubscriptionsManager( self )
+        
         def qt_code_gui():
+            
+            ClientGUIStyle.InitialiseDefaults()
+            
+            qt_style_name = self.new_options.GetNoneableString( 'qt_style_name' )
+            
+            if qt_style_name is not None:
+                
+                try:
+                    
+                    ClientGUIStyle.SetStyle( qt_style_name )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Could not load Qt style: {}'.format( e ) )
+                    
+                
+            
+            qt_stylesheet_name = self.new_options.GetNoneableString( 'qt_stylesheet_name' )
+            
+            if qt_stylesheet_name is not None:
+                
+                try:
+                    
+                    ClientGUIStyle.SetStylesheet( qt_stylesheet_name )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Could not load Qt stylesheet: {}'.format( e ) )
+                    
+                
             
             self.gui = ClientGUI.FrameGUI( self )
             
             self.ResetIdleTimer()
             
         
-        self.CallBlockingToQt(self._splash, qt_code_gui)
+        self.CallBlockingToQt( self._splash, qt_code_gui )
         
         # ShowText will now popup as a message, as popup message manager has overwritten the hooks
         
@@ -904,7 +958,6 @@ class Controller( HydrusController.HydrusController ):
         
         if not HG.no_daemons:
             
-            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 4 * 3600, init_wait = 60, pre_call_wait = 3 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions', 'wake_idle_workers' ), period = 4 * 3600, pre_call_wait = 1 ) )
             
@@ -1423,6 +1476,8 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownModel( self ):
         
+        self.pub( 'splash_set_status_text', 'saving and exiting objects' )
+        
         if self._is_booted:
             
             self.file_viewing_stats_manager.Flush()
@@ -1437,11 +1492,19 @@ class Controller( HydrusController.HydrusController ):
         
         if not HG.emergency_exit:
             
+            self.pub( 'splash_set_status_text', 'waiting for subscriptions to exit' )
+            
+            self._ShutdownSubscriptionsManager()
+            
             self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
             
             self._ShutdownDaemons()
             
+            self.pub( 'splash_set_status_subtext', '' )
+            
             if HG.do_idle_shutdown_work:
+                
+                self.pub( 'splash_set_status_text', 'waiting for idle shutdown work' )
                 
                 try:
                     

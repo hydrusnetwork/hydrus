@@ -314,6 +314,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'media_background_bmp_path' ] = None
         self._dictionary[ 'noneable_strings' ][ 'http_proxy' ] = None
         self._dictionary[ 'noneable_strings' ][ 'https_proxy' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'qt_style_name' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'qt_stylesheet_name' ] = None
         
         self._dictionary[ 'strings' ] = {}
         

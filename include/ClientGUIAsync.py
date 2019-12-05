@@ -188,7 +188,12 @@ class FastThreadToGUIUpdater( object ):
     # if not, we won't get bungled up with 10,000+ pubsub events in the event queue
     def Update( self, *args, **kwargs ):
         
-        if HG.view_shutdown:
+        if HG.model_shutdown:
+            
+            return
+            
+        
+        if self._win is None:
             
             return
             

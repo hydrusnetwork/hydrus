@@ -3866,7 +3866,7 @@ But if 2 is--and is also perhaps accompanied by many 'could not parse' errors--t
         file_velocity = checker_options.GetRawCurrentVelocity( query.GetFileSeedCache(), last_check_time )
         pretty_file_velocity = checker_options.GetPrettyCurrentVelocity( query.GetFileSeedCache(), last_check_time, no_prefix = True )
         
-        estimate = self._original_subscription.GetBandwidthWaitingEstimate( query )
+        estimate = query.GetBandwidthWaitingEstimate( self._original_subscription.GetName() )
         
         if estimate == 0:
             
@@ -5063,7 +5063,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 for subscription in self._subscriptions.GetData():
                     
-                    if subscription.HasQuerySearchText( search_text ):
+                    if subscription.HasQuerySearchTextFragment( search_text ):
                         
                         selectee_subscriptions.append( subscription )
                         

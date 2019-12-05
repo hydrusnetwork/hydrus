@@ -926,11 +926,27 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         self.destroyed.connect( HG.client_controller.gui.MaintainCanvasFrameReferences )
         
     
-    def close( self ):
+    def closeEvent( self, event ):
         
-        self._canvas_window.CleanBeforeDestroy()
-        
-        ClientGUITopLevelWindows.FrameThatResizes.close( self )
+        if self._canvas_window is not None:
+            
+            can_close = self._canvas_window.TryToDoPreClose()
+            
+            if can_close:
+                
+                self._canvas_window.CleanBeforeDestroy()
+                
+                ClientGUITopLevelWindows.FrameThatResizes.closeEvent( self, event )
+                
+            else:
+                
+                event.ignore()
+                
+            
+        else:
+            
+            ClientGUITopLevelWindows.FrameThatResizes.closeEvent( self, event )
+            
         
     
     def FullscreenSwitch( self ):
@@ -1008,8 +1024,6 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         # just to reinforce, as Qt sometimes sets none focus for this window until it goes off and back on
         self._canvas_window.setFocus( QC.Qt.OtherFocusReason )
         
-        self._widget_event_filter.EVT_CLOSE( self._canvas_window.EventClose )
-        
     
     def TakeFocusForUser( self ):
         
@@ -1042,8 +1056,6 @@ class Canvas( QW.QWidget ):
         self._canvas_key = HydrusData.GenerateKey()
         
         self._maintain_pan_and_zoom = False
-        
-        self._closing = False
         
         self._service_keys_to_services = {}
         
@@ -1954,24 +1966,21 @@ class Canvas( QW.QWidget ):
     
     def resizeEvent( self, event ):
         
-        if not self._closing:
+        ( my_width, my_height ) = self.size().toTuple()
+        
+        if self._current_media is not None:
             
-            ( my_width, my_height ) = self.size().toTuple()
+            ( media_width, media_height ) = self._media_container.size().toTuple()
             
-            if self._current_media is not None:
+            if my_width != media_width or my_height != media_height:
                 
-                ( media_width, media_height ) = self._media_container.size().toTuple()
+                self._ReinitZoom()
                 
-                if my_width != media_width or my_height != media_height:
-                    
-                    self._ReinitZoom()
-                    
-                    self._ResetMediaWindowCenterPosition()
-                    
+                self._ResetMediaWindowCenterPosition()
                 
             
-            self.update()
-            
+        
+        self.update()
         
     
     def FlipActiveCustomShortcutName( self, name ):
@@ -2775,23 +2784,21 @@ class CanvasWithHovers( CanvasWithDetails ):
         HG.client_controller.sub( self, 'FullscreenSwitch', 'canvas_fullscreen_switch' )
         
     
-    def _Close( self ):
-        
-        self._closing = True
-        
-        self.parentWidget().close()
-        
-    
     def _GenerateHoverTopFrame( self ):
         
         raise NotImplementedError()
+        
+    
+    def _TryToCloseWindow( self ):
+        
+        self.window().close()
         
     
     def CloseFromHover( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
             
-            self._Close()
+            self._TryToCloseWindow()
             
         
     
@@ -2918,6 +2925,13 @@ class CanvasWithHovers( CanvasWithDetails ):
             
         
     
+    def TryToDoPreClose( self ):
+        
+        can_close = True
+        
+        return can_close
+        
+    
 class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def __init__( self, parent, file_search_context, both_files_match ):
@@ -2959,7 +2973,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         QP.CallAfter( self._ShowNewPair )
         
     
-    def _Close( self ):
+    def TryToDoPreClose( self ):
         
         num_committable = self._GetNumCommittableDecisions()
         
@@ -2978,7 +2992,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     self._GoBack()
                     
                 
-                return
+                return False
                 
             elif result == QW.QDialog.Accepted:
                 
@@ -2991,7 +3005,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         HG.client_controller.pub( 'refresh_dupe_page_numbers' )
         
-        CanvasWithHovers._Close( self )
+        return True
         
     
     def _CommitProcessed( self, blocking = True ):
@@ -3276,7 +3290,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
                     
-                    self._Close()
+                    self.window().deleteLater()
                     
                     return
                     
@@ -3409,7 +3423,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events (likely a series of file deletes), the duplicate filter has no valid pair to back up to. It will now close.' )
                         
-                        self._Close()
+                        self.window().deleteLater()
                         
                         return
                         
@@ -3478,7 +3492,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         QW.QMessageBox.critical( self, 'Error', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
                         
-                        self._Close()
+                        self.window().deleteLater()
                         
                         return
                         
@@ -3503,7 +3517,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 self._CommitProcessed( blocking = True )
                 
-                self._Close()
+                self._TryToCloseWindow()
                 
                 return
                 
@@ -3585,11 +3599,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def EventClose( self, event ):
-        
-        if not self._closing: self._Close()
-        
-    
     def EventMouse( self, event ):
         
         if self._IShouldCatchShortcutEvent( event = event ):
@@ -3662,7 +3671,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
                 
-                self._Close()
+                self._TryToCloseWindow()
                 
             else:
                 
@@ -3820,7 +3829,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             QW.QMessageBox.information( self, 'Information', 'All pairs have been filtered!' )
             
-            self._Close()
+            self._TryToCloseWindow()
             
         
         def qt_continue( unprocessed_pairs ):
@@ -3866,11 +3875,11 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         HG.client_controller.pub( 'set_focus', self._page_key, None )
         
     
-    def _Close( self ):
+    def TryToDoPreClose( self ):
         
         HG.client_controller.pub( 'set_focus', self._page_key, self._current_media )
         
-        CanvasWithHovers._Close( self )
+        return CanvasWithHovers.TryToDoPreClose( self )
         
     
     def _GetIndexString( self ):
@@ -3975,7 +3984,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         if self.HasNoMedia():
             
-            self._Close()
+            self._TryToCloseWindow()
             
         elif self.HasMedia( self._current_media ):
             
@@ -4026,11 +4035,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         
     
-    def EventClose( self, event ):
-        
-        if not self._closing: self._Close()
-        
-    
     def EventFullscreenSwitch( self, event ):
         
         self.parentWidget().FullscreenSwitch()
@@ -4061,7 +4065,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         if self.HasNoMedia():
             
-            self._Close()
+            self._TryToCloseWindow()
             
         elif self.HasMedia( self._current_media ):
             
@@ -4116,75 +4120,72 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def _Close( self ):
+    def TryToDoPreClose( self ):
         
-        if self._IShouldCatchShortcutEvent():
+        if len( self._kept ) > 0 or len( self._deleted ) > 0:
             
-            if len( self._kept ) > 0 or len( self._deleted ) > 0:
+            label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
+            
+            ( result, cancelled ) = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+            
+            if cancelled:
                 
-                label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
+                if self._current_media in self._kept:
+                    
+                    self._kept.remove( self._current_media )
+                    
                 
-                result, cancelled = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+                if self._current_media in self._deleted:
+                    
+                    self._deleted.remove( self._current_media )
+                    
                 
-                if cancelled:
+                return False
+                
+            elif result == QW.QDialog.Accepted:
+                
+                def process_in_thread( service_keys_and_content_updates ):
                     
-                    if self._current_media in self._kept:
+                    for ( service_key, content_update ) in service_keys_and_content_updates:
                         
-                        self._kept.remove( self._current_media )
-                        
-                    
-                    if self._current_media in self._deleted:
-                        
-                        self._deleted.remove( self._current_media )
-                        
-                    
-                    return
-                    
-                elif result == QW.QDialog.Accepted:
-                    
-                    def process_in_thread( service_keys_and_content_updates ):
-                        
-                        for ( service_key, content_update ) in service_keys_and_content_updates:
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
-                            
+                        HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
                         
                     
-                    self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
-                    self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                
+                self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
+                self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                
+                service_keys_and_content_updates = []
+                
+                reason = 'Deleted in Archive/Delete filter.'
+                
+                for chunk_of_hashes in HydrusData.SplitListIntoChunks( self._deleted_hashes, 64 ):
                     
-                    service_keys_and_content_updates = []
+                    service_keys_and_content_updates.append( ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) ) )
                     
-                    reason = 'Deleted in Archive/Delete filter.'
+                
+                service_keys_and_content_updates.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ) )
+                
+                HG.client_controller.CallToThread( process_in_thread, service_keys_and_content_updates )
+                
+                self._kept = set()
+                self._deleted = set()
+                
+                self._current_media = self._GetFirst() # so the pubsub on close is better
+                
+                if HC.options[ 'remove_filtered_files' ]:
                     
-                    for chunk_of_hashes in HydrusData.SplitListIntoChunks( self._deleted_hashes, 64 ):
-                        
-                        service_keys_and_content_updates.append( ( CC.LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason ) ) )
-                        
+                    all_hashes = set()
                     
-                    service_keys_and_content_updates.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) ) )
+                    all_hashes.update( self._deleted_hashes )
+                    all_hashes.update( self._kept_hashes )
                     
-                    HG.client_controller.CallToThread( process_in_thread, service_keys_and_content_updates )
-                    
-                    self._kept = set()
-                    self._deleted = set()
-                    
-                    self._current_media = self._GetFirst() # so the pubsub on close is better
-                    
-                    if HC.options[ 'remove_filtered_files' ]:
-                        
-                        all_hashes = set()
-                        
-                        all_hashes.update( self._deleted_hashes )
-                        all_hashes.update( self._kept_hashes )
-                        
-                        HG.client_controller.pub( 'remove_media', self._page_key, all_hashes )
-                        
+                    HG.client_controller.pub( 'remove_media', self._page_key, all_hashes )
                     
                 
             
-            CanvasMediaList._Close( self )
-            
+        
+        return CanvasMediaList.TryToDoPreClose( self )
         
     
     def _Delete( self, media = None, reason = None, file_service_key = None ):
@@ -4196,8 +4197,14 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         self._deleted.add( self._current_media )
         
-        if self._current_media == self._GetLast(): self._Close()
-        else: self._ShowNext()
+        if self._current_media == self._GetLast():
+            
+            self._TryToCloseWindow()
+            
+        else:
+            
+            self._ShowNext()
+            
         
         return True
         
@@ -4211,15 +4218,21 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         self._kept.add( self._current_media )
         
-        if self._current_media == self._GetLast(): self._Close()
-        else: self._ShowNext()
+        if self._current_media == self._GetLast():
+            
+            self._TryToCloseWindow()
+            
+        else:
+            
+            self._ShowNext()
+            
         
     
     def _Skip( self ):
         
         if self._current_media == self._GetLast():
             
-            self._Close()
+            self._TryToCloseWindow()
             
         else:
             
@@ -4330,7 +4343,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             if key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
                 
-                self._Close()
+                self._TryToCloseWindow()
                 
             else:
                 
@@ -4377,7 +4390,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
             elif action == 'launch_the_archive_delete_filter':
                 
-                self._Close()
+                self._TryToCloseWindow()
                 
             else:
                 
@@ -4563,8 +4576,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self._timer_slideshow_job = None
         self._timer_slideshow_interval = 0
         
-        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventClose )
-        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventClose )
+        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventMouseClose )
+        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseClose )
         
         if first_hash is None:
             
@@ -4585,6 +4598,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         QP.CallAfter( self.SetMedia, first_media ) # don't set this until we have a size > (20, 20)!
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
+        
+    
+    def EventMouseClose( self, event ):
+        
+        self._TryToCloseWindow()
         
     
     def _PausePlaySlideshow( self ):
@@ -4855,7 +4873,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             if modifier == QC.Qt.NoModifier and key in CC.DELETE_KEYS: self._Delete()
             elif modifier == QC.Qt.ShiftModifier and key in CC.DELETE_KEYS: self._Undelete()
             elif modifier == QC.Qt.NoModifier and key in ( QC.Qt.Key_Space, ): self._PausePlaySlideshow()
-            elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ): self._Close()
+            elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return, QC.Qt.Key_Escape ):
+                
+                self._TryToCloseWindow()
+                
             else:
                 
                 CanvasMediaListNavigable.keyPressEvent( self, event )
@@ -4907,7 +4928,7 @@ class MediaContainer( QW.QWidget ):
         QW.QWidget.__init__( self, parent )
         
         # If I do not set this, macOS goes 100% CPU endless repaint events!
-        # My guess is it is due to the borked layout
+        # My guess is it due to the borked layout
         self.setAttribute( QC.Qt.WA_OpaquePaintEvent, True )
         
         self._media = None

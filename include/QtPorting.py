@@ -13,7 +13,7 @@ if not 'QT_API' in os.environ:
 
         import PySide2
 
-        os.putenv( 'QT_API', 'pyside2' )
+        os.environ[ 'QT_API' ] = 'pyside2'
         
     except ImportError:
 
@@ -382,44 +382,31 @@ class TabBar( QW.QTabBar ):
     
     def dragEnterEvent(self, event):
 
-        if event.mimeData().formats():
-
-            event.accept()
+        if 'application/hydrus-tab' in event.mimeData().formats():
+            
+            event.ignore()
             
         else:
-
-            event.ignore()
+            
+            event.accept()
             
         
     
-    def dragMoveEvent(self, event):
-
-        if event.mimeData().formats():
-
+    def dragMoveEvent( self, event ):
+        
+        if 'application/hydrus-tab' not in event.mimeData().formats():
+            
             tab_index = self.tabAt( event.pos() )
-
+            
             if tab_index != -1:
                 
-                shift_down = event.keyboardModifiers() & QC.Qt.ShiftModifier
-
-                follow_dropped_page = not shift_down
-
-                new_options = HG.client_controller.new_options
-
-                if new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ):
-                    
-                    follow_dropped_page = not follow_dropped_page
-                    
-
-                if follow_dropped_page:
-                    
-                    self.parentWidget().setCurrentIndex( tab_index )
-                    
+                self.parentWidget().setCurrentIndex( tab_index )
                 
             
         else:
             
             event.ignore()
+            
         
     
     def lastClickedTabIndex( self ):
@@ -455,7 +442,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         self._tab_bar = self.tabBar()
         
         self._supplementary_drop_target = None
-
+        
     
     def _LayoutPagesHelper( self ):
 
@@ -521,15 +508,11 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        if HC.PLATFORM_MACOS:
-            
-            return
-            
+        my_mouse_pos = e.pos()
+        global_mouse_pos = self.mapToGlobal( my_mouse_pos )
+        tab_bar_mouse_pos = self._tab_bar.mapFromGlobal( global_mouse_pos )
         
-        global_pos = self.mapToGlobal( e.pos() )
-        pos_in_tab = self._tab_bar.mapFromGlobal( global_pos )
-        
-        if not self._tab_bar.rect().contains( pos_in_tab ):
+        if not self._tab_bar.rect().contains( tab_bar_mouse_pos ):
             
             return
             
@@ -553,6 +536,8 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         mimeData = QC.QMimeData()
         
+        mimeData.setData( 'application/hydrus-tab', b'' )
+        
         drag = QG.QDrag( self._tab_bar )
         
         drag.setMimeData( mimeData )
@@ -561,7 +546,10 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
         cursor = QG.QCursor( QC.Qt.OpenHandCursor )
         
-        drag.setHotSpot( e.pos() - pos_in_tab )
+        drag.setHotSpot( QC.QPoint( 0, 0 ) )
+        
+        # this puts the tab pixmap exactly where we picked it up, but it looks bad
+        # drag.setHotSpot( tab_bar_mouse_pos - tab_rect.topLeft() )
         
         drag.setDragCursor( cursor.pixmap(), QC.Qt.MoveAction )
         
@@ -575,7 +563,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return QW.QTabWidget.dragEnterEvent( self, e )
             
         
-        if not e.mimeData().formats():
+        if 'application/hydrus-tab' in e.mimeData().formats():
             
             e.accept()
             
@@ -586,10 +574,14 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
     def dragMoveEvent( self, event ):
-
+        
         #if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( event.pos() ) ) ): return QW.QTabWidget.dragMoveEvent( self, event )
         
-        tab_index = self._tab_bar.tabAt( event.pos() )
+        screen_pos = self.mapToGlobal( event.pos() )
+        
+        tab_pos = self._tab_bar.mapFromGlobal( screen_pos )
+        
+        tab_index = self._tab_bar.tabAt( tab_pos )
         
         if tab_index != -1:
             
@@ -598,7 +590,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             self.setCurrentIndex( tab_index )
             
         
-        if event.mimeData().formats():
+        if 'application/hydrus-tab' not in event.mimeData().formats():
             
             event.reject()
             
@@ -640,7 +632,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return QW.QTabWidget.dropEvent( self, e )
             
        
-        if len( e.mimeData().formats() ): #Page dnd has no associated mime data
+        if 'application/hydrus-tab' not in e.mimeData().formats(): #Page dnd has no associated mime data
             
             e.ignore()
             
@@ -681,8 +673,12 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         e.accept()
         
         counter = self.count()
-
-        dropped_on_tab_index = self.tabBar().tabAt( e.pos() )
+        
+        screen_pos = self.mapToGlobal( e.pos() )
+        
+        tab_pos = self.tabBar().mapFromGlobal( screen_pos )
+        
+        dropped_on_tab_index = self.tabBar().tabAt( tab_pos )
         
         if source_notebook == self and dropped_on_tab_index == source_page_index:
             
@@ -1128,26 +1124,7 @@ def AdjustColour( colour, percent ):
     percent = percent / 100
     
     return QG.QColor( colour.red() + colour.red() * percent, colour.green() + colour.green() * percent, colour.blue() + colour.blue() * percent, colour.alpha() )
-
-
-def DestroyChildren( widget ):
-
-    if not widget.layout(): return
-
-    ClearLayout( widget.layout(), delete_widgets = True )
-
-    # This creates a new hidden widget, reparents the layout to it then deletes the widget.
-    # Not the nicest solution but otherwise widget.setLayout( None ) refused to work...
-    tmp = QW.QWidget()
-    tmp.setVisible( False )
-
-    tmp.setLayout( widget.layout() )
-
-    tmp.deleteLater()
-
-    widget.setLayout( None )
-
-
+    
 class BusyCursor:
     
     def __enter__( self ):
@@ -1267,10 +1244,6 @@ def Unsplit( splitter, widget ):
         
         widget.setVisible( False )
         
-    
-def GetEffectiveMinSize( widget ):
-
-    return widget.sizeHint().toTuple() #widget.minimumSize().toTuple()
     
 def GetSystemColour( colour ):
     
@@ -1590,6 +1563,7 @@ class AboutBox( QW.QDialog ):
         QW.QDialog.__init__( self, parent )
         
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
+        
         self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
         self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
@@ -2022,9 +1996,12 @@ class Dialog( QW.QDialog ):
         return self
         
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__( self, exc_type, exc_val, exc_tb ):
         
-        self.deleteLater()
+        if isValid( self ):
+            
+            self.deleteLater()
+            
         
     
 class PasswordEntryDialog( Dialog ):

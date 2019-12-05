@@ -3,6 +3,7 @@ from . import ClientConstants as CC
 from . import ClientAPI
 from . import ClientLocalServer
 from . import ClientLocalServerResources
+from . import ClientManagers
 from . import ClientMedia
 from . import ClientRatings
 from . import ClientSearch
@@ -744,8 +745,8 @@ class TestClientAPI( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        HG.test_controller.tag_siblings_manager = ClientCaches.TagSiblingsManager( HG.test_controller )
-        HG.test_controller.tag_parents_manager = ClientCaches.TagParentsManager( HG.test_controller )
+        HG.test_controller.tag_siblings_manager = ClientManagers.TagSiblingsManager( HG.test_controller )
+        HG.test_controller.tag_parents_manager = ClientManagers.TagParentsManager( HG.test_controller )
         
         # ok, now with
         
@@ -961,8 +962,6 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         expected_answer = {}
-        
-        expected_answer = { 'url_type' : HC.URL_TYPE_WATCHABLE, 'url_type_string' : 'watchable url', 'match_name' : '8chan thread', 'can_parse' : True }
         
         expected_answer[ 'normalised_url' ] = normalised_url
         expected_answer[ 'url_type' ] = HC.URL_TYPE_WATCHABLE

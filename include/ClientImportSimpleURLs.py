@@ -190,7 +190,10 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                text = text.splitlines()[0]
+                if len( text ) > 0:
+                    
+                    text = text.splitlines()[0]
+                    
                 
                 self._current_action = text
                 

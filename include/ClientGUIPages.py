@@ -1780,12 +1780,16 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         position = event.pos()
         
-        tab_index = self.tabBar().tabAt( position )
+        screen_pos = self.mapToGlobal( position )
+        
+        tab_pos = self.tabBar().mapFromGlobal( screen_pos )
+        
+        tab_index = self.tabBar().tabAt( tab_pos )
         
         if tab_index == -1:
             
             self.ChooseNewPage()
-                
+            
         else:
             
             return True # was: event.ignore()
@@ -1815,7 +1819,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         position = event.pos()
         
-        tab_index = self.tabBar().tabAt( position )
+        screen_pos = self.mapToGlobal( position )
+        
+        tab_pos = self.tabBar().mapFromGlobal( screen_pos )
+        
+        tab_index = self.tabBar().tabAt( tab_pos )
         
         if tab_index == -1:
             

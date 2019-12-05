@@ -26,6 +26,7 @@ from . import ClientGUIScrolledPanelsEdit
 from . import ClientGUIScrolledPanelsManagement
 from . import ClientGUIScrolledPanelsReview
 from . import ClientGUIShortcuts
+from . import ClientGUIStyle
 from . import ClientGUITags
 from . import ClientGUITopLevelWindows
 from . import ClientMedia
@@ -384,7 +385,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         self._widget_event_filter.EVT_LEFT_DCLICK( self.EventFrameNewPage )
         self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventFrameNewPage )
         self._widget_event_filter.EVT_RIGHT_DOWN( self.EventFrameNotebookMenu )
-        self._widget_event_filter.EVT_CLOSE( self.EventClose )
         self._widget_event_filter.EVT_SET_FOCUS( self.EventFocus )
         self._widget_event_filter.EVT_ICONIZE( self.EventIconize )
         
@@ -1878,7 +1878,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
         
         #self._controller.CallLaterQtSafe(self, 1.0, self.adjustSize ) # some i3 thing--doesn't layout main gui on init for some reason
         
-        self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, self.SaveLastSession)
+        self._controller.CallLaterQtSafe(self, last_session_save_period_minutes * 60, self.AutoSaveLastSession)
         
         self._clipboard_watcher_repeating_job = self._controller.CallRepeatingQtSafe(self, 1.0, 1.0, self.REPEATINGClipboardWatcher)
         
@@ -2298,6 +2298,27 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             dlg.exec()
             
         
+        qt_style_name = self._controller.new_options.GetNoneableString( 'qt_style_name' )
+        qt_stylesheet_name = self._controller.new_options.GetNoneableString( 'qt_stylesheet_name' )
+        
+        if qt_style_name is None:
+            
+            ClientGUIStyle.SetStyle( ClientGUIStyle.ORIGINAL_STYLE )
+            
+        else:
+            
+            ClientGUIStyle.SetStyle( qt_style_name )
+            
+        
+        if qt_stylesheet_name is None:
+            
+            ClientGUIStyle.ClearStylesheet()
+            
+        else:
+            
+            ClientGUIStyle.SetStylesheet( qt_stylesheet_name )
+            
+        
         self._controller.pub( 'wake_daemons' )
         self.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
@@ -2414,6 +2435,8 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
                     
+                    HG.client_controller.subscriptions_manager.NewSubscriptions( subscriptions )
+                    
                 
             
         
@@ -2427,7 +2450,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 
                 try:
                     
-                    if HG.subscriptions_running:
+                    if HG.client_controller.subscriptions_manager.SubscriptionsRunning():
                         
                         job_key = ClientThreading.JobKey()
                         
@@ -2437,7 +2460,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                             
                             controller.pub( 'message', job_key )
                             
-                            while HG.subscriptions_running:
+                            while HG.client_controller.subscriptions_manager.SubscriptionsRunning():
                                 
                                 time.sleep( 0.1 )
                                 
@@ -2486,7 +2509,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                     
                     try:
                         
-                        controller.CallBlockingToQt(self, qt_do_it, subscriptions, original_pause_status)
+                        controller.CallBlockingToQt( self, qt_do_it, subscriptions, original_pause_status )
                         
                     except HydrusExceptions.QtDeadWindowException:
                         
@@ -2496,8 +2519,6 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
                 finally:
                     
                     controller.options[ 'pause_subs_sync' ] = original_pause_status
-                    
-                    controller.pub( 'notify_new_subscriptions' )
                     
                 
             
@@ -2694,7 +2715,7 @@ class FrameGUI( ClientGUITopLevelWindows.MainFrameThatResizes ):
             
             HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
             
-            self._controller.pub( 'notify_restart_subs_sync_daemon' )
+            self._controller.subscriptions_manager.Wake()
             
         elif sync_type == 'export_folders':
             
@@ -3556,7 +3577,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             hide_close_button = not job_key.IsCancellable()
             
-            with ClientGUITopLevelWindows.DialogNullipotent( self, title, hide_buttons = hide_close_button ) as dlg:
+            with ClientGUITopLevelWindows.DialogNullipotent( self, title, hide_buttons = hide_close_button, do_not_activate = True ) as dlg:
                 
                 panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
                 
@@ -3565,6 +3586,29 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 dlg.exec()
                 
             
+        
+    
+    def AutoSaveLastSession( self ):
+        
+        only_save_last_session_during_idle = self._controller.new_options.GetBoolean( 'only_save_last_session_during_idle' )
+        
+        if only_save_last_session_during_idle and not self._controller.CurrentlyIdle():
+            
+            next_call_delay = 60
+            
+        else:
+            
+            if HC.options[ 'default_gui_session' ] == 'last session':
+                
+                self._notebook.SaveGUISession( 'last session' )
+                
+            
+            last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
+            
+            next_call_delay = last_session_save_period_minutes * 60
+            
+        
+        self._controller.CallLaterQtSafe( self, next_call_delay, self.AutoSaveLastSession )
         
     
     def DeleteAllClosedPages( self ):
@@ -3635,13 +3679,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def EventClose( self, event ):
+    def closeEvent( self, event ):
         
         exit_allowed = self.Exit()
         
         if not exit_allowed:
             
-            return True # was: event.ignore()
+            event.ignore()
             
         
     
@@ -4126,7 +4170,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if self._controller.new_options.GetBoolean( 'advanced_mode' ):
                 
-                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.pub, 'notify_restart_subs_sync_daemon' )
+                ClientGUIMenus.AppendMenuItem( submenu, 'nudge subscriptions awake', 'Tell the subs daemon to wake up, just in case any subs are due.', self._controller.subscriptions_manager.ClearCacheAndWake )
                 
             
             ClientGUIMenus.AppendSeparator( submenu )
@@ -4325,7 +4369,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             links = QW.QMenu( menu )
             
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalPixmaps.file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalPixmaps.eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8ch.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8kun board', 'Open hydrus dev\'s 8kun board, where he makes release posts and other status updates.', CC.GlobalPixmaps.eight_kun, ClientPaths.LaunchURLInWebBrowser, 'https://8kun.top/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuItem( links, 'Endchan board bunker', 'Open hydrus dev\'s Endchan board, the bunker for when 8kun is unavailable.', ClientPaths.LaunchURLInWebBrowser, 'https://endchan.net/hydrus/index.html' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalPixmaps.twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalPixmaps.tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
             site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalPixmaps.discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
@@ -4417,6 +4462,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
             ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
             ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
+            ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
             ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( data_actions, 'take garbage snapshot', 'Capture current garbage object counts.', self._DebugTakeGarbageSnapshot )
@@ -5537,29 +5583,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 ClientGUIMenus.DestroyMenu( self, old_menu )
             
-        
-    
-    def SaveLastSession( self ):
-        
-        only_save_last_session_during_idle = self._controller.new_options.GetBoolean( 'only_save_last_session_during_idle' )
-        
-        if only_save_last_session_during_idle and not self._controller.CurrentlyIdle():
-            
-            next_call_delay = 60
-            
-        else:
-            
-            if HC.options[ 'default_gui_session' ] == 'last session':
-                
-                self._notebook.SaveGUISession( 'last session' )
-                
-            
-            last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
-            
-            next_call_delay = last_session_save_period_minutes * 60
-            
-        
-        self._controller.CallLaterQtSafe(self, next_call_delay, self.SaveLastSession)
         
     
     def SetMediaFocus( self ):

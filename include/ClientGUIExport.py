@@ -396,7 +396,7 @@ If you select synchronise, be careful!'''
         run_regularly = self._run_regularly.isChecked()
         
         period = self._period.GetValue()
-               
+        
         if self._path.GetPath() in ( '', None ):
             
             raise HydrusExceptions.VetoException( 'You must enter a folder path to export to!' )

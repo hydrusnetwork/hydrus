@@ -1880,6 +1880,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         help += 'Please note that this system bases its calendar dates on UTC/GMT time (it helps servers and clients around the world stay in sync a bit easier). This has no bearing on what, for instance, the \'past 24 hours\' means, but monthly transitions may occur a few hours off whatever your midnight is.'
         help += os.linesep * 2
         help += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. If you want to throttle your client, the simplest way is to add a simple rule like \'500MB per day\' to the global context.'
+        
         QW.QMessageBox.information( self, 'Information', help )
         
     
@@ -3433,8 +3434,6 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._bandwidth_rules = self._controller.network_engine.bandwidth_manager.GetRules( self._network_context )
         self._bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( self._network_context )
         
-        self._last_fetched_rule_rows = set()
-        
         #
         
         info_panel = ClientGUICommon.StaticBox( self, 'description' )
@@ -3462,6 +3461,13 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._uses_default_rules_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignHCenter )
         
         self._rules_rows_panel = QW.QWidget( rules_panel )
+        
+        vbox = QP.VBoxLayout()
+        
+        self._rules_rows_panel.setLayout( vbox )
+        
+        self._last_fetched_rule_rows = set()
+        self._rule_widgets = []
         
         self._use_default_rules_button = ClientGUICommon.BetterButton( rules_panel, 'use default rules', self._UseDefaultRules )
         self._edit_rules_button = ClientGUICommon.BetterButton( rules_panel, 'edit rules', self._EditRules )
@@ -3538,9 +3544,9 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._rules_job = HG.client_controller.CallRepeatingQtSafe(self, 0.5, 5.0, self._UpdateRules)
+        self._rules_job = HG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, self._UpdateRules )
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe(self, 0.5, 1.0, self._Update)
+        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.5, 1.0, self._Update )
         
     
     def _EditRules( self ):
@@ -3595,16 +3601,12 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _UpdateRules( self ):
         
-        changes_made = False
-        
         if self._network_context.IsDefault() or self._network_context == ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT:
             
             if self._use_default_rules_button.isVisible():
                 
                 self._uses_default_rules_st.hide()
                 self._use_default_rules_button.hide()
-                
-                changes_made = True
                 
             
         else:
@@ -3619,8 +3621,6 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._use_default_rules_button.hide()
                     
-                    changes_made = True
-                    
                 
             else:
                 
@@ -3632,8 +3632,6 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._use_default_rules_button.show()
                     
-                    changes_made = True
-                    
                 
             
         
@@ -3643,9 +3641,16 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._last_fetched_rule_rows = rule_rows
             
-            QP.DestroyChildren( self._rules_rows_panel )
+            vbox = self._rules_rows_panel.layout()
             
-            vbox = QP.VBoxLayout()
+            for rule_widget in self._rule_widgets:
+                
+                vbox.removeWidget( rule_widget )
+                
+                rule_widget.deleteLater()
+                
+            
+            self._rule_widgets = []
             
             for ( status, ( v, r ) ) in rule_rows:
                 
@@ -3653,12 +3658,10 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 tg.SetValue( status, v, r )
                 
+                self._rule_widgets.append( tg )
+                
                 QP.AddToLayout( vbox, tg, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
-            
-            self._rules_rows_panel.setLayout( vbox )
-            
-            changes_made = True
             
         
     

@@ -52,12 +52,12 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        if x < 500: x = 500
-        if y < 200: y = 200
+        size_hint.setWidth( max( size_hint.width(), 500 ) )
+        size_hint.setHeight( max( size_hint.height(), 200 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         self.show()
         

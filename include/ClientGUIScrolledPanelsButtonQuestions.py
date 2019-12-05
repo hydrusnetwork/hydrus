@@ -50,6 +50,7 @@ class QuestionFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPane
             
             parent.SetCancelled( True )
             parent.done( QW.QDialog.Rejected )
+            
         
         self._back = ClientGUICommon.BetterButton( self, 'back to filtering', cancel_callback, parent )
         

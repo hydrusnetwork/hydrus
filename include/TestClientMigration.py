@@ -3,6 +3,7 @@ from . import ClientConstants as CC
 from . import ClientDB
 from . import ClientImportFileSeeds
 from . import ClientImportOptions
+from . import ClientManagers
 from . import ClientMigration
 from . import ClientServices
 from . import ClientTags
@@ -155,7 +156,7 @@ class TestMigration( unittest.TestCase ):
         
         self.WriteSynchronous( 'update_services', services )
         
-        self.services_manager = ClientCaches.ServicesManager( self )
+        self.services_manager = ClientManagers.ServicesManager( self )
         
     
     def _do_fake_imports( self ):

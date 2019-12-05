@@ -148,7 +148,10 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     def status_hook( text ):
         
-        text = text.splitlines()[0]
+        if len( text ) > 0:
+            
+            text = text.splitlines()[0]
+            
         
         job_key.SetVariable( 'popup_text_1', text )
         
@@ -219,7 +222,10 @@ def THREADDownloadURLs( job_key, urls, title ):
     
     def status_hook( text ):
         
-        text = text.splitlines()[0]
+        if len( text ) > 0:
+            
+            text = text.splitlines()[0]
+            
         
         job_key.SetVariable( 'popup_text_2', text )
         

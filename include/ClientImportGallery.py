@@ -218,7 +218,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 with self._lock:
                     
-                    text = text.splitlines()[0]
+                    if len( text ) > 0:
+                        
+                        text = text.splitlines()[0]
+                        
                     
                     self._file_status = text
                     
@@ -332,7 +335,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                text = text.splitlines()[0]
+                if len( text ) > 0:
+                    
+                    text = text.splitlines()[0]
+                    
                 
                 self._gallery_status = text
                 

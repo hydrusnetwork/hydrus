@@ -1278,13 +1278,13 @@ class ListBox( QW.QScrollArea ):
                 
                 ( x, y ) = ( x_start, current_index * text_height )
                 
-                ( text_width, text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
+                ( this_text_width, this_text_height ) = painter.fontMetrics().size( QC.Qt.TextSingleLine, text ).toTuple()
                 
-                painter.drawText( QC.QRectF( x, y, text_width, text_height ), text )
+                painter.drawText( QC.QRectF( x, y, this_text_width, this_text_height ), text )
                 
                 if there_is_more_than_one_text:
                     
-                    x_start += text_width
+                    x_start += this_text_width
                     
                 
             

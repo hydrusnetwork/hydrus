@@ -111,9 +111,9 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         #
         
@@ -354,11 +354,11 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self.setLayout( vbox )
         
-        ( x, y ) = QP.GetEffectiveMinSize( self )
+        size_hint = self.sizeHint()
         
-        x = max( x, 760 )
+        size_hint.setWidth( max( size_hint.width(), 760 ) )
         
-        QP.SetInitialSize( self, (x,y) )
+        QP.SetInitialSize( self, size_hint )
         
         #
         

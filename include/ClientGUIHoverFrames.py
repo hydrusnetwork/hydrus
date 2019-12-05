@@ -28,10 +28,12 @@ class FullscreenHoverFrame( QW.QFrame ):
         QW.QFrame.__init__( self, parent )
         
         self.setWindowFlags( QC.Qt.FramelessWindowHint | QC.Qt.Tool )
-        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
-        self.setLineWidth( 2 )
+        
         self.setAttribute( QC.Qt.WA_ShowWithoutActivating )
         self.setAttribute( QC.Qt.WA_DeleteOnClose )
+        
+        self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
+        self.setLineWidth( 2 )
         
         self._my_canvas = my_canvas
         self._canvas_key = canvas_key
@@ -1163,7 +1165,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
                 
                 self._last_seen_urls = list( urls )
                 
-                QP.ClearLayout( self._urls_vbox, delete_widgets=True )
+                QP.ClearLayout( self._urls_vbox, delete_widgets = True )
                 
                 url_tuples = HG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
                 
@@ -1172,7 +1174,10 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
                     link = ClientGUICommon.BetterHyperLink( self, display_string, url )
                     
                     QP.AddToLayout( self._urls_vbox, link, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
                     self.layout().addStretch( 1 )
+                    
+                
             
         
         self._SizeAndPosition()
@@ -1180,7 +1185,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
     
     def wheelEvent( self, event ):
         
-        QW.QApplication.sendEvent(self.parentWidget(), event)
+        QW.QApplication.sendEvent( self.parentWidget(), event )
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):

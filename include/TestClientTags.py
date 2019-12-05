@@ -1,6 +1,7 @@
 import collections
 from . import ClientCaches
 from . import ClientConstants as CC
+from . import ClientManagers
 from . import ClientMedia
 from . import ClientSearch
 from . import ClientTags
@@ -674,7 +675,7 @@ class TestTagParents( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        cls._tag_parents_manager = ClientCaches.TagParentsManager( HG.client_controller )
+        cls._tag_parents_manager = ClientManagers.TagParentsManager( HG.client_controller )
         
     
     def test_expand_predicates( self ):
@@ -812,7 +813,7 @@ class TestTagSiblings( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
-        cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HG.test_controller )
+        cls._tag_siblings_manager = ClientManagers.TagSiblingsManager( HG.test_controller )
         
     
     def test_collapse_predicates( self ):
